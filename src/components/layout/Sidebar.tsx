@@ -12,6 +12,7 @@ import {
   UserCircle,
   Package,
   Menu,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -22,6 +23,7 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet";
 
 const navItems = [
@@ -107,8 +109,8 @@ export function MobileHeader() {
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div className="flex items-center h-14 px-4 border-b border-border">
+            {/* Logo with close button */}
+            <div className="flex items-center justify-between h-14 px-4 border-b border-border">
               <NavLink to="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-hero">
                   <TrendingUp className="h-4 w-4 text-primary-foreground" />
@@ -117,6 +119,11 @@ export function MobileHeader() {
                   ROIBOY
                 </span>
               </NavLink>
+              <SheetClose asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <X className="h-4 w-4" />
+                </Button>
+              </SheetClose>
             </div>
             <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} />
           </div>
