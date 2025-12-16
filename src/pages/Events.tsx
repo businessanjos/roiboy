@@ -42,7 +42,9 @@ import {
   Trash2, 
   Clock,
   Link as LinkIcon,
-  Package
+  Package,
+  Monitor,
+  MapPin
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,6 +54,7 @@ interface Event {
   title: string;
   description: string | null;
   event_type: "live" | "material";
+  modality: "online" | "presencial";
   scheduled_at: string | null;
   duration_minutes: number | null;
   meeting_url: string | null;
@@ -88,6 +91,7 @@ export default function Events() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [eventType, setEventType] = useState<"live" | "material">("live");
+  const [modality, setModality] = useState<"online" | "presencial">("online");
   const [scheduledAt, setScheduledAt] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("");
   const [meetingUrl, setMeetingUrl] = useState("");
@@ -152,6 +156,7 @@ export default function Events() {
     setTitle("");
     setDescription("");
     setEventType("live");
+    setModality("online");
     setScheduledAt("");
     setDurationMinutes("");
     setMeetingUrl("");
@@ -166,6 +171,7 @@ export default function Events() {
     setTitle(event.title);
     setDescription(event.description || "");
     setEventType(event.event_type);
+    setModality(event.modality || "online");
     setScheduledAt(event.scheduled_at ? event.scheduled_at.slice(0, 16) : "");
     setDurationMinutes(event.duration_minutes?.toString() || "");
     setMeetingUrl(event.meeting_url || "");
@@ -198,6 +204,7 @@ export default function Events() {
       title: title.trim(),
       description: description.trim() || null,
       event_type: eventType,
+      modality: modality,
       scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       duration_minutes: durationMinutes ? parseInt(durationMinutes) : null,
       meeting_url: meetingUrl.trim() || null,
@@ -347,27 +354,52 @@ export default function Events() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Tipo de Evento</Label>
-                <Select value={eventType} onValueChange={(v: "live" | "material") => setEventType(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="live">
-                      <div className="flex items-center gap-2">
-                        <Video className="h-4 w-4" />
-                        Live / Encontro
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="material">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Material / Download
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Evento</Label>
+                  <Select value={eventType} onValueChange={(v: "live" | "material") => setEventType(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="live">
+                        <div className="flex items-center gap-2">
+                          <Video className="h-4 w-4" />
+                          Live / Encontro
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="material">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Material / Download
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Modalidade</Label>
+                  <Select value={modality} onValueChange={(v: "online" | "presencial") => setModality(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="online">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-4 w-4" />
+                          Online
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="presencial">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Presencial
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {eventType === "live" && (
@@ -495,6 +527,7 @@ export default function Events() {
                   <TableRow>
                     <TableHead>Evento</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Modalidade</TableHead>
                     <TableHead>Data/Hora</TableHead>
                     <TableHead>Produtos</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -524,6 +557,15 @@ export default function Events() {
                             Recorrente
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {event.modality === "online" ? (
+                            <><Monitor className="h-3 w-3 mr-1" /> Online</>
+                          ) : (
+                            <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
+                          )}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {event.scheduled_at ? (
