@@ -130,6 +130,32 @@ serve(async (req) => {
 
     console.log("Message saved:", messageEvent.id);
 
+    // Trigger AI analysis in background (only for client messages)
+    if (payload.direction === "client_to_team" && payload.content_text.length > 10) {
+      console.log("Triggering AI analysis...");
+      const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-message`;
+      
+      // Fire and forget - don't wait for analysis
+      fetch(analyzeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({
+          message_event_id: messageEvent.id,
+          content_text: payload.content_text,
+          client_id: client.id,
+          account_id: client.account_id,
+          source: "whatsapp_text",
+        }),
+      }).then(res => {
+        console.log("AI analysis triggered, status:", res.status);
+      }).catch(err => {
+        console.error("Error triggering AI analysis:", err);
+      });
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
