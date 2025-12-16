@@ -21,6 +21,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Video,
   FileText,
   Calendar,
@@ -30,6 +40,8 @@ import {
   ExternalLink,
   Package,
   Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { format, isPast, isFuture, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,6 +89,9 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [accountId, setAccountId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<EventWithProducts | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -209,6 +224,21 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       meeting_url: "",
       material_url: "",
     });
+    setEditingEvent(null);
+  };
+
+  const openEditDialog = (event: EventWithProducts) => {
+    setEditingEvent(event);
+    setFormData({
+      title: event.title,
+      description: event.description || "",
+      event_type: event.event_type,
+      scheduled_at: event.scheduled_at ? event.scheduled_at.slice(0, 16) : "",
+      duration_minutes: event.duration_minutes?.toString() || "60",
+      meeting_url: event.meeting_url || "",
+      material_url: event.material_url || "",
+    });
+    setDialogOpen(true);
   };
 
   const handleCreateEvent = async () => {
@@ -268,6 +298,84 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  const handleUpdateEvent = async () => {
+    if (!accountId || !editingEvent || !formData.title.trim()) {
+      toast.error("Preencha o título do evento");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
+          event_type: formData.event_type,
+          scheduled_at: formData.scheduled_at || null,
+          duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
+          meeting_url: formData.meeting_url.trim() || null,
+          material_url: formData.material_url.trim() || null,
+        })
+        .eq("id", editingEvent.id);
+
+      if (error) throw error;
+
+      toast.success("Evento atualizado com sucesso!");
+      resetForm();
+      setDialogOpen(false);
+      fetchEvents();
+    } catch (error) {
+      console.error("Error updating event:", error);
+      toast.error("Erro ao atualizar evento");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!eventToDelete) return;
+
+    try {
+      // First delete event_products links
+      await supabase
+        .from("event_products")
+        .delete()
+        .eq("event_id", eventToDelete.id);
+
+      // Then delete deliveries
+      await supabase
+        .from("client_event_deliveries")
+        .delete()
+        .eq("event_id", eventToDelete.id);
+
+      // Finally delete the event
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", eventToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("Evento excluído com sucesso!");
+      setDeleteDialogOpen(false);
+      setEventToDelete(null);
+      fetchEvents();
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Erro ao excluir evento");
+    }
+  };
+
+  const handleSubmit = () => {
+    if (editingEvent) {
+      handleUpdateEvent();
+    } else {
+      handleCreateEvent();
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -286,17 +394,14 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     );
   }
 
-  const CreateEventButton = () => (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Novo Evento
-        </Button>
-      </DialogTrigger>
+  const EventDialog = () => (
+    <Dialog open={dialogOpen} onOpenChange={(open) => {
+      setDialogOpen(open);
+      if (!open) resetForm();
+    }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Criar Evento para Cliente</DialogTitle>
+          <DialogTitle>{editingEvent ? "Editar Evento" : "Criar Evento para Cliente"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
@@ -388,8 +493,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleCreateEvent} disabled={submitting}>
-              {submitting ? "Criando..." : "Criar Evento"}
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? (editingEvent ? "Salvando..." : "Criando...") : (editingEvent ? "Salvar" : "Criar Evento")}
             </Button>
           </div>
         </div>
@@ -397,17 +502,64 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     </Dialog>
   );
 
+  const DeleteConfirmDialog = () => (
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja excluir "{eventToDelete?.title}"? Esta ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDeleteEvent} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  const EventActions = ({ event }: { event: EventWithProducts }) => (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => openEditDialog(event)}
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive hover:text-destructive"
+        onClick={() => {
+          setEventToDelete(event);
+          setDeleteDialogOpen(true);
+        }}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+
   if (events.length === 0) {
     return (
       <div className="space-y-4">
         <div className="flex justify-end">
-          <CreateEventButton />
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Novo Evento
+          </Button>
         </div>
         <div className="text-center py-8 text-muted-foreground">
           <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p>Nenhum evento programado para os produtos deste cliente.</p>
           <p className="text-sm mt-1">Crie eventos usando o botão acima.</p>
         </div>
+        <EventDialog />
       </div>
     );
   }
@@ -425,9 +577,14 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     <div className="space-y-6">
       {/* Header with Create Button */}
       <div className="flex justify-end">
-        <CreateEventButton />
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Novo Evento
+        </Button>
       </div>
-      {/* Upcoming Events */}
+      
+      <EventDialog />
+      <DeleteConfirmDialog />
       {upcomingEvents.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -484,6 +641,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                           </a>
                         </Button>
                       )}
+                      <EventActions event={event} />
                     </div>
                   </div>
                 </div>
@@ -542,6 +700,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                         </a>
                       </Button>
                     )}
+                    <EventActions event={event} />
                   </div>
                 </div>
               );
@@ -609,6 +768,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                         Não participou
                       </Badge>
                     )}
+                    <EventActions event={event} />
                   </div>
                 </div>
               );
