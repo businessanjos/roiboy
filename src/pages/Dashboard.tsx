@@ -33,8 +33,6 @@ import {
   Sparkles,
   MessageSquare,
   TrendingDown,
-  ThumbsUp,
-  ThumbsDown,
   Minus,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -491,50 +489,8 @@ export default function Dashboard() {
 
         {/* CX Tab */}
         <TabsContent value="cx" className="space-y-6">
-          {/* CX Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">E-Score Médio</p>
-                    <p className="text-3xl font-bold text-foreground">{avgEScore}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Heart className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Promotores</p>
-                    <p className="text-3xl font-bold text-success">{promoterCount}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                    <ThumbsUp className="h-6 w-6 text-success" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Detratores</p>
-                    <p className="text-3xl font-bold text-danger">{detractorCount}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
-                    <ThumbsDown className="h-6 w-6 text-danger" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          {/* CX Stats Card */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="shadow-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
@@ -544,6 +500,38 @@ export default function Dashboard() {
                   </div>
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <Bell className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Aniversários</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {upcomingEvents.filter(e => e.event_type === "birthday").length}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-pink-500/10 flex items-center justify-center">
+                    <Cake className="h-6 w-6 text-pink-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Detectados por IA</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {upcomingEvents.filter(e => e.source === "ai_detected").length}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-violet-500/10 flex items-center justify-center">
+                    <Sparkles className="h-6 w-6 text-violet-500" />
                   </div>
                 </div>
               </CardContent>
@@ -597,30 +585,6 @@ export default function Dashboard() {
                   })}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* V-NPS Distribution */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base">Distribuição V-NPS</CardTitle>
-              <CardDescription>Classificação dos clientes por V-NPS</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-4 rounded-lg bg-success/10">
-                  <p className="text-2xl font-bold text-success">{promoterCount}</p>
-                  <p className="text-sm text-muted-foreground">Promotores</p>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-warning/10">
-                  <p className="text-2xl font-bold text-warning">{clients.filter(c => c.vnps_class === "neutral").length}</p>
-                  <p className="text-sm text-muted-foreground">Neutros</p>
-                </div>
-                <div className="text-center p-4 rounded-lg bg-danger/10">
-                  <p className="text-2xl font-bold text-danger">{detractorCount}</p>
-                  <p className="text-sm text-muted-foreground">Detratores</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
