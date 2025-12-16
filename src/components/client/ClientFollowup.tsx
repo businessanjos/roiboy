@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import {
   Plus,
   FileText,
@@ -36,6 +37,7 @@ import {
   Upload,
   StickyNote,
   User,
+  Expand,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -76,6 +78,10 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const [formTitle, setFormTitle] = useState("");
   const [formContent, setFormContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     fetchFollowups();
@@ -365,12 +371,33 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
                     )}
 
                     {followup.type === "image" && followup.file_url && (
-                      <div className="mb-2">
+                      <div className="mb-2 relative group">
                         <img
                           src={followup.file_url}
                           alt={followup.file_name || "Imagem"}
-                          className="max-w-xs max-h-48 rounded-md object-cover"
+                          className="max-w-xs max-h-48 rounded-md object-cover cursor-pointer transition-opacity hover:opacity-90"
+                          onClick={() => {
+                            setLightboxImage({
+                              url: followup.file_url!,
+                              name: followup.file_name || followup.title || "Imagem",
+                            });
+                            setLightboxOpen(true);
+                          }}
                         />
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="absolute bottom-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setLightboxImage({
+                              url: followup.file_url!,
+                              name: followup.file_name || followup.title || "Imagem",
+                            });
+                            setLightboxOpen(true);
+                          }}
+                        >
+                          <Expand className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
 
@@ -541,6 +568,17 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        src={lightboxImage?.url || ""}
+        alt={lightboxImage?.name}
+        open={lightboxOpen}
+        onClose={() => {
+          setLightboxOpen(false);
+          setLightboxImage(null);
+        }}
+      />
     </div>
   );
 }
