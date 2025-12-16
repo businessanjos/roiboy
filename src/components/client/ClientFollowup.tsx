@@ -38,6 +38,9 @@ import {
   StickyNote,
   User,
   Expand,
+  ArrowDownUp,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -88,11 +91,14 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   // Drag and drop state
   const [isDragging, setIsDragging] = useState(false);
 
+  // Sort state
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
   const PAGE_SIZE = 10;
 
   useEffect(() => {
     fetchFollowups();
-  }, [clientId]);
+  }, [clientId, sortOrder]);
 
   const fetchFollowups = async (loadMore = false) => {
     if (loadMore) {
@@ -112,7 +118,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           users (name)
         `, { count: "exact" })
         .eq("client_id", clientId)
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: sortOrder === "asc" })
         .range(offset, offset + PAGE_SIZE - 1);
 
       if (error) throw error;
@@ -509,6 +515,23 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         <Button variant="outline" size="sm" onClick={() => openNewDialog("image")}>
           <Image className="h-4 w-4 mr-2" />
           Subir Imagem
+        </Button>
+
+        <div className="flex-1" />
+
+        {/* Sort Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+          className="gap-2"
+        >
+          {sortOrder === "desc" ? (
+            <ArrowDown className="h-4 w-4" />
+          ) : (
+            <ArrowUp className="h-4 w-4" />
+          )}
+          {sortOrder === "desc" ? "Mais recentes" : "Mais antigos"}
         </Button>
       </div>
 
