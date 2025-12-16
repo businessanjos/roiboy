@@ -114,6 +114,54 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
 
   useEffect(() => {
     fetchEvents();
+
+    // Realtime subscription for automatic updates when AI detects new events
+    const channel = supabase
+      .channel(`life-events-${clientId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'client_life_events',
+          filter: `client_id=eq.${clientId}`,
+        },
+        (payload) => {
+          console.log('Life event realtime update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            const newEvent = payload.new as LifeEvent;
+            setEvents((prev) => {
+              // Check if already exists to avoid duplicates
+              if (prev.some((e) => e.id === newEvent.id)) return prev;
+              // Show toast for AI-detected events
+              if (newEvent.source === 'ai_detected') {
+                toast.success(`Momento CX detectado pela IA: ${newEvent.title}`, {
+                  icon: '✨',
+                });
+              }
+              return [...prev, newEvent].sort((a, b) => {
+                if (!a.event_date) return 1;
+                if (!b.event_date) return -1;
+                return new Date(a.event_date).getTime() - new Date(b.event_date).getTime();
+              });
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedEvent = payload.new as LifeEvent;
+            setEvents((prev) =>
+              prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedEvent = payload.old as { id: string };
+            setEvents((prev) => prev.filter((e) => e.id !== deletedEvent.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [clientId]);
 
   const fetchEvents = async () => {
