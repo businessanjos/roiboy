@@ -66,6 +66,8 @@ interface ClientFollowupProps {
 export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const [followups, setFollowups] = useState<Followup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [followupToDelete, setFollowupToDelete] = useState<Followup | null>(null);
@@ -86,29 +88,58 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   // Drag and drop state
   const [isDragging, setIsDragging] = useState(false);
 
+  const PAGE_SIZE = 10;
+
   useEffect(() => {
     fetchFollowups();
   }, [clientId]);
 
-  const fetchFollowups = async () => {
-    setLoading(true);
+  const fetchFollowups = async (loadMore = false) => {
+    if (loadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setFollowups([]);
+    }
+
     try {
-      const { data, error } = await supabase
+      const offset = loadMore ? followups.length : 0;
+      
+      const { data, error, count } = await supabase
         .from("client_followups")
         .select(`
           *,
           users (name)
-        `)
+        `, { count: "exact" })
         .eq("client_id", clientId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
 
       if (error) throw error;
-      setFollowups((data || []) as Followup[]);
+
+      const newFollowups = (data || []) as Followup[];
+      
+      if (loadMore) {
+        setFollowups((prev) => [...prev, ...newFollowups]);
+      } else {
+        setFollowups(newFollowups);
+      }
+
+      // Check if there are more items to load
+      const totalLoaded = loadMore ? followups.length + newFollowups.length : newFollowups.length;
+      setHasMore(count !== null && totalLoaded < count);
     } catch (error: any) {
       console.error("Error fetching followups:", error);
       toast.error("Erro ao carregar acompanhamentos");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreFollowups = () => {
+    if (!loadingMore && hasMore) {
+      fetchFollowups(true);
     }
   };
 
@@ -598,6 +629,33 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
                 </div>
               </div>
             ))}
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="pt-4 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={loadMoreFollowups}
+                  disabled={loadingMore}
+                  className="w-full max-w-xs"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Carregando...
+                    </>
+                  ) : (
+                    "Carregar mais"
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {!hasMore && followups.length > PAGE_SIZE && (
+              <p className="text-center text-sm text-muted-foreground pt-4">
+                Todos os registros carregados
+              </p>
+            )}
           </div>
         </ScrollArea>
       )}
