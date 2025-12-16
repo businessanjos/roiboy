@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
@@ -26,6 +27,8 @@ import {
   X,
   Clock,
   Package,
+  Edit2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -71,6 +74,13 @@ interface ClientProduct {
   name: string;
 }
 
+interface AllProduct {
+  id: string;
+  name: string;
+  price: number;
+  is_active: boolean;
+}
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -84,11 +94,93 @@ export default function ClientDetail() {
   const [loading, setLoading] = useState(true);
   const [roiDialogOpen, setRoiDialogOpen] = useState(false);
   
+  // Product editing state
+  const [productsDialogOpen, setProductsDialogOpen] = useState(false);
+  const [allProducts, setAllProducts] = useState<AllProduct[]>([]);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [savingProducts, setSavingProducts] = useState(false);
+  
   // ROI form state
   const [roiType, setRoiType] = useState<string>("tangible");
   const [roiCategory, setRoiCategory] = useState<string>("revenue");
   const [roiEvidence, setRoiEvidence] = useState("");
   const [roiImpact, setRoiImpact] = useState<string>("medium");
+
+  const fetchAllProducts = async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    
+    if (!error) setAllProducts(data || []);
+  };
+
+  const openProductsDialog = () => {
+    setSelectedProductIds(clientProducts.map(p => p.id));
+    fetchAllProducts();
+    setProductsDialogOpen(true);
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProductIds(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleSaveProducts = async () => {
+    if (!id) return;
+    setSavingProducts(true);
+
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .single();
+
+      if (!userData) {
+        toast.error("Perfil não encontrado");
+        return;
+      }
+
+      // Delete existing client_products
+      await supabase
+        .from("client_products")
+        .delete()
+        .eq("client_id", id);
+
+      // Insert new client_products
+      if (selectedProductIds.length > 0) {
+        const newClientProducts = selectedProductIds.map(productId => ({
+          account_id: userData.account_id,
+          client_id: id,
+          product_id: productId,
+        }));
+
+        const { error } = await supabase
+          .from("client_products")
+          .insert(newClientProducts);
+
+        if (error) throw error;
+      }
+
+      // Update local state
+      const newProducts = allProducts
+        .filter(p => selectedProductIds.includes(p.id))
+        .map(p => ({ id: p.id, name: p.name }));
+      setClientProducts(newProducts);
+
+      toast.success("Produtos atualizados!");
+      setProductsDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error saving products:", error);
+      toast.error(error.message || "Erro ao salvar produtos");
+    } finally {
+      setSavingProducts(false);
+    }
+  };
 
   const fetchData = async () => {
     if (!id) return;
@@ -487,18 +579,74 @@ export default function ClientDetail() {
               <StatusIndicator status={client.status} size="sm" />
             </div>
             <p className="text-muted-foreground">{client.phone_e164}</p>
-            {clientProducts.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                {clientProducts.map((product) => (
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              {clientProducts.length > 0 ? (
+                clientProducts.map((product) => (
                   <Badge key={product.id} variant="secondary" className="text-xs">
                     <Package className="h-3 w-3 mr-1" />
                     {product.name}
                   </Badge>
-                ))}
-              </div>
-            )}
+                ))
+              ) : (
+                <span className="text-sm text-muted-foreground">Nenhum produto</span>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 px-2"
+                onClick={openProductsDialog}
+              >
+                <Edit2 className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </div>
+
+        {/* Products Edit Dialog */}
+        <Dialog open={productsDialogOpen} onOpenChange={setProductsDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Produtos</DialogTitle>
+              <DialogDescription>
+                Selecione os produtos vinculados a este cliente
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {allProducts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum produto cadastrado. <Link to="/products" className="text-primary underline">Criar produtos</Link>
+                </p>
+              ) : (
+                <div className="border rounded-lg p-3 space-y-2 max-h-64 overflow-y-auto">
+                  {allProducts.map((product) => (
+                    <label
+                      key={product.id}
+                      className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={selectedProductIds.includes(product.id)}
+                        onCheckedChange={() => toggleProductSelection(product.id)}
+                      />
+                      <span className="flex-1 text-sm">{product.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setProductsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveProducts} disabled={savingProducts}>
+                {savingProducts && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={roiDialogOpen} onOpenChange={setRoiDialogOpen}>
           <DialogTrigger asChild>
