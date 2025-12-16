@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.get-client-by-phone]
 verify_jwt = false
+
+[functions.recompute-scores]
+verify_jwt = false
