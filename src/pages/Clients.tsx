@@ -11,7 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
@@ -96,6 +97,10 @@ export default function Clients() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [importing, setImporting] = useState(false);
+
+  // Bulk Omie Sync state
+  const [bulkSyncing, setBulkSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchClients = async () => {
@@ -285,6 +290,51 @@ export default function Clients() {
     URL.revokeObjectURL(url);
   };
 
+  const handleBulkOmieSync = async () => {
+    if (clients.length === 0) {
+      toast.error("Nenhum cliente para sincronizar");
+      return;
+    }
+
+    setBulkSyncing(true);
+    setSyncProgress({ current: 0, total: clients.length, success: 0, failed: 0 });
+
+    let success = 0;
+    let failed = 0;
+
+    for (let i = 0; i < clients.length; i++) {
+      const client = clients[i];
+      setSyncProgress(prev => ({ ...prev, current: i + 1 }));
+
+      try {
+        const { error } = await supabase.functions.invoke('sync-omie', {
+          body: { client_id: client.id }
+        });
+
+        if (error) {
+          console.error(`Sync failed for ${client.full_name}:`, error);
+          failed++;
+        } else {
+          success++;
+        }
+      } catch (err) {
+        console.error(`Sync error for ${client.full_name}:`, err);
+        failed++;
+      }
+    }
+
+    setSyncProgress(prev => ({ ...prev, success, failed }));
+    setBulkSyncing(false);
+
+    if (failed === 0) {
+      toast.success(`${success} cliente(s) sincronizado(s) com sucesso!`);
+    } else {
+      toast.warning(`Sincronização concluída: ${success} sucesso, ${failed} falha(s)`);
+    }
+
+    fetchClients();
+  };
+
   const validCount = csvData.filter(r => r.valid).length;
   const invalidCount = csvData.filter(r => !r.valid).length;
 
@@ -297,7 +347,26 @@ export default function Clients() {
     <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
       <div className="flex justify-between items-center flex-wrap gap-3">
         <h1 className="text-2xl font-bold">Clientes</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Bulk Omie Sync */}
+          <Button 
+            variant="outline" 
+            onClick={handleBulkOmieSync}
+            disabled={bulkSyncing || clients.length === 0}
+          >
+            {bulkSyncing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {syncProgress.current}/{syncProgress.total}
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sincronizar Omie
+              </>
+            )}
+          </Button>
+
           {/* Import CSV Dialog */}
           <Dialog open={importDialogOpen} onOpenChange={(open) => {
             setImportDialogOpen(open);
