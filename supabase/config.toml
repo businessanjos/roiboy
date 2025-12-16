@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.sync-omie]
 verify_jwt = false
+
+[functions.ryka-webhook]
+verify_jwt = false
