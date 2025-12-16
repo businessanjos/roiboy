@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const systemPrompt = `Você é o ROIBOY Analyzer, um especialista em identificar percepção de ROI e sinais de risco em conversas entre mentores/consultores e seus clientes.
+const systemPrompt = `Você é o ROIBOY Analyzer, um especialista em identificar percepção de ROI, sinais de risco e momentos importantes da vida do cliente em conversas entre mentores/consultores e seus clientes.
 
 TAXONOMIA DE ROI:
 - TANGÍVEL: revenue (aumento de receita), cost (redução de custos), time (economia de tempo), process (melhoria de processos)
@@ -24,12 +24,32 @@ SINAIS DE RISCO:
 - Mudança de tom negativa
 - Menção de cancelamento ou pausa
 
+MOMENTOS CX (LIFE EVENTS):
+Identifique menções a eventos importantes na vida do cliente:
+- birthday: Aniversário próprio ou de familiares
+- child_birth: Nascimento de filho(a)
+- pregnancy: Gravidez anunciada
+- wedding: Casamento ou noivado
+- graduation: Formatura própria ou de familiares
+- promotion: Promoção no trabalho
+- new_job: Novo emprego
+- travel: Viagem importante
+- health: Questões de saúde (cirurgia, tratamento)
+- loss: Perda/luto
+- achievement: Conquista pessoal ou profissional
+- celebration: Comemoração especial
+- anniversary: Aniversário de casamento ou empresa
+- moving: Mudança de casa/cidade
+- other: Outros eventos significativos
+
 REGRAS:
 1. Só identifique ROI se houver evidência clara na mensagem
 2. Só identifique risco se houver sinal claro
-3. Gere recomendações práticas e específicas
-4. Se insuficiente, retorne arrays vazios
-5. Nunca invente - seja conservador na classificação`;
+3. Identifique momentos CX quando o cliente mencionar eventos de vida
+4. Extraia datas quando mencionadas (ex: "semana que vem", "dia 15")
+5. Gere recomendações práticas e específicas
+6. Se insuficiente, retorne arrays vazios
+7. Nunca invente - seja conservador na classificação`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -72,7 +92,8 @@ serve(async (req) => {
     const userPrompt = `Analise a seguinte mensagem do cliente e identifique:
 1. Evidências de ROI percebido (tangível ou intangível)
 2. Sinais de risco
-3. Recomendações de ação
+3. Momentos CX (eventos importantes da vida do cliente)
+4. Recomendações de ação
 
 CONTEXTO RECENTE:
 ${contextStr}
@@ -99,7 +120,7 @@ Analise e retorne os eventos identificados.`;
             type: "function",
             function: {
               name: "classify_message",
-              description: "Classifica a mensagem identificando ROI, riscos e recomendações",
+              description: "Classifica a mensagem identificando ROI, riscos, momentos CX e recomendações",
               parameters: {
                 type: "object",
                 properties: {
@@ -155,6 +176,37 @@ Analise e retorne os eventos identificados.`;
                       required: ["risk_level", "reason", "evidence_snippet"]
                     }
                   },
+                  life_events: {
+                    type: "array",
+                    description: "Lista de momentos CX (eventos de vida) mencionados pelo cliente",
+                    items: {
+                      type: "object",
+                      properties: {
+                        event_type: { 
+                          type: "string", 
+                          enum: ["birthday", "child_birth", "pregnancy", "wedding", "graduation", "promotion", "new_job", "travel", "health", "loss", "achievement", "celebration", "anniversary", "moving", "other"],
+                          description: "Tipo do evento de vida"
+                        },
+                        title: { 
+                          type: "string",
+                          description: "Título descritivo do evento (ex: 'Aniversário de 40 anos', 'Nascimento do filho')"
+                        },
+                        description: { 
+                          type: "string",
+                          description: "Detalhes adicionais mencionados sobre o evento"
+                        },
+                        event_date: { 
+                          type: "string",
+                          description: "Data do evento se mencionada (formato YYYY-MM-DD). Se for data relativa, calcule a partir de hoje."
+                        },
+                        is_recurring: { 
+                          type: "boolean",
+                          description: "Se é um evento recorrente anual (ex: aniversário)"
+                        }
+                      },
+                      required: ["event_type", "title"]
+                    }
+                  },
                   recommendations: {
                     type: "array",
                     description: "Lista de recomendações de ação",
@@ -179,7 +231,7 @@ Analise e retorne os eventos identificados.`;
                     }
                   }
                 },
-                required: ["roi_events", "risk_events", "recommendations"]
+                required: ["roi_events", "risk_events", "life_events", "recommendations"]
               }
             }
           }
@@ -225,7 +277,7 @@ Analise e retorne os eventos identificados.`;
     console.log("Classification:", JSON.stringify(classification, null, 2));
 
     const now = new Date().toISOString();
-    const results = { roi_events: 0, risk_events: 0, recommendations: 0 };
+    const results = { roi_events: 0, risk_events: 0, life_events: 0, recommendations: 0 };
 
     // Insert ROI events
     if (classification.roi_events?.length > 0) {
@@ -268,6 +320,33 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
+    // Insert Life Events (Momentos CX)
+    if (classification.life_events?.length > 0) {
+      for (const lifeEvent of classification.life_events) {
+        // Determine if event is recurring based on type
+        const recurringTypes = ["birthday", "anniversary"];
+        const isRecurring = lifeEvent.is_recurring ?? recurringTypes.includes(lifeEvent.event_type);
+        
+        const { error } = await supabase.from("client_life_events").insert({
+          account_id,
+          client_id,
+          event_type: lifeEvent.event_type,
+          title: lifeEvent.title,
+          description: lifeEvent.description || null,
+          event_date: lifeEvent.event_date || null,
+          is_recurring: isRecurring,
+          source: "ai_detected",
+          reminder_days_before: 7,
+        });
+        if (error) {
+          console.error("Error inserting life_event:", error);
+        } else {
+          results.life_events++;
+          console.log(`Life event detected: ${lifeEvent.event_type} - ${lifeEvent.title}`);
+        }
+      }
+    }
+
     // Insert Recommendations
     if (classification.recommendations?.length > 0) {
       for (const rec of classification.recommendations) {
@@ -287,7 +366,7 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
-    console.log(`Analysis complete. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.recommendations} Recommendations`);
+    console.log(`Analysis complete. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life Events, ${results.recommendations} Recommendations`);
 
     // Trigger score recalculation for this client in background
     if (results.roi_events > 0 || results.risk_events > 0) {
