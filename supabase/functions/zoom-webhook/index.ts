@@ -165,7 +165,7 @@ serve(async (req) => {
         // Find the live session
         const { data: session } = await supabase
           .from("live_sessions")
-          .select("id, account_id, start_time")
+          .select("id, account_id, start_time, title")
           .eq("external_meeting_id", eventPayload.object.id)
           .maybeSingle();
 
@@ -174,21 +174,17 @@ serve(async (req) => {
           break;
         }
 
-        // Try to find client by email
+        // Try to find client by name or email
         let clientId: string | null = null;
-        if (participant.email) {
-          // Try to match by email in users table, then find their clients
-          // Or match directly if client has email stored
-          const { data: matchedClient } = await supabase
-            .from("clients")
-            .select("id")
-            .eq("account_id", session.account_id)
-            .ilike("full_name", `%${participant.user_name || ""}%`)
-            .maybeSingle();
-          
-          if (matchedClient) {
-            clientId = matchedClient.id;
-          }
+        const { data: matchedClient } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("account_id", session.account_id)
+          .ilike("full_name", `%${participant.user_name || ""}%`)
+          .maybeSingle();
+        
+        if (matchedClient) {
+          clientId = matchedClient.id;
         }
 
         if (!clientId) {
@@ -216,6 +212,82 @@ serve(async (req) => {
           console.error("Error creating attendance:", attendanceError);
         } else {
           console.log("Attendance recorded for client:", clientId);
+        }
+
+        // Auto-create event delivery for matching live events
+        // Find client's products
+        const { data: clientProducts } = await supabase
+          .from("client_products")
+          .select("product_id")
+          .eq("client_id", clientId);
+
+        if (clientProducts && clientProducts.length > 0) {
+          const productIds = clientProducts.map(cp => cp.product_id);
+          
+          // Find matching live events by title/time that are linked to client's products
+          const now = new Date();
+          const windowStart = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+          const windowEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
+          
+          const { data: matchingEvents } = await supabase
+            .from("events")
+            .select(`
+              id,
+              title,
+              scheduled_at,
+              event_products!inner(product_id)
+            `)
+            .eq("account_id", session.account_id)
+            .eq("event_type", "live")
+            .gte("scheduled_at", windowStart.toISOString())
+            .lte("scheduled_at", windowEnd.toISOString())
+            .in("event_products.product_id", productIds);
+
+          if (matchingEvents && matchingEvents.length > 0) {
+            for (const event of matchingEvents) {
+              // Check if delivery already exists
+              const { data: existingDelivery } = await supabase
+                .from("client_event_deliveries")
+                .select("id")
+                .eq("client_id", clientId)
+                .eq("event_id", event.id)
+                .maybeSingle();
+
+              if (!existingDelivery) {
+                // Create delivery record
+                const { error: deliveryError } = await supabase
+                  .from("client_event_deliveries")
+                  .insert({
+                    account_id: session.account_id,
+                    client_id: clientId,
+                    event_id: event.id,
+                    status: "delivered",
+                    delivered_at: new Date().toISOString(),
+                    delivery_method: "zoom_auto",
+                    notes: `Presença automática via Zoom - ${session.title}`,
+                  });
+
+                if (deliveryError) {
+                  console.error("Error creating event delivery:", deliveryError);
+                } else {
+                  console.log("Event delivery created for client:", clientId, "event:", event.id);
+                }
+              } else {
+                // Update existing delivery to delivered
+                await supabase
+                  .from("client_event_deliveries")
+                  .update({
+                    status: "delivered",
+                    delivered_at: new Date().toISOString(),
+                    delivery_method: "zoom_auto",
+                    notes: `Presença confirmada via Zoom - ${session.title}`,
+                  })
+                  .eq("id", existingDelivery.id);
+                  
+                console.log("Event delivery updated for client:", clientId, "event:", event.id);
+              }
+            }
+          }
         }
         break;
       }
