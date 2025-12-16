@@ -906,6 +906,7 @@ export type Database = {
         | "zoom"
         | "google_meet"
         | "system"
+        | "financial"
       roi_category:
         | "revenue"
         | "cost"
@@ -921,6 +922,7 @@ export type Database = {
         | "zoom"
         | "google_meet"
         | "manual"
+        | "financial"
       roi_type: "tangible" | "intangible"
       trend_type: "up" | "flat" | "down"
       user_role: "admin" | "leader" | "mentor"
@@ -1095,6 +1097,7 @@ export const Constants = {
         "zoom",
         "google_meet",
         "system",
+        "financial",
       ],
       roi_category: [
         "revenue",
@@ -1112,6 +1115,7 @@ export const Constants = {
         "zoom",
         "google_meet",
         "manual",
+        "financial",
       ],
       roi_type: ["tangible", "intangible"],
       trend_type: ["up", "flat", "down"],
