@@ -20,6 +20,23 @@ const validateE164 = (phone: string): { valid: boolean; message?: string } => {
   return { valid: true };
 };
 
+// Mask phone input to E.164 format
+const formatPhoneE164 = (value: string): string => {
+  // Remove all non-digit characters except +
+  let digits = value.replace(/[^\d+]/g, "");
+  
+  // Ensure it starts with +
+  if (!digits.startsWith("+")) {
+    digits = "+" + digits.replace(/\+/g, "");
+  }
+  
+  // Remove any additional + signs
+  digits = "+" + digits.slice(1).replace(/\+/g, "");
+  
+  // Limit to 16 characters (+15 digits)
+  return digits.slice(0, 16);
+};
+
 export default function Clients() {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,17 +135,19 @@ export default function Clients() {
                 <Input 
                   value={newPhone} 
                   onChange={(e) => {
-                    setNewPhone(e.target.value);
+                    const formatted = formatPhoneE164(e.target.value);
+                    setNewPhone(formatted);
                     if (phoneError) setPhoneError(null);
                   }} 
                   placeholder="+5511999999999"
                   className={phoneError ? "border-destructive" : ""}
+                  maxLength={16}
                 />
                 {phoneError && (
                   <p className="text-xs text-destructive">{phoneError}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Formato: +[código país][número]. Ex: +5511999999999
+                  Digite apenas números. O + é adicionado automaticamente.
                 </p>
               </div>
             </div>
