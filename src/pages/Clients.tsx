@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package } from "lucide-react";
 import { toast } from "sonner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 
@@ -38,6 +39,13 @@ interface CsvRow {
   phone_e164: string;
   valid: boolean;
   error?: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  is_active: boolean;
 }
 
 const parseCSV = (content: string): CsvRow[] => {
@@ -79,6 +87,8 @@ export default function Clients() {
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   // CSV Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -96,8 +106,19 @@ export default function Clients() {
     setLoading(false);
   };
 
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+
+    if (!error) setProducts(data || []);
+  };
+
   useEffect(() => {
     fetchClients();
+    fetchProducts();
   }, []);
 
   const handleAddClient = async () => {
@@ -125,26 +146,52 @@ export default function Clients() {
         return;
       }
 
-      const { error } = await supabase.from("clients").insert({
+      const { data: newClient, error } = await supabase.from("clients").insert({
         account_id: userData.account_id,
         full_name: newName.trim(),
         phone_e164: newPhone.trim(),
-      });
+      }).select().single();
 
       if (error) {
         console.error("Insert error:", error);
         throw error;
+      }
+
+      // Insert selected products
+      if (selectedProducts.length > 0 && newClient) {
+        const clientProducts = selectedProducts.map(productId => ({
+          account_id: userData.account_id,
+          client_id: newClient.id,
+          product_id: productId,
+        }));
+
+        const { error: productError } = await supabase
+          .from("client_products")
+          .insert(clientProducts);
+
+        if (productError) {
+          console.error("Error linking products:", productError);
+        }
       }
       
       toast.success("Cliente adicionado!");
       setDialogOpen(false);
       setNewName("");
       setNewPhone("");
+      setSelectedProducts([]);
       fetchClients();
     } catch (error: any) {
       console.error("Add client error:", error);
       toast.error(error.message || "Erro ao adicionar cliente");
     }
+  };
+
+  const toggleProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -349,7 +396,15 @@ export default function Clients() {
           </Dialog>
 
           {/* Add Single Client Dialog */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setNewName("");
+              setNewPhone("");
+              setSelectedProducts([]);
+              setPhoneError(null);
+            }
+          }}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
             </DialogTrigger>
@@ -382,6 +437,37 @@ export default function Clients() {
                   <p className="text-xs text-muted-foreground">
                     Digite apenas números. O + é adicionado automaticamente.
                   </p>
+                </div>
+
+                {/* Product Selection */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Produtos
+                  </Label>
+                  {products.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">
+                      Nenhum produto cadastrado. <Link to="/products" className="text-primary underline">Criar produtos</Link>
+                    </p>
+                  ) : (
+                    <div className="border rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                      {products.map((product) => (
+                        <label
+                          key={product.id}
+                          className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedProducts.includes(product.id)}
+                            onCheckedChange={() => toggleProduct(product.id)}
+                          />
+                          <span className="flex-1 text-sm">{product.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <DialogFooter>
