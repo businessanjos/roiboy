@@ -153,20 +153,93 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    // Filter out files that are too large
+    const validFiles = files.filter((file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} é muito grande. Máximo 10MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    // If single file, open dialog for adding title/description
+    if (validFiles.length === 1) {
+      const file = validFiles[0];
       const isImage = file.type.startsWith("image/");
-      
       resetForm();
       setFormType(isImage ? "image" : "file");
       processFile(file);
       setDialogOpen(true);
+      return;
+    }
+
+    // Multiple files - upload directly
+    await handleBulkUpload(validFiles);
+  };
+
+  const handleBulkUpload = async (files: File[]) => {
+    setUploading(true);
+    
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id, account_id")
+        .single();
+
+      if (!userData) {
+        toast.error("Usuário não encontrado");
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const file of files) {
+        try {
+          const isImage = file.type.startsWith("image/");
+          const fileData = await uploadFile(file);
+
+          await supabase.from("client_followups").insert({
+            account_id: userData.account_id,
+            client_id: clientId,
+            user_id: userData.id,
+            type: isImage ? "image" : "file",
+            title: file.name,
+            content: null,
+            file_url: fileData.url,
+            file_name: fileData.name,
+            file_size: fileData.size,
+          });
+
+          successCount++;
+        } catch (error) {
+          console.error(`Error uploading ${file.name}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} arquivo${successCount > 1 ? "s" : ""} enviado${successCount > 1 ? "s" : ""} com sucesso!`);
+        fetchFollowups();
+      }
+      if (errorCount > 0) {
+        toast.error(`${errorCount} arquivo${errorCount > 1 ? "s" : ""} falhou${errorCount > 1 ? "aram" : ""}.`);
+      }
+    } catch (error: any) {
+      console.error("Error in bulk upload:", error);
+      toast.error("Erro ao enviar arquivos");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -377,10 +450,18 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           <div className="border-2 border-dashed border-primary rounded-xl p-12 bg-primary/5 animate-scale-in">
             <div className="flex flex-col items-center gap-3 text-primary">
               <Upload className="h-12 w-12" />
-              <p className="text-lg font-medium">Solte o arquivo aqui</p>
-              <p className="text-sm text-muted-foreground">Imagens ou documentos</p>
+              <p className="text-lg font-medium">Solte os arquivos aqui</p>
+              <p className="text-sm text-muted-foreground">Imagens ou documentos (múltiplos arquivos suportados)</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Bulk Upload Progress */}
+      {uploading && !dialogOpen && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/30 bg-primary/5">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-sm font-medium">Enviando arquivos...</span>
         </div>
       )}
 
