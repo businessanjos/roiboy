@@ -787,6 +787,111 @@ export type Database = {
           },
         ]
       }
+      sales_goals: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          currency: string
+          external_id: string | null
+          goal_amount: number
+          id: string
+          period_end: string
+          period_start: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          currency?: string
+          external_id?: string | null
+          goal_amount?: number
+          id?: string
+          period_end: string
+          period_start: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          currency?: string
+          external_id?: string | null
+          goal_amount?: number
+          id?: string
+          period_end?: string
+          period_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_records: {
+        Row: {
+          account_id: string
+          amount: number
+          client_id: string
+          created_at: string
+          currency: string
+          description: string | null
+          external_id: string | null
+          id: string
+          sale_date: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number
+          client_id: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          external_id?: string | null
+          id?: string
+          sale_date: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          client_id?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          external_id?: string | null
+          id?: string
+          sale_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_records_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_records_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       score_snapshots: {
         Row: {
           account_id: string
@@ -957,7 +1062,7 @@ export type Database = {
       client_status: "active" | "paused" | "churn_risk" | "churned"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
-      integration_type: "zoom" | "google"
+      integration_type: "zoom" | "google" | "clinica_ryka"
       interaction_type:
         | "chat"
         | "qna"
@@ -1146,7 +1251,7 @@ export const Constants = {
       client_status: ["active", "paused", "churn_risk", "churned"],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
-      integration_type: ["zoom", "google"],
+      integration_type: ["zoom", "google", "clinica_ryka"],
       interaction_type: [
         "chat",
         "qna",
