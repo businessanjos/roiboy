@@ -11,10 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
+import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
   Plus,
@@ -29,6 +32,11 @@ import {
   Package,
   Edit2,
   Loader2,
+  User,
+  Mail,
+  Phone,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -41,6 +49,20 @@ interface Client {
   status: "active" | "paused" | "churn_risk" | "churned";
   tags: string[];
   created_at: string;
+  emails?: string[];
+  additional_phones?: string[];
+  cpf?: string;
+  cnpj?: string;
+  birth_date?: string;
+  company_name?: string;
+  notes?: string;
+  street?: string;
+  street_number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
 }
 
 interface ScoreSnapshot {
@@ -105,6 +127,11 @@ export default function ClientDetail() {
   const [roiCategory, setRoiCategory] = useState<string>("revenue");
   const [roiEvidence, setRoiEvidence] = useState("");
   const [roiImpact, setRoiImpact] = useState<string>("medium");
+
+  // Edit client info state
+  const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<ClientFormData>(getEmptyClientFormData());
+  const [savingInfo, setSavingInfo] = useState(false);
 
   const fetchAllProducts = async () => {
     const { data, error } = await supabase
@@ -182,6 +209,105 @@ export default function ClientDetail() {
     }
   };
 
+  const openEditInfoDialog = () => {
+    if (!client) return;
+    setEditFormData({
+      full_name: client.full_name,
+      phone_e164: client.phone_e164,
+      emails: client.emails || [],
+      additional_phones: client.additional_phones || [],
+      cpf: client.cpf || "",
+      cnpj: client.cnpj || "",
+      birth_date: client.birth_date || "",
+      company_name: client.company_name || "",
+      notes: client.notes || "",
+      street: client.street || "",
+      street_number: client.street_number || "",
+      complement: client.complement || "",
+      neighborhood: client.neighborhood || "",
+      city: client.city || "",
+      state: client.state || "",
+      zip_code: client.zip_code || "",
+    });
+    setEditInfoDialogOpen(true);
+  };
+
+  const handleSaveClientInfo = async () => {
+    if (!id || !client) return;
+    
+    // Validate required fields
+    if (!editFormData.full_name.trim()) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+    
+    // Validate CPF if provided
+    if (editFormData.cpf && !validateCPF(editFormData.cpf)) {
+      toast.error("CPF inválido");
+      return;
+    }
+    
+    // Validate CNPJ if provided
+    if (editFormData.cnpj && !validateCNPJ(editFormData.cnpj)) {
+      toast.error("CNPJ inválido");
+      return;
+    }
+
+    setSavingInfo(true);
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({
+          full_name: editFormData.full_name.trim(),
+          emails: editFormData.emails,
+          additional_phones: editFormData.additional_phones,
+          cpf: editFormData.cpf.replace(/\D/g, '') || null,
+          cnpj: editFormData.cnpj.replace(/\D/g, '') || null,
+          birth_date: editFormData.birth_date || null,
+          company_name: editFormData.company_name || null,
+          notes: editFormData.notes || null,
+          street: editFormData.street || null,
+          street_number: editFormData.street_number || null,
+          complement: editFormData.complement || null,
+          neighborhood: editFormData.neighborhood || null,
+          city: editFormData.city || null,
+          state: editFormData.state || null,
+          zip_code: editFormData.zip_code?.replace(/\D/g, '') || null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update local state
+      setClient({
+        ...client,
+        full_name: editFormData.full_name.trim(),
+        emails: editFormData.emails,
+        additional_phones: editFormData.additional_phones,
+        cpf: editFormData.cpf,
+        cnpj: editFormData.cnpj,
+        birth_date: editFormData.birth_date,
+        company_name: editFormData.company_name,
+        notes: editFormData.notes,
+        street: editFormData.street,
+        street_number: editFormData.street_number,
+        complement: editFormData.complement,
+        neighborhood: editFormData.neighborhood,
+        city: editFormData.city,
+        state: editFormData.state,
+        zip_code: editFormData.zip_code,
+      });
+
+      toast.success("Informações atualizadas!");
+      setEditInfoDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error saving client info:", error);
+      toast.error(error.message || "Erro ao salvar informações");
+    } finally {
+      setSavingInfo(false);
+    }
+  };
+
   const fetchData = async () => {
     if (!id) return;
     setLoading(true);
@@ -198,6 +324,20 @@ export default function ClientDetail() {
       setClient({
         ...clientData,
         tags: (clientData.tags as string[]) || [],
+        emails: (clientData.emails as string[]) || [],
+        additional_phones: (clientData.additional_phones as string[]) || [],
+        cpf: clientData.cpf || "",
+        cnpj: clientData.cnpj || "",
+        birth_date: clientData.birth_date || "",
+        company_name: clientData.company_name || "",
+        notes: clientData.notes || "",
+        street: clientData.street || "",
+        street_number: clientData.street_number || "",
+        complement: clientData.complement || "",
+        neighborhood: clientData.neighborhood || "",
+        city: clientData.city || "",
+        state: clientData.state || "",
+        zip_code: clientData.zip_code || "",
       });
 
       // Fetch client products
@@ -577,8 +717,40 @@ export default function ClientDetail() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">{client.full_name}</h1>
               <StatusIndicator status={client.status} size="sm" />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2"
+                onClick={openEditInfoDialog}
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+              </Button>
             </div>
-            <p className="text-muted-foreground">{client.phone_e164}</p>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-1">
+              <span className="flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5" />
+                {client.phone_e164}
+              </span>
+              {client.emails && client.emails.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3.5 w-3.5" />
+                  {client.emails[0]}
+                  {client.emails.length > 1 && ` +${client.emails.length - 1}`}
+                </span>
+              )}
+              {client.company_name && (
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {client.company_name}
+                </span>
+              )}
+              {client.city && client.state && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {client.city}/{client.state}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 flex-wrap mt-2">
               {clientProducts.length > 0 ? (
                 clientProducts.map((product) => (
@@ -601,6 +773,34 @@ export default function ClientDetail() {
             </div>
           </div>
         </div>
+
+        {/* Edit Info Dialog */}
+        <Dialog open={editInfoDialogOpen} onOpenChange={setEditInfoDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Editar Informações do Cliente</DialogTitle>
+              <DialogDescription>
+                Atualize os dados cadastrais do cliente
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <ClientInfoForm 
+                data={editFormData} 
+                onChange={setEditFormData}
+                showBasicFields={false}
+              />
+            </ScrollArea>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditInfoDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveClientInfo} disabled={savingInfo}>
+                {savingInfo && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Products Edit Dialog */}
         <Dialog open={productsDialogOpen} onOpenChange={setProductsDialogOpen}>

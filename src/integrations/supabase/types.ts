@@ -264,30 +264,72 @@ export type Database = {
       clients: {
         Row: {
           account_id: string
+          additional_phones: Json | null
+          birth_date: string | null
+          city: string | null
+          cnpj: string | null
+          company_name: string | null
+          complement: string | null
+          cpf: string | null
           created_at: string
+          emails: Json | null
           full_name: string
           id: string
+          neighborhood: string | null
+          notes: string | null
           phone_e164: string
+          state: string | null
           status: Database["public"]["Enums"]["client_status"]
+          street: string | null
+          street_number: string | null
           tags: Json | null
+          zip_code: string | null
         }
         Insert: {
           account_id: string
+          additional_phones?: Json | null
+          birth_date?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          complement?: string | null
+          cpf?: string | null
           created_at?: string
+          emails?: Json | null
           full_name: string
           id?: string
+          neighborhood?: string | null
+          notes?: string | null
           phone_e164: string
+          state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          street?: string | null
+          street_number?: string | null
           tags?: Json | null
+          zip_code?: string | null
         }
         Update: {
           account_id?: string
+          additional_phones?: Json | null
+          birth_date?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          complement?: string | null
+          cpf?: string | null
           created_at?: string
+          emails?: Json | null
           full_name?: string
           id?: string
+          neighborhood?: string | null
+          notes?: string | null
           phone_e164?: string
+          state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          street?: string | null
+          street_number?: string | null
           tags?: Json | null
+          zip_code?: string | null
         }
         Relationships: [
           {
