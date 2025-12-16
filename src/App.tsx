@@ -13,6 +13,7 @@ import Integrations from "./pages/Integrations";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import Products from "./pages/Products";
+import Events from "./pages/Events";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/clients/new" element={<Clients />} />
               <Route path="/clients/:id" element={<ClientDetail />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/events" element={<Events />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />

@@ -18,6 +18,7 @@ import { VNPSBadge, VNPSExplanation } from "@/components/ui/vnps-badge";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
+import { ClientAgenda } from "@/components/client/ClientAgenda";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
@@ -41,6 +42,7 @@ import {
   MapPin,
   RefreshCw,
   HelpCircle,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -1138,9 +1140,10 @@ export default function ClientDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="subscriptions" className="space-y-4">
+      <Tabs defaultValue="agenda" className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
+            <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
             <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -1150,6 +1153,26 @@ export default function ClientDetail() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="agenda">
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Agenda de Entregas
+              </CardTitle>
+              <CardDescription>
+                Eventos e materiais incluídos nos produtos do cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <ClientAgenda 
+                clientId={id!} 
+                clientProductIds={clientProducts.map(p => p.id)} 
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="subscriptions">
           <Card className="shadow-card">

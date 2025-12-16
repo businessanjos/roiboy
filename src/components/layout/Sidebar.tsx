@@ -13,6 +13,7 @@ import {
   Package,
   Menu,
   X,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -30,6 +31,7 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/clients", icon: Users, label: "Clientes" },
   { to: "/products", icon: Package, label: "Produtos" },
+  { to: "/events", icon: CalendarDays, label: "Eventos" },
   { to: "/integrations", icon: Link2, label: "Integrações" },
   { to: "/settings", icon: Settings, label: "Configurações" },
   { to: "/profile", icon: UserCircle, label: "Meu Perfil" },
