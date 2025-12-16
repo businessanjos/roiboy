@@ -1,1 +1,13 @@
 project_id = "mtzoavtbtqflufyccern"
+
+[functions.ingest-whatsapp-message]
+verify_jwt = false
+
+[functions.ingest-whatsapp-audio]
+verify_jwt = false
+
+[functions.zoom-webhook]
+verify_jwt = false
+
+[functions.get-client-by-phone]
+verify_jwt = false
