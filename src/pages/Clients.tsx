@@ -99,7 +99,16 @@ export default function Clients() {
   const fetchClients = async () => {
     const { data, error } = await supabase
       .from("clients")
-      .select("*")
+      .select(`
+        *,
+        client_products (
+          product_id,
+          products (
+            id,
+            name
+          )
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (!error) setClients(data || []);
@@ -490,22 +499,36 @@ export default function Clients() {
       </div>
 
       <div className="grid gap-3">
-        {filtered.map((client) => (
-          <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="font-medium">{client.full_name}</p>
-                <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusIndicator status={client.status} size="sm" />
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to={`/clients/${client.id}`}>Ver <ArrowRight className="h-4 w-4 ml-1" /></Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {filtered.map((client) => {
+          const clientProducts = client.client_products?.map((cp: any) => cp.products?.name).filter(Boolean) || [];
+          
+          return (
+            <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium">{client.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
+                  {clientProducts.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      {clientProducts.map((productName: string, idx: number) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          <Package className="h-3 w-3 mr-1" />
+                          {productName}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <StatusIndicator status={client.status} size="sm" />
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to={`/clients/${client.id}`}>Ver <ArrowRight className="h-4 w-4 ml-1" /></Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
         {!loading && filtered.length === 0 && (
           <p className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</p>
         )}

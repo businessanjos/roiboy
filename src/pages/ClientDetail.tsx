@@ -25,6 +25,7 @@ import {
   Check,
   X,
   Clock,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -65,10 +66,16 @@ interface Recommendation {
   created_at: string;
 }
 
+interface ClientProduct {
+  id: string;
+  name: string;
+}
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [client, setClient] = useState<Client | null>(null);
+  const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [roiEvents, setRoiEvents] = useState<RoiEvent[]>([]);
@@ -100,6 +107,23 @@ export default function ClientDetail() {
         ...clientData,
         tags: (clientData.tags as string[]) || [],
       });
+
+      // Fetch client products
+      const { data: clientProductsData } = await supabase
+        .from("client_products")
+        .select(`
+          product_id,
+          products (
+            id,
+            name
+          )
+        `)
+        .eq("client_id", id);
+
+      const products = (clientProductsData || [])
+        .map((cp: any) => cp.products)
+        .filter(Boolean) as ClientProduct[];
+      setClientProducts(products);
 
       // Fetch latest score
       const { data: scoreData } = await supabase
@@ -463,6 +487,16 @@ export default function ClientDetail() {
               <StatusIndicator status={client.status} size="sm" />
             </div>
             <p className="text-muted-foreground">{client.phone_e164}</p>
+            {clientProducts.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {clientProducts.map((product) => (
+                  <Badge key={product.id} variant="secondary" className="text-xs">
+                    <Package className="h-3 w-3 mr-1" />
+                    {product.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
