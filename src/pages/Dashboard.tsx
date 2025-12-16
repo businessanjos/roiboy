@@ -10,6 +10,7 @@ import { StatusIndicator, QuadrantIndicator, TrendIndicator } from "@/components
 import { ScoreBadge } from "@/components/ui/score-badge";
 import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Users,
   AlertTriangle,
@@ -36,7 +37,7 @@ import {
   Minus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInDays, addYears, isBefore } from "date-fns";
+import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface ClientWithScore {
@@ -538,55 +539,92 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Upcoming Life Events */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base">Próximos Momentos CX</CardTitle>
-              </div>
-              <CardDescription>Eventos importantes dos próximos 30 dias</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {upcomingEvents.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum momento CX próximo. Cadastre aniversários e datas importantes dos seus clientes!
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingEvents.map((event: any) => {
-                    const Icon = EVENT_TYPE_ICONS[event.event_type] || Calendar;
-                    return (
-                      <Link
-                        key={event.id}
-                        to={`/clients/${event.client_id}`}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{event.title}</p>
-                          <p className="text-xs text-muted-foreground">{event.client_name}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {event.source === "ai_detected" && (
-                            <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
-                              <Sparkles className="h-3 w-3" />
-                              IA
-                            </Badge>
-                          )}
-                          <Badge variant={event.daysUntil === 0 ? "default" : event.daysUntil <= 7 ? "secondary" : "outline"}>
-                            {event.daysUntil === 0 ? "Hoje!" : event.daysUntil === 1 ? "Amanhã" : `${event.daysUntil} dias`}
-                          </Badge>
-                        </div>
-                      </Link>
-                    );
-                  })}
+          {/* Calendar + Events Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Calendar */}
+            <Card className="shadow-card lg:col-span-1">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-base">Calendário CX</CardTitle>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <CalendarComponent
+                  mode="multiple"
+                  selected={upcomingEvents.map((e: any) => e.nextDate)}
+                  className="rounded-md pointer-events-auto"
+                  locale={ptBR}
+                  modifiers={{
+                    event: upcomingEvents.map((e: any) => e.nextDate),
+                  }}
+                  modifiersStyles={{
+                    event: {
+                      backgroundColor: "hsl(var(--primary) / 0.2)",
+                      borderRadius: "50%",
+                      fontWeight: "bold",
+                    },
+                  }}
+                  disabled={false}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Upcoming Life Events */}
+            <Card className="shadow-card lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Bell className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-base">Próximos Momentos CX</CardTitle>
+                </div>
+                <CardDescription>Eventos importantes dos próximos 30 dias</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {upcomingEvents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum momento CX próximo. Cadastre aniversários e datas importantes dos seus clientes!
+                  </p>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    {upcomingEvents.map((event: any) => {
+                      const Icon = EVENT_TYPE_ICONS[event.event_type] || Calendar;
+                      return (
+                        <Link
+                          key={event.id}
+                          to={`/clients/${event.client_id}`}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Icon className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{event.title}</p>
+                            <p className="text-xs text-muted-foreground">{event.client_name}</p>
+                            {event.nextDate && (
+                              <p className="text-xs text-muted-foreground">
+                                {format(event.nextDate, "dd 'de' MMMM", { locale: ptBR })}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {event.source === "ai_detected" && (
+                              <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
+                                <Sparkles className="h-3 w-3" />
+                                IA
+                              </Badge>
+                            )}
+                            <Badge variant={event.daysUntil === 0 ? "default" : event.daysUntil <= 7 ? "secondary" : "outline"}>
+                              {event.daysUntil === 0 ? "Hoje!" : event.daysUntil === 1 ? "Amanhã" : `${event.daysUntil} dias`}
+                            </Badge>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Gestão Tab */}
