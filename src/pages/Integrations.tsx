@@ -20,6 +20,7 @@ export default function Integrations() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(null);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const zoomWebhookUrl = `${supabaseUrl}/functions/v1/zoom-webhook`;
@@ -27,12 +28,28 @@ export default function Integrations() {
   const whatsappAudioUrl = `${supabaseUrl}/functions/v1/ingest-whatsapp-audio`;
   const rykaWebhookUrl = `${supabaseUrl}/functions/v1/ryka-webhook`;
   const pipedriveWebhookUrl = `${supabaseUrl}/functions/v1/pipedrive-webhook`;
+  const pipedriveFullUrl = accountId 
+    ? `${pipedriveWebhookUrl}?account_id=${accountId}` 
+    : pipedriveWebhookUrl;
 
   useEffect(() => {
     if (user) {
       fetchIntegrations();
+      fetchAccountId();
     }
   }, [user]);
+
+  const fetchAccountId = async () => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("account_id")
+      .eq("auth_user_id", user?.id)
+      .single();
+    
+    if (!error && data) {
+      setAccountId(data.account_id);
+    }
+  };
 
   const fetchIntegrations = async () => {
     setLoading(true);
@@ -500,13 +517,13 @@ Headers: x-ryka-secret: [seu_secret]
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Webhook URL</Label>
+                  <Label>Webhook URL Completa (pronta para usar)</Label>
                   <div className="flex gap-2">
-                    <Input value={pipedriveWebhookUrl} readOnly className="font-mono text-sm" />
+                    <Input value={pipedriveFullUrl} readOnly className="font-mono text-sm" />
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => copyToClipboard(pipedriveWebhookUrl, "Pipedrive Webhook URL")}
+                      onClick={() => copyToClipboard(pipedriveFullUrl, "Pipedrive Webhook URL")}
                     >
                       {copied === "Pipedrive Webhook URL" ? (
                         <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -516,15 +533,17 @@ Headers: x-ryka-secret: [seu_secret]
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Configure este URL no Pipedrive em Settings → Webhooks.
+                    Copie e cole esta URL diretamente no Pipedrive.
                   </p>
                 </div>
 
-                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
-                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                    <strong>Importante:</strong> Adicione <code className="bg-emerald-500/20 px-1 rounded">?account_id=SEU_ACCOUNT_ID</code> ao final da URL para vincular os clientes à sua conta.
-                  </p>
-                </div>
+                {accountId && (
+                  <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                      <strong>Seu Account ID:</strong> <code className="bg-emerald-500/20 px-1 rounded">{accountId}</code>
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-lg border p-4 space-y-3">
@@ -554,16 +573,9 @@ Headers: x-ryka-secret: [seu_secret]
                   <li>Acesse <a href="https://app.pipedrive.com/settings/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Pipedrive → Settings → Webhooks</a></li>
                   <li>Clique em "Create new webhook"</li>
                   <li>Selecione o evento <code className="text-xs bg-muted px-1 rounded">Deal - Updated</code></li>
-                  <li>Cole a Webhook URL acima (com o account_id)</li>
+                  <li>Cole a Webhook URL completa acima</li>
                   <li>Marque "Active" e salve</li>
                 </ol>
-              </div>
-
-              <div className="rounded-lg border p-4 space-y-3">
-                <h4 className="font-medium">Exemplo de URL completa:</h4>
-                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto break-all">
-{`${pipedriveWebhookUrl}?account_id=seu-account-id-aqui`}
-                </pre>
               </div>
             </CardContent>
           </Card>
