@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
+import { Subscriptions } from "@/components/client/Subscriptions";
 import {
   ArrowLeft,
   Plus,
@@ -626,14 +627,23 @@ export default function ClientDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="timeline" className="space-y-4">
+      <Tabs defaultValue="subscriptions" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="subscriptions">Produtos</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
           <TabsTrigger value="recommendations">
             Recomendações ({recommendations.filter((r) => r.status === "open").length})
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="subscriptions">
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <Subscriptions clientId={id!} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="timeline">
           <Card className="shadow-card">
