@@ -20,7 +20,8 @@ import {
   Clock,
   XCircle,
   PauseCircle,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -67,6 +68,7 @@ export function Subscriptions({ clientId }: SubscriptionsProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Form state
   const [productName, setProductName] = useState("");
@@ -217,6 +219,36 @@ export function Subscriptions({ clientId }: SubscriptionsProps) {
     }
   };
 
+  const handleSyncOmie = async () => {
+    setSyncing(true);
+    try {
+      const response = await supabase.functions.invoke('sync-omie', {
+        body: { client_id: clientId },
+      });
+
+      if (response.error) throw response.error;
+
+      const result = response.data;
+      
+      if (result.synced > 0) {
+        toast.success(`Sincronizado com sucesso! Status atualizado.`);
+      } else if (result.details?.[0]?.status === 'not_found') {
+        toast.warning('Cliente não encontrado na Omie. Verifique se o telefone/nome está correto.');
+      } else if (result.details?.[0]?.status === 'no_receivables') {
+        toast.info('Nenhuma conta a receber encontrada na Omie para este cliente.');
+      } else {
+        toast.info('Sincronização concluída.');
+      }
+      
+      fetchSubscriptions();
+    } catch (error: any) {
+      console.error('Error syncing with Omie:', error);
+      toast.error(error.message || 'Erro ao sincronizar com Omie');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -234,21 +266,35 @@ export function Subscriptions({ clientId }: SubscriptionsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h3 className="font-medium">Produtos e Assinaturas</h3>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button size="sm" onClick={() => {
-              resetForm();
-              setStartDate(format(new Date(), "yyyy-MM-dd"));
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleSyncOmie}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Sincronizar Omie
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button size="sm" onClick={() => {
+                resetForm();
+                setStartDate(format(new Date(), "yyyy-MM-dd"));
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -365,6 +411,7 @@ export function Subscriptions({ clientId }: SubscriptionsProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {subscriptions.length === 0 ? (
