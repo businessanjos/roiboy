@@ -11,7 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
@@ -87,6 +88,7 @@ const parseCSV = (content: string): CsvRow[] => {
 export default function Clients() {
   const [clients, setClients] = useState<any[]>([]);
   const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
+  const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -123,9 +125,11 @@ export default function Clients() {
     if (!error) {
       setClients(data || []);
       
-      // Fetch V-NPS for all clients
+      // Fetch V-NPS and WhatsApp data for all clients
       if (data && data.length > 0) {
         const clientIds = data.map(c => c.id);
+        
+        // Fetch V-NPS
         const { data: vnpsData } = await supabase
           .from("vnps_snapshots")
           .select("*")
@@ -140,6 +144,51 @@ export default function Clients() {
           }
         });
         setVnpsMap(vnpsGrouped);
+        
+        // Fetch WhatsApp conversations and message counts
+        const { data: conversationsData } = await supabase
+          .from("conversations")
+          .select("client_id")
+          .in("client_id", clientIds);
+        
+        // Fetch latest message per client
+        const { data: messagesData } = await supabase
+          .from("message_events")
+          .select("client_id, sent_at")
+          .in("client_id", clientIds)
+          .order("sent_at", { ascending: false });
+        
+        // Build WhatsApp status map
+        const whatsappGrouped: Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }> = {};
+        
+        // Initialize with conversation data
+        (conversationsData || []).forEach((c: any) => {
+          if (!whatsappGrouped[c.client_id]) {
+            whatsappGrouped[c.client_id] = { hasConversation: true, messageCount: 0, lastMessageAt: null };
+          }
+        });
+        
+        // Add message counts and last message date
+        const messageCountMap = new Map<string, number>();
+        const lastMessageMap = new Map<string, string>();
+        
+        (messagesData || []).forEach((m: any) => {
+          messageCountMap.set(m.client_id, (messageCountMap.get(m.client_id) || 0) + 1);
+          if (!lastMessageMap.has(m.client_id)) {
+            lastMessageMap.set(m.client_id, m.sent_at);
+          }
+        });
+        
+        messageCountMap.forEach((count, clientId) => {
+          if (!whatsappGrouped[clientId]) {
+            whatsappGrouped[clientId] = { hasConversation: true, messageCount: count, lastMessageAt: lastMessageMap.get(clientId) || null };
+          } else {
+            whatsappGrouped[clientId].messageCount = count;
+            whatsappGrouped[clientId].lastMessageAt = lastMessageMap.get(clientId) || null;
+          }
+        });
+        
+        setWhatsappMap(whatsappGrouped);
       }
     }
     setLoading(false);
@@ -600,6 +649,39 @@ export default function Clients() {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
+                  {/* WhatsApp indicator */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                          whatsappMap[client.id]?.messageCount > 0 
+                            ? "bg-emerald-500/10 text-emerald-600" 
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {whatsappMap[client.id]?.messageCount > 0 && (
+                            <span className="font-medium">{whatsappMap[client.id].messageCount}</span>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {whatsappMap[client.id]?.messageCount > 0 ? (
+                          <div className="text-xs">
+                            <p className="font-medium">WhatsApp conectado</p>
+                            <p>{whatsappMap[client.id].messageCount} mensagem(ns)</p>
+                            {whatsappMap[client.id].lastMessageAt && (
+                              <p className="text-muted-foreground">
+                                Última: {new Date(whatsappMap[client.id].lastMessageAt!).toLocaleDateString('pt-BR')}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs">Sem mensagens WhatsApp</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
                   {vnpsMap[client.id] && (
                     <VNPSBadge
                       score={vnpsMap[client.id].vnps_score}
