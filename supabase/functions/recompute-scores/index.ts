@@ -15,6 +15,13 @@ interface AccountSettings {
   escore_live_participation: number;
   threshold_low_escore: number;
   threshold_low_roizometer: number;
+  threshold_silence_days: number;
+}
+
+interface ClientTicketInfo {
+  client_id: string;
+  total_ticket: number;
+  multiplier: number;
 }
 
 const defaultSettings: AccountSettings = {
@@ -26,6 +33,7 @@ const defaultSettings: AccountSettings = {
   escore_live_participation: 30,
   threshold_low_escore: 30,
   threshold_low_roizometer: 30,
+  threshold_silence_days: 7,
 };
 
 serve(async (req) => {
@@ -66,7 +74,11 @@ serve(async (req) => {
         .eq("account_id", account.id)
         .maybeSingle();
 
-      const settings: AccountSettings = settingsData || defaultSettings;
+      const settings: AccountSettings = { ...defaultSettings, ...settingsData };
+
+      // Calculate ticket multipliers for all clients in this account
+      const ticketInfo = await calculateTicketMultipliers(supabase, account.id);
+      console.log(`Account ${account.id}: Average ticket = ${ticketInfo.averageTicket}, Clients with products = ${ticketInfo.clients.length}`);
 
       // Get clients for this account
       let clientsQuery = supabase.from("clients").select("id").eq("account_id", account.id);
@@ -88,11 +100,20 @@ serve(async (req) => {
 
       for (const client of clients || []) {
         try {
-          // Calculate ROIzometer (0-100)
-          const roizometer = await calculateRoizometer(supabase, client.id, account.id, settings, thirtyDaysAgo);
+          // Get ticket multiplier for this client (default to 1.0 if no products)
+          const clientTicket = ticketInfo.clients.find(c => c.client_id === client.id);
+          const ticketMultiplier = clientTicket?.multiplier || 1.0;
           
-          // Calculate E-Score (0-100)
-          const escore = await calculateEScore(supabase, client.id, account.id, settings, thirtyDaysAgo);
+          console.log(`Client ${client.id}: Ticket multiplier = ${ticketMultiplier.toFixed(2)}`);
+
+          // Calculate ROIzometer (0-100) - ticket affects impact weight
+          const roizometer = await calculateRoizometer(supabase, client.id, account.id, settings, thirtyDaysAgo, ticketMultiplier);
+          
+          // Calculate E-Score (0-100) - ticket affects thresholds
+          const escore = await calculateEScore(supabase, client.id, account.id, settings, thirtyDaysAgo, ticketMultiplier);
+          
+          // Check for silence risk (ticket affects silence threshold)
+          await checkSilenceRisk(supabase, client.id, account.id, settings, ticketMultiplier);
           
           // Determine quadrant
           const quadrant = determineQuadrant(escore, roizometer);
@@ -126,10 +147,10 @@ serve(async (req) => {
             accountResult.errors.push(`Client ${client.id}: ${snapshotError.message}`);
           } else {
             accountResult.clients_processed++;
-            console.log(`Processed client ${client.id}: E=${escore}, ROI=${roizometer}, Q=${quadrant}, T=${trend}`);
+            console.log(`Processed client ${client.id}: E=${escore}, ROI=${roizometer}, Q=${quadrant}, T=${trend}, Ticket=${ticketMultiplier.toFixed(2)}x`);
 
-            // Update client status based on scores
-            const newStatus = determineClientStatus(escore, roizometer, settings);
+            // Update client status based on scores (ticket affects thresholds)
+            const newStatus = determineClientStatus(escore, roizometer, settings, ticketMultiplier);
             if (newStatus) {
               await supabase
                 .from("clients")
@@ -168,12 +189,69 @@ serve(async (req) => {
   }
 });
 
+/**
+ * Calculate ticket multipliers for all clients in an account
+ * Multiplier = client_ticket / average_ticket
+ * This means clients with higher tickets have multipliers > 1
+ */
+async function calculateTicketMultipliers(
+  supabase: any,
+  accountId: string
+): Promise<{ averageTicket: number; clients: ClientTicketInfo[] }> {
+  // Get all client_products with product prices
+  const { data: clientProducts } = await supabase
+    .from("client_products")
+    .select(`
+      client_id,
+      products (
+        price
+      )
+    `)
+    .eq("account_id", accountId);
+
+  if (!clientProducts || clientProducts.length === 0) {
+    return { averageTicket: 0, clients: [] };
+  }
+
+  // Group by client and sum their product prices
+  const clientTickets = new Map<string, number>();
+  
+  for (const cp of clientProducts) {
+    const price = cp.products?.price || 0;
+    const currentTotal = clientTickets.get(cp.client_id) || 0;
+    clientTickets.set(cp.client_id, currentTotal + price);
+  }
+
+  // Calculate average ticket
+  const tickets = Array.from(clientTickets.values());
+  const averageTicket = tickets.length > 0 
+    ? tickets.reduce((sum, t) => sum + t, 0) / tickets.length 
+    : 0;
+
+  // Calculate multipliers
+  const clients: ClientTicketInfo[] = [];
+  for (const [clientId, totalTicket] of clientTickets) {
+    // Multiplier: client's ticket / average, capped between 0.5 and 3.0
+    const rawMultiplier = averageTicket > 0 ? totalTicket / averageTicket : 1.0;
+    const multiplier = Math.max(0.5, Math.min(3.0, rawMultiplier));
+    
+    clients.push({
+      client_id: clientId,
+      total_ticket: totalTicket,
+      multiplier,
+    });
+  }
+
+  return { averageTicket, clients };
+}
+
 async function calculateRoizometer(
   supabase: any,
   clientId: string,
   accountId: string,
   settings: AccountSettings,
-  since: Date
+  since: Date,
+  ticketMultiplier: number
 ): Promise<number> {
   // Get ROI events in the window
   const { data: roiEvents } = await supabase
@@ -195,13 +273,11 @@ async function calculateRoizometer(
   const intangibleCategories = ["clarity", "confidence", "tranquility", "status_direction"];
   const intangibleEvents = roiEvents.filter((e: any) => intangibleCategories.includes(e.category));
 
+  // Impact score is boosted by ticket multiplier
   const impactScore = (impact: string) => {
-    switch (impact) {
-      case "high": return 3;
-      case "medium": return 2;
-      case "low": return 1;
-      default: return 1;
-    }
+    const baseScore = impact === "high" ? 3 : impact === "medium" ? 2 : 1;
+    // Higher ticket = more weight on each ROI event
+    return baseScore * ticketMultiplier;
   };
 
   const sourceWeight = (source: string) => {
@@ -231,7 +307,8 @@ async function calculateEScore(
   clientId: string,
   accountId: string,
   settings: AccountSettings,
-  since: Date
+  since: Date,
+  ticketMultiplier: number
 ): Promise<number> {
   // WhatsApp engagement (0 to settings.escore_whatsapp_engagement)
   const { data: messages } = await supabase
@@ -245,11 +322,18 @@ async function calculateEScore(
   const clientMessages = messages?.filter((m: any) => m.direction === "client_to_team").length || 0;
   const audioMessages = messages?.filter((m: any) => m.source === "whatsapp_audio_transcript").length || 0;
 
-  // Score based on message activity (max points at 30+ messages)
+  // Higher ticket clients are expected to engage more, so we apply sensitivity
+  // More engagement expected = higher bar to achieve same score
+  const engagementSensitivity = Math.sqrt(ticketMultiplier); // Moderate effect
+
+  // Score based on message activity (adjusted for ticket)
   let whatsappScore = 0;
   if (messageCount > 0) {
-    const frequencyScore = Math.min(1, messageCount / 30);
-    const responseScore = Math.min(1, clientMessages / 15);
+    const expectedMessages = 30 * engagementSensitivity;
+    const expectedClientMessages = 15 * engagementSensitivity;
+    
+    const frequencyScore = Math.min(1, messageCount / expectedMessages);
+    const responseScore = Math.min(1, clientMessages / expectedClientMessages);
     const audioBonus = Math.min(0.3, audioMessages * 0.1);
     whatsappScore = Math.round((frequencyScore * 0.5 + responseScore * 0.5 + audioBonus) * settings.escore_whatsapp_engagement);
   }
@@ -277,8 +361,12 @@ async function calculateEScore(
     const avgDuration = attendance?.reduce((sum: number, a: any) => sum + (a.duration_sec || 0), 0) / (attendedSessions || 1);
     const punctualityScore = attendance?.filter((a: any) => (a.join_delay_sec || 0) < 300).length / (attendedSessions || 1);
     
+    // Higher ticket = higher expectation for attendance
+    const attendanceExpectation = 0.7 + (ticketMultiplier - 1) * 0.1; // 70% base + ticket bonus
+    const adjustedAttendance = Math.min(1, attendanceRate / attendanceExpectation);
+    
     presenceScore = Math.round(
-      (attendanceRate * 0.5 + Math.min(1, avgDuration / 3600) * 0.3 + punctualityScore * 0.2) 
+      (adjustedAttendance * 0.5 + Math.min(1, avgDuration / 3600) * 0.3 + punctualityScore * 0.2) 
       * settings.escore_live_presence
     );
   }
@@ -295,13 +383,88 @@ async function calculateEScore(
   if (interactions && interactions.length > 0) {
     const totalInteractions = interactions.reduce((sum: number, i: any) => sum + (i.count || 1), 0);
     const typeBonus = new Set(interactions.map((i: any) => i.type)).size * 0.1;
+    
+    // Higher ticket = more participation expected
+    const expectedInteractions = 20 * engagementSensitivity;
+    
     participationScore = Math.min(
       settings.escore_live_participation,
-      Math.round((Math.min(1, totalInteractions / 20) + typeBonus) * settings.escore_live_participation)
+      Math.round((Math.min(1, totalInteractions / expectedInteractions) + typeBonus) * settings.escore_live_participation)
     );
   }
 
   return Math.min(100, whatsappScore + presenceScore + participationScore);
+}
+
+/**
+ * Check if client has been silent too long and create risk event
+ * Higher ticket clients have shorter silence thresholds
+ */
+async function checkSilenceRisk(
+  supabase: any,
+  clientId: string,
+  accountId: string,
+  settings: AccountSettings,
+  ticketMultiplier: number
+): Promise<void> {
+  // Get last message from client
+  const { data: lastMessage } = await supabase
+    .from("message_events")
+    .select("sent_at")
+    .eq("client_id", clientId)
+    .eq("account_id", accountId)
+    .eq("direction", "client_to_team")
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lastMessage) return;
+
+  const lastMessageDate = new Date(lastMessage.sent_at);
+  const daysSinceLastMessage = Math.floor((Date.now() - lastMessageDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Adjust silence threshold based on ticket
+  // Higher ticket = shorter threshold (more sensitive)
+  const adjustedThreshold = Math.round(settings.threshold_silence_days / ticketMultiplier);
+  const minThreshold = 3; // Never less than 3 days
+  const effectiveThreshold = Math.max(minThreshold, adjustedThreshold);
+
+  if (daysSinceLastMessage >= effectiveThreshold) {
+    // Check if we already have a recent silence risk event
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { data: existingRisk } = await supabase
+      .from("risk_events")
+      .select("id")
+      .eq("client_id", clientId)
+      .eq("source", "system")
+      .ilike("reason", "%silêncio%")
+      .gte("happened_at", sevenDaysAgo.toISOString())
+      .limit(1);
+
+    if (!existingRisk || existingRisk.length === 0) {
+      // Determine risk level based on ticket and days silent
+      let riskLevel: "low" | "medium" | "high" = "low";
+      if (ticketMultiplier >= 1.5 || daysSinceLastMessage >= effectiveThreshold * 2) {
+        riskLevel = "high";
+      } else if (ticketMultiplier >= 1.0 || daysSinceLastMessage >= effectiveThreshold * 1.5) {
+        riskLevel = "medium";
+      }
+
+      await supabase.from("risk_events").insert({
+        account_id: accountId,
+        client_id: clientId,
+        source: "system",
+        risk_level: riskLevel,
+        reason: `Silêncio de ${daysSinceLastMessage} dias (cliente ticket ${ticketMultiplier >= 1.5 ? 'alto' : ticketMultiplier >= 1.0 ? 'médio' : 'baixo'})`,
+        evidence_snippet: `Última mensagem: ${lastMessageDate.toLocaleDateString('pt-BR')}`,
+        happened_at: new Date().toISOString(),
+      });
+
+      console.log(`Created silence risk event for client ${clientId}: ${daysSinceLastMessage} days, threshold ${effectiveThreshold}, level ${riskLevel}`);
+    }
+  }
 }
 
 function determineQuadrant(escore: number, roizometer: number): string {
@@ -330,12 +493,22 @@ function determineTrend(
   return "flat";
 }
 
+/**
+ * Determine client status based on scores
+ * Ticket multiplier affects thresholds - high ticket clients enter churn_risk sooner
+ */
 function determineClientStatus(
   escore: number, 
   roizometer: number, 
-  settings: AccountSettings
+  settings: AccountSettings,
+  ticketMultiplier: number
 ): string | null {
-  if (escore < settings.threshold_low_escore && roizometer < settings.threshold_low_roizometer) {
+  // Adjust thresholds based on ticket
+  // Higher ticket = higher thresholds (enter churn_risk earlier)
+  const escoreThreshold = settings.threshold_low_escore * ticketMultiplier;
+  const roiThreshold = settings.threshold_low_roizometer * ticketMultiplier;
+
+  if (escore < escoreThreshold && roizometer < roiThreshold) {
     return "churn_risk";
   }
   if (escore >= 50 && roizometer >= 50) {
