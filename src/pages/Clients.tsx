@@ -10,9 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
+import { validateCPF, validateCNPJ } from "@/lib/validators";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -84,11 +87,10 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [newClientData, setNewClientData] = useState<ClientFormData>(getEmptyClientFormData());
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // CSV Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -131,17 +133,20 @@ export default function Clients() {
   }, []);
 
   const handleAddClient = async () => {
-    if (!newName.trim()) {
-      toast.error("Preencha o nome do cliente");
+    const errors: Record<string, string> = {};
+    if (!newClientData.full_name.trim()) errors.full_name = "Nome é obrigatório";
+    if (!newClientData.phone_e164.trim() || !/^\+[1-9]\d{1,14}$/.test(newClientData.phone_e164)) {
+      errors.phone_e164 = "Telefone inválido. Ex: +5511999999999";
+    }
+    if (newClientData.cpf && !validateCPF(newClientData.cpf)) errors.cpf = "CPF inválido";
+    if (newClientData.cnpj && !validateCNPJ(newClientData.cnpj)) errors.cnpj = "CNPJ inválido";
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error("Corrija os erros no formulário");
       return;
     }
-
-    const phoneValidation = validateE164(newPhone.trim());
-    if (!phoneValidation.valid) {
-      setPhoneError(phoneValidation.message || "Telefone inválido");
-      return;
-    }
-    setPhoneError(null);
+    setFormErrors({});
 
     try {
       const { data: userData, error: userError } = await supabase
@@ -150,47 +155,47 @@ export default function Clients() {
         .single();
       
       if (userError || !userData) {
-        console.error("User profile error:", userError);
         toast.error("Perfil não encontrado. Faça logout e login novamente.");
         return;
       }
 
       const { data: newClient, error } = await supabase.from("clients").insert({
         account_id: userData.account_id,
-        full_name: newName.trim(),
-        phone_e164: newPhone.trim(),
+        full_name: newClientData.full_name.trim(),
+        phone_e164: newClientData.phone_e164.trim(),
+        emails: newClientData.emails,
+        additional_phones: newClientData.additional_phones,
+        cpf: newClientData.cpf?.replace(/\D/g, '') || null,
+        cnpj: newClientData.cnpj?.replace(/\D/g, '') || null,
+        birth_date: newClientData.birth_date || null,
+        company_name: newClientData.company_name || null,
+        notes: newClientData.notes || null,
+        street: newClientData.street || null,
+        street_number: newClientData.street_number || null,
+        complement: newClientData.complement || null,
+        neighborhood: newClientData.neighborhood || null,
+        city: newClientData.city || null,
+        state: newClientData.state || null,
+        zip_code: newClientData.zip_code?.replace(/\D/g, '') || null,
       }).select().single();
 
-      if (error) {
-        console.error("Insert error:", error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // Insert selected products
       if (selectedProducts.length > 0 && newClient) {
         const clientProducts = selectedProducts.map(productId => ({
           account_id: userData.account_id,
           client_id: newClient.id,
           product_id: productId,
         }));
-
-        const { error: productError } = await supabase
-          .from("client_products")
-          .insert(clientProducts);
-
-        if (productError) {
-          console.error("Error linking products:", productError);
-        }
+        await supabase.from("client_products").insert(clientProducts);
       }
       
       toast.success("Cliente adicionado!");
       setDialogOpen(false);
-      setNewName("");
-      setNewPhone("");
+      setNewClientData(getEmptyClientFormData());
       setSelectedProducts([]);
       fetchClients();
     } catch (error: any) {
-      console.error("Add client error:", error);
       toast.error(error.message || "Erro ao adicionar cliente");
     }
   };
@@ -408,77 +413,60 @@ export default function Clients() {
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) {
-              setNewName("");
-              setNewPhone("");
+              setNewClientData(getEmptyClientFormData());
               setSelectedProducts([]);
-              setPhoneError(null);
+              setFormErrors({});
             }
           }}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Novo Cliente</DialogTitle>
-                <DialogDescription>Adicione um novo cliente para monitorar.</DialogDescription>
+                <DialogDescription>Adicione um novo cliente com todos os dados cadastrais.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Nome completo</Label>
-                  <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="João Silva" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone (E.164)</Label>
-                  <Input 
-                    value={newPhone} 
-                    onChange={(e) => {
-                      const formatted = formatPhoneE164(e.target.value);
-                      setNewPhone(formatted);
-                      if (phoneError) setPhoneError(null);
-                    }} 
-                    placeholder="+5511999999999"
-                    className={phoneError ? "border-destructive" : ""}
-                    maxLength={16}
+              <ScrollArea className="max-h-[60vh] pr-4">
+                <div className="space-y-6">
+                  <ClientInfoForm 
+                    data={newClientData} 
+                    onChange={setNewClientData}
+                    errors={formErrors}
+                    showBasicFields={true}
                   />
-                  {phoneError && (
-                    <p className="text-xs text-destructive">{phoneError}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Digite apenas números. O + é adicionado automaticamente.
-                  </p>
+                  
+                  {/* Product Selection */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Produtos
+                    </Label>
+                    {products.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-2">
+                        Nenhum produto cadastrado. <Link to="/products" className="text-primary underline">Criar produtos</Link>
+                      </p>
+                    ) : (
+                      <div className="border rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                        {products.map((product) => (
+                          <label
+                            key={product.id}
+                            className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={selectedProducts.includes(product.id)}
+                              onCheckedChange={() => toggleProduct(product.id)}
+                            />
+                            <span className="flex-1 text-sm">{product.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                {/* Product Selection */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Produtos
-                  </Label>
-                  {products.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-2">
-                      Nenhum produto cadastrado. <Link to="/products" className="text-primary underline">Criar produtos</Link>
-                    </p>
-                  ) : (
-                    <div className="border rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
-                      {products.map((product) => (
-                        <label
-                          key={product.id}
-                          className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={selectedProducts.includes(product.id)}
-                            onCheckedChange={() => toggleProduct(product.id)}
-                          />
-                          <span className="flex-1 text-sm">{product.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              </ScrollArea>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
                 <Button onClick={handleAddClient}>Salvar</Button>
