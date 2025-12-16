@@ -5,8 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusIndicator, QuadrantIndicator, TrendIndicator } from "@/components/ui/status-indicator";
 import { ScoreBadge } from "@/components/ui/score-badge";
+import { VNPSBadge } from "@/components/ui/vnps-badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Users,
   AlertTriangle,
@@ -15,8 +18,28 @@ import {
   Plus,
   ArrowRight,
   RefreshCw,
+  Target,
+  Heart,
+  Settings2,
+  Cake,
+  Baby,
+  GraduationCap,
+  Trophy,
+  Calendar,
+  Bell,
+  Star,
+  Briefcase,
+  Plane,
+  Sparkles,
+  MessageSquare,
+  TrendingDown,
+  ThumbsUp,
+  ThumbsDown,
+  Minus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { format, differenceInDays, addYears, isBefore } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ClientWithScore {
   id: string;
@@ -29,7 +52,50 @@ interface ClientWithScore {
   trend: "up" | "flat" | "down";
   last_risk?: string;
   recommendation?: string;
+  vnps_score?: number;
+  vnps_class?: "promoter" | "neutral" | "detractor";
 }
+
+interface LifeEvent {
+  id: string;
+  client_id: string;
+  client_name: string;
+  event_type: string;
+  title: string;
+  event_date: string | null;
+  is_recurring: boolean;
+  source: string;
+}
+
+interface ROIStats {
+  totalROIEvents: number;
+  tangibleCount: number;
+  intangibleCount: number;
+  highImpactCount: number;
+  recentCategories: { category: string; count: number }[];
+}
+
+interface RiskStats {
+  totalRiskEvents: number;
+  highRiskCount: number;
+  mediumRiskCount: number;
+  lowRiskCount: number;
+}
+
+const EVENT_TYPE_ICONS: Record<string, any> = {
+  birthday: Cake,
+  child_birth: Baby,
+  pregnancy: Baby,
+  wedding: Heart,
+  anniversary: Heart,
+  graduation: GraduationCap,
+  new_job: Briefcase,
+  promotion: TrendingUp,
+  travel: Plane,
+  achievement: Trophy,
+  celebration: Star,
+  other: Calendar,
+};
 
 export default function Dashboard() {
   const [clients, setClients] = useState<ClientWithScore[]>([]);
@@ -37,11 +103,13 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [quadrantFilter, setQuadrantFilter] = useState<string>("all");
+  const [upcomingEvents, setUpcomingEvents] = useState<LifeEvent[]>([]);
+  const [roiStats, setROIStats] = useState<ROIStats | null>(null);
+  const [riskStats, setRiskStats] = useState<RiskStats | null>(null);
 
   const fetchClients = async () => {
     setLoading(true);
     try {
-      // Fetch clients with their latest score snapshots
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select("*")
@@ -49,12 +117,19 @@ export default function Dashboard() {
 
       if (clientsError) throw clientsError;
 
-      // Fetch latest scores for each client
       const clientsWithScores: ClientWithScore[] = await Promise.all(
         (clientsData || []).map(async (client) => {
           const { data: scoreData } = await supabase
             .from("score_snapshots")
             .select("*")
+            .eq("client_id", client.id)
+            .order("computed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const { data: vnpsData } = await supabase
+            .from("vnps_snapshots")
+            .select("vnps_score, vnps_class")
             .eq("client_id", client.id)
             .order("computed_at", { ascending: false })
             .limit(1)
@@ -88,6 +163,8 @@ export default function Dashboard() {
             trend: (scoreData?.trend as ClientWithScore["trend"]) ?? "flat",
             last_risk: riskData?.reason,
             recommendation: recData?.action_text,
+            vnps_score: vnpsData?.vnps_score,
+            vnps_class: vnpsData?.vnps_class as ClientWithScore["vnps_class"],
           };
         })
       );
@@ -101,8 +178,126 @@ export default function Dashboard() {
     }
   };
 
+  const fetchUpcomingEvents = async () => {
+    try {
+      const { data: eventsData, error } = await supabase
+        .from("client_life_events")
+        .select("*, clients!inner(full_name)")
+        .not("event_date", "is", null)
+        .order("event_date", { ascending: true });
+
+      if (error) throw error;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const upcoming = (eventsData || [])
+        .map((event: any) => {
+          const eventDate = new Date(event.event_date);
+          let nextDate = new Date(eventDate);
+          
+          if (event.is_recurring) {
+            nextDate.setFullYear(today.getFullYear());
+            if (isBefore(nextDate, today)) {
+              nextDate = addYears(nextDate, 1);
+            }
+          }
+          
+          const daysUntil = differenceInDays(nextDate, today);
+          
+          return {
+            ...event,
+            client_name: event.clients?.full_name || "Cliente",
+            daysUntil,
+            nextDate,
+          };
+        })
+        .filter((e: any) => e.daysUntil >= 0 && e.daysUntil <= 30)
+        .sort((a: any, b: any) => a.daysUntil - b.daysUntil)
+        .slice(0, 10);
+
+      setUpcomingEvents(upcoming);
+    } catch (error) {
+      console.error("Error fetching life events:", error);
+    }
+  };
+
+  const fetchROIStats = async () => {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: roiEvents, error } = await supabase
+        .from("roi_events")
+        .select("roi_type, category, impact")
+        .gte("happened_at", thirtyDaysAgo.toISOString());
+
+      if (error) throw error;
+
+      const categoryCount: Record<string, number> = {};
+      let tangible = 0;
+      let intangible = 0;
+      let highImpact = 0;
+
+      (roiEvents || []).forEach((e: any) => {
+        if (e.roi_type === "tangible") tangible++;
+        else intangible++;
+        if (e.impact === "high") highImpact++;
+        categoryCount[e.category] = (categoryCount[e.category] || 0) + 1;
+      });
+
+      const recentCategories = Object.entries(categoryCount)
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      setROIStats({
+        totalROIEvents: roiEvents?.length || 0,
+        tangibleCount: tangible,
+        intangibleCount: intangible,
+        highImpactCount: highImpact,
+        recentCategories,
+      });
+    } catch (error) {
+      console.error("Error fetching ROI stats:", error);
+    }
+  };
+
+  const fetchRiskStats = async () => {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: riskEvents, error } = await supabase
+        .from("risk_events")
+        .select("risk_level")
+        .gte("happened_at", thirtyDaysAgo.toISOString());
+
+      if (error) throw error;
+
+      let high = 0, medium = 0, low = 0;
+      (riskEvents || []).forEach((e: any) => {
+        if (e.risk_level === "high") high++;
+        else if (e.risk_level === "medium") medium++;
+        else low++;
+      });
+
+      setRiskStats({
+        totalRiskEvents: riskEvents?.length || 0,
+        highRiskCount: high,
+        mediumRiskCount: medium,
+        lowRiskCount: low,
+      });
+    } catch (error) {
+      console.error("Error fetching risk stats:", error);
+    }
+  };
+
   useEffect(() => {
     fetchClients();
+    fetchUpcomingEvents();
+    fetchROIStats();
+    fetchRiskStats();
   }, []);
 
   const filteredClients = clients.filter((client) => {
@@ -116,10 +311,29 @@ export default function Dashboard() {
 
   const totalClients = clients.length;
   const churnRiskCount = clients.filter((c) => c.status === "churn_risk" || c.status === "churned").length;
+  const promoterCount = clients.filter((c) => c.vnps_class === "promoter").length;
+  const detractorCount = clients.filter((c) => c.vnps_class === "detractor").length;
+  const avgROI = clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.roizometer, 0) / clients.length) : 0;
+  const avgEScore = clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.escore, 0) / clients.length) : 0;
+
   const topRiskClients = [...clients]
     .filter((c) => c.status === "churn_risk" || c.status === "churned")
     .sort((a, b) => a.roizometer - b.roizometer)
     .slice(0, 5);
+
+  const getCategoryLabel = (cat: string) => {
+    const labels: Record<string, string> = {
+      revenue: "Receita",
+      cost: "Custos",
+      time: "Tempo",
+      process: "Processos",
+      clarity: "Clareza",
+      confidence: "Confiança",
+      tranquility: "Tranquilidade",
+      status_direction: "Direção",
+    };
+    return labels[cat] || cat;
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
@@ -127,10 +341,10 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Visão geral dos seus clientes</p>
+          <p className="text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchClients} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { fetchClients(); fetchUpcomingEvents(); fetchROIStats(); fetchRiskStats(); }} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
@@ -143,187 +357,463 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Clientes</p>
-                <p className="text-3xl font-bold text-foreground">{totalClients}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="roi" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsTrigger value="roi" className="gap-2">
+            <Target className="h-4 w-4" />
+            <span className="hidden sm:inline">ROI</span>
+          </TabsTrigger>
+          <TabsTrigger value="cx" className="gap-2">
+            <Heart className="h-4 w-4" />
+            <span className="hidden sm:inline">CX</span>
+          </TabsTrigger>
+          <TabsTrigger value="gestao" className="gap-2">
+            <Settings2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Gestão</span>
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className="shadow-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Em Risco</p>
-                <p className="text-3xl font-bold text-danger">{churnRiskCount}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-danger" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* ROI Tab */}
+        <TabsContent value="roi" className="space-y-6">
+          {/* ROI Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">ROIzômetro Médio</p>
+                    <p className="text-3xl font-bold text-foreground">{avgROI}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Target className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-card col-span-1 sm:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Top 5 em Risco</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {topRiskClients.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum cliente em risco</p>
-            ) : (
-              <div className="space-y-2">
-                {topRiskClients.map((client) => (
-                  <Link
-                    key={client.id}
-                    to={`/clients/${client.id}`}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <span className="text-sm font-medium text-foreground">{client.full_name}</span>
-                    <ScoreBadge score={client.roizometer} size="sm" />
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Eventos ROI (30d)</p>
+                    <p className="text-3xl font-bold text-foreground">{roiStats?.totalROIEvents || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-success" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Filters */}
-      <Card className="shadow-card">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou telefone..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="active">Saudável</SelectItem>
-                <SelectItem value="churn_risk">Em Risco</SelectItem>
-                <SelectItem value="churned">Crítico</SelectItem>
-                <SelectItem value="paused">Pausado</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={quadrantFilter} onValueChange={setQuadrantFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Quadrante" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="highE_highROI">Encantado</SelectItem>
-                <SelectItem value="highE_lowROI">Risco de Cobrança</SelectItem>
-                <SelectItem value="lowE_highROI">Risco Silencioso</SelectItem>
-                <SelectItem value="lowE_lowROI">Churn Iminente</SelectItem>
-              </SelectContent>
-            </Select>
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Eventos de Risco (30d)</p>
+                    <p className="text-3xl font-bold text-danger">{riskStats?.totalRiskEvents || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
+                    <AlertTriangle className="h-6 w-6 text-danger" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Alto Impacto</p>
+                    <p className="text-3xl font-bold text-primary">{roiStats?.highImpactCount || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Star className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Clients Table */}
-      <Card className="shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  ROIzômetro
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  E-Score
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Tendência
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Quadrante
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Último Alerta
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Ação
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                    <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
-                    Carregando...
-                  </td>
-                </tr>
-              ) : filteredClients.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                    {clients.length === 0
-                      ? "Nenhum cliente cadastrado. Adicione seu primeiro cliente!"
-                      : "Nenhum cliente encontrado com os filtros aplicados."}
-                  </td>
-                </tr>
-              ) : (
-                filteredClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-foreground">{client.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
+          {/* ROI Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="text-base">Categorias de ROI (30 dias)</CardTitle>
+                <CardDescription>Tipos de ROI mais identificados</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {roiStats?.recentCategories && roiStats.recentCategories.length > 0 ? (
+                  <div className="space-y-3">
+                    {roiStats.recentCategories.map((cat) => (
+                      <div key={cat.category} className="flex items-center justify-between">
+                        <span className="text-sm">{getCategoryLabel(cat.category)}</span>
+                        <Badge variant="secondary">{cat.count}</Badge>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <ScoreBadge score={client.roizometer} size="sm" />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <ScoreBadge score={client.escore} size="sm" />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <TrendIndicator trend={client.trend} size="sm" />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <QuadrantIndicator quadrant={client.quadrant} size="sm" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-muted-foreground max-w-48 truncate">
-                        {client.last_risk || "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/clients/${client.id}`}>
-                          Ver <ArrowRight className="h-4 w-4 ml-1" />
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhum evento de ROI nos últimos 30 dias</p>
+                )}
+                <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Tangível vs Intangível</span>
+                  <span className="font-medium">{roiStats?.tangibleCount || 0} / {roiStats?.intangibleCount || 0}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="text-base">Top 5 em Risco</CardTitle>
+                <CardDescription>Clientes que precisam de atenção</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {topRiskClients.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum cliente em risco</p>
+                ) : (
+                  <div className="space-y-2">
+                    {topRiskClients.map((client) => (
+                      <Link
+                        key={client.id}
+                        to={`/clients/${client.id}`}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <span className="text-sm font-medium">{client.full_name}</span>
+                        <ScoreBadge score={client.roizometer} size="sm" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* CX Tab */}
+        <TabsContent value="cx" className="space-y-6">
+          {/* CX Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">E-Score Médio</p>
+                    <p className="text-3xl font-bold text-foreground">{avgEScore}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Heart className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Promotores</p>
+                    <p className="text-3xl font-bold text-success">{promoterCount}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                    <ThumbsUp className="h-6 w-6 text-success" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Detratores</p>
+                    <p className="text-3xl font-bold text-danger">{detractorCount}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
+                    <ThumbsDown className="h-6 w-6 text-danger" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Momentos CX Próximos</p>
+                    <p className="text-3xl font-bold text-primary">{upcomingEvents.length}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Bell className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Upcoming Life Events */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base">Próximos Momentos CX</CardTitle>
+              </div>
+              <CardDescription>Eventos importantes dos próximos 30 dias</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {upcomingEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum momento CX próximo. Cadastre aniversários e datas importantes dos seus clientes!
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingEvents.map((event: any) => {
+                    const Icon = EVENT_TYPE_ICONS[event.event_type] || Calendar;
+                    return (
+                      <Link
+                        key={event.id}
+                        to={`/clients/${event.client_id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{event.title}</p>
+                          <p className="text-xs text-muted-foreground">{event.client_name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {event.source === "ai_detected" && (
+                            <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
+                              <Sparkles className="h-3 w-3" />
+                              IA
+                            </Badge>
+                          )}
+                          <Badge variant={event.daysUntil === 0 ? "default" : event.daysUntil <= 7 ? "secondary" : "outline"}>
+                            {event.daysUntil === 0 ? "Hoje!" : event.daysUntil === 1 ? "Amanhã" : `${event.daysUntil} dias`}
+                          </Badge>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+            </CardContent>
+          </Card>
+
+          {/* V-NPS Distribution */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base">Distribuição V-NPS</CardTitle>
+              <CardDescription>Classificação dos clientes por V-NPS</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 rounded-lg bg-success/10">
+                  <p className="text-2xl font-bold text-success">{promoterCount}</p>
+                  <p className="text-sm text-muted-foreground">Promotores</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-warning/10">
+                  <p className="text-2xl font-bold text-warning">{clients.filter(c => c.vnps_class === "neutral").length}</p>
+                  <p className="text-sm text-muted-foreground">Neutros</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-danger/10">
+                  <p className="text-2xl font-bold text-danger">{detractorCount}</p>
+                  <p className="text-sm text-muted-foreground">Detratores</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Gestão Tab */}
+        <TabsContent value="gestao" className="space-y-6">
+          {/* Gestão Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total de Clientes</p>
+                    <p className="text-3xl font-bold text-foreground">{totalClients}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Em Risco</p>
+                    <p className="text-3xl font-bold text-danger">{churnRiskCount}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
+                    <AlertTriangle className="h-6 w-6 text-danger" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Ativos</p>
+                    <p className="text-3xl font-bold text-success">{clients.filter(c => c.status === "active").length}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-success" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Pausados</p>
+                    <p className="text-3xl font-bold text-muted-foreground">{clients.filter(c => c.status === "paused").length}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                    <Minus className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <Card className="shadow-card">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou telefone..."
+                    className="pl-9"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Saudável</SelectItem>
+                    <SelectItem value="churn_risk">Em Risco</SelectItem>
+                    <SelectItem value="churned">Crítico</SelectItem>
+                    <SelectItem value="paused">Pausado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={quadrantFilter} onValueChange={setQuadrantFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Quadrante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="highE_highROI">Encantado</SelectItem>
+                    <SelectItem value="highE_lowROI">Risco de Cobrança</SelectItem>
+                    <SelectItem value="lowE_highROI">Risco Silencioso</SelectItem>
+                    <SelectItem value="lowE_lowROI">Churn Iminente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Clients Table */}
+          <Card className="shadow-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Cliente
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      ROIzômetro
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      E-Score
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Tendência
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Quadrante
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Último Alerta
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Ação
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                        <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
+                        Carregando...
+                      </td>
+                    </tr>
+                  ) : filteredClients.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                        {clients.length === 0
+                          ? "Nenhum cliente cadastrado. Adicione seu primeiro cliente!"
+                          : "Nenhum cliente encontrado com os filtros aplicados."}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredClients.map((client) => (
+                      <tr key={client.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="font-medium text-foreground">{client.full_name}</p>
+                            <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <ScoreBadge score={client.roizometer} size="sm" />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <ScoreBadge score={client.escore} size="sm" />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <TrendIndicator trend={client.trend} size="sm" />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <QuadrantIndicator quadrant={client.quadrant} size="sm" />
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-muted-foreground max-w-48 truncate">
+                            {client.last_risk || "—"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/clients/${client.id}`}>
+                              Ver <ArrowRight className="h-4 w-4 ml-1" />
+                            </Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
