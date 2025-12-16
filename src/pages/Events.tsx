@@ -55,6 +55,7 @@ interface Event {
   description: string | null;
   event_type: "live" | "material";
   modality: "online" | "presencial";
+  address: string | null;
   scheduled_at: string | null;
   duration_minutes: number | null;
   meeting_url: string | null;
@@ -92,6 +93,7 @@ export default function Events() {
   const [description, setDescription] = useState("");
   const [eventType, setEventType] = useState<"live" | "material">("live");
   const [modality, setModality] = useState<"online" | "presencial">("online");
+  const [address, setAddress] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("");
   const [meetingUrl, setMeetingUrl] = useState("");
@@ -157,6 +159,7 @@ export default function Events() {
     setDescription("");
     setEventType("live");
     setModality("online");
+    setAddress("");
     setScheduledAt("");
     setDurationMinutes("");
     setMeetingUrl("");
@@ -172,6 +175,7 @@ export default function Events() {
     setDescription(event.description || "");
     setEventType(event.event_type);
     setModality(event.modality || "online");
+    setAddress(event.address || "");
     setScheduledAt(event.scheduled_at ? event.scheduled_at.slice(0, 16) : "");
     setDurationMinutes(event.duration_minutes?.toString() || "");
     setMeetingUrl(event.meeting_url || "");
@@ -205,6 +209,7 @@ export default function Events() {
       description: description.trim() || null,
       event_type: eventType,
       modality: modality,
+      address: modality === "presencial" ? address.trim() || null : null,
       scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       duration_minutes: durationMinutes ? parseInt(durationMinutes) : null,
       meeting_url: meetingUrl.trim() || null,
@@ -401,6 +406,17 @@ export default function Events() {
                   </Select>
                 </div>
               </div>
+              {modality === "presencial" && (
+                <div className="space-y-2">
+                  <Label htmlFor="address">Endereço</Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Rua, número, bairro, cidade..."
+                  />
+                </div>
+              )}
 
               {eventType === "live" && (
                 <>
