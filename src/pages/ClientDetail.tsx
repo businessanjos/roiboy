@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
+import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import {
   ArrowLeft,
   Plus,
@@ -43,15 +44,6 @@ interface ScoreSnapshot {
   quadrant: "highE_lowROI" | "lowE_highROI" | "lowE_lowROI" | "highE_highROI";
   trend: "up" | "flat" | "down";
   computed_at: string;
-}
-
-interface TimelineEvent {
-  id: string;
-  type: "message" | "roi" | "risk" | "recommendation" | "session";
-  title: string;
-  description?: string;
-  timestamp: string;
-  metadata?: Record<string, any>;
 }
 
 interface RoiEvent {
@@ -179,25 +171,49 @@ export default function ClientDetail() {
           title: `ROI ${roi.roi_type === "tangible" ? "Tangível" : "Intangível"}: ${getCategoryLabel(roi.category)}`,
           description: roi.evidence_snippet,
           timestamp: roi.happened_at,
-          metadata: { impact: roi.impact, category: roi.category },
+          metadata: { 
+            impact: roi.impact, 
+            category: roi.category, 
+            roi_type: roi.roi_type,
+            source: roi.source 
+          },
         });
       });
 
-      // Add risk events
-      (riskData || []).forEach((risk: any) => {
+      // Add risk events (fetch all, not just 3)
+      const { data: allRiskData } = await supabase
+        .from("risk_events")
+        .select("*")
+        .eq("client_id", id)
+        .order("happened_at", { ascending: false })
+        .limit(20);
+
+      (allRiskData || []).forEach((risk: any) => {
         timelineItems.push({
           id: risk.id,
           type: "risk",
-          title: "Alerta de Risco",
-          description: risk.reason,
+          title: "Sinal de Risco Detectado",
+          description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
           timestamp: risk.happened_at,
-          metadata: { level: risk.risk_level },
+          metadata: { level: risk.risk_level, source: risk.source },
+        });
+      });
+
+      // Add recommendations
+      (recData || []).forEach((rec: any) => {
+        timelineItems.push({
+          id: rec.id,
+          type: "recommendation",
+          title: rec.title,
+          description: rec.action_text,
+          timestamp: rec.created_at,
+          metadata: { priority: rec.priority, status: rec.status },
         });
       });
 
       // Sort by timestamp
       timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setTimeline(timelineItems.slice(0, 30));
+      setTimeline(timelineItems.slice(0, 50));
 
     } catch (error) {
       console.error("Error fetching client data:", error);
@@ -487,58 +503,31 @@ export default function ClientDetail() {
 
         <TabsContent value="timeline">
           <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base">Histórico de Interações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {timeline.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Nenhuma interação registrada ainda.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {timeline.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                    >
-                      <div
-                        className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          event.type === "message"
-                            ? "bg-info/10 text-info"
-                            : event.type === "roi"
-                            ? "bg-success/10 text-success"
-                            : event.type === "risk"
-                            ? "bg-danger/10 text-danger"
-                            : "bg-primary/10 text-primary"
-                        }`}
-                      >
-                        {event.type === "message" && <MessageSquare className="h-4 w-4" />}
-                        {event.type === "roi" && <TrendingUp className="h-4 w-4" />}
-                        {event.type === "risk" && <AlertTriangle className="h-4 w-4" />}
-                        {event.type === "session" && <Video className="h-4 w-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium text-sm text-foreground">
-                            {event.title}
-                          </p>
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {format(new Date(event.timestamp), "dd/MM HH:mm", {
-                              locale: ptBR,
-                            })}
-                          </span>
-                        </div>
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {event.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Histórico Completo</CardTitle>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span>Mensagens</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>ROI</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <span>Riscos</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-violet-500" />
+                    <span>Ações</span>
+                  </div>
                 </div>
-              )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <Timeline events={timeline} />
             </CardContent>
           </Card>
         </TabsContent>
