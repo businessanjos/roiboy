@@ -858,6 +858,69 @@ export type Database = {
           },
         ]
       }
+      vnps_snapshots: {
+        Row: {
+          account_id: string
+          client_id: string
+          computed_at: string
+          created_at: string
+          eligible_for_nps_ask: boolean
+          escore: number
+          explanation: string | null
+          id: string
+          risk_index: number
+          roizometer: number
+          trend: Database["public"]["Enums"]["trend_type"]
+          vnps_class: Database["public"]["Enums"]["vnps_class"]
+          vnps_score: number
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          computed_at?: string
+          created_at?: string
+          eligible_for_nps_ask?: boolean
+          escore?: number
+          explanation?: string | null
+          id?: string
+          risk_index?: number
+          roizometer?: number
+          trend?: Database["public"]["Enums"]["trend_type"]
+          vnps_class?: Database["public"]["Enums"]["vnps_class"]
+          vnps_score?: number
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          computed_at?: string
+          created_at?: string
+          eligible_for_nps_ask?: boolean
+          escore?: number
+          explanation?: string | null
+          id?: string
+          risk_index?: number
+          roizometer?: number
+          trend?: Database["public"]["Enums"]["trend_type"]
+          vnps_class?: Database["public"]["Enums"]["vnps_class"]
+          vnps_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vnps_snapshots_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vnps_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -926,6 +989,7 @@ export type Database = {
       roi_type: "tangible" | "intangible"
       trend_type: "up" | "flat" | "down"
       user_role: "admin" | "leader" | "mentor"
+      vnps_class: "detractor" | "neutral" | "promoter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1120,6 +1184,7 @@ export const Constants = {
       roi_type: ["tangible", "intangible"],
       trend_type: ["up", "flat", "down"],
       user_role: ["admin", "leader", "mentor"],
+      vnps_class: ["detractor", "neutral", "promoter"],
     },
   },
 } as const
