@@ -33,24 +33,42 @@ export default function Clients() {
   }, []);
 
   const handleAddClient = async () => {
+    if (!newName.trim() || !newPhone.trim()) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
     try {
-      const { data: userData } = await supabase.from("users").select("account_id").single();
-      if (!userData) throw new Error("User not found");
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("account_id")
+        .single();
+      
+      if (userError || !userData) {
+        console.error("User profile error:", userError);
+        toast.error("Perfil não encontrado. Faça logout e login novamente.");
+        return;
+      }
 
       const { error } = await supabase.from("clients").insert({
         account_id: userData.account_id,
-        full_name: newName,
-        phone_e164: newPhone,
+        full_name: newName.trim(),
+        phone_e164: newPhone.trim(),
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Insert error:", error);
+        throw error;
+      }
+      
       toast.success("Cliente adicionado!");
       setDialogOpen(false);
       setNewName("");
       setNewPhone("");
       fetchClients();
-    } catch (error) {
-      toast.error("Erro ao adicionar cliente");
+    } catch (error: any) {
+      console.error("Add client error:", error);
+      toast.error(error.message || "Erro ao adicionar cliente");
     }
   };
 
