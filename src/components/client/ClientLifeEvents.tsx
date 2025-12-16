@@ -52,6 +52,8 @@ import {
   User,
   HeartPulse,
   CloudRain,
+  Sparkles,
+  Home,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isAfter } from "date-fns";
@@ -65,7 +67,7 @@ interface LifeEvent {
   description: string | null;
   is_recurring: boolean;
   reminder_days_before: number | null;
-  source: "manual" | "conversation";
+  source: "manual" | "conversation" | "ai_detected";
   created_at: string;
 }
 
@@ -83,10 +85,13 @@ const EVENT_TYPES = [
   { value: "new_job", label: "Novo Emprego", icon: Briefcase, color: "text-emerald-500" },
   { value: "promotion", label: "Promoção", icon: TrendingUp, color: "text-green-500" },
   { value: "retirement", label: "Aposentadoria", icon: Star, color: "text-amber-500" },
+  { value: "health", label: "Questão de Saúde", icon: HeartPulse, color: "text-orange-500" },
   { value: "health_issue", label: "Questão de Saúde", icon: HeartPulse, color: "text-orange-500" },
   { value: "loss", label: "Perda/Luto", icon: CloudRain, color: "text-gray-500" },
   { value: "travel", label: "Viagem", icon: Plane, color: "text-cyan-500" },
   { value: "achievement", label: "Conquista", icon: Trophy, color: "text-yellow-500" },
+  { value: "celebration", label: "Comemoração", icon: Star, color: "text-amber-500" },
+  { value: "moving", label: "Mudança", icon: Home, color: "text-teal-500" },
   { value: "other", label: "Outro", icon: Star, color: "text-muted-foreground" },
 ];
 
@@ -361,6 +366,12 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-medium truncate">{event.title}</h4>
+                          {event.source === "ai_detected" && (
+                            <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
+                              <Sparkles className="h-3 w-3" />
+                              IA
+                            </Badge>
+                          )}
                           {event.source === "conversation" && (
                             <Badge variant="outline" className="gap-1 text-xs">
                               <MessageSquare className="h-3 w-3" />
