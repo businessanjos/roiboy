@@ -222,6 +222,32 @@ serve(async (req) => {
 
     console.log("Audio transcribed and saved:", messageEvent.id);
 
+    // Trigger AI analysis in background (only for client messages)
+    if (payload.direction === "client_to_team" && transcription.length > 10) {
+      console.log("Triggering AI analysis for audio transcription...");
+      const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-message`;
+      
+      // Fire and forget - don't wait for analysis
+      fetch(analyzeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({
+          message_event_id: messageEvent.id,
+          content_text: transcription,
+          client_id: client.id,
+          account_id: client.account_id,
+          source: "whatsapp_audio",
+        }),
+      }).then(res => {
+        console.log("AI analysis triggered, status:", res.status);
+      }).catch(err => {
+        console.error("Error triggering AI analysis:", err);
+      });
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
