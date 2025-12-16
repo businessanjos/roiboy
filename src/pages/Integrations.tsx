@@ -24,6 +24,7 @@ export default function Integrations() {
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const zoomWebhookUrl = `${supabaseUrl}/functions/v1/zoom-webhook`;
+  const googleMeetWebhookUrl = `${supabaseUrl}/functions/v1/google-meet-webhook`;
   const whatsappMessageUrl = `${supabaseUrl}/functions/v1/ingest-whatsapp-message`;
   const whatsappAudioUrl = `${supabaseUrl}/functions/v1/ingest-whatsapp-audio`;
   const rykaWebhookUrl = `${supabaseUrl}/functions/v1/ryka-webhook`;
@@ -264,7 +265,7 @@ export default function Integrations() {
                   <div>
                     <CardTitle>Google Meet</CardTitle>
                     <CardDescription>
-                      Capture presença de reuniões do Google Meet via Calendar
+                      Capture presença de reuniões do Google Meet via Workspace Events API
                     </CardDescription>
                   </div>
                 </div>
@@ -278,26 +279,66 @@ export default function Integrations() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                  <strong>Em desenvolvimento:</strong> A integração com Google Meet requer configuração OAuth.
-                  Entre em contato para configuração personalizada.
-                </p>
-              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Webhook URL (Pub/Sub Endpoint)</Label>
+                  <div className="flex gap-2">
+                    <Input value={googleMeetWebhookUrl} readOnly className="font-mono text-sm" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(googleMeetWebhookUrl, "Google Meet Webhook URL")}
+                    >
+                      {copied === "Google Meet Webhook URL" ? (
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Configure este URL como Push Endpoint no Google Cloud Pub/Sub.
+                  </p>
+                </div>
 
-              <div className="rounded-lg border p-4 space-y-3">
-                <h4 className="font-medium">Funcionalidades planejadas:</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Sincronização com Google Calendar</li>
-                  <li>• Detecção de presença em reuniões</li>
-                  <li>• Duração de participação</li>
-                  <li>• Integração com Google Workspace</li>
-                </ul>
+                <div className="rounded-lg border p-4 space-y-3">
+                  <h4 className="font-medium">Eventos suportados:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• <code className="text-xs bg-muted px-1 rounded">conference.v2.started</code> - Início de reunião</li>
+                    <li>• <code className="text-xs bg-muted px-1 rounded">conference.v2.ended</code> - Fim de reunião</li>
+                    <li>• <code className="text-xs bg-muted px-1 rounded">participant.v2.joined</code> - Participante entrou</li>
+                    <li>• <code className="text-xs bg-muted px-1 rounded">participant.v2.left</code> - Participante saiu</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <ExternalLink className="h-4 w-4" />
+                    Como configurar
+                  </h4>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Acesse o <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a></li>
+                    <li>Ative a <strong>Google Workspace Events API</strong></li>
+                    <li>Crie um <strong>Pub/Sub Topic</strong> e adicione esta URL como Push Subscription</li>
+                    <li>Configure <strong>OAuth 2.0</strong> com escopo <code className="text-xs bg-muted px-1 rounded">meetings.space.readonly</code></li>
+                    <li>Crie uma <strong>Event Subscription</strong> para eventos do Meet</li>
+                  </ol>
+                </div>
+
+                <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    <strong>Requer Google Workspace:</strong> A integração funciona apenas com contas Google Workspace (não Gmail pessoal).
+                  </p>
+                </div>
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={() => toggleIntegration("google")} variant="outline">
-                  {googleIntegration?.status === "connected" ? "Desconectar" : "Marcar como Conectado"}
+                <Button onClick={() => toggleIntegration("google")}>
+                  {googleIntegration?.status === "connected" ? "Desconectar" : "Conectar"}
+                </Button>
+                <Button variant="outline" onClick={fetchIntegrations}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Atualizar Status
                 </Button>
               </div>
             </CardContent>
