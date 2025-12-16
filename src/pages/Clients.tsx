@@ -416,25 +416,27 @@ export default function Clients() {
   );
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">Clientes</h1>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
         <div className="flex gap-2 flex-wrap">
           {/* Bulk Omie Sync */}
           <Button 
             variant="outline" 
+            size="sm"
+            className="sm:size-default"
             onClick={handleBulkOmieSync}
             disabled={bulkSyncing || clients.length === 0}
           >
             {bulkSyncing ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {syncProgress.current}/{syncProgress.total}
+                <span className="hidden sm:inline">{syncProgress.current}/{syncProgress.total}</span>
               </>
             ) : (
               <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Sincronizar Omie
+                <RefreshCw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sincronizar Omie</span>
               </>
             )}
           </Button>
@@ -448,9 +450,9 @@ export default function Clients() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+              <Button variant="outline" size="sm" className="sm:size-default">
+                <Upload className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Importar CSV</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
@@ -560,7 +562,7 @@ export default function Clients() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />Novo Cliente</Button>
+              <Button size="sm" className="sm:size-default"><Plus className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Novo Cliente</span></Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh]">
               <DialogHeader>
@@ -633,67 +635,72 @@ export default function Clients() {
           
           return (
             <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium">{client.full_name}</p>
-                  <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
-                  {clientProducts.length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                      {clientProducts.map((productName: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          <Package className="h-3 w-3 mr-1" />
-                          {productName}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  {/* WhatsApp indicator */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                          whatsappMap[client.id]?.messageCount > 0 
-                            ? "bg-emerald-500/10 text-emerald-600" 
-                            : "bg-muted text-muted-foreground"
-                        }`}>
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          {whatsappMap[client.id]?.messageCount > 0 && (
-                            <span className="font-medium">{whatsappMap[client.id].messageCount}</span>
-                          )}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {whatsappMap[client.id]?.messageCount > 0 ? (
-                          <div className="text-xs">
-                            <p className="font-medium">WhatsApp conectado</p>
-                            <p>{whatsappMap[client.id].messageCount} mensagem(ns)</p>
-                            {whatsappMap[client.id].lastMessageAt && (
-                              <p className="text-muted-foreground">
-                                Última: {new Date(whatsappMap[client.id].lastMessageAt!).toLocaleDateString('pt-BR')}
-                              </p>
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <p className="font-medium truncate">{client.full_name}</p>
+                    <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
+                    {clientProducts.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                        {clientProducts.map((productName: string, idx: number) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            <Package className="h-3 w-3 mr-1" />
+                            {productName}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+                    {/* WhatsApp indicator */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                            whatsappMap[client.id]?.messageCount > 0 
+                              ? "bg-emerald-500/10 text-emerald-600" 
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            {whatsappMap[client.id]?.messageCount > 0 && (
+                              <span className="font-medium">{whatsappMap[client.id].messageCount}</span>
                             )}
                           </div>
-                        ) : (
-                          <p className="text-xs">Sem mensagens WhatsApp</p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  {vnpsMap[client.id] && (
-                    <VNPSBadge
-                      score={vnpsMap[client.id].vnps_score}
-                      vnpsClass={vnpsMap[client.id].vnps_class}
-                      trend={vnpsMap[client.id].trend}
-                      size="sm"
-                    />
-                  )}
-                  <StatusIndicator status={client.status} size="sm" />
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/clients/${client.id}`}>Ver <ArrowRight className="h-4 w-4 ml-1" /></Link>
-                  </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {whatsappMap[client.id]?.messageCount > 0 ? (
+                            <div className="text-xs">
+                              <p className="font-medium">WhatsApp conectado</p>
+                              <p>{whatsappMap[client.id].messageCount} mensagem(ns)</p>
+                              {whatsappMap[client.id].lastMessageAt && (
+                                <p className="text-muted-foreground">
+                                  Última: {new Date(whatsappMap[client.id].lastMessageAt!).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs">Sem mensagens WhatsApp</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    {vnpsMap[client.id] && (
+                      <VNPSBadge
+                        score={vnpsMap[client.id].vnps_score}
+                        vnpsClass={vnpsMap[client.id].vnps_class}
+                        trend={vnpsMap[client.id].trend}
+                        size="sm"
+                      />
+                    )}
+                    <StatusIndicator status={client.status} size="sm" />
+                    <Button variant="ghost" size="sm" asChild className="ml-auto sm:ml-0">
+                      <Link to={`/clients/${client.id}`}>
+                        <span className="hidden sm:inline">Ver</span>
+                        <ArrowRight className="h-4 w-4 sm:ml-1" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

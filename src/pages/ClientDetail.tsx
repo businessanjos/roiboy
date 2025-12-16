@@ -770,18 +770,18 @@ export default function ClientDetail() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
             <Link to="/dashboard">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{client.full_name}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">{client.full_name}</h1>
               <StatusIndicator status={client.status} size="sm" />
               <Button 
                 variant="ghost" 
@@ -792,7 +792,7 @@ export default function ClientDetail() {
                 <Edit2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mt-1">
               <span className="flex items-center gap-1">
                 <Phone className="h-3.5 w-3.5" />
                 {client.phone_e164}
@@ -800,14 +800,14 @@ export default function ClientDetail() {
               {client.emails && client.emails.length > 0 && (
                 <span className="flex items-center gap-1">
                   <Mail className="h-3.5 w-3.5" />
-                  {client.emails[0]}
+                  <span className="truncate max-w-[150px]">{client.emails[0]}</span>
                   {client.emails.length > 1 && ` +${client.emails.length - 1}`}
                 </span>
               )}
               {client.company_name && (
                 <span className="flex items-center gap-1">
                   <Building2 className="h-3.5 w-3.5" />
-                  {client.company_name}
+                  <span className="truncate max-w-[120px]">{client.company_name}</span>
                 </span>
               )}
               {client.city && client.state && (
@@ -1017,7 +1017,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Scores Header */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="shadow-card">
           <CardContent className="p-5">
             <ScoreGauge
@@ -1139,15 +1139,17 @@ export default function ClientDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="subscriptions" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
-          <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
-          <TabsTrigger value="recommendations">
-            Recomendações ({recommendations.filter((r) => r.status === "open").length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="w-max sm:w-auto">
+            <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
+            <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
+            <TabsTrigger value="recommendations">
+              Recomendações ({recommendations.filter((r) => r.status === "open").length})
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="subscriptions">
           <Card className="shadow-card">
