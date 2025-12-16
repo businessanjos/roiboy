@@ -29,3 +29,12 @@ verify_jwt = false
 
 [functions.google-meet-webhook]
 verify_jwt = false
+
+[functions.extension-auth]
+verify_jwt = false
+
+[functions.create-client]
+verify_jwt = false
+
+[functions.bulk-ingest-messages]
+verify_jwt = false
