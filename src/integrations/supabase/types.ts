@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_settings: {
+        Row: {
+          account_id: string
+          created_at: string
+          escore_live_participation: number
+          escore_live_presence: number
+          escore_whatsapp_engagement: number
+          id: string
+          threshold_engagement_drop_percent: number
+          threshold_low_escore: number
+          threshold_low_roizometer: number
+          threshold_silence_days: number
+          updated_at: string
+          weight_live_interaction: number
+          weight_whatsapp_audio: number
+          weight_whatsapp_text: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          escore_live_participation?: number
+          escore_live_presence?: number
+          escore_whatsapp_engagement?: number
+          id?: string
+          threshold_engagement_drop_percent?: number
+          threshold_low_escore?: number
+          threshold_low_roizometer?: number
+          threshold_silence_days?: number
+          updated_at?: string
+          weight_live_interaction?: number
+          weight_whatsapp_audio?: number
+          weight_whatsapp_text?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          escore_live_participation?: number
+          escore_live_presence?: number
+          escore_whatsapp_engagement?: number
+          id?: string
+          threshold_engagement_drop_percent?: number
+          threshold_low_escore?: number
+          threshold_low_roizometer?: number
+          threshold_silence_days?: number
+          updated_at?: string
+          weight_live_interaction?: number
+          weight_whatsapp_audio?: number
+          weight_whatsapp_text?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           created_at: string

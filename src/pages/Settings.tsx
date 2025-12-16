@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Settings2, Scale, AlertTriangle, Save, RotateCcw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2 } from "lucide-react";
 
 interface ScoreWeights {
   whatsapp_text: number;
@@ -40,10 +42,53 @@ const defaultThresholds: RiskThresholds = {
 };
 
 export default function Settings() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [weights, setWeights] = useState<ScoreWeights>(defaultWeights);
   const [thresholds, setThresholds] = useState<RiskThresholds>(defaultThresholds);
   const [hasChanges, setHasChanges] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      loadSettings();
+    }
+  }, [user]);
+
+  const loadSettings = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("account_settings")
+        .select("*")
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error loading settings:", error);
+      } else if (data) {
+        setSettingsId(data.id);
+        setWeights({
+          whatsapp_text: Number(data.weight_whatsapp_text),
+          whatsapp_audio: Number(data.weight_whatsapp_audio),
+          live_interaction: Number(data.weight_live_interaction),
+          whatsapp_engagement: data.escore_whatsapp_engagement,
+          live_presence: data.escore_live_presence,
+          live_participation: data.escore_live_participation,
+        });
+        setThresholds({
+          silence_days: data.threshold_silence_days,
+          engagement_drop_percent: data.threshold_engagement_drop_percent,
+          low_escore: data.threshold_low_escore,
+          low_roizometer: data.threshold_low_roizometer,
+        });
+      }
+    } catch (err) {
+      console.error("Error:", err);
+    }
+    setLoading(false);
+  };
 
   const updateWeight = (key: keyof ScoreWeights, value: number) => {
     setWeights((prev) => ({ ...prev, [key]: value }));
@@ -55,15 +100,63 @@ export default function Settings() {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
-    // In a real implementation, save to database
-    localStorage.setItem("roiboy_weights", JSON.stringify(weights));
-    localStorage.setItem("roiboy_thresholds", JSON.stringify(thresholds));
-    setHasChanges(false);
-    toast({
-      title: "Configurações salvas",
-      description: "Os pesos e limiares foram atualizados com sucesso.",
-    });
+  const handleSave = async () => {
+    setSaving(true);
+    
+    const settingsData = {
+      weight_whatsapp_text: weights.whatsapp_text,
+      weight_whatsapp_audio: weights.whatsapp_audio,
+      weight_live_interaction: weights.live_interaction,
+      escore_whatsapp_engagement: weights.whatsapp_engagement,
+      escore_live_presence: weights.live_presence,
+      escore_live_participation: weights.live_participation,
+      threshold_silence_days: thresholds.silence_days,
+      threshold_engagement_drop_percent: thresholds.engagement_drop_percent,
+      threshold_low_escore: thresholds.low_escore,
+      threshold_low_roizometer: thresholds.low_roizometer,
+    };
+
+    try {
+      if (settingsId) {
+        // Update existing settings
+        const { error } = await supabase
+          .from("account_settings")
+          .update(settingsData)
+          .eq("id", settingsId);
+
+        if (error) throw error;
+      } else {
+        // Insert new settings
+        const accountId = user?.user_metadata?.account_id;
+        if (!accountId) {
+          throw new Error("Account ID not found");
+        }
+        
+        const { data, error } = await supabase
+          .from("account_settings")
+          .insert({ ...settingsData, account_id: accountId })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setSettingsId(data.id);
+      }
+
+      setHasChanges(false);
+      toast({
+        title: "Configurações salvas",
+        description: "Os pesos e limiares foram atualizados com sucesso.",
+      });
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as configurações.",
+        variant: "destructive",
+      });
+    }
+    
+    setSaving(false);
   };
 
   const handleReset = () => {
@@ -75,6 +168,14 @@ export default function Settings() {
       description: "Configurações restauradas para os valores padrão.",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -90,8 +191,12 @@ export default function Settings() {
             <RotateCcw className="h-4 w-4 mr-2" />
             Resetar
           </Button>
-          <Button onClick={handleSave} disabled={!hasChanges}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button onClick={handleSave} disabled={!hasChanges || saving}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
             Salvar
           </Button>
         </div>
