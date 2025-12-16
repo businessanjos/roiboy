@@ -17,6 +17,7 @@ import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components
 import { VNPSBadge, VNPSExplanation } from "@/components/ui/vnps-badge";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
+import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
@@ -1140,6 +1141,7 @@ export default function ClientDetail() {
       <Tabs defaultValue="subscriptions" className="space-y-4">
         <TabsList>
           <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
+          <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
           <TabsTrigger value="recommendations">
@@ -1151,6 +1153,14 @@ export default function ClientDetail() {
           <Card className="shadow-card">
             <CardContent className="p-6">
               <ClientFinancial clientId={id!} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sales">
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <SalesPerformance clientId={id!} />
             </CardContent>
           </Card>
         </TabsContent>
