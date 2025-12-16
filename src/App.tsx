@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
+import Integrations from "./pages/Integrations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,7 +29,7 @@ const App = () => (
               <Route path="/clients" element={<Clients />} />
               <Route path="/clients/new" element={<Clients />} />
               <Route path="/clients/:id" element={<ClientDetail />} />
-              <Route path="/integrations" element={<Dashboard />} />
+              <Route path="/integrations" element={<Integrations />} />
               <Route path="/settings" element={<Dashboard />} />
             </Route>
             <Route path="*" element={<NotFound />} />
