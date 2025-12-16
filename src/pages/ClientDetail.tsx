@@ -629,7 +629,7 @@ export default function ClientDetail() {
       {/* Tabs */}
       <Tabs defaultValue="subscriptions" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="subscriptions">Produtos</TabsTrigger>
+          <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
           <TabsTrigger value="recommendations">
