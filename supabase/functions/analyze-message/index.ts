@@ -289,6 +289,29 @@ Analise e retorne os eventos identificados.`;
 
     console.log(`Analysis complete. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.recommendations} Recommendations`);
 
+    // Trigger score recalculation for this client in background
+    if (results.roi_events > 0 || results.risk_events > 0) {
+      console.log(`Triggering score recalculation for client ${client_id}`);
+      
+      // Fire and forget - don't await
+      fetch(`${supabaseUrl}/functions/v1/recompute-scores`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({ account_id, client_id }),
+      }).then(response => {
+        if (response.ok) {
+          console.log(`Score recalculation triggered for client ${client_id}`);
+        } else {
+          console.error(`Score recalculation failed: ${response.status}`);
+        }
+      }).catch(err => {
+        console.error("Error triggering score recalculation:", err);
+      });
+    }
+
     return new Response(
       JSON.stringify({ success: true, results, classification }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
