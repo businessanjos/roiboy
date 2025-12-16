@@ -575,13 +575,20 @@ export default function Events() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {event.modality === "online" ? (
-                            <><Monitor className="h-3 w-3 mr-1" /> Online</>
-                          ) : (
-                            <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
+                        <div className="space-y-1">
+                          <Badge variant="outline">
+                            {event.modality === "online" ? (
+                              <><Monitor className="h-3 w-3 mr-1" /> Online</>
+                            ) : (
+                              <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
+                            )}
+                          </Badge>
+                          {event.modality === "presencial" && event.address && (
+                            <div className="text-xs text-muted-foreground line-clamp-1">
+                              {event.address}
+                            </div>
                           )}
-                        </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {event.scheduled_at ? (
