@@ -149,6 +149,72 @@ export type Database = {
           },
         ]
       }
+      client_subscriptions: {
+        Row: {
+          account_id: string
+          amount: number
+          billing_period: Database["public"]["Enums"]["billing_period"]
+          client_id: string
+          created_at: string
+          currency: string
+          end_date: string | null
+          id: string
+          next_billing_date: string | null
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          product_name: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number
+          billing_period?: Database["public"]["Enums"]["billing_period"]
+          client_id: string
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          id?: string
+          next_billing_date?: string | null
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          product_name: string
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          billing_period?: Database["public"]["Enums"]["billing_period"]
+          client_id?: string
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          id?: string
+          next_billing_date?: string | null
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          product_name?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_subscriptions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_subscriptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           account_id: string
@@ -668,6 +734,12 @@ export type Database = {
       get_user_account_id: { Args: never; Returns: string }
     }
     Enums: {
+      billing_period:
+        | "monthly"
+        | "quarterly"
+        | "semiannual"
+        | "annual"
+        | "one_time"
       channel_type: "whatsapp"
       client_status: "active" | "paused" | "churn_risk" | "churned"
       impact_level: "low" | "medium" | "high"
@@ -682,6 +754,13 @@ export type Database = {
       live_platform: "zoom" | "google_meet"
       message_direction: "client_to_team" | "team_to_client"
       message_source: "whatsapp_text" | "whatsapp_audio_transcript"
+      payment_status:
+        | "active"
+        | "overdue"
+        | "cancelled"
+        | "trial"
+        | "paused"
+        | "pending"
       priority_level: "low" | "medium" | "high"
       quadrant_type:
         | "highE_lowROI"
@@ -840,6 +919,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      billing_period: [
+        "monthly",
+        "quarterly",
+        "semiannual",
+        "annual",
+        "one_time",
+      ],
       channel_type: ["whatsapp"],
       client_status: ["active", "paused", "churn_risk", "churned"],
       impact_level: ["low", "medium", "high"],
@@ -855,6 +941,14 @@ export const Constants = {
       live_platform: ["zoom", "google_meet"],
       message_direction: ["client_to_team", "team_to_client"],
       message_source: ["whatsapp_text", "whatsapp_audio_transcript"],
+      payment_status: [
+        "active",
+        "overdue",
+        "cancelled",
+        "trial",
+        "paused",
+        "pending",
+      ],
       priority_level: ["low", "medium", "high"],
       quadrant_type: [
         "highE_lowROI",
