@@ -10,6 +10,16 @@ import { Plus, Search, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 
+// E.164 format: + followed by 1-15 digits
+const E164_REGEX = /^\+[1-9]\d{1,14}$/;
+
+const validateE164 = (phone: string): { valid: boolean; message?: string } => {
+  if (!phone) return { valid: false, message: "Telefone é obrigatório" };
+  if (!phone.startsWith("+")) return { valid: false, message: "Deve começar com +" };
+  if (!E164_REGEX.test(phone)) return { valid: false, message: "Formato inválido. Ex: +5511999999999" };
+  return { valid: true };
+};
+
 export default function Clients() {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +27,7 @@ export default function Clients() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   const fetchClients = async () => {
     const { data, error } = await supabase
@@ -33,10 +44,17 @@ export default function Clients() {
   }, []);
 
   const handleAddClient = async () => {
-    if (!newName.trim() || !newPhone.trim()) {
-      toast.error("Preencha todos os campos");
+    if (!newName.trim()) {
+      toast.error("Preencha o nome do cliente");
       return;
     }
+
+    const phoneValidation = validateE164(newPhone.trim());
+    if (!phoneValidation.valid) {
+      setPhoneError(phoneValidation.message || "Telefone inválido");
+      return;
+    }
+    setPhoneError(null);
 
     try {
       const { data: userData, error: userError } = await supabase
@@ -97,7 +115,21 @@ export default function Clients() {
               </div>
               <div className="space-y-2">
                 <Label>Telefone (E.164)</Label>
-                <Input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="+5511999999999" />
+                <Input 
+                  value={newPhone} 
+                  onChange={(e) => {
+                    setNewPhone(e.target.value);
+                    if (phoneError) setPhoneError(null);
+                  }} 
+                  placeholder="+5511999999999"
+                  className={phoneError ? "border-destructive" : ""}
+                />
+                {phoneError && (
+                  <p className="text-xs text-destructive">{phoneError}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Formato: +[código país][número]. Ex: +5511999999999
+                </p>
               </div>
             </div>
             <DialogFooter>
