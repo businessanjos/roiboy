@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2 } from "lucide-react";
+import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play } from "lucide-react";
 
 interface ScoreWeights {
   whatsapp_text: number;
@@ -50,6 +50,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -169,6 +170,31 @@ export default function Settings() {
     });
   };
 
+  const handleRecalculateScores = async () => {
+    setRecalculating(true);
+    try {
+      const accountId = user?.user_metadata?.account_id;
+      const { data, error } = await supabase.functions.invoke("recompute-scores", {
+        body: { account_id: accountId },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Scores recalculados",
+        description: data?.message || "Os scores foram atualizados com sucesso.",
+      });
+    } catch (err) {
+      console.error("Error recalculating scores:", err);
+      toast({
+        title: "Erro ao recalcular",
+        description: "Não foi possível recalcular os scores.",
+        variant: "destructive",
+      });
+    }
+    setRecalculating(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -215,6 +241,10 @@ export default function Settings() {
           <TabsTrigger value="taxonomy" className="gap-2">
             <Settings2 className="h-4 w-4" />
             Taxonomia
+          </TabsTrigger>
+          <TabsTrigger value="jobs" className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Jobs
           </TabsTrigger>
         </TabsList>
 
@@ -600,6 +630,82 @@ export default function Settings() {
                     <li>• (Em desenvolvimento)</li>
                   </ul>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="jobs" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recálculo de Scores</CardTitle>
+              <CardDescription>
+                Execute o recálculo de scores para todos os clientes da conta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">O que será recalculado:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <strong>ROIzômetro</strong> - Baseado em roi_events dos últimos 30 dias</li>
+                  <li>• <strong>E-Score</strong> - Baseado em mensagens, presença e participação</li>
+                  <li>• <strong>Quadrante</strong> - Classificação baseada nos scores</li>
+                  <li>• <strong>Tendência</strong> - Comparação com snapshot anterior</li>
+                  <li>• <strong>Status</strong> - Atualização automática para churn_risk se aplicável</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Nota:</strong> O recálculo utiliza os pesos e limiares configurados acima.
+                  Certifique-se de salvar as configurações antes de executar o job.
+                </p>
+              </div>
+
+              <Button 
+                onClick={handleRecalculateScores} 
+                disabled={recalculating}
+                className="w-full"
+              >
+                {recalculating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Recalculando...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Executar Recálculo de Scores
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Agendamento Automático</CardTitle>
+              <CardDescription>
+                Configure execução periódica do recálculo de scores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <strong>Em desenvolvimento:</strong> O agendamento automático via cron job 
+                  estará disponível em breve. Por enquanto, execute manualmente ou 
+                  integre via API.
+                </p>
+              </div>
+              
+              <div className="mt-4 rounded-lg border p-4 space-y-2">
+                <h4 className="font-medium text-sm">Endpoint da API:</h4>
+                <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
+                  POST {import.meta.env.VITE_SUPABASE_URL}/functions/v1/recompute-scores
+                </code>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Body: {`{ "account_id": "uuid" }`} (opcional, recalcula todos se omitido)
+                </p>
               </div>
             </CardContent>
           </Card>
