@@ -295,6 +295,66 @@ export type Database = {
           },
         ]
       }
+      client_life_events: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          description: string | null
+          event_date: string | null
+          event_type: string
+          id: string
+          is_recurring: boolean
+          reminder_days_before: number | null
+          source: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          description?: string | null
+          event_date?: string | null
+          event_type: string
+          id?: string
+          is_recurring?: boolean
+          reminder_days_before?: number | null
+          source?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          event_date?: string | null
+          event_type?: string
+          id?: string
+          is_recurring?: boolean
+          reminder_days_before?: number | null
+          source?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_life_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_life_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_products: {
         Row: {
           account_id: string

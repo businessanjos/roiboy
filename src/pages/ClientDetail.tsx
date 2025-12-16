@@ -21,6 +21,7 @@ import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { ClientFollowup } from "@/components/client/ClientFollowup";
+import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -45,6 +46,7 @@ import {
   HelpCircle,
   Calendar,
   FileText,
+  Heart,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -1146,6 +1148,7 @@ export default function ClientDetail() {
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
+            <TabsTrigger value="cx">Momentos CX</TabsTrigger>
             <TabsTrigger value="followup">Acompanhamento</TabsTrigger>
             <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
             <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
@@ -1173,6 +1176,23 @@ export default function ClientDetail() {
                 clientId={id!} 
                 clientProductIds={clientProducts.map(p => p.id)} 
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cx">
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Momentos CX
+              </CardTitle>
+              <CardDescription>
+                Eventos importantes da vida do cliente para um atendimento humanizado
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <ClientLifeEvents clientId={id!} />
             </CardContent>
           </Card>
         </TabsContent>
