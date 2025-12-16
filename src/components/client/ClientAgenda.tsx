@@ -3,6 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Video,
   FileText,
@@ -12,6 +29,7 @@ import {
   X,
   ExternalLink,
   Package,
+  Plus,
 } from "lucide-react";
 import { format, isPast, isFuture, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -57,6 +75,19 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [deliveries, setDeliveries] = useState<ClientDelivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    event_type: "live" as "live" | "material",
+    scheduled_at: "",
+    duration_minutes: "60",
+    meeting_url: "",
+    material_url: "",
+  });
 
   useEffect(() => {
     fetchAccountId();
@@ -168,6 +199,75 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      event_type: "live",
+      scheduled_at: "",
+      duration_minutes: "60",
+      meeting_url: "",
+      material_url: "",
+    });
+  };
+
+  const handleCreateEvent = async () => {
+    if (!accountId || !formData.title.trim()) {
+      toast.error("Preencha o título do evento");
+      return;
+    }
+
+    if (clientProductIds.length === 0) {
+      toast.error("Cliente não possui produtos vinculados");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Create event
+      const { data: eventData, error: eventError } = await supabase
+        .from("events")
+        .insert({
+          account_id: accountId,
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
+          event_type: formData.event_type,
+          scheduled_at: formData.scheduled_at || null,
+          duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
+          meeting_url: formData.meeting_url.trim() || null,
+          material_url: formData.material_url.trim() || null,
+        })
+        .select()
+        .single();
+
+      if (eventError) throw eventError;
+
+      // Link to client's products
+      const eventProductsInserts = clientProductIds.map((productId) => ({
+        account_id: accountId,
+        event_id: eventData.id,
+        product_id: productId,
+      }));
+
+      const { error: linkError } = await supabase
+        .from("event_products")
+        .insert(eventProductsInserts);
+
+      if (linkError) throw linkError;
+
+      toast.success("Evento criado com sucesso!");
+      resetForm();
+      setDialogOpen(false);
+      fetchEvents();
+    } catch (error) {
+      console.error("Error creating event:", error);
+      toast.error("Erro ao criar evento");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -186,12 +286,128 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     );
   }
 
+  const CreateEventButton = () => (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="h-4 w-4 mr-1" />
+          Novo Evento
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Criar Evento para Cliente</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Título *</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Nome do evento"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="event_type">Tipo</Label>
+            <Select
+              value={formData.event_type}
+              onValueChange={(value: "live" | "material") => 
+                setFormData({ ...formData, event_type: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="live">Live / Reunião</SelectItem>
+                <SelectItem value="material">Material de Apoio</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Detalhes do evento"
+              rows={3}
+            />
+          </div>
+
+          {formData.event_type === "live" && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="scheduled_at">Data/Hora</Label>
+                  <Input
+                    id="scheduled_at"
+                    type="datetime-local"
+                    value={formData.scheduled_at}
+                    onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duração (min)</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    value={formData.duration_minutes}
+                    onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="meeting_url">Link da Reunião</Label>
+                <Input
+                  id="meeting_url"
+                  value={formData.meeting_url}
+                  onChange={(e) => setFormData({ ...formData, meeting_url: e.target.value })}
+                  placeholder="https://zoom.us/..."
+                />
+              </div>
+            </>
+          )}
+
+          {formData.event_type === "material" && (
+            <div className="space-y-2">
+              <Label htmlFor="material_url">Link do Material</Label>
+              <Input
+                id="material_url"
+                value={formData.material_url}
+                onChange={(e) => setFormData({ ...formData, material_url: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateEvent} disabled={submitting}>
+              {submitting ? "Criando..." : "Criar Evento"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (events.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
-        <p>Nenhum evento programado para os produtos deste cliente.</p>
-        <p className="text-sm mt-1">Crie eventos na aba Eventos e vincule aos produtos.</p>
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <CreateEventButton />
+        </div>
+        <div className="text-center py-8 text-muted-foreground">
+          <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>Nenhum evento programado para os produtos deste cliente.</p>
+          <p className="text-sm mt-1">Crie eventos usando o botão acima.</p>
+        </div>
       </div>
     );
   }
@@ -207,6 +423,10 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
 
   return (
     <div className="space-y-6">
+      {/* Header with Create Button */}
+      <div className="flex justify-end">
+        <CreateEventButton />
+      </div>
       {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <div>
