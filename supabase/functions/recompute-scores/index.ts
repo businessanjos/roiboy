@@ -16,6 +16,13 @@ interface AccountSettings {
   threshold_low_escore: number;
   threshold_low_roizometer: number;
   threshold_silence_days: number;
+  // V-NPS settings
+  vnps_risk_weight_low: number;
+  vnps_risk_weight_medium: number;
+  vnps_risk_weight_high: number;
+  vnps_eligible_min_score: number;
+  vnps_eligible_max_risk: number;
+  vnps_eligible_min_escore: number;
 }
 
 interface ClientTicketInfo {
@@ -43,6 +50,13 @@ const defaultSettings: AccountSettings = {
   threshold_low_escore: 30,
   threshold_low_roizometer: 30,
   threshold_silence_days: 7,
+  // V-NPS defaults
+  vnps_risk_weight_low: 5,
+  vnps_risk_weight_medium: 15,
+  vnps_risk_weight_high: 30,
+  vnps_eligible_min_score: 9.0,
+  vnps_eligible_max_risk: 20,
+  vnps_eligible_min_escore: 60,
 };
 
 serve(async (req) => {
@@ -156,7 +170,7 @@ serve(async (req) => {
             accountResult.errors.push(`Client ${client.id}: ${snapshotError.message}`);
           } else {
             // Calculate and save V-NPS
-            const vnpsResult = await calculateVNPS(supabase, client.id, account.id, escore, roizometer);
+            const vnpsResult = await calculateVNPS(supabase, client.id, account.id, escore, roizometer, settings);
             
             const { error: vnpsError } = await supabase
               .from("vnps_snapshots")
@@ -232,10 +246,11 @@ async function calculateVNPS(
   clientId: string,
   accountId: string,
   escore: number,
-  roizometer: number
+  roizometer: number,
+  settings: AccountSettings
 ): Promise<VNPSResult> {
-  // Calculate Risk Index from risk_events
-  const riskIndex = await calculateRiskIndex(supabase, clientId, accountId);
+  // Calculate Risk Index from risk_events using settings
+  const riskIndex = await calculateRiskIndex(supabase, clientId, accountId, settings);
   
   // Apply V-NPS formula
   const vnpsRaw = (roizometer * 0.5) + (escore * 0.3) + ((100 - riskIndex) * 0.2);
@@ -270,8 +285,11 @@ async function calculateVNPS(
   // Generate explanation
   const explanation = generateVNPSExplanation(vnpsScore, vnpsClass, roizometer, escore, riskIndex, trend);
   
-  // Determine eligibility for NPS ask (promoter with low risk and high engagement)
-  const eligibleForNpsAsk = vnpsScore >= 9.0 && riskIndex < 20 && escore >= 60;
+  // Determine eligibility for NPS ask using configurable thresholds
+  const eligibleForNpsAsk = 
+    vnpsScore >= settings.vnps_eligible_min_score && 
+    riskIndex <= settings.vnps_eligible_max_risk && 
+    escore >= settings.vnps_eligible_min_escore;
   
   return {
     vnps_score: vnpsScore,
@@ -285,14 +303,15 @@ async function calculateVNPS(
 
 /**
  * Calculate Risk Index (0-100) from risk_events
- * - low = +5, medium = +15, high = +30
+ * Uses configurable weights from settings
  * - Recent events (<14 days) have higher weight
  * - Risk decays over time
  */
 async function calculateRiskIndex(
   supabase: any,
   clientId: string,
-  accountId: string
+  accountId: string,
+  settings: AccountSettings
 ): Promise<number> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -312,10 +331,10 @@ async function calculateRiskIndex(
   let totalRisk = 0;
 
   for (const event of riskEvents) {
-    // Base weight by level
-    let baseWeight = 5; // low
-    if (event.risk_level === "medium") baseWeight = 15;
-    else if (event.risk_level === "high") baseWeight = 30;
+    // Base weight by level using configurable settings
+    let baseWeight = settings.vnps_risk_weight_low; // low
+    if (event.risk_level === "medium") baseWeight = settings.vnps_risk_weight_medium;
+    else if (event.risk_level === "high") baseWeight = settings.vnps_risk_weight_high;
 
     // Recency factor: events in last 14 days get full weight, older events decay
     const eventDate = new Date(event.happened_at).getTime();
