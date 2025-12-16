@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play } from "lucide-react";
+import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp } from "lucide-react";
 
 interface ScoreWeights {
   whatsapp_text: number;
@@ -23,6 +23,15 @@ interface RiskThresholds {
   engagement_drop_percent: number;
   low_escore: number;
   low_roizometer: number;
+}
+
+interface VNPSSettings {
+  risk_weight_low: number;
+  risk_weight_medium: number;
+  risk_weight_high: number;
+  eligible_min_score: number;
+  eligible_max_risk: number;
+  eligible_min_escore: number;
 }
 
 const defaultWeights: ScoreWeights = {
@@ -41,11 +50,21 @@ const defaultThresholds: RiskThresholds = {
   low_roizometer: 30,
 };
 
+const defaultVNPS: VNPSSettings = {
+  risk_weight_low: 5,
+  risk_weight_medium: 15,
+  risk_weight_high: 30,
+  eligible_min_score: 9.0,
+  eligible_max_risk: 20,
+  eligible_min_escore: 60,
+};
+
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [weights, setWeights] = useState<ScoreWeights>(defaultWeights);
   const [thresholds, setThresholds] = useState<RiskThresholds>(defaultThresholds);
+  const [vnpsSettings, setVnpsSettings] = useState<VNPSSettings>(defaultVNPS);
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,6 +103,17 @@ export default function Settings() {
           low_escore: data.threshold_low_escore,
           low_roizometer: data.threshold_low_roizometer,
         });
+        // Load V-NPS settings if they exist
+        if (data.vnps_risk_weight_low !== undefined) {
+          setVnpsSettings({
+            risk_weight_low: data.vnps_risk_weight_low,
+            risk_weight_medium: data.vnps_risk_weight_medium,
+            risk_weight_high: data.vnps_risk_weight_high,
+            eligible_min_score: Number(data.vnps_eligible_min_score),
+            eligible_max_risk: data.vnps_eligible_max_risk,
+            eligible_min_escore: data.vnps_eligible_min_escore,
+          });
+        }
       }
     } catch (err) {
       console.error("Error:", err);
@@ -101,6 +131,11 @@ export default function Settings() {
     setHasChanges(true);
   };
 
+  const updateVnps = (key: keyof VNPSSettings, value: number) => {
+    setVnpsSettings((prev) => ({ ...prev, [key]: value }));
+    setHasChanges(true);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     
@@ -115,6 +150,13 @@ export default function Settings() {
       threshold_engagement_drop_percent: thresholds.engagement_drop_percent,
       threshold_low_escore: thresholds.low_escore,
       threshold_low_roizometer: thresholds.low_roizometer,
+      // V-NPS settings
+      vnps_risk_weight_low: vnpsSettings.risk_weight_low,
+      vnps_risk_weight_medium: vnpsSettings.risk_weight_medium,
+      vnps_risk_weight_high: vnpsSettings.risk_weight_high,
+      vnps_eligible_min_score: vnpsSettings.eligible_min_score,
+      vnps_eligible_max_risk: vnpsSettings.eligible_max_risk,
+      vnps_eligible_min_escore: vnpsSettings.eligible_min_escore,
     };
 
     try {
@@ -163,6 +205,7 @@ export default function Settings() {
   const handleReset = () => {
     setWeights(defaultWeights);
     setThresholds(defaultThresholds);
+    setVnpsSettings(defaultVNPS);
     setHasChanges(true);
     toast({
       title: "Valores resetados",
@@ -229,7 +272,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="weights" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="weights" className="gap-2">
             <Scale className="h-4 w-4" />
             Pesos de Score
@@ -237,6 +280,10 @@ export default function Settings() {
           <TabsTrigger value="thresholds" className="gap-2">
             <AlertTriangle className="h-4 w-4" />
             Limiares de Risco
+          </TabsTrigger>
+          <TabsTrigger value="vnps" className="gap-2">
+            <ThumbsUp className="h-4 w-4" />
+            V-NPS
           </TabsTrigger>
           <TabsTrigger value="taxonomy" className="gap-2">
             <Settings2 className="h-4 w-4" />
@@ -521,6 +568,177 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Risco silencioso. Cliente satisfeito mas ausente.
                   </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="vnps" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações do V-NPS</CardTitle>
+              <CardDescription>
+                Configure os pesos do Risk Index e critérios de elegibilidade para pedido de indicação.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h4 className="font-medium">Pesos do Risk Index</h4>
+                <p className="text-sm text-muted-foreground">
+                  O Risk Index é calculado somando os pesos dos eventos de risco, ponderados pela recência.
+                </p>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Evento de Risco Baixo</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      +{vnpsSettings.risk_weight_low} pts
+                    </span>
+                  </div>
+                  <Slider
+                    value={[vnpsSettings.risk_weight_low]}
+                    onValueChange={([v]) => updateVnps("risk_weight_low", v)}
+                    max={20}
+                    min={1}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Evento de Risco Médio</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      +{vnpsSettings.risk_weight_medium} pts
+                    </span>
+                  </div>
+                  <Slider
+                    value={[vnpsSettings.risk_weight_medium]}
+                    onValueChange={([v]) => updateVnps("risk_weight_medium", v)}
+                    max={40}
+                    min={5}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Evento de Risco Alto</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      +{vnpsSettings.risk_weight_high} pts
+                    </span>
+                  </div>
+                  <Slider
+                    value={[vnpsSettings.risk_weight_high]}
+                    onValueChange={([v]) => updateVnps("risk_weight_high", v)}
+                    max={60}
+                    min={10}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Elegibilidade para Pedido de Indicação</CardTitle>
+              <CardDescription>
+                Define os critérios para marcar um cliente como elegível para pedido de indicação ou depoimento.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>V-NPS mínimo</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      ≥ {vnpsSettings.eligible_min_score.toFixed(1)}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[vnpsSettings.eligible_min_score * 10]}
+                    onValueChange={([v]) => updateVnps("eligible_min_score", v / 10)}
+                    max={100}
+                    min={70}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Cliente deve ter V-NPS igual ou acima deste valor para ser elegível.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Risk Index máximo</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      ≤ {vnpsSettings.eligible_max_risk}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[vnpsSettings.eligible_max_risk]}
+                    onValueChange={([v]) => updateVnps("eligible_max_risk", v)}
+                    max={50}
+                    min={5}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Risk Index deve estar abaixo deste valor.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>E-Score mínimo</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      ≥ {vnpsSettings.eligible_min_escore}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[vnpsSettings.eligible_min_escore]}
+                    onValueChange={([v]) => updateVnps("eligible_min_escore", v)}
+                    max={80}
+                    min={40}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Engajamento deve estar acima deste valor.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Fórmula do V-NPS</CardTitle>
+              <CardDescription>
+                Referência da fórmula de cálculo (valores fixos, não configuráveis).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-muted/50 rounded-lg p-4 font-mono text-sm">
+                <p className="mb-2">V_NPS_RAW = (ROIzômetro × 0.5) + (E-Score × 0.3) + ((100 - RiskIndex) × 0.2)</p>
+                <p>V_NPS = V_NPS_RAW ÷ 10</p>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                <div className="rounded-lg border-2 border-rose-500/50 bg-rose-500/10 p-3 text-center">
+                  <div className="font-medium text-rose-700 dark:text-rose-400">Detrator</div>
+                  <p className="text-xs text-muted-foreground">0.0 – 6.0</p>
+                </div>
+                <div className="rounded-lg border-2 border-amber-500/50 bg-amber-500/10 p-3 text-center">
+                  <div className="font-medium text-amber-700 dark:text-amber-400">Neutro</div>
+                  <p className="text-xs text-muted-foreground">7.0 – 8.0</p>
+                </div>
+                <div className="rounded-lg border-2 border-emerald-500/50 bg-emerald-500/10 p-3 text-center">
+                  <div className="font-medium text-emerald-700 dark:text-emerald-400">Promotor</div>
+                  <p className="text-xs text-muted-foreground">9.0 – 10.0</p>
                 </div>
               </div>
             </CardContent>

@@ -27,6 +27,12 @@ export type Database = {
           threshold_low_roizometer: number
           threshold_silence_days: number
           updated_at: string
+          vnps_eligible_max_risk: number
+          vnps_eligible_min_escore: number
+          vnps_eligible_min_score: number
+          vnps_risk_weight_high: number
+          vnps_risk_weight_low: number
+          vnps_risk_weight_medium: number
           weight_live_interaction: number
           weight_whatsapp_audio: number
           weight_whatsapp_text: number
@@ -43,6 +49,12 @@ export type Database = {
           threshold_low_roizometer?: number
           threshold_silence_days?: number
           updated_at?: string
+          vnps_eligible_max_risk?: number
+          vnps_eligible_min_escore?: number
+          vnps_eligible_min_score?: number
+          vnps_risk_weight_high?: number
+          vnps_risk_weight_low?: number
+          vnps_risk_weight_medium?: number
           weight_live_interaction?: number
           weight_whatsapp_audio?: number
           weight_whatsapp_text?: number
@@ -59,6 +71,12 @@ export type Database = {
           threshold_low_roizometer?: number
           threshold_silence_days?: number
           updated_at?: string
+          vnps_eligible_max_risk?: number
+          vnps_eligible_min_escore?: number
+          vnps_eligible_min_score?: number
+          vnps_risk_weight_high?: number
+          vnps_risk_weight_low?: number
+          vnps_risk_weight_medium?: number
           weight_live_interaction?: number
           weight_whatsapp_audio?: number
           weight_whatsapp_text?: number
