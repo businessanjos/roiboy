@@ -167,6 +167,67 @@ export type Database = {
           },
         ]
       }
+      client_event_deliveries: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          delivered_at: string | null
+          delivery_method: string | null
+          event_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["delivery_status"]
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          delivered_at?: string | null
+          delivery_method?: string | null
+          event_id: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          delivery_method?: string | null
+          event_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_event_deliveries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_event_deliveries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_event_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_products: {
         Row: {
           account_id: string
@@ -397,6 +458,105 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_products: {
+        Row: {
+          account_id: string
+          created_at: string
+          event_id: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_products_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_products_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          event_type: Database["public"]["Enums"]["event_type"]
+          id: string
+          is_recurring: boolean
+          material_url: string | null
+          meeting_url: string | null
+          scheduled_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          event_type?: Database["public"]["Enums"]["event_type"]
+          id?: string
+          is_recurring?: boolean
+          material_url?: string | null
+          meeting_url?: string | null
+          scheduled_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          event_type?: Database["public"]["Enums"]["event_type"]
+          id?: string
+          is_recurring?: boolean
+          material_url?: string | null
+          meeting_url?: string | null
+          scheduled_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -1060,6 +1220,8 @@ export type Database = {
         | "one_time"
       channel_type: "whatsapp"
       client_status: "active" | "paused" | "churn_risk" | "churned"
+      delivery_status: "pending" | "delivered" | "missed"
+      event_type: "live" | "material"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
       integration_type: "zoom" | "google" | "clinica_ryka" | "pipedrive"
@@ -1249,6 +1411,8 @@ export const Constants = {
       ],
       channel_type: ["whatsapp"],
       client_status: ["active", "paused", "churn_risk", "churned"],
+      delivery_status: ["pending", "delivered", "missed"],
+      event_type: ["live", "material"],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
       integration_type: ["zoom", "google", "clinica_ryka", "pipedrive"],
