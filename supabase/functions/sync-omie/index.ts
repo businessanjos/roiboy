@@ -16,9 +16,23 @@ interface OmieCliente {
   codigo_cliente_omie: number;
   codigo_cliente_integracao?: string;
   razao_social: string;
+  nome_fantasia?: string;
   cnpj_cpf: string;
+  telefone1_ddd?: string;
   telefone1_numero?: string;
+  telefone2_ddd?: string;
+  telefone2_numero?: string;
   email?: string;
+  endereco?: string;
+  endereco_numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  observacao?: string;
+  pessoa_fisica?: string; // "S" or "N"
+  data_nascimento?: string;
 }
 
 interface OmieContaReceber {
@@ -28,10 +42,24 @@ interface OmieContaReceber {
   data_emissao: string;
   valor_documento: number;
   valor_pago_soma?: number;
-  status_titulo: string; // LIQUIDADO, ATRASADO, A_VENCER, PARCIAL
+  status_titulo: string;
   descricao?: string;
   numero_documento?: string;
 }
+
+// Clean CPF/CNPJ for comparison (remove formatting)
+const cleanDocument = (doc: string): string => {
+  return doc?.replace(/\D/g, '') || '';
+};
+
+// Format phone to E.164
+const formatPhoneE164 = (ddd?: string, numero?: string): string | null => {
+  if (!numero) return null;
+  const cleanDdd = (ddd || '').replace(/\D/g, '');
+  const cleanNumero = numero.replace(/\D/g, '');
+  if (!cleanNumero) return null;
+  return `+55${cleanDdd}${cleanNumero}`;
+};
 
 // Map Omie status to our payment_status
 const mapOmieStatus = (status: string, dataVencimento: string): string => {
@@ -56,6 +84,8 @@ const mapOmieStatus = (status: string, dataVencimento: string): string => {
 
 // Call Omie API
 async function callOmieApi(endpoint: string, call: string, param: any) {
+  console.log(`Calling Omie API: ${endpoint}/${call}`, JSON.stringify(param));
+  
   const response = await fetch(`https://app.omie.com.br/api/v1/${endpoint}/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -70,19 +100,55 @@ async function callOmieApi(endpoint: string, call: string, param: any) {
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Omie API error:', errorText);
-    throw new Error(`Omie API error: ${response.status}`);
+    throw new Error(`Omie API error: ${response.status} - ${errorText}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  
+  // Check for Omie error in response
+  if (result.faultstring) {
+    console.error('Omie fault:', result.faultstring);
+    throw new Error(`Omie: ${result.faultstring}`);
+  }
+
+  return result;
+}
+
+// Find client in Omie by CPF/CNPJ
+async function findOmieClientByCpfCnpj(cpfCnpj: string): Promise<OmieCliente | null> {
+  try {
+    const cleanDoc = cleanDocument(cpfCnpj);
+    if (!cleanDoc) return null;
+    
+    console.log(`Searching Omie client by CPF/CNPJ: ${cleanDoc}`);
+
+    const result = await callOmieApi('geral/clientes', 'ListarClientes', {
+      pagina: 1,
+      registros_por_pagina: 10,
+      clientesFiltro: { cnpj_cpf: cleanDoc },
+    });
+
+    if (result.clientes_cadastro && result.clientes_cadastro.length > 0) {
+      console.log(`Found ${result.clientes_cadastro.length} client(s) by CPF/CNPJ`);
+      return result.clientes_cadastro[0];
+    }
+
+    console.log('No client found by CPF/CNPJ');
+    return null;
+  } catch (error) {
+    console.error('Error finding Omie client by CPF/CNPJ:', error);
+    return null;
+  }
 }
 
 // Find client in Omie by phone or name
 async function findOmieClient(phone: string, name: string): Promise<OmieCliente | null> {
   try {
     // Clean phone for search
-    const cleanPhone = phone.replace(/\D/g, '').slice(-9); // Last 9 digits
+    const cleanPhone = phone.replace(/\D/g, '').slice(-9);
     
-    // Search by phone
+    console.log(`Searching Omie client by phone: ${cleanPhone}`);
+
     const result = await callOmieApi('geral/clientes', 'ListarClientes', {
       pagina: 1,
       registros_por_pagina: 50,
@@ -90,10 +156,12 @@ async function findOmieClient(phone: string, name: string): Promise<OmieCliente 
     });
 
     if (result.clientes_cadastro && result.clientes_cadastro.length > 0) {
+      console.log(`Found ${result.clientes_cadastro.length} client(s) by phone`);
       return result.clientes_cadastro[0];
     }
 
     // If not found by phone, search by name
+    console.log(`Searching Omie client by name: ${name}`);
     const resultByName = await callOmieApi('geral/clientes', 'ListarClientes', {
       pagina: 1,
       registros_por_pagina: 50,
@@ -101,7 +169,6 @@ async function findOmieClient(phone: string, name: string): Promise<OmieCliente 
     });
 
     if (resultByName.clientes_cadastro && resultByName.clientes_cadastro.length > 0) {
-      // Try to find exact match
       const exactMatch = resultByName.clientes_cadastro.find(
         (c: OmieCliente) => c.razao_social.toLowerCase().includes(name.toLowerCase())
       );
@@ -132,6 +199,71 @@ async function getClientReceivables(codigoClienteOmie: number): Promise<OmieCont
   }
 }
 
+// Enrich client data from Omie
+function buildClientUpdateFromOmie(omieClient: OmieCliente, existingEmails: string[] = [], existingPhones: string[] = []) {
+  const updates: Record<string, any> = {};
+
+  // CPF/CNPJ
+  if (omieClient.cnpj_cpf) {
+    const cleanDoc = cleanDocument(omieClient.cnpj_cpf);
+    if (cleanDoc.length === 11) {
+      updates.cpf = cleanDoc;
+    } else if (cleanDoc.length === 14) {
+      updates.cnpj = cleanDoc;
+    }
+  }
+
+  // Company name
+  if (omieClient.nome_fantasia || omieClient.razao_social) {
+    updates.company_name = omieClient.nome_fantasia || omieClient.razao_social;
+  }
+
+  // Birth date (for pessoa física)
+  if (omieClient.data_nascimento && omieClient.pessoa_fisica === 'S') {
+    // Omie returns dates in DD/MM/YYYY format
+    const [day, month, year] = omieClient.data_nascimento.split('/');
+    if (day && month && year) {
+      updates.birth_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+
+  // Emails
+  const emails = new Set(existingEmails);
+  if (omieClient.email) {
+    omieClient.email.split(/[;,]/).forEach(e => {
+      const cleaned = e.trim().toLowerCase();
+      if (cleaned && cleaned.includes('@')) emails.add(cleaned);
+    });
+  }
+  if (emails.size > 0) {
+    updates.emails = Array.from(emails);
+  }
+
+  // Additional phones
+  const phones = new Set(existingPhones);
+  const phone2 = formatPhoneE164(omieClient.telefone2_ddd, omieClient.telefone2_numero);
+  if (phone2) phones.add(phone2);
+  if (phones.size > 0) {
+    updates.additional_phones = Array.from(phones);
+  }
+
+  // Address
+  if (omieClient.endereco) updates.street = omieClient.endereco;
+  if (omieClient.endereco_numero) updates.street_number = omieClient.endereco_numero;
+  if (omieClient.complemento) updates.complement = omieClient.complemento;
+  if (omieClient.bairro) updates.neighborhood = omieClient.bairro;
+  if (omieClient.cidade) updates.city = omieClient.cidade;
+  if (omieClient.estado) updates.state = omieClient.estado;
+  if (omieClient.cep) updates.zip_code = cleanDocument(omieClient.cep);
+
+  // Notes - append Omie observation if exists
+  if (omieClient.observacao) {
+    updates.notes = omieClient.observacao;
+  }
+
+  return updates;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -139,14 +271,15 @@ serve(async (req) => {
 
   try {
     if (!OMIE_APP_KEY || !OMIE_APP_SECRET) {
-      throw new Error('Omie credentials not configured');
+      throw new Error('Credenciais Omie não configuradas. Configure OMIE_APP_KEY e OMIE_APP_SECRET.');
     }
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
-    const { client_id, account_id, sync_all } = await req.json();
+    const body = await req.json();
+    const { client_id, account_id, sync_all, enrich_data = true, use_cpf_cnpj = true } = body;
     
-    console.log('Starting Omie sync...', { client_id, account_id, sync_all });
+    console.log('Starting Omie sync...', { client_id, account_id, sync_all, enrich_data, use_cpf_cnpj });
 
     let clientsToSync: any[] = [];
 
@@ -154,7 +287,7 @@ serve(async (req) => {
       // Sync all clients from account
       const { data: clients, error } = await supabase
         .from('clients')
-        .select('id, full_name, phone_e164')
+        .select('id, full_name, phone_e164, cpf, cnpj, emails, additional_phones, account_id')
         .eq('account_id', account_id);
 
       if (error) throw error;
@@ -163,7 +296,7 @@ serve(async (req) => {
       // Sync single client
       const { data: client, error } = await supabase
         .from('clients')
-        .select('id, full_name, phone_e164, account_id')
+        .select('id, full_name, phone_e164, cpf, cnpj, emails, additional_phones, account_id')
         .eq('id', client_id)
         .single();
 
@@ -173,7 +306,9 @@ serve(async (req) => {
 
     const results = {
       synced: 0,
+      enriched: 0,
       errors: 0,
+      not_found: 0,
       details: [] as any[],
     };
 
@@ -181,11 +316,24 @@ serve(async (req) => {
       try {
         console.log(`Syncing client: ${client.full_name} (${client.phone_e164})`);
 
-        // Find client in Omie
-        const omieClient = await findOmieClient(client.phone_e164, client.full_name);
+        let omieClient: OmieCliente | null = null;
+
+        // First, try to find by CPF/CNPJ if available and option is enabled
+        if (use_cpf_cnpj && (client.cpf || client.cnpj)) {
+          const docToSearch = client.cnpj || client.cpf;
+          console.log(`Searching by CPF/CNPJ: ${docToSearch}`);
+          omieClient = await findOmieClientByCpfCnpj(docToSearch);
+        }
+
+        // If not found by document, try phone/name
+        if (!omieClient) {
+          console.log('Document not found, trying phone/name...');
+          omieClient = await findOmieClient(client.phone_e164, client.full_name);
+        }
 
         if (!omieClient) {
           console.log(`Client not found in Omie: ${client.full_name}`);
+          results.not_found++;
           results.details.push({
             client_id: client.id,
             name: client.full_name,
@@ -197,6 +345,31 @@ serve(async (req) => {
 
         console.log(`Found Omie client: ${omieClient.razao_social} (${omieClient.codigo_cliente_omie})`);
 
+        const accountId = client.account_id || account_id;
+
+        // Enrich client data if option is enabled
+        if (enrich_data) {
+          const clientUpdates = buildClientUpdateFromOmie(
+            omieClient, 
+            client.emails || [], 
+            client.additional_phones || []
+          );
+
+          if (Object.keys(clientUpdates).length > 0) {
+            console.log('Enriching client data:', clientUpdates);
+            const { error: updateError } = await supabase
+              .from('clients')
+              .update(clientUpdates)
+              .eq('id', client.id);
+
+            if (updateError) {
+              console.error('Error enriching client:', updateError);
+            } else {
+              results.enriched++;
+            }
+          }
+        }
+
         // Get receivables
         const receivables = await getClientReceivables(omieClient.codigo_cliente_omie);
         console.log(`Found ${receivables.length} receivables`);
@@ -207,6 +380,8 @@ serve(async (req) => {
             name: client.full_name,
             status: 'no_receivables',
             message: 'Nenhuma conta a receber encontrada',
+            enriched: enrich_data,
+            omie_client: omieClient.razao_social,
           });
           continue;
         }
@@ -223,14 +398,12 @@ serve(async (req) => {
         } else if (openReceivables.length > 0) {
           overallStatus = 'active';
         } else {
-          overallStatus = 'active'; // All paid
+          overallStatus = 'active';
         }
 
         // Get next billing date
         const nextReceivable = openReceivables
           .sort((a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime())[0];
-
-        const accountId = client.account_id || account_id;
 
         // Check if subscription exists for this client
         const { data: existingSubscription } = await supabase
@@ -249,7 +422,6 @@ serve(async (req) => {
         };
 
         if (existingSubscription) {
-          // Update existing subscription
           const { error: updateError } = await supabase
             .from('client_subscriptions')
             .update(subscriptionData)
@@ -257,7 +429,6 @@ serve(async (req) => {
 
           if (updateError) throw updateError;
         } else {
-          // Create new subscription
           const { error: insertError } = await supabase
             .from('client_subscriptions')
             .insert({
@@ -280,6 +451,8 @@ serve(async (req) => {
           payment_status: overallStatus,
           has_overdue: hasOverdue,
           open_amount: totalOpen,
+          enriched: enrich_data,
+          omie_client: omieClient.razao_social,
         });
 
       } catch (clientError: any) {
