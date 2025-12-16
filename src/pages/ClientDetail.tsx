@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
-import { Subscriptions } from "@/components/client/Subscriptions";
+import { ClientFinancial } from "@/components/client/ClientFinancial";
 import {
   ArrowLeft,
   Plus,
@@ -640,7 +640,7 @@ export default function ClientDetail() {
         <TabsContent value="subscriptions">
           <Card className="shadow-card">
             <CardContent className="p-6">
-              <Subscriptions clientId={id!} />
+              <ClientFinancial clientId={id!} />
             </CardContent>
           </Card>
         </TabsContent>
