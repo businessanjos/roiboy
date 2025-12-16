@@ -646,6 +646,7 @@ export type Database = {
           is_recurring: boolean
           material_url: string | null
           meeting_url: string | null
+          modality: Database["public"]["Enums"]["event_modality"]
           scheduled_at: string | null
           title: string
           updated_at: string
@@ -660,6 +661,7 @@ export type Database = {
           is_recurring?: boolean
           material_url?: string | null
           meeting_url?: string | null
+          modality?: Database["public"]["Enums"]["event_modality"]
           scheduled_at?: string | null
           title: string
           updated_at?: string
@@ -674,6 +676,7 @@ export type Database = {
           is_recurring?: boolean
           material_url?: string | null
           meeting_url?: string | null
+          modality?: Database["public"]["Enums"]["event_modality"]
           scheduled_at?: string | null
           title?: string
           updated_at?: string
@@ -1348,6 +1351,7 @@ export type Database = {
       channel_type: "whatsapp"
       client_status: "active" | "paused" | "churn_risk" | "churned"
       delivery_status: "pending" | "delivered" | "missed"
+      event_modality: "online" | "presencial"
       event_type: "live" | "material"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
@@ -1539,6 +1543,7 @@ export const Constants = {
       channel_type: ["whatsapp"],
       client_status: ["active", "paused", "churn_risk", "churned"],
       delivery_status: ["pending", "delivered", "missed"],
+      event_modality: ["online", "presencial"],
       event_type: ["live", "material"],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
