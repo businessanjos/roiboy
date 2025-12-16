@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
+import { VNPSBadge, VNPSExplanation } from "@/components/ui/vnps-badge";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
@@ -38,6 +39,7 @@ import {
   Building2,
   MapPin,
   RefreshCw,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -71,6 +73,18 @@ interface ScoreSnapshot {
   escore: number;
   quadrant: "highE_lowROI" | "lowE_highROI" | "lowE_lowROI" | "highE_highROI";
   trend: "up" | "flat" | "down";
+  computed_at: string;
+}
+
+interface VNPSSnapshot {
+  vnps_score: number;
+  vnps_class: "detractor" | "neutral" | "promoter";
+  roizometer: number;
+  escore: number;
+  risk_index: number;
+  trend: "up" | "flat" | "down";
+  explanation: string | null;
+  eligible_for_nps_ask: boolean;
   computed_at: string;
 }
 
@@ -110,6 +124,7 @@ export default function ClientDetail() {
   const [client, setClient] = useState<Client | null>(null);
   const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
+  const [vnps, setVnps] = useState<VNPSSnapshot | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [roiEvents, setRoiEvents] = useState<RoiEvent[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -405,6 +420,19 @@ export default function ClientDetail() {
 
       if (scoreData) {
         setScore(scoreData as ScoreSnapshot);
+      }
+
+      // Fetch latest V-NPS
+      const { data: vnpsData } = await supabase
+        .from("vnps_snapshots")
+        .select("*")
+        .eq("client_id", id)
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (vnpsData) {
+        setVnps(vnpsData as VNPSSnapshot);
       }
 
       // Fetch ROI events
@@ -988,7 +1016,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Scores Header */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="shadow-card">
           <CardContent className="p-5">
             <ScoreGauge
@@ -1006,6 +1034,29 @@ export default function ClientDetail() {
               label="E-Score"
               size="lg"
             />
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardContent className="p-5">
+            <div className="flex flex-col items-center justify-center h-full gap-2">
+              <p className="text-sm font-medium text-muted-foreground">V-NPS</p>
+              {vnps ? (
+                <div className="flex flex-col items-center gap-1">
+                  <VNPSBadge
+                    score={vnps.vnps_score}
+                    vnpsClass={vnps.vnps_class}
+                    trend={vnps.trend}
+                    explanation={vnps.explanation || undefined}
+                    eligible={vnps.eligible_for_nps_ask}
+                    size="lg"
+                    showClass
+                  />
+                </div>
+              ) : (
+                <span className="text-2xl font-bold text-muted-foreground">—</span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -1033,6 +1084,30 @@ export default function ClientDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* V-NPS Explanation */}
+      {vnps && (
+        <Card className="shadow-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+              Por que esse V-NPS?
+            </CardTitle>
+            <CardDescription>
+              Probabilidade real de recomendação, calculada continuamente a partir de ROI percebido, engajamento e risco.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <VNPSExplanation
+              explanation={vnps.explanation || "V-NPS calculado com base nos dados disponíveis."}
+              roizometer={vnps.roizometer}
+              escore={vnps.escore}
+              riskIndex={vnps.risk_index}
+              eligible={vnps.eligible_for_nps_ask}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Risk Alerts */}
       {riskEvents.length > 0 && (

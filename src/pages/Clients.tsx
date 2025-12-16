@@ -15,6 +15,7 @@ import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCi
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
+import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 
@@ -85,6 +86,7 @@ const parseCSV = (content: string): CsvRow[] => {
 
 export default function Clients() {
   const [clients, setClients] = useState<any[]>([]);
+  const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -118,7 +120,28 @@ export default function Clients() {
       `)
       .order("created_at", { ascending: false });
 
-    if (!error) setClients(data || []);
+    if (!error) {
+      setClients(data || []);
+      
+      // Fetch V-NPS for all clients
+      if (data && data.length > 0) {
+        const clientIds = data.map(c => c.id);
+        const { data: vnpsData } = await supabase
+          .from("vnps_snapshots")
+          .select("*")
+          .in("client_id", clientIds)
+          .order("computed_at", { ascending: false });
+        
+        // Group by client_id and take latest
+        const vnpsGrouped: Record<string, any> = {};
+        (vnpsData || []).forEach((v: any) => {
+          if (!vnpsGrouped[v.client_id]) {
+            vnpsGrouped[v.client_id] = v;
+          }
+        });
+        setVnpsMap(vnpsGrouped);
+      }
+    }
     setLoading(false);
   };
 
@@ -577,6 +600,14 @@ export default function Clients() {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
+                  {vnpsMap[client.id] && (
+                    <VNPSBadge
+                      score={vnpsMap[client.id].vnps_score}
+                      vnpsClass={vnpsMap[client.id].vnps_class}
+                      trend={vnpsMap[client.id].trend}
+                      size="sm"
+                    />
+                  )}
                   <StatusIndicator status={client.status} size="sm" />
                   <Button variant="ghost" size="sm" asChild>
                     <Link to={`/clients/${client.id}`}>Ver <ArrowRight className="h-4 w-4 ml-1" /></Link>

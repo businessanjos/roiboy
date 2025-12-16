@@ -24,6 +24,15 @@ interface ClientTicketInfo {
   multiplier: number;
 }
 
+interface VNPSResult {
+  vnps_score: number;
+  vnps_class: "detractor" | "neutral" | "promoter";
+  risk_index: number;
+  explanation: string;
+  eligible_for_nps_ask: boolean;
+  trend: "up" | "flat" | "down";
+}
+
 const defaultSettings: AccountSettings = {
   weight_whatsapp_text: 1.0,
   weight_whatsapp_audio: 1.5,
@@ -146,8 +155,33 @@ serve(async (req) => {
             console.error("Error creating snapshot:", snapshotError);
             accountResult.errors.push(`Client ${client.id}: ${snapshotError.message}`);
           } else {
+            // Calculate and save V-NPS
+            const vnpsResult = await calculateVNPS(supabase, client.id, account.id, escore, roizometer);
+            
+            const { error: vnpsError } = await supabase
+              .from("vnps_snapshots")
+              .insert({
+                account_id: account.id,
+                client_id: client.id,
+                vnps_score: vnpsResult.vnps_score,
+                vnps_class: vnpsResult.vnps_class,
+                roizometer,
+                escore,
+                risk_index: vnpsResult.risk_index,
+                trend: vnpsResult.trend,
+                explanation: vnpsResult.explanation,
+                eligible_for_nps_ask: vnpsResult.eligible_for_nps_ask,
+                computed_at: new Date().toISOString(),
+              });
+
+            if (vnpsError) {
+              console.error("Error creating V-NPS snapshot:", vnpsError);
+            } else {
+              console.log(`V-NPS for client ${client.id}: ${vnpsResult.vnps_score} (${vnpsResult.vnps_class})`);
+            }
+
             accountResult.clients_processed++;
-            console.log(`Processed client ${client.id}: E=${escore}, ROI=${roizometer}, Q=${quadrant}, T=${trend}, Ticket=${ticketMultiplier.toFixed(2)}x`);
+            console.log(`Processed client ${client.id}: E=${escore}, ROI=${roizometer}, Q=${quadrant}, T=${trend}, V-NPS=${vnpsResult.vnps_score}`);
 
             // Update client status based on scores (ticket affects thresholds)
             const newStatus = determineClientStatus(escore, roizometer, settings, ticketMultiplier);
@@ -188,6 +222,182 @@ serve(async (req) => {
     );
   }
 });
+
+/**
+ * Calculate V-NPS (Live NPS) based on ROIzometer, E-Score, and Risk Index
+ * Formula: V_NPS = ((ROIzometro * 0.5) + (EScore * 0.3) + ((100 - RiskIndex) * 0.2)) / 10
+ */
+async function calculateVNPS(
+  supabase: any,
+  clientId: string,
+  accountId: string,
+  escore: number,
+  roizometer: number
+): Promise<VNPSResult> {
+  // Calculate Risk Index from risk_events
+  const riskIndex = await calculateRiskIndex(supabase, clientId, accountId);
+  
+  // Apply V-NPS formula
+  const vnpsRaw = (roizometer * 0.5) + (escore * 0.3) + ((100 - riskIndex) * 0.2);
+  const vnpsScore = Math.round(vnpsRaw / 10 * 10) / 10; // Round to 1 decimal
+  
+  // Classify V-NPS (same as traditional NPS)
+  let vnpsClass: "detractor" | "neutral" | "promoter";
+  if (vnpsScore >= 9.0) {
+    vnpsClass = "promoter";
+  } else if (vnpsScore >= 7.0) {
+    vnpsClass = "neutral";
+  } else {
+    vnpsClass = "detractor";
+  }
+  
+  // Get previous V-NPS to determine trend
+  const { data: prevVnps } = await supabase
+    .from("vnps_snapshots")
+    .select("vnps_score")
+    .eq("client_id", clientId)
+    .order("computed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let trend: "up" | "flat" | "down" = "flat";
+  if (prevVnps) {
+    const diff = vnpsScore - prevVnps.vnps_score;
+    if (diff >= 0.5) trend = "up";
+    else if (diff <= -0.5) trend = "down";
+  }
+  
+  // Generate explanation
+  const explanation = generateVNPSExplanation(vnpsScore, vnpsClass, roizometer, escore, riskIndex, trend);
+  
+  // Determine eligibility for NPS ask (promoter with low risk and high engagement)
+  const eligibleForNpsAsk = vnpsScore >= 9.0 && riskIndex < 20 && escore >= 60;
+  
+  return {
+    vnps_score: vnpsScore,
+    vnps_class: vnpsClass,
+    risk_index: riskIndex,
+    explanation,
+    eligible_for_nps_ask: eligibleForNpsAsk,
+    trend,
+  };
+}
+
+/**
+ * Calculate Risk Index (0-100) from risk_events
+ * - low = +5, medium = +15, high = +30
+ * - Recent events (<14 days) have higher weight
+ * - Risk decays over time
+ */
+async function calculateRiskIndex(
+  supabase: any,
+  clientId: string,
+  accountId: string
+): Promise<number> {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  const { data: riskEvents } = await supabase
+    .from("risk_events")
+    .select("risk_level, happened_at")
+    .eq("client_id", clientId)
+    .eq("account_id", accountId)
+    .gte("happened_at", thirtyDaysAgo.toISOString());
+
+  if (!riskEvents || riskEvents.length === 0) {
+    return 0;
+  }
+
+  const now = Date.now();
+  let totalRisk = 0;
+
+  for (const event of riskEvents) {
+    // Base weight by level
+    let baseWeight = 5; // low
+    if (event.risk_level === "medium") baseWeight = 15;
+    else if (event.risk_level === "high") baseWeight = 30;
+
+    // Recency factor: events in last 14 days get full weight, older events decay
+    const eventDate = new Date(event.happened_at).getTime();
+    const daysAgo = (now - eventDate) / (1000 * 60 * 60 * 24);
+    
+    let recencyMultiplier = 1.0;
+    if (daysAgo > 14) {
+      // Decay for events older than 14 days (down to 0.5 at 30 days)
+      recencyMultiplier = Math.max(0.5, 1 - ((daysAgo - 14) / 32));
+    } else if (daysAgo <= 7) {
+      // Boost for very recent events
+      recencyMultiplier = 1.2;
+    }
+
+    totalRisk += baseWeight * recencyMultiplier;
+  }
+
+  // Cap at 100
+  return Math.min(100, Math.round(totalRisk));
+}
+
+/**
+ * Generate human-readable explanation for V-NPS score
+ */
+function generateVNPSExplanation(
+  vnpsScore: number,
+  vnpsClass: string,
+  roizometer: number,
+  escore: number,
+  riskIndex: number,
+  trend: string
+): string {
+  const parts: string[] = [];
+  
+  // Class description
+  const classDesc = vnpsClass === "promoter" ? "promotor" : vnpsClass === "neutral" ? "neutro" : "detrator";
+  parts.push(`V-NPS ${classDesc}`);
+  
+  // Main factors
+  const factors: string[] = [];
+  
+  // ROI perception
+  if (roizometer >= 70) {
+    factors.push("alta percepção de ROI");
+  } else if (roizometer <= 30) {
+    factors.push("baixa percepção de ROI");
+  }
+  
+  // Engagement
+  if (escore >= 70) {
+    factors.push("engajamento forte");
+  } else if (escore <= 30) {
+    factors.push("engajamento fraco");
+  } else if (trend === "down") {
+    factors.push("queda de engajamento");
+  }
+  
+  // Risk
+  if (riskIndex >= 50) {
+    factors.push("risco alto recente");
+  } else if (riskIndex >= 25) {
+    factors.push("risco médio recente");
+  }
+  
+  // Build explanation
+  if (factors.length > 0) {
+    if (vnpsScore >= 7) {
+      parts.push("sustentado por " + factors.join(" e "));
+    } else {
+      parts.push("puxado para baixo por " + factors.join(" e "));
+    }
+  }
+  
+  // Trend note
+  if (trend === "up") {
+    parts.push("(tendência de alta)");
+  } else if (trend === "down") {
+    parts.push("(tendência de queda)");
+  }
+  
+  return parts.join(" ");
+}
 
 /**
  * Calculate ticket multipliers for all clients in an account
