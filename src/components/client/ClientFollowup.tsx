@@ -83,6 +83,9 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null);
 
+  // Drag and drop state
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => {
     fetchFollowups();
   }, [clientId]);
@@ -134,15 +137,56 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Max 10MB
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("Arquivo muito grande. Máximo 10MB.");
-        return;
-      }
-      setSelectedFile(file);
-      if (!formTitle) {
-        setFormTitle(file.name);
-      }
+      processFile(file);
+    }
+  };
+
+  const processFile = (file: File) => {
+    // Max 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 10MB.");
+      return;
+    }
+    setSelectedFile(file);
+    if (!formTitle) {
+      setFormTitle(file.name);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      const isImage = file.type.startsWith("image/");
+      
+      resetForm();
+      setFormType(isImage ? "image" : "file");
+      processFile(file);
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set to false if we're leaving the drop zone entirely
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
     }
   };
 
@@ -320,7 +364,26 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drop Zone Overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="border-2 border-dashed border-primary rounded-xl p-12 bg-primary/5 animate-scale-in">
+            <div className="flex flex-col items-center gap-3 text-primary">
+              <Upload className="h-12 w-12" />
+              <p className="text-lg font-medium">Solte o arquivo aqui</p>
+              <p className="text-sm text-muted-foreground">Imagens ou documentos</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={() => openNewDialog("note")}>
