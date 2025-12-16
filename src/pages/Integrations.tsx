@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users } from "lucide-react";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -26,6 +26,7 @@ export default function Integrations() {
   const whatsappMessageUrl = `${supabaseUrl}/functions/v1/ingest-whatsapp-message`;
   const whatsappAudioUrl = `${supabaseUrl}/functions/v1/ingest-whatsapp-audio`;
   const rykaWebhookUrl = `${supabaseUrl}/functions/v1/ryka-webhook`;
+  const pipedriveWebhookUrl = `${supabaseUrl}/functions/v1/pipedrive-webhook`;
 
   useEffect(() => {
     if (user) {
@@ -142,6 +143,10 @@ export default function Integrations() {
             <TabsTrigger value="ryka" className="gap-2">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Clínica Ryka</span>
+            </TabsTrigger>
+            <TabsTrigger value="pipedrive" className="gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Pipedrive</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -472,6 +477,93 @@ Headers: x-ryka-secret: [seu_secret]
                   <li>• Duplicatas são ignoradas via external_id</li>
                   <li>• Clientes identificados por CPF ou CNPJ</li>
                 </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pipedrive" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Pipedrive</CardTitle>
+                  <CardDescription>
+                    Cadastre clientes automaticamente ao fechar vendas no Pipedrive
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Webhook URL</Label>
+                  <div className="flex gap-2">
+                    <Input value={pipedriveWebhookUrl} readOnly className="font-mono text-sm" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(pipedriveWebhookUrl, "Pipedrive Webhook URL")}
+                    >
+                      {copied === "Pipedrive Webhook URL" ? (
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Configure este URL no Pipedrive em Settings → Webhooks.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                    <strong>Importante:</strong> Adicione <code className="bg-emerald-500/20 px-1 rounded">?account_id=SEU_ACCOUNT_ID</code> ao final da URL para vincular os clientes à sua conta.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Gatilho configurado:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <code className="text-xs bg-muted px-1 rounded">deal.won</code> - Quando um deal é marcado como ganho</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Dados sincronizados:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Nome do contato (ou título do deal)</li>
+                  <li>• Telefone e emails</li>
+                  <li>• Empresa e endereço</li>
+                  <li>• Valor do deal → vira assinatura</li>
+                  <li>• Evento de ROI criado automaticamente</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                <h4 className="font-medium flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Como configurar
+                </h4>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Acesse <a href="https://app.pipedrive.com/settings/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Pipedrive → Settings → Webhooks</a></li>
+                  <li>Clique em "Create new webhook"</li>
+                  <li>Selecione o evento <code className="text-xs bg-muted px-1 rounded">Deal - Updated</code></li>
+                  <li>Cole a Webhook URL acima (com o account_id)</li>
+                  <li>Marque "Active" e salve</li>
+                </ol>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Exemplo de URL completa:</h4>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto break-all">
+{`${pipedriveWebhookUrl}?account_id=seu-account-id-aqui`}
+                </pre>
               </div>
             </CardContent>
           </Card>

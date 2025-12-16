@@ -1062,7 +1062,7 @@ export type Database = {
       client_status: "active" | "paused" | "churn_risk" | "churned"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
-      integration_type: "zoom" | "google" | "clinica_ryka"
+      integration_type: "zoom" | "google" | "clinica_ryka" | "pipedrive"
       interaction_type:
         | "chat"
         | "qna"
@@ -1251,7 +1251,7 @@ export const Constants = {
       client_status: ["active", "paused", "churn_risk", "churned"],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
-      integration_type: ["zoom", "google", "clinica_ryka"],
+      integration_type: ["zoom", "google", "clinica_ryka", "pipedrive"],
       interaction_type: [
         "chat",
         "qna",
