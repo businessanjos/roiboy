@@ -41,6 +41,8 @@ import {
   ArrowDownUp,
   ArrowDown,
   ArrowUp,
+  Search,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -93,6 +95,9 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
 
   // Sort state
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
 
   const PAGE_SIZE = 10;
 
@@ -148,6 +153,16 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
       fetchFollowups(true);
     }
   };
+
+  // Filter followups by search query
+  const filteredFollowups = followups.filter((followup) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const titleMatch = followup.title?.toLowerCase().includes(query);
+    const contentMatch = followup.content?.toLowerCase().includes(query);
+    const fileNameMatch = followup.file_name?.toLowerCase().includes(query);
+    return titleMatch || contentMatch || fileNameMatch;
+  });
 
   const resetForm = () => {
     setFormType("note");
@@ -503,7 +518,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
       )}
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => openNewDialog("note")}>
           <StickyNote className="h-4 w-4 mr-2" />
           Nova Nota
@@ -535,17 +550,47 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         </Button>
       </div>
 
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por título ou conteúdo..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 pr-9"
+        />
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+            onClick={() => setSearchQuery("")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
       {/* Followups List */}
-      {followups.length === 0 ? (
+      {filteredFollowups.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p>Nenhum registro de acompanhamento ainda.</p>
-          <p className="text-sm">Comece adicionando uma nota, arquivo ou imagem.</p>
+          {searchQuery ? (
+            <>
+              <p>Nenhum resultado encontrado.</p>
+              <p className="text-sm">Tente buscar por outros termos.</p>
+            </>
+          ) : (
+            <>
+              <p>Nenhum registro de acompanhamento ainda.</p>
+              <p className="text-sm">Comece adicionando uma nota, arquivo ou imagem.</p>
+            </>
+          )}
         </div>
       ) : (
         <ScrollArea className="h-[400px]">
           <div className="space-y-3 pr-4">
-            {followups.map((followup) => (
+            {filteredFollowups.map((followup) => (
               <div
                 key={followup.id}
                 className="p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors"
