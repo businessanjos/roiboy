@@ -227,6 +227,140 @@ export default function ClientDetail() {
     fetchData();
   }, [id]);
 
+  // Realtime subscriptions
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`client-timeline-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'message_events',
+          filter: `client_id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('New message:', payload);
+          const msg = payload.new as any;
+          setTimeline((prev) => {
+            const newEvent: TimelineEvent = {
+              id: msg.id,
+              type: "message",
+              title: msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
+              description: msg.content_text || "(Áudio transcrito)",
+              timestamp: msg.sent_at,
+              metadata: { source: msg.source, direction: msg.direction },
+            };
+            const updated = [newEvent, ...prev.filter(e => e.id !== msg.id)];
+            updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            return updated.slice(0, 50);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'roi_events',
+          filter: `client_id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('New ROI event:', payload);
+          const roi = payload.new as any;
+          setRoiEvents((prev) => [roi, ...prev]);
+          setTimeline((prev) => {
+            const newEvent: TimelineEvent = {
+              id: roi.id,
+              type: "roi",
+              title: `ROI ${roi.roi_type === "tangible" ? "Tangível" : "Intangível"}: ${getCategoryLabel(roi.category)}`,
+              description: roi.evidence_snippet,
+              timestamp: roi.happened_at,
+              metadata: { 
+                impact: roi.impact, 
+                category: roi.category, 
+                roi_type: roi.roi_type,
+                source: roi.source 
+              },
+            };
+            const updated = [newEvent, ...prev.filter(e => e.id !== roi.id)];
+            updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            return updated.slice(0, 50);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'risk_events',
+          filter: `client_id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('New risk event:', payload);
+          const risk = payload.new as any;
+          setRiskEvents((prev) => [risk, ...prev.slice(0, 2)]);
+          setTimeline((prev) => {
+            const newEvent: TimelineEvent = {
+              id: risk.id,
+              type: "risk",
+              title: "Sinal de Risco Detectado",
+              description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
+              timestamp: risk.happened_at,
+              metadata: { level: risk.risk_level, source: risk.source },
+            };
+            const updated = [newEvent, ...prev.filter(e => e.id !== risk.id)];
+            updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            return updated.slice(0, 50);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'recommendations',
+          filter: `client_id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Recommendation change:', payload);
+          if (payload.eventType === 'INSERT') {
+            const rec = payload.new as any;
+            setRecommendations((prev) => [rec, ...prev]);
+            setTimeline((prev) => {
+              const newEvent: TimelineEvent = {
+                id: rec.id,
+                type: "recommendation",
+                title: rec.title,
+                description: rec.action_text,
+                timestamp: rec.created_at,
+                metadata: { priority: rec.priority, status: rec.status },
+              };
+              const updated = [newEvent, ...prev.filter(e => e.id !== rec.id)];
+              updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+              return updated.slice(0, 50);
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const rec = payload.new as any;
+            setRecommendations((prev) => 
+              prev.map(r => r.id === rec.id ? rec : r)
+            );
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       revenue: "Receita",
