@@ -686,19 +686,33 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Agendamento Automático</CardTitle>
               <CardDescription>
-                Configure execução periódica do recálculo de scores.
+                Execução periódica do recálculo de scores.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                  <strong>Em desenvolvimento:</strong> O agendamento automático via cron job 
-                  estará disponível em breve. Por enquanto, execute manualmente ou 
-                  integre via API.
-                </p>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg bg-primary/10 border border-primary/20 p-4 flex items-center gap-3">
+                <div className="h-3 w-3 rounded-full bg-primary animate-pulse" />
+                <div>
+                  <p className="text-sm font-medium text-primary">Cron Job Ativo</p>
+                  <p className="text-xs text-muted-foreground">
+                    Execução automática a cada hora (minuto 0)
+                  </p>
+                </div>
               </div>
               
-              <div className="mt-4 rounded-lg border p-4 space-y-2">
+              <div className="rounded-lg border p-4 space-y-2">
+                <h4 className="font-medium text-sm">Configuração:</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <span className="text-muted-foreground">Nome do job:</span>
+                  <code className="text-xs bg-muted px-2 py-1 rounded">recompute-scores-hourly</code>
+                  <span className="text-muted-foreground">Frequência:</span>
+                  <code className="text-xs bg-muted px-2 py-1 rounded">0 * * * *</code>
+                  <span className="text-muted-foreground">Próxima execução:</span>
+                  <span className="text-xs">A cada hora cheia</span>
+                </div>
+              </div>
+              
+              <div className="rounded-lg border p-4 space-y-2">
                 <h4 className="font-medium text-sm">Endpoint da API:</h4>
                 <code className="text-xs bg-muted px-2 py-1 rounded block overflow-x-auto">
                   POST {import.meta.env.VITE_SUPABASE_URL}/functions/v1/recompute-scores
