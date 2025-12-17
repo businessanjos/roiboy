@@ -580,37 +580,35 @@ export default function Forms() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem onClick={() => viewResponses(form)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Respostas
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => copyFormLink(form)}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copiar Link
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => copyFormLink(form, true)}>
-                        <Link2 className="h-4 w-4 mr-2" />
-                        Link com Cliente
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => window.open(`/f/${form.id}`, "_blank")}
-                      >
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); window.open(`/f/${form.id}`, "_blank"); }}>
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Abrir Formulário
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); viewResponses(form); }}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Ver Respostas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); copyFormLink(form); }}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copiar Link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); copyFormLink(form, true); }}>
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Link com Cliente
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openEditDialog(form); }}>
                         <Pencil className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => duplicateForm(form)}>
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); duplicateForm(form); }}>
                         <Copy className="h-4 w-4 mr-2" />
                         Duplicar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toggleFormActive(form)}>
+                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggleFormActive(form); }}>
                         {form.is_active ? "Desativar" : "Ativar"}
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => deleteForm(form)}
+                        onSelect={(e) => { e.preventDefault(); deleteForm(form); }}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
