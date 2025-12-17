@@ -439,7 +439,18 @@ export default function PublicForm() {
                       id="clientPhone"
                       value={clientPhone}
                       onChange={(e) => {
-                        setClientPhone(e.target.value);
+                        const value = e.target.value.replace(/\D/g, "");
+                        let formatted = "";
+                        if (value.length <= 2) {
+                          formatted = value.length > 0 ? `(${value}` : "";
+                        } else if (value.length <= 7) {
+                          formatted = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                        } else if (value.length <= 11) {
+                          formatted = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+                        } else {
+                          formatted = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+                        }
+                        setClientPhone(formatted);
                         if (fieldErrors.clientPhone) {
                           setFieldErrors((prev) => ({ ...prev, clientPhone: false }));
                         }
