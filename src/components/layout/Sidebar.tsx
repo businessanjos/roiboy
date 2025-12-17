@@ -17,10 +17,11 @@ import {
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   Sheet,
   SheetContent,
@@ -37,13 +38,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  avatar_url: string | null;
-}
-
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/clients", icon: Users, label: "Clientes" },
@@ -54,7 +48,8 @@ const navItems = [
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
-function SidebarContent({ collapsed, onNavigate, currentUser }: { collapsed: boolean; onNavigate?: () => void; currentUser: CurrentUser | null }) {
+function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { currentUser } = useCurrentUser();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -151,19 +146,6 @@ function SidebarContent({ collapsed, onNavigate, currentUser }: { collapsed: boo
 
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-
-  useEffect(() => {
-    fetchCurrentUser();
-  }, []);
-
-  const fetchCurrentUser = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, name, email, avatar_url")
-      .maybeSingle();
-    if (data) setCurrentUser(data);
-  };
 
   return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
@@ -200,7 +182,7 @@ export function MobileHeader() {
                 </Button>
               </SheetClose>
             </div>
-            <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} currentUser={currentUser} />
+            <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} />
           </div>
         </SheetContent>
       </Sheet>
@@ -210,20 +192,7 @@ export function MobileHeader() {
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    fetchCurrentUser();
-  }, []);
-
-  const fetchCurrentUser = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, name, email, avatar_url")
-      .maybeSingle();
-    if (data) setCurrentUser(data);
-  };
 
   if (isMobile) {
     return null;
@@ -262,7 +231,7 @@ export function Sidebar() {
         </Button>
       </div>
 
-      <SidebarContent collapsed={collapsed} currentUser={currentUser} />
+      <SidebarContent collapsed={collapsed} />
     </aside>
   );
 }

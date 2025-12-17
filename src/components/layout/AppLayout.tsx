@@ -1,6 +1,7 @@
 import { Outlet, Navigate } from "react-router-dom";
 import { Sidebar, MobileHeader } from "./Sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { CurrentUserProvider } from "@/hooks/useCurrentUser";
 import { Loader2 } from "lucide-react";
 
 export function AppLayout() {
@@ -19,14 +20,16 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <MobileHeader />
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 overflow-auto">
-          <Outlet />
-        </main>
+    <CurrentUserProvider>
+      <div className="flex flex-col min-h-screen bg-background">
+        <MobileHeader />
+        <div className="flex flex-1">
+          <Sidebar />
+          <main className="flex-1 overflow-auto">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </CurrentUserProvider>
   );
 }

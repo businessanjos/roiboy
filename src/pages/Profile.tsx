@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { User, Mail, Building2, Save, Loader2, Camera, Upload } from "lucide-react";
+import { User, Mail, Building2, Save, Loader2, Camera } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface UserProfile {
   id: string;
@@ -25,6 +26,7 @@ interface Account {
 }
 
 export default function Profile() {
+  const { updateUser } = useCurrentUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,7 +161,7 @@ export default function Profile() {
         .from("avatars")
         .getPublicUrl(fileName);
 
-      const avatarUrl = publicUrlData.publicUrl;
+      const avatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
 
       // Update user profile with avatar URL
       const { error: updateError } = await supabase
@@ -170,6 +172,7 @@ export default function Profile() {
       if (updateError) throw updateError;
 
       setProfile({ ...profile, avatar_url: avatarUrl });
+      updateUser({ avatar_url: avatarUrl }); // Update global context
       toast.success("Foto atualizada!");
     } catch (error: any) {
       console.error("Error uploading avatar:", error);
