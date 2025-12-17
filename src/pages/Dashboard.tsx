@@ -38,6 +38,7 @@ import {
   TrendingDown,
   Minus,
   BarChart3,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
@@ -49,6 +50,7 @@ interface ContractData {
   status: string;
   status_changed_at: string | null;
   start_date: string;
+  value: number;
 }
 
 interface ClientWithScore {
@@ -348,7 +350,7 @@ export default function Dashboard() {
       
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, status, status_changed_at, start_date")
+        .select("id, status, status_changed_at, start_date, value")
         .or(`start_date.gte.${format(sixMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${sixMonthsAgo.toISOString()}`)
         .order("start_date", { ascending: true });
 
@@ -426,6 +428,33 @@ export default function Dashboard() {
     
     return { rate, trend, novos, saidas, netChange };
   }, [monthlyChartData]);
+
+  // Calculate lost financial value from cancelled and churn_risk contracts
+  const lostFinancialValue = useMemo(() => {
+    const currentMonthStart = startOfMonth(new Date());
+    const currentMonthEnd = endOfMonth(new Date());
+    
+    let totalLost = 0;
+    let cancelamentosValue = 0;
+    let demissoesValue = 0;
+    
+    contractData.forEach((contract) => {
+      if (contract.status_changed_at) {
+        const changedAt = parseISO(contract.status_changed_at);
+        if (changedAt >= currentMonthStart && changedAt <= currentMonthEnd) {
+          if (contract.status === "churned") {
+            cancelamentosValue += contract.value || 0;
+          } else if (contract.status === "ended") {
+            demissoesValue += contract.value || 0;
+          }
+        }
+      }
+    });
+    
+    totalLost = cancelamentosValue + demissoesValue;
+    
+    return { totalLost, cancelamentosValue, demissoesValue };
+  }, [contractData]);
 
   const chartConfig = {
     novos: {
@@ -992,29 +1021,53 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Retention Rate Card */}
-          <Card className={`shadow-card border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
-                  <div className="flex items-center gap-2">
-                    <p className={`text-3xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                      {retentionMetrics.rate}%
+          {/* Retention & Financial Loss Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Retention Rate Card */}
+            <Card className={`shadow-card border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
+                    <div className="flex items-center gap-2">
+                      <p className={`text-3xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                        {retentionMetrics.rate}%
+                      </p>
+                      {retentionMetrics.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-500" />}
+                      {retentionMetrics.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-500" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
                     </p>
-                    {retentionMetrics.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-500" />}
-                    {retentionMetrics.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-500" />}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
-                  </p>
+                  <div className={`h-12 w-12 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                    <Target className={`h-6 w-6 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
+                  </div>
                 </div>
-                <div className={`h-12 w-12 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                  <Target className={`h-6 w-6 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
+              </CardContent>
+            </Card>
+
+            {/* Financial Loss Card */}
+            <Card className="shadow-card border-l-4 border-l-red-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
+                    <p className="text-3xl font-bold text-red-600">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.totalLost)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Cancelamentos: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.cancelamentosValue)} | 
+                      Demissões: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.demissoesValue)}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-red-600" />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
