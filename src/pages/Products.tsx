@@ -26,8 +26,18 @@ interface Product {
   price: number;
   billing_period: "monthly" | "quarterly" | "semiannual" | "annual" | "one_time";
   is_active: boolean;
+  is_mls: boolean;
+  mls_level: string | null;
   created_at: string;
 }
+
+const mlsLevelLabels: Record<string, string> = {
+  bronze: "Bronze",
+  prata: "Prata",
+  ouro: "Ouro",
+  diamond: "Diamond",
+  platinum: "Platinum",
+};
 
 const billingPeriodLabels = {
   monthly: "Mensal",
@@ -50,6 +60,8 @@ export default function Products() {
   const [price, setPrice] = useState("");
   const [billingPeriod, setBillingPeriod] = useState<string>("monthly");
   const [isActive, setIsActive] = useState(true);
+  const [isMls, setIsMls] = useState(false);
+  const [mlsLevel, setMlsLevel] = useState<string>("");
 
   const fetchProducts = async () => {
     try {
@@ -78,6 +90,8 @@ export default function Products() {
     setPrice("");
     setBillingPeriod("monthly");
     setIsActive(true);
+    setIsMls(false);
+    setMlsLevel("");
     setEditingId(null);
   };
 
@@ -88,6 +102,8 @@ export default function Products() {
     setPrice(product.price.toString());
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
+    setIsMls(product.is_mls);
+    setMlsLevel(product.mls_level || "");
     setDialogOpen(true);
   };
 
@@ -116,6 +132,8 @@ export default function Products() {
         price: parseFloat(price) || 0,
         billing_period: billingPeriod as "monthly" | "quarterly" | "semiannual" | "annual" | "one_time",
         is_active: isActive,
+        is_mls: isMls,
+        mls_level: isMls ? (mlsLevel || null) : null,
       };
 
       if (editingId) {
@@ -261,6 +279,38 @@ export default function Products() {
                   onCheckedChange={setIsActive}
                 />
               </div>
+
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="is-mls">Produto MLS</Label>
+                  <Switch
+                    id="is-mls"
+                    checked={isMls}
+                    onCheckedChange={(checked) => {
+                      setIsMls(checked);
+                      if (!checked) setMlsLevel("");
+                    }}
+                  />
+                </div>
+
+                {isMls && (
+                  <div className="space-y-2">
+                    <Label>Nível do Título</Label>
+                    <Select value={mlsLevel} onValueChange={setMlsLevel}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o nível" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bronze">Bronze</SelectItem>
+                        <SelectItem value="prata">Prata</SelectItem>
+                        <SelectItem value="ouro">Ouro</SelectItem>
+                        <SelectItem value="diamond">Diamond</SelectItem>
+                        <SelectItem value="platinum">Platinum</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </div>
 
             <DialogFooter>
@@ -327,6 +377,11 @@ export default function Products() {
                   <Badge variant="outline">
                     {billingPeriodLabels[product.billing_period]}
                   </Badge>
+                  {product.is_mls && (
+                    <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+                      MLS {product.mls_level ? `- ${mlsLevelLabels[product.mls_level]}` : ""}
+                    </Badge>
+                  )}
                   {!product.is_active && (
                     <Badge variant="destructive">Inativo</Badge>
                   )}

@@ -1324,6 +1324,8 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          is_mls: boolean
+          mls_level: string | null
           name: string
           price: number
           updated_at: string
@@ -1335,6 +1337,8 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_mls?: boolean
+          mls_level?: string | null
           name: string
           price?: number
           updated_at?: string
@@ -1346,6 +1350,8 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          is_mls?: boolean
+          mls_level?: string | null
           name?: string
           price?: number
           updated_at?: string
