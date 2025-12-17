@@ -159,6 +159,15 @@ export default function ClientDetail() {
   const [roiScreenshotPreview, setRoiScreenshotPreview] = useState<string | null>(null);
   const [uploadingRoi, setUploadingRoi] = useState(false);
 
+  // Risk form state
+  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
+  const [riskLevel, setRiskLevel] = useState<string>("medium");
+  const [riskReason, setRiskReason] = useState("");
+  const [riskEvidence, setRiskEvidence] = useState("");
+  const [riskScreenshot, setRiskScreenshot] = useState<File | null>(null);
+  const [riskScreenshotPreview, setRiskScreenshotPreview] = useState<string | null>(null);
+  const [uploadingRisk, setUploadingRisk] = useState(false);
+
   // Edit client info state
   const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<ClientFormData>(getEmptyClientFormData());
@@ -534,7 +543,7 @@ export default function ClientDetail() {
           title: "Sinal de Risco Detectado",
           description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
           timestamp: risk.happened_at,
-          metadata: { level: risk.risk_level, source: risk.source },
+          metadata: { level: risk.risk_level, source: risk.source, image_url: risk.image_url },
         });
       });
 
@@ -621,7 +630,8 @@ export default function ClientDetail() {
                 impact: roi.impact, 
                 category: roi.category, 
                 roi_type: roi.roi_type,
-                source: roi.source 
+                source: roi.source,
+                image_url: roi.image_url,
               },
             };
             const updated = [newEvent, ...prev.filter(e => e.id !== roi.id)];
@@ -649,7 +659,7 @@ export default function ClientDetail() {
               title: "Sinal de Risco Detectado",
               description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
               timestamp: risk.happened_at,
-              metadata: { level: risk.risk_level, source: risk.source },
+              metadata: { level: risk.risk_level, source: risk.source, image_url: risk.image_url },
             };
             const updated = [newEvent, ...prev.filter(e => e.id !== risk.id)];
             updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -801,6 +811,98 @@ export default function ClientDetail() {
       toast.error("Erro ao adicionar ROI");
     } finally {
       setUploadingRoi(false);
+    }
+  };
+
+  const handleRiskScreenshotSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setRiskScreenshot(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRiskScreenshotPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRiskScreenshotDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      setRiskScreenshot(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRiskScreenshotPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearRiskScreenshot = () => {
+    setRiskScreenshot(null);
+    setRiskScreenshotPreview(null);
+  };
+
+  const handleAddRisk = async () => {
+    if (!id || !client || !riskReason.trim()) {
+      toast.error("Preencha o motivo do risco");
+      return;
+    }
+
+    setUploadingRisk(true);
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .single();
+
+      if (!userData) throw new Error("User not found");
+
+      let imageUrl: string | null = null;
+
+      if (riskScreenshot) {
+        const fileExt = riskScreenshot.name.split(".").pop();
+        const fileName = `${id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("roi-screenshots")
+          .upload(fileName, riskScreenshot);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("roi-screenshots")
+          .getPublicUrl(fileName);
+
+        imageUrl = urlData.publicUrl;
+      }
+
+      const { error } = await supabase.from("risk_events").insert({
+        account_id: userData.account_id,
+        client_id: id,
+        source: "system" as const,
+        risk_level: riskLevel as "low" | "medium" | "high",
+        reason: riskReason,
+        evidence_snippet: riskEvidence || null,
+        happened_at: new Date().toISOString(),
+        image_url: imageUrl,
+      });
+
+      if (error) throw error;
+
+      toast.success("Risco adicionado com sucesso!");
+      setRiskDialogOpen(false);
+      setRiskReason("");
+      setRiskEvidence("");
+      setRiskScreenshot(null);
+      setRiskScreenshotPreview(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error adding risk:", error);
+      toast.error("Erro ao adicionar risco");
+    } finally {
+      setUploadingRisk(false);
     }
   };
 
@@ -1141,6 +1243,109 @@ export default function ClientDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+          <Dialog open={riskDialogOpen} onOpenChange={setRiskDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Adicionar Risco
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Registrar Sinal de Risco</DialogTitle>
+                <DialogDescription>
+                  Registre um sinal de risco identificado no cliente
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nível de Risco</Label>
+                  <Select value={riskLevel} onValueChange={setRiskLevel}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baixo</SelectItem>
+                      <SelectItem value="medium">Médio</SelectItem>
+                      <SelectItem value="high">Alto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Motivo *</Label>
+                  <Input
+                    placeholder="Ex: Cliente demonstrou frustração..."
+                    value={riskReason}
+                    onChange={(e) => setRiskReason(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Evidência (opcional)</Label>
+                  <Textarea
+                    placeholder="Trecho de conversa ou contexto adicional..."
+                    value={riskEvidence}
+                    onChange={(e) => setRiskEvidence(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Print (opcional)</Label>
+                  {riskScreenshotPreview ? (
+                    <div className="relative">
+                      <img
+                        src={riskScreenshotPreview}
+                        alt="Preview"
+                        className="w-full h-40 object-cover rounded-lg border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8"
+                        onClick={clearRiskScreenshot}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={handleRiskScreenshotDrop}
+                      onClick={() => document.getElementById("risk-screenshot-input")?.click()}
+                    >
+                      <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Arraste uma imagem ou clique para selecionar
+                      </p>
+                      <input
+                        id="risk-screenshot-input"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleRiskScreenshotSelect}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRiskDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleAddRisk} disabled={uploadingRisk}>
+                  {uploadingRisk ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
