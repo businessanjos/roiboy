@@ -386,18 +386,20 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
   const content = (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Campos Personalizados</h3>
-          <p className="text-sm text-muted-foreground">
-            Crie campos para acompanhar o processo dos clientes
-          </p>
-        </div>
+        {!isControlled && (
+          <div>
+            <h3 className="text-lg font-medium">Campos Personalizados</h3>
+            <p className="text-sm text-muted-foreground">
+              Crie campos para acompanhar o processo dos clientes
+            </p>
+          </div>
+        )}
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button size="sm" className={isControlled ? "ml-auto" : ""}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Campo
             </Button>
@@ -565,6 +567,9 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
     return (
       <Dialog open={managerOpen} onOpenChange={setManagerOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Configurar Campos</DialogTitle>
+          </DialogHeader>
           {content}
         </DialogContent>
       </Dialog>
