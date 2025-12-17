@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -840,12 +840,68 @@ export default function Clients() {
               <Button size="sm" className="sm:size-default"><Plus className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Novo Cliente</span></Button>
             </DialogTrigger>
             <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh]">
-              <DialogHeader>
-                <DialogTitle>Novo Cliente</DialogTitle>
-                <DialogDescription className="hidden sm:block">Adicione um novo cliente com todos os dados cadastrais.</DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="max-h-[55vh] sm:max-h-[60vh] pr-2 sm:pr-4">
-                <div className="space-y-6">
+              {(() => {
+                // Calculate progress for required fields
+                const requiredChecks = [
+                  { label: "Nome", filled: !!newClientData.full_name.trim() },
+                  { label: "Telefone", filled: /^\+[1-9]\d{1,14}$/.test(newClientData.phone_e164) },
+                  ...requiredFields.map(field => {
+                    const value = newClientFieldValues[field.id];
+                    const filled = value !== null && value !== undefined && value !== "" && 
+                                   !(Array.isArray(value) && value.length === 0);
+                    return { label: field.name, filled };
+                  })
+                ];
+                const filledCount = requiredChecks.filter(c => c.filled).length;
+                const totalCount = requiredChecks.length;
+                const progressPercent = totalCount > 0 ? (filledCount / totalCount) * 100 : 100;
+                
+                return (
+                  <>
+                    <DialogHeader className="space-y-3">
+                      <DialogTitle>Novo Cliente</DialogTitle>
+                      <DialogDescription className="hidden sm:block">Adicione um novo cliente com todos os dados cadastrais.</DialogDescription>
+                      
+                      {/* Progress Indicator */}
+                      {totalCount > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              Campos obrigatórios: {filledCount}/{totalCount}
+                            </span>
+                            {filledCount === totalCount ? (
+                              <span className="text-green-600 dark:text-green-500 flex items-center gap-1">
+                                <Check className="h-3 w-3" />
+                                Completo
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">{Math.round(progressPercent)}%</span>
+                            )}
+                          </div>
+                          <Progress 
+                            value={progressPercent} 
+                            className="h-1.5"
+                          />
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {requiredChecks.map((check, idx) => (
+                              <span 
+                                key={idx}
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs transition-colors ${
+                                  check.filled 
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                {check.filled && <Check className="h-2.5 w-2.5" />}
+                                {check.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[55vh] sm:max-h-[60vh] pr-2 sm:pr-4">
+                      <div className="space-y-6">
                   {/* Avatar Upload */}
                   <div className="flex flex-col items-center gap-2 sm:gap-3 pb-3 sm:pb-4 border-b">
                     <div className="relative group">
@@ -1092,12 +1148,15 @@ export default function Clients() {
                       </div>
                     </div>
                   )}
-                </div>
-              </ScrollArea>
-              <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
-                <Button onClick={handleAddClient} className="w-full sm:w-auto">Salvar</Button>
-              </DialogFooter>
+                      </div>
+                    </ScrollArea>
+                    <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+                      <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
+                      <Button onClick={handleAddClient} className="w-full sm:w-auto">Salvar</Button>
+                    </DialogFooter>
+                  </>
+                );
+              })()}
             </DialogContent>
           </Dialog>
         </div>
