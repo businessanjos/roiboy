@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { User, Mail, Building2, Save, Loader2 } from "lucide-react";
+import { User, Mail, Building2, Save, Loader2, Camera, Upload } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -15,6 +15,8 @@ interface UserProfile {
   email: string;
   role: string;
   account_id: string;
+  avatar_url: string | null;
+  auth_user_id: string | null;
 }
 
 interface Account {
@@ -27,6 +29,8 @@ export default function Profile() {
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [editName, setEditName] = useState("");
   const [editAccountName, setEditAccountName] = useState("");
@@ -105,8 +109,6 @@ export default function Profile() {
 
     setSaving(true);
     try {
-      // Note: This will only work if the user has permission to update accounts
-      // Currently RLS only allows SELECT on accounts
       const { error } = await supabase
         .from("accounts")
         .update({ name: editAccountName.trim() })
@@ -121,6 +123,59 @@ export default function Profile() {
       toast.error("Você não tem permissão para editar a conta");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile?.auth_user_id) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione uma imagem");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${profile.auth_user_id}/avatar.${fileExt}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
+
+      const avatarUrl = publicUrlData.publicUrl;
+
+      // Update user profile with avatar URL
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", profile.id);
+
+      if (updateError) throw updateError;
+
+      setProfile({ ...profile, avatar_url: avatarUrl });
+      toast.success("Foto atualizada!");
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast.error(error.message || "Erro ao enviar foto");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -187,17 +242,43 @@ export default function Profile() {
       <Card className="shadow-card">
         <CardHeader>
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="text-lg bg-primary text-primary-foreground">
-                {getInitials(profile.name)}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={profile.avatar_url || undefined} alt={profile.name} />
+                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                  {getInitials(profile.name)}
+                </AvatarFallback>
+              </Avatar>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <Button
+                size="icon"
+                variant="secondary"
+                className="absolute bottom-0 right-0 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
             <div>
               <CardTitle>{profile.name}</CardTitle>
               <CardDescription className="flex items-center gap-1">
                 <Mail className="h-3 w-3" />
                 {profile.email}
               </CardDescription>
+              <p className="text-xs text-muted-foreground mt-1">
+                Passe o mouse na foto para alterá-la
+              </p>
             </div>
           </div>
         </CardHeader>

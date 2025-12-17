@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, User, Users } from "lucide-react";
@@ -42,6 +42,7 @@ interface TeamUser {
   role: UserRole;
   created_at: string;
   auth_user_id: string | null;
+  avatar_url: string | null;
 }
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -338,6 +339,7 @@ export default function Team() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
+                          <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
                           <AvatarFallback className="bg-primary/10 text-primary text-sm">
                             {getInitials(user.name)}
                           </AvatarFallback>
