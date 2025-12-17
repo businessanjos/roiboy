@@ -2,9 +2,23 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { FieldValueEditor } from "@/components/custom-fields/FieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
-import { Layers, Loader2 } from "lucide-react";
+import { 
+  Layers, 
+  Loader2, 
+  ToggleLeft, 
+  Hash, 
+  DollarSign, 
+  Calendar, 
+  List, 
+  ListChecks, 
+  Users, 
+  Type,
+  CheckCircle2,
+  Circle
+} from "lucide-react";
 
 interface ClientFieldValue {
   field_id: string;
@@ -19,6 +33,62 @@ interface ClientFieldsSummaryProps {
   clientId: string;
   expanded?: boolean;
 }
+
+const FIELD_TYPE_CONFIG: Record<string, { 
+  icon: typeof Type; 
+  label: string; 
+  color: string;
+  bgColor: string;
+}> = {
+  boolean: { 
+    icon: ToggleLeft, 
+    label: "Sim/Não", 
+    color: "text-purple-500",
+    bgColor: "bg-purple-500/10"
+  },
+  number: { 
+    icon: Hash, 
+    label: "Número", 
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/10"
+  },
+  currency: { 
+    icon: DollarSign, 
+    label: "Moeda", 
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-500/10"
+  },
+  date: { 
+    icon: Calendar, 
+    label: "Data", 
+    color: "text-orange-500",
+    bgColor: "bg-orange-500/10"
+  },
+  select: { 
+    icon: List, 
+    label: "Seleção", 
+    color: "text-cyan-500",
+    bgColor: "bg-cyan-500/10"
+  },
+  multi_select: { 
+    icon: ListChecks, 
+    label: "Multi-seleção", 
+    color: "text-pink-500",
+    bgColor: "bg-pink-500/10"
+  },
+  user: { 
+    icon: Users, 
+    label: "Responsável", 
+    color: "text-amber-500",
+    bgColor: "bg-amber-500/10"
+  },
+  text: { 
+    icon: Type, 
+    label: "Texto", 
+    color: "text-muted-foreground",
+    bgColor: "bg-muted"
+  },
+};
 
 export function ClientFieldsSummary({ clientId, expanded = false }: ClientFieldsSummaryProps) {
   const [fields, setFields] = useState<CustomField[]>([]);
@@ -113,6 +183,18 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
     }));
   };
 
+  const getFieldTypeConfig = (type: string) => {
+    return FIELD_TYPE_CONFIG[type] || FIELD_TYPE_CONFIG.text;
+  };
+
+  const hasFieldValue = (field: CustomField) => {
+    const value = fieldValues[field.id];
+    if (value === null || value === undefined) return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    if (value === "") return false;
+    return true;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 text-muted-foreground py-8">
@@ -124,61 +206,83 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
 
   if (fields.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Layers className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>Nenhum campo personalizado cadastrado.</p>
-        <p className="text-sm">Acesse Configurações para criar campos.</p>
+      <div className="text-center py-12 text-muted-foreground">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
+          <Layers className="h-8 w-8 opacity-50" />
+        </div>
+        <p className="font-medium">Nenhum campo personalizado</p>
+        <p className="text-sm mt-1">Acesse Configurações para criar campos.</p>
       </div>
     );
   }
 
   // Count fields with values
-  const filledCount = fields.filter((field) => {
-    const value = fieldValues[field.id];
-    if (value === null || value === undefined) return false;
-    if (Array.isArray(value) && value.length === 0) return false;
-    if (value === "") return false;
-    return true;
-  }).length;
+  const filledCount = fields.filter(hasFieldValue).length;
+  const progressPercent = Math.round((filledCount / fields.length) * 100);
 
-  // Expanded view - list format for dedicated tab
+  // Expanded view - visual card format for dedicated tab
   if (expanded) {
     return (
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-          <Badge variant="secondary">
-            {filledCount}/{fields.length} preenchidos
-          </Badge>
+      <div className="space-y-6">
+        {/* Progress Header */}
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/10">
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Preenchimento</span>
+              <span className="text-sm text-muted-foreground">
+                {filledCount} de {fields.length} campos
+              </span>
+            </div>
+            <Progress value={progressPercent} className="h-2" />
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-bold text-primary">{progressPercent}%</span>
+          </div>
         </div>
-        <div className="divide-y divide-border">
+
+        {/* Fields Grid */}
+        <div className="grid gap-3 sm:grid-cols-2">
           {fields.map((field) => {
+            const config = getFieldTypeConfig(field.field_type);
+            const Icon = config.icon;
             const value = fieldValues[field.id];
-            const hasValue =
-              value !== null &&
-              value !== undefined &&
-              !(Array.isArray(value) && value.length === 0) &&
-              value !== "";
+            const hasValue = hasFieldValue(field);
 
             return (
               <div
                 key={field.id}
-                className="flex items-center justify-between py-3 px-2 hover:bg-muted/30 rounded-lg transition-colors group"
+                className={`group relative p-4 rounded-xl border transition-all duration-200 hover:shadow-md ${
+                  hasValue
+                    ? "bg-card border-border hover:border-primary/30"
+                    : "bg-muted/30 border-dashed border-muted-foreground/20 hover:border-muted-foreground/40"
+                }`}
               >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${hasValue ? '' : 'text-muted-foreground'}`}>
-                    {field.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {field.field_type === 'boolean' ? 'Sim/Não' : 
-                     field.field_type === 'number' ? 'Número' :
-                     field.field_type === 'currency' ? 'Moeda' :
-                     field.field_type === 'date' ? 'Data' :
-                     field.field_type === 'select' ? 'Seleção' :
-                     field.field_type === 'multi_select' ? 'Multi-seleção' :
-                     field.field_type === 'user' ? 'Usuário' : 'Texto'}
-                  </p>
+                {/* Status indicator */}
+                <div className="absolute top-3 right-3">
+                  {hasValue ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground/30" />
+                  )}
                 </div>
-                <div className="flex-shrink-0 ml-4">
+
+                {/* Field Header */}
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={`p-2 rounded-lg ${config.bgColor}`}>
+                    <Icon className={`h-4 w-4 ${config.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0 pr-6">
+                    <h4 className={`font-medium text-sm truncate ${!hasValue && 'text-muted-foreground'}`}>
+                      {field.name}
+                    </h4>
+                    <p className={`text-xs ${config.color}`}>
+                      {config.label}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Field Value */}
+                <div className="pl-11">
                   {accountId ? (
                     <FieldValueEditor
                       field={field}
@@ -215,11 +319,7 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {fields.map((field) => {
             const value = fieldValues[field.id];
-            const hasValue =
-              value !== null &&
-              value !== undefined &&
-              !(Array.isArray(value) && value.length === 0) &&
-              value !== "";
+            const hasValue = hasFieldValue(field);
 
             return (
               <div
