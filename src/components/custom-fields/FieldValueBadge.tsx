@@ -1,11 +1,18 @@
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Minus } from "lucide-react";
+import { Check, X, Minus, User } from "lucide-react";
 import { CustomField, FieldOption } from "./CustomFieldsManager";
+
+interface TeamUser {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface FieldValueBadgeProps {
   field: CustomField;
   value: any;
   size?: "sm" | "md";
+  teamUsers?: TeamUser[];
 }
 
 const getColorClasses = (color: string) => {
@@ -22,7 +29,7 @@ const getColorClasses = (color: string) => {
   return colorMap[color] || colorMap.gray;
 };
 
-export function FieldValueBadge({ field, value, size = "sm" }: FieldValueBadgeProps) {
+export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldValueBadgeProps) {
   const textSize = size === "sm" ? "text-xs" : "text-sm";
   const padding = size === "sm" ? "px-1.5 py-0.5" : "px-2 py-1";
 
@@ -94,6 +101,49 @@ export function FieldValueBadge({ field, value, size = "sm" }: FieldValueBadgePr
           </span>
         )}
       </div>
+    );
+  }
+
+  // User field
+  if (field.field_type === "user") {
+    const selectedUserIds = Array.isArray(value) ? value : [];
+    if (selectedUserIds.length === 0) {
+      return (
+        <span className={`inline-flex items-center ${padding} rounded bg-muted text-muted-foreground ${textSize}`}>
+          —
+        </span>
+      );
+    }
+    
+    // If we have team users data, show names
+    if (teamUsers && teamUsers.length > 0) {
+      const selectedUsers = teamUsers.filter(u => selectedUserIds.includes(u.id));
+      return (
+        <div className="flex flex-wrap gap-1">
+          {selectedUsers.slice(0, 2).map((user) => (
+            <span
+              key={user.id}
+              className={`inline-flex items-center gap-1 ${padding} rounded bg-primary/10 text-primary border border-primary/20 ${textSize}`}
+            >
+              <User className="h-3 w-3" />
+              {user.name.split(" ")[0]}
+            </span>
+          ))}
+          {selectedUsers.length > 2 && (
+            <span className={`inline-flex items-center ${padding} rounded bg-muted text-muted-foreground ${textSize}`}>
+              +{selectedUsers.length - 2}
+            </span>
+          )}
+        </div>
+      );
+    }
+    
+    // Fallback: show count
+    return (
+      <span className={`inline-flex items-center gap-1 ${padding} rounded bg-primary/10 text-primary border border-primary/20 ${textSize}`}>
+        <User className="h-3 w-3" />
+        {selectedUserIds.length}
+      </span>
     );
   }
 

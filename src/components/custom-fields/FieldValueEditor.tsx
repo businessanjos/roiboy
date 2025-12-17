@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Check, X } from "lucide-react";
+import { Check, X, User } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -18,6 +18,12 @@ interface FieldValueEditorProps {
   accountId: string;
   currentValue: any;
   onValueChange: (fieldId: string, newValue: any) => void;
+}
+
+interface TeamUser {
+  id: string;
+  name: string;
+  email: string;
 }
 
 const getColorClasses = (color: string, selected: boolean) => {
@@ -39,6 +45,25 @@ export function FieldValueEditor({ field, clientId, accountId, currentValue, onV
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [localValue, setLocalValue] = useState<any>(currentValue);
+  const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
+
+  // Fetch team users when opening user field
+  useEffect(() => {
+    if (field.field_type === "user" && open) {
+      fetchTeamUsers();
+    }
+  }, [field.field_type, open]);
+
+  const fetchTeamUsers = async () => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email")
+      .order("name");
+    
+    if (!error && data) {
+      setTeamUsers(data);
+    }
+  };
 
   const saveValue = async (newValue: any) => {
     setSaving(true);
@@ -71,6 +96,7 @@ export function FieldValueEditor({ field, clientId, accountId, currentValue, onV
           valueData.value_text = newValue;
           break;
         case "multi_select":
+        case "user":
           valueData.value_json = newValue;
           break;
       }
@@ -196,6 +222,55 @@ export function FieldValueEditor({ field, clientId, accountId, currentValue, onV
                 </button>
               );
             })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // User field - select team members
+  if (field.field_type === "user") {
+    const selectedUserIds = Array.isArray(currentValue) ? currentValue : [];
+    
+    const toggleUser = (userId: string) => {
+      const newValues = selectedUserIds.includes(userId)
+        ? selectedUserIds.filter(id => id !== userId)
+        : [...selectedUserIds, userId];
+      saveValue(newValues);
+    };
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+            <FieldValueBadge field={field} value={currentValue} teamUsers={teamUsers.length ? teamUsers : undefined} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-2" align="start">
+          <div className="flex flex-col gap-1 max-h-64 overflow-auto">
+            {teamUsers.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                Carregando...
+              </div>
+            ) : (
+              teamUsers.map((user) => {
+                const isSelected = selectedUserIds.includes(user.id);
+                return (
+                  <button
+                    key={user.id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
+                      isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                    }`}
+                    onClick={() => toggleUser(user.id)}
+                    disabled={saving}
+                  >
+                    <Checkbox checked={isSelected} className="pointer-events-none" />
+                    <User className="h-4 w-4" />
+                    <span className="truncate">{user.name}</span>
+                  </button>
+                );
+              })
+            )}
           </div>
         </PopoverContent>
       </Popover>
