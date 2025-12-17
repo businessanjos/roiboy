@@ -394,7 +394,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     );
   }
 
-  const EventDialog = () => (
+  const eventDialogContent = (
     <Dialog open={dialogOpen} onOpenChange={(open) => {
       setDialogOpen(open);
       if (!open) resetForm();
@@ -405,9 +405,9 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         </DialogHeader>
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Título *</Label>
+            <Label htmlFor="event-title">Título *</Label>
             <Input
-              id="title"
+              id="event-title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Nome do evento"
@@ -433,9 +433,9 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="event-description">Descrição</Label>
             <Textarea
-              id="description"
+              id="event-description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Detalhes do evento"
@@ -502,7 +502,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     </Dialog>
   );
 
-  const DeleteConfirmDialog = () => (
+  const deleteDialogContent = (
     <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -521,30 +521,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     </AlertDialog>
   );
 
-  const EventActions = ({ event }: { event: EventWithProducts }) => (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => openEditDialog(event)}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-destructive hover:text-destructive"
-        onClick={() => {
-          setEventToDelete(event);
-          setDeleteDialogOpen(true);
-        }}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  );
-
   if (events.length === 0) {
     return (
       <div className="space-y-4">
@@ -559,7 +535,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           <p>Nenhum evento programado para os produtos deste cliente.</p>
           <p className="text-sm mt-1">Crie eventos usando o botão acima.</p>
         </div>
-        <EventDialog />
+        {eventDialogContent}
       </div>
     );
   }
@@ -583,8 +559,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         </Button>
       </div>
       
-      <EventDialog />
-      <DeleteConfirmDialog />
+      {eventDialogContent}
+      {deleteDialogContent}
       {upcomingEvents.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -641,7 +617,27 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                           </a>
                         </Button>
                       )}
-                      <EventActions event={event} />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditDialog(event)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setEventToDelete(event);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -700,7 +696,27 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                         </a>
                       </Button>
                     )}
-                    <EventActions event={event} />
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEditDialog(event)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setEventToDelete(event);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -768,7 +784,27 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                         Não participou
                       </Badge>
                     )}
-                    <EventActions event={event} />
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEditDialog(event)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setEventToDelete(event);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
