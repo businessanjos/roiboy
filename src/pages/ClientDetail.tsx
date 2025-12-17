@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
-import { VNPSBadge, VNPSExplanation } from "@/components/ui/vnps-badge";
+import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
@@ -47,7 +47,6 @@ import {
   Building2,
   MapPin,
   RefreshCw,
-  HelpCircle,
   Calendar,
   FileText,
   Heart,
@@ -1665,6 +1664,9 @@ export default function ClientDetail() {
                   trend={vnps.trend}
                   explanation={vnps.explanation || undefined}
                   eligible={vnps.eligible_for_nps_ask}
+                  roizometer={vnps.roizometer}
+                  escore={vnps.escore}
+                  riskIndex={vnps.risk_index}
                   size="lg"
                   showClass
                 />
@@ -1700,52 +1702,27 @@ export default function ClientDetail() {
         </Card>
       </div>
 
-      {/* V-NPS Explanation + Contract Timer side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {vnps && (
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                Por que esse V-NPS?
-              </CardTitle>
-              <CardDescription>
-                Probabilidade real de recomendação, calculada continuamente a partir de ROI percebido, engajamento e risco.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <VNPSExplanation
-                explanation={vnps.explanation || "V-NPS calculado com base nos dados disponíveis."}
-                roizometer={vnps.roizometer}
-                escore={vnps.escore}
-                riskIndex={vnps.risk_index}
-                eligible={vnps.eligible_for_nps_ask}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {(client.contract_start_date || client.contract_end_date) && (
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                Vigência do Contrato
-              </CardTitle>
-              <CardDescription>
-                Período e progresso do contrato atual
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ContractTimer 
-                startDate={client.contract_start_date}
-                endDate={client.contract_end_date}
-                variant="full"
-              />
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {/* Contract Timer */}
+      {(client.contract_start_date || client.contract_end_date) && (
+        <Card className="shadow-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              Vigência do Contrato
+            </CardTitle>
+            <CardDescription>
+              Período e progresso do contrato atual
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ContractTimer 
+              startDate={client.contract_start_date}
+              endDate={client.contract_end_date}
+              variant="full"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Risk Alerts */}
       {riskEvents.length > 0 && (
