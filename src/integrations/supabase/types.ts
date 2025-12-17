@@ -1149,6 +1149,7 @@ export type Database = {
           evidence_snippet: string | null
           happened_at: string
           id: string
+          image_url: string | null
           impact: Database["public"]["Enums"]["impact_level"]
           roi_type: Database["public"]["Enums"]["roi_type"]
           source: Database["public"]["Enums"]["roi_source"]
@@ -1161,6 +1162,7 @@ export type Database = {
           evidence_snippet?: string | null
           happened_at: string
           id?: string
+          image_url?: string | null
           impact?: Database["public"]["Enums"]["impact_level"]
           roi_type: Database["public"]["Enums"]["roi_type"]
           source: Database["public"]["Enums"]["roi_source"]
@@ -1173,6 +1175,7 @@ export type Database = {
           evidence_snippet?: string | null
           happened_at?: string
           id?: string
+          image_url?: string | null
           impact?: Database["public"]["Enums"]["impact_level"]
           roi_type?: Database["public"]["Enums"]["roi_type"]
           source?: Database["public"]["Enums"]["roi_source"]

@@ -49,6 +49,8 @@ import {
   Calendar,
   FileText,
   Heart,
+  ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -153,6 +155,9 @@ export default function ClientDetail() {
   const [roiCategory, setRoiCategory] = useState<string>("revenue");
   const [roiEvidence, setRoiEvidence] = useState("");
   const [roiImpact, setRoiImpact] = useState<string>("medium");
+  const [roiScreenshot, setRoiScreenshot] = useState<File | null>(null);
+  const [roiScreenshotPreview, setRoiScreenshotPreview] = useState<string | null>(null);
+  const [uploadingRoi, setUploadingRoi] = useState(false);
 
   // Edit client info state
   const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
@@ -708,9 +713,40 @@ export default function ClientDetail() {
     return labels[category] || category;
   };
 
+  const handleRoiScreenshotSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setRoiScreenshot(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRoiScreenshotPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRoiScreenshotDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      setRoiScreenshot(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRoiScreenshotPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearRoiScreenshot = () => {
+    setRoiScreenshot(null);
+    setRoiScreenshotPreview(null);
+  };
+
   const handleAddRoi = async () => {
     if (!id || !client) return;
 
+    setUploadingRoi(true);
     try {
       const { data: userData } = await supabase
         .from("users")
@@ -718,6 +754,26 @@ export default function ClientDetail() {
         .single();
 
       if (!userData) throw new Error("User not found");
+
+      let imageUrl: string | null = null;
+
+      // Upload screenshot if present
+      if (roiScreenshot) {
+        const fileExt = roiScreenshot.name.split(".").pop();
+        const fileName = `${id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("roi-screenshots")
+          .upload(fileName, roiScreenshot);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("roi-screenshots")
+          .getPublicUrl(fileName);
+
+        imageUrl = urlData.publicUrl;
+      }
 
       const { error } = await supabase.from("roi_events").insert({
         account_id: userData.account_id,
@@ -728,6 +784,7 @@ export default function ClientDetail() {
         evidence_snippet: roiEvidence,
         impact: roiImpact as "low" | "medium" | "high",
         happened_at: new Date().toISOString(),
+        image_url: imageUrl,
       });
 
       if (error) throw error;
@@ -735,10 +792,14 @@ export default function ClientDetail() {
       toast.success("ROI adicionado com sucesso!");
       setRoiDialogOpen(false);
       setRoiEvidence("");
+      setRoiScreenshot(null);
+      setRoiScreenshotPreview(null);
       fetchData();
     } catch (error) {
       console.error("Error adding ROI:", error);
       toast.error("Erro ao adicionar ROI");
+    } finally {
+      setUploadingRoi(false);
     }
   };
 
@@ -1021,12 +1082,61 @@ export default function ClientDetail() {
                   onChange={(e) => setRoiEvidence(e.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Print (opcional)</Label>
+                {roiScreenshotPreview ? (
+                  <div className="relative">
+                    <img
+                      src={roiScreenshotPreview}
+                      alt="Preview"
+                      className="w-full h-40 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8"
+                      onClick={clearRoiScreenshot}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleRoiScreenshotDrop}
+                    onClick={() => document.getElementById("roi-screenshot-input")?.click()}
+                  >
+                    <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Arraste uma imagem ou clique para selecionar
+                    </p>
+                    <input
+                      id="roi-screenshot-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleRoiScreenshotSelect}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setRoiDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleAddRoi}>Salvar</Button>
+              <Button onClick={handleAddRoi} disabled={uploadingRoi}>
+                {uploadingRoi ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar"
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
