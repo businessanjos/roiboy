@@ -531,7 +531,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
     return (
       <div className="space-y-4">
         {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2 pb-2">
+        <div className="flex flex-wrap gap-2 pb-2 border-b">
           {(Object.entries(filterConfig) as [EventFilter, { label: string; color: string }][]).map(([key, config]) => (
             <button
               key={key}
@@ -549,15 +549,9 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
           ))}
         </div>
         
-        <div className="text-center py-12 text-muted-foreground">
-          <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Nenhum evento na timeline ainda.</p>
-          <p className="text-sm mt-1">Interações e análises aparecerão aqui.</p>
-        </div>
-        
-        {/* Comment Input - Facebook Style with @mentions */}
+        {/* Comment Input - Top position */}
         {clientId && currentUser && (
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pb-4 border-b">
             <Avatar className="h-9 w-9 flex-shrink-0">
               <AvatarImage src={currentUser.avatar_url || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary text-sm">
@@ -611,6 +605,12 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
             </div>
           </div>
         )}
+
+        <div className="text-center py-12 text-muted-foreground">
+          <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>Nenhum evento na timeline ainda.</p>
+          <p className="text-sm mt-1">Interações e análises aparecerão aqui.</p>
+        </div>
       </div>
     );
   }
@@ -649,41 +649,9 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         )}
       </div>
 
-      {/* No results message */}
-      {filteredEvents.length === 0 && events.length > 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>Nenhum evento encontrado com os filtros selecionados.</p>
-        </div>
-      )}
-
-      {/* Events List */}
-      <div className="space-y-4">
-        {visibleEvents.map((event, index) => (
-          <div key={event.id} className="relative">
-            {event.type === "comment" ? (
-              <CommentItem event={event} />
-            ) : event.type === "field_change" ? (
-              <SystemEventItem event={event} />
-            ) : (
-              <SystemEventItem event={event} />
-            )}
-            
-            {/* Show "Mostrar X atualizações anteriores" after a few items */}
-            {index === 4 && hiddenCount > 0 && !showOlder && (
-              <button
-                onClick={() => setShowOlder(true)}
-                className="text-primary text-sm font-medium hover:underline mt-2 mb-2"
-              >
-                Mostrar {hiddenCount} atualizações anteriores
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Comment Input - Facebook Style with @mentions */}
+      {/* Comment Input - Top position like other tabs */}
       {clientId && currentUser && (
-        <div className="flex gap-3 pt-4 border-t">
+        <div className="flex gap-3 pb-4 border-b">
           <Avatar className="h-9 w-9 flex-shrink-0">
             <AvatarImage src={currentUser.avatar_url || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary text-sm">
@@ -737,6 +705,38 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
           </div>
         </div>
       )}
+
+      {/* No results message */}
+      {filteredEvents.length === 0 && events.length > 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>Nenhum evento encontrado com os filtros selecionados.</p>
+        </div>
+      )}
+
+      {/* Events List */}
+      <div className="space-y-4">
+        {visibleEvents.map((event, index) => (
+          <div key={event.id} className="relative">
+            {event.type === "comment" ? (
+              <CommentItem event={event} />
+            ) : event.type === "field_change" ? (
+              <SystemEventItem event={event} />
+            ) : (
+              <SystemEventItem event={event} />
+            )}
+            
+            {/* Show "Mostrar X atualizações anteriores" after a few items */}
+            {index === 4 && hiddenCount > 0 && !showOlder && (
+              <button
+                onClick={() => setShowOlder(true)}
+                className="text-primary text-sm font-medium hover:underline mt-2 mb-2"
+              >
+                Mostrar {hiddenCount} atualizações anteriores
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
