@@ -406,10 +406,10 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full">
       {/* Upcoming Events Alert */}
       {upcomingEvents.length > 0 && (
-        <Card className="border-primary/30 bg-primary/5">
+        <Card className="border-primary/30 bg-primary/5 mb-4">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <Bell className="h-5 w-5 text-primary" />
@@ -443,9 +443,103 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
         </Card>
       )}
 
-      {/* Social Media Style Input */}
+      {/* Events List */}
+      <div className="flex-1 overflow-y-auto space-y-1">
+        {events.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Heart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>Nenhum momento CX registrado.</p>
+            <p className="text-sm">Adicione aniversários, conquistas e outros momentos importantes.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {events.map((event) => {
+              const typeInfo = getEventTypeInfo(event.event_type);
+              const Icon = typeInfo.icon;
+              const daysUntil = getDaysUntil(event);
+
+              return (
+                <div
+                  key={event.id}
+                  className="flex items-center gap-3 py-3 px-2 hover:bg-muted/30 rounded-lg transition-colors group"
+                >
+                  <div className={`p-2 rounded-lg bg-muted/50 ${typeInfo.color}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">{event.title}</span>
+                      {event.source === "ai_detected" && (
+                        <Badge variant="outline" className="gap-1 text-[10px] h-5 border-primary/50 text-primary">
+                          <Sparkles className="h-2.5 w-2.5" />
+                          IA
+                        </Badge>
+                      )}
+                      {event.source === "conversation" && (
+                        <Badge variant="outline" className="gap-1 text-[10px] h-5">
+                          <MessageSquare className="h-2.5 w-2.5" />
+                          Conversa
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{typeInfo.label}</span>
+                      {event.event_date && (
+                        <>
+                          <span>•</span>
+                          <span>{format(new Date(event.event_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        </>
+                      )}
+                      {event.is_recurring && daysUntil !== null && daysUntil <= 30 && (
+                        <Badge
+                          variant={daysUntil <= 7 ? "default" : "secondary"}
+                          className="text-[10px] h-4 px-1.5"
+                        >
+                          {daysUntil === 0
+                            ? "Hoje!"
+                            : daysUntil === 1
+                            ? "Amanhã"
+                            : `em ${daysUntil}d`}
+                        </Badge>
+                      )}
+                    </div>
+                    {event.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                        {event.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => openEditDialog(event)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setEventToDelete(event);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Social Media Style Input - BOTTOM */}
       {currentUser && (
-        <div className="flex gap-3 pb-4 border-b">
+        <div className="flex gap-3 pt-4 mt-4 border-t">
           <Avatar className="h-9 w-9 flex-shrink-0">
             <AvatarImage src={currentUser.avatar_url || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary text-sm">
@@ -528,101 +622,6 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Events List */}
-      {events.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Heart className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p>Nenhum momento CX registrado.</p>
-          <p className="text-sm">Adicione aniversários, conquistas e outros momentos importantes.</p>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {events.map((event) => {
-            const typeInfo = getEventTypeInfo(event.event_type);
-            const Icon = typeInfo.icon;
-            const daysUntil = getDaysUntil(event);
-
-            return (
-              <Card key={event.id} className="hover:bg-muted/30 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className={`p-2 rounded-lg bg-muted ${typeInfo.color}`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-medium truncate">{event.title}</h4>
-                          {event.source === "ai_detected" && (
-                            <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
-                              <Sparkles className="h-3 w-3" />
-                              IA
-                            </Badge>
-                          )}
-                          {event.source === "conversation" && (
-                            <Badge variant="outline" className="gap-1 text-xs">
-                              <MessageSquare className="h-3 w-3" />
-                              Conversa
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{typeInfo.label}</p>
-                        {event.event_date && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">
-                              {format(new Date(event.event_date), "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                            {event.is_recurring && daysUntil !== null && (
-                              <Badge
-                                variant={daysUntil <= 7 ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {daysUntil === 0
-                                  ? "Hoje!"
-                                  : daysUntil === 1
-                                  ? "Amanhã"
-                                  : `em ${daysUntil} dias`}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                            {event.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openEditDialog(event)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setEventToDelete(event);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
         </div>
       )}
 
