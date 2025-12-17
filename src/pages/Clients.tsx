@@ -364,6 +364,14 @@ export default function Clients() {
       toast.error(`${errorCount} campo${errorCount > 1 ? 's' : ''} obrigatório${errorCount > 1 ? 's' : ''} não preenchido${errorCount > 1 ? 's' : ''}`, {
         description: "Preencha os campos destacados em vermelho"
       });
+      
+      // Scroll to first error field
+      setTimeout(() => {
+        const firstError = document.querySelector('[data-error="true"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
       return;
     }
     setFormErrors({});
@@ -1011,7 +1019,7 @@ export default function Clients() {
                           const hasError = formErrors[`field_${field.id}`];
                           
                           return (
-                            <div key={field.id} className={`space-y-1 sm:space-y-1.5 ${hasError ? "animate-pulse" : ""}`}>
+                            <div key={field.id} data-error={!!hasError} className={`space-y-1 sm:space-y-1.5 ${hasError ? "animate-pulse" : ""}`}>
                               <Label className={`text-sm flex items-center gap-1.5 ${hasError ? "text-destructive" : ""}`}>
                                 {hasError && <AlertCircle className="h-3 w-3" />}
                                 {field.name} *

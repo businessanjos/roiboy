@@ -128,7 +128,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             Dados Básicos
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+            <div className="space-y-2" data-error={!!errors.full_name}>
               <Label>Nome completo *</Label>
               <Input
                 value={data.full_name}
@@ -140,7 +140,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                 <p className="text-xs text-destructive">{errors.full_name}</p>
               )}
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2" data-error={!!errors.phone_e164}>
               <Label>Telefone principal (E.164) *</Label>
               <Input
                 value={data.phone_e164}
