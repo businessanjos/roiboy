@@ -20,6 +20,7 @@ import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import Forms from "./pages/Forms";
 import PublicForm from "./pages/PublicForm";
+import ChurnReport from "./pages/ChurnReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/integrations" element={<Integrations />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/reports/churn" element={<ChurnReport />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
