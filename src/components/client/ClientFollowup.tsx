@@ -745,111 +745,102 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         </div>
       ) : (
         <ScrollArea className="h-[400px]">
-          <div className="space-y-3 pr-4">
+          <div className="space-y-4 pr-4">
             {filteredFollowups.map((followup) => (
-              <div
-                key={followup.id}
-                className="p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="gap-1">
+              <div key={followup.id} className="flex gap-3 group">
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarFallback className="text-xs bg-muted">
+                    {(followup.users?.name || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{followup.users?.name || "Usuário"}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(followup.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                    </span>
+                    {followup.type !== "note" && (
+                      <Badge variant="outline" className="gap-1 h-5 text-xs">
                         {getTypeIcon(followup.type)}
                         {getTypeLabel(followup.type)}
                       </Badge>
-                      {followup.title && (
-                        <span className="font-medium truncate">{followup.title}</span>
-                      )}
-                    </div>
-
-                    {followup.content && (
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-2">
-                        {followup.content}
-                      </p>
                     )}
-
-                    {followup.type === "image" && followup.file_url && (
-                      <div className="mb-2 relative group">
-                        <img
-                          src={followup.file_url}
-                          alt={followup.file_name || "Imagem"}
-                          className="max-w-xs max-h-48 rounded-md object-cover cursor-pointer transition-opacity hover:opacity-90"
-                          onClick={() => {
-                            setLightboxImage({
-                              url: followup.file_url!,
-                              name: followup.file_name || followup.title || "Imagem",
-                            });
-                            setLightboxOpen(true);
-                          }}
-                        />
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="absolute bottom-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            setLightboxImage({
-                              url: followup.file_url!,
-                              name: followup.file_name || followup.title || "Imagem",
-                            });
-                            setLightboxOpen(true);
-                          }}
-                        >
-                          <Expand className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-
-                    {followup.type === "file" && followup.file_url && (
-                      <a
-                        href={followup.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                    <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => openEditDialog(followup)}
                       >
-                        <Download className="h-4 w-4" />
-                        {followup.file_name}
-                        {followup.file_size && (
-                          <span className="text-muted-foreground">
-                            ({formatFileSize(followup.file_size)})
-                          </span>
-                        )}
-                      </a>
-                    )}
-
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-                      <User className="h-3 w-3" />
-                      <span>{followup.users?.name || "Usuário"}</span>
-                      <span>•</span>
-                      <span>
-                        {format(new Date(followup.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                          locale: ptBR,
-                        })}
-                      </span>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setFollowupToDelete(followup);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openEditDialog(followup)}
+                  {followup.content && (
+                    <p className="text-sm text-foreground whitespace-pre-wrap mt-1">
+                      {followup.content}
+                    </p>
+                  )}
+
+                  {followup.type === "image" && followup.file_url && (
+                    <div className="mt-2 relative group/img inline-block">
+                      <img
+                        src={followup.file_url}
+                        alt={followup.file_name || "Imagem"}
+                        className="max-w-xs max-h-48 rounded-md object-cover cursor-pointer transition-opacity hover:opacity-90"
+                        onClick={() => {
+                          setLightboxImage({
+                            url: followup.file_url!,
+                            name: followup.file_name || followup.title || "Imagem",
+                          });
+                          setLightboxOpen(true);
+                        }}
+                      />
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="absolute bottom-2 right-2 h-6 w-6 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                        onClick={() => {
+                          setLightboxImage({
+                            url: followup.file_url!,
+                            name: followup.file_name || followup.title || "Imagem",
+                          });
+                          setLightboxOpen(true);
+                        }}
+                      >
+                        <Expand className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {followup.type === "file" && followup.file_url && (
+                    <a
+                      href={followup.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-1"
                     >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => {
-                        setFollowupToDelete(followup);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      <Download className="h-4 w-4" />
+                      {followup.file_name}
+                      {followup.file_size && (
+                        <span className="text-muted-foreground">
+                          ({formatFileSize(followup.file_size)})
+                        </span>
+                      )}
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
@@ -861,7 +852,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
                   variant="outline"
                   onClick={loadMoreFollowups}
                   disabled={loadingMore}
-                  className="w-full max-w-xs"
+                  size="sm"
                 >
                   {loadingMore ? (
                     <>
