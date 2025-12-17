@@ -181,6 +181,9 @@ export type Database = {
           parent_contract_id: string | null
           payment_option: string | null
           start_date: string
+          status: string
+          status_changed_at: string | null
+          status_reason: string | null
           updated_at: string
           value: number
         }
@@ -197,6 +200,9 @@ export type Database = {
           parent_contract_id?: string | null
           payment_option?: string | null
           start_date: string
+          status?: string
+          status_changed_at?: string | null
+          status_reason?: string | null
           updated_at?: string
           value?: number
         }
@@ -213,6 +219,9 @@ export type Database = {
           parent_contract_id?: string | null
           payment_option?: string | null
           start_date?: string
+          status?: string
+          status_changed_at?: string | null
+          status_reason?: string | null
           updated_at?: string
           value?: number
         }
