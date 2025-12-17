@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -18,20 +18,14 @@ import {
   Target,
   Zap,
   FileText,
-  Image as ImageIcon,
-  File,
-  Download,
-  ChevronDown,
   Send,
   Loader2,
   StickyNote,
   Paperclip,
-  Smile,
   Camera,
 } from "lucide-react";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -402,7 +396,6 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
   const [submitting, setSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [showOlder, setShowOlder] = useState(false);
-  const [mentionedUsers, setMentionedUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [clientName, setClientName] = useState<string>("");
   const [activeFilters, setActiveFilters] = useState<Set<EventFilter>>(new Set());
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -531,7 +524,6 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
       }
       
       setComment("");
-      setMentionedUsers([]);
       onCommentAdded?.();
       toast.success("Comentário adicionado!");
     } catch (error: any) {
