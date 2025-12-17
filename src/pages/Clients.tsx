@@ -126,6 +126,9 @@ export default function Clients() {
   
   // Custom field values for new client
   const [newClientFieldValues, setNewClientFieldValues] = useState<Record<string, any>>({});
+  
+  // Saving state for new client
+  const [savingClient, setSavingClient] = useState(false);
 
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
@@ -375,6 +378,7 @@ export default function Clients() {
       return;
     }
     setFormErrors({});
+    setSavingClient(true);
 
     try {
       const { data: userData, error: userError } = await supabase
@@ -502,6 +506,8 @@ export default function Clients() {
       fetchClients();
     } catch (error: any) {
       toast.error(error.message || "Erro ao adicionar cliente");
+    } finally {
+      setSavingClient(false);
     }
   };
 
@@ -1178,8 +1184,17 @@ export default function Clients() {
                       </div>
                     </ScrollArea>
                     <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-                      <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
-                      <Button onClick={handleAddClient} className="w-full sm:w-auto">Salvar</Button>
+                      <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={savingClient} className="w-full sm:w-auto">Cancelar</Button>
+                      <Button onClick={handleAddClient} disabled={savingClient} className="w-full sm:w-auto">
+                        {savingClient ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          "Salvar"
+                        )}
+                      </Button>
                     </DialogFooter>
                   </>
                 );
