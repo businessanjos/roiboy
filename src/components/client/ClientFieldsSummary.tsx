@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
+import { FieldValueEditor } from "@/components/custom-fields/FieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { Layers, Loader2 } from "lucide-react";
 
@@ -15,12 +15,6 @@ interface ClientFieldValue {
   value_json: any;
 }
 
-interface TeamUser {
-  id: string;
-  name: string;
-  email: string;
-}
-
 interface ClientFieldsSummaryProps {
   clientId: string;
 }
@@ -28,7 +22,7 @@ interface ClientFieldsSummaryProps {
 export function ClientFieldsSummary({ clientId }: ClientFieldsSummaryProps) {
   const [fields, setFields] = useState<CustomField[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
-  const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
+  const [accountId, setAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +31,16 @@ export function ClientFieldsSummary({ clientId }: ClientFieldsSummaryProps) {
 
   const fetchData = async () => {
     try {
+      // Get account ID
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .single();
+
+      if (userData) {
+        setAccountId(userData.account_id);
+      }
+
       // Fetch active custom fields
       const { data: fieldsData, error: fieldsError } = await supabase
         .from("custom_fields")
@@ -94,21 +98,18 @@ export function ClientFieldsSummary({ clientId }: ClientFieldsSummaryProps) {
         }
       });
       setFieldValues(valuesMap);
-
-      // Fetch team users for user-type fields
-      const hasUserFields = parsedFields.some((f) => f.field_type === "user");
-      if (hasUserFields) {
-        const { data: usersData } = await supabase
-          .from("users")
-          .select("id, name, email")
-          .order("name");
-        setTeamUsers((usersData || []) as TeamUser[]);
-      }
     } catch (error) {
       console.error("Error fetching custom fields:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleValueChange = (fieldId: string, newValue: any) => {
+    setFieldValues((prev) => ({
+      ...prev,
+      [fieldId]: newValue,
+    }));
   };
 
   if (loading) {
@@ -128,22 +129,14 @@ export function ClientFieldsSummary({ clientId }: ClientFieldsSummaryProps) {
     return null;
   }
 
-  // Filter fields that have values
-  const fieldsWithValues = fields.filter((field) => {
+  // Count fields with values
+  const filledCount = fields.filter((field) => {
     const value = fieldValues[field.id];
     if (value === null || value === undefined) return false;
     if (Array.isArray(value) && value.length === 0) return false;
     if (value === "") return false;
     return true;
-  });
-
-  const fieldsWithoutValues = fields.filter((field) => {
-    const value = fieldValues[field.id];
-    if (value === null || value === undefined) return true;
-    if (Array.isArray(value) && value.length === 0) return true;
-    if (value === "") return true;
-    return false;
-  });
+  }).length;
 
   return (
     <Card className="shadow-card mb-4 bg-muted/30">
@@ -152,7 +145,7 @@ export function ClientFieldsSummary({ clientId }: ClientFieldsSummaryProps) {
           <Layers className="h-4 w-4" />
           Campos Personalizados
           <Badge variant="secondary" className="text-xs">
-            {fieldsWithValues.length}/{fields.length}
+            {filledCount}/{fields.length}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -160,27 +153,35 @@ export function ClientFieldsSummary({ clientId }: ClientFieldsSummaryProps) {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {fields.map((field) => {
             const value = fieldValues[field.id];
-            const hasValue = value !== null && value !== undefined && 
-              !(Array.isArray(value) && value.length === 0) && value !== "";
+            const hasValue =
+              value !== null &&
+              value !== undefined &&
+              !(Array.isArray(value) && value.length === 0) &&
+              value !== "";
 
             return (
               <div
                 key={field.id}
-                className={`p-2 rounded-lg border ${
-                  hasValue 
-                    ? "bg-card border-border" 
-                    : "bg-muted/50 border-border/50"
+                className={`p-2 rounded-lg border transition-colors ${
+                  hasValue
+                    ? "bg-card border-border hover:border-primary/30"
+                    : "bg-muted/50 border-border/50 hover:border-border"
                 }`}
               >
                 <p className="text-xs text-muted-foreground mb-1 truncate" title={field.name}>
                   {field.name}
                 </p>
-                <FieldValueBadge
-                  field={field}
-                  value={value}
-                  size="sm"
-                  teamUsers={teamUsers}
-                />
+                {accountId ? (
+                  <FieldValueEditor
+                    field={field}
+                    clientId={clientId}
+                    accountId={accountId}
+                    currentValue={value}
+                    onValueChange={handleValueChange}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
               </div>
             );
           })}
