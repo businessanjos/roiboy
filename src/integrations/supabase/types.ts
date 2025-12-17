@@ -640,6 +640,8 @@ export type Database = {
           emails: Json | null
           full_name: string
           id: string
+          is_mls: boolean
+          mls_level: string | null
           neighborhood: string | null
           notes: string | null
           phone_e164: string
@@ -666,6 +668,8 @@ export type Database = {
           emails?: Json | null
           full_name: string
           id?: string
+          is_mls?: boolean
+          mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null
           phone_e164: string
@@ -692,6 +696,8 @@ export type Database = {
           emails?: Json | null
           full_name?: string
           id?: string
+          is_mls?: boolean
+          mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null
           phone_e164?: string

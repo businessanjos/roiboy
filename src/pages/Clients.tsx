@@ -416,6 +416,8 @@ export default function Clients() {
         city: newClientData.city || null,
         state: newClientData.state || null,
         zip_code: newClientData.zip_code?.replace(/\D/g, '') || null,
+        is_mls: newClientData.is_mls,
+        mls_level: newClientData.is_mls ? (newClientData.mls_level || null) : null,
       }).select().single();
 
       if (error) throw error;
