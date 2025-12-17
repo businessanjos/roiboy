@@ -1245,6 +1245,7 @@ export default function Clients() {
                     <TableHead className="font-medium sticky left-0 bg-muted/50 z-10 min-w-[200px]">Cliente</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">Status</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
+                    <TableHead className="font-medium text-center min-w-[120px]">Contrato</TableHead>
                     {customFields.map((field) => (
                       <TableHead key={field.id} className="font-medium text-center min-w-[120px]">
                         {field.name}
@@ -1256,14 +1257,14 @@ export default function Clients() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4 + customFields.length} className="text-center py-8">
+                      <TableCell colSpan={5 + customFields.length} className="text-center py-8">
                         <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
                         Carregando...
                       </TableCell>
                     </TableRow>
                   ) : filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4 + customFields.length} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5 + customFields.length} className="text-center py-8 text-muted-foreground">
                         Nenhum cliente encontrado.
                       </TableCell>
                     </TableRow>
@@ -1360,6 +1361,47 @@ export default function Clients() {
                               trend={vnpsMap[client.id].trend}
                               size="sm"
                             />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {client.contract_end_date ? (
+                            (() => {
+                              const expiryStatus = getContractExpiryStatus(client.contract_end_date);
+                              const endDate = new Date(client.contract_end_date).toLocaleDateString('pt-BR');
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
+                                        expiryStatus?.type === "expired" 
+                                          ? "bg-destructive/10 text-destructive" 
+                                          : expiryStatus?.type === "urgent"
+                                            ? "bg-destructive/10 text-destructive"
+                                            : expiryStatus?.type === "warning"
+                                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                      }`}>
+                                        {expiryStatus?.type === "expired" ? (
+                                          <AlertTriangle className="h-3 w-3" />
+                                        ) : expiryStatus ? (
+                                          <Clock className="h-3 w-3" />
+                                        ) : (
+                                          <CheckCircle2 className="h-3 w-3" />
+                                        )}
+                                        {endDate}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">
+                                        {expiryStatus ? expiryStatus.label : "Contrato ativo"}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })()
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
