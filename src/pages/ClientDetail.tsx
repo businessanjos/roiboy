@@ -21,7 +21,6 @@ import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
-import { ClientFollowup } from "@/components/client/ClientFollowup";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
@@ -1778,7 +1777,6 @@ export default function ClientDetail() {
             <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="cx">Momentos CX</TabsTrigger>
-            <TabsTrigger value="followup">Acompanhamento</TabsTrigger>
             <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
             <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
             <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
@@ -1822,23 +1820,6 @@ export default function ClientDetail() {
             </CardHeader>
             <CardContent className="pt-4">
               <ClientLifeEvents clientId={id!} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="followup">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Acompanhamento
-              </CardTitle>
-              <CardDescription>
-                Notas, arquivos e imagens para registro de backoffice
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ClientFollowup clientId={id!} />
             </CardContent>
           </Card>
         </TabsContent>
