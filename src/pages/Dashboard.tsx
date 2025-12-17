@@ -507,14 +507,20 @@ export default function Dashboard() {
   const lostFinancialValue = useMemo(() => {
     const currentMonthStart = startOfMonth(new Date());
     const currentMonthEnd = endOfMonth(new Date());
+    const previousMonthStart = startOfMonth(subMonths(new Date(), 1));
+    const previousMonthEnd = endOfMonth(subMonths(new Date(), 1));
     
     let totalLost = 0;
     let cancelamentosValue = 0;
     let demissoesValue = 0;
+    let previousTotalLost = 0;
     
-    filteredContractData.forEach((contract) => {
+    // Use contractData instead of filtered for consistent period comparison
+    contractData.forEach((contract) => {
       if (contract.status_changed_at) {
         const changedAt = parseISO(contract.status_changed_at);
+        
+        // Current month
         if (changedAt >= currentMonthStart && changedAt <= currentMonthEnd) {
           if (contract.status === "churned") {
             cancelamentosValue += contract.value || 0;
@@ -522,13 +528,32 @@ export default function Dashboard() {
             demissoesValue += contract.value || 0;
           }
         }
+        
+        // Previous month
+        if (changedAt >= previousMonthStart && changedAt <= previousMonthEnd) {
+          if (contract.status === "churned" || contract.status === "ended") {
+            previousTotalLost += contract.value || 0;
+          }
+        }
       }
     });
     
     totalLost = cancelamentosValue + demissoesValue;
     
-    return { totalLost, cancelamentosValue, demissoesValue };
-  }, [filteredContractData]);
+    // Calculate trend
+    let trend: 'up' | 'flat' | 'down' = 'flat';
+    let percentChange = 0;
+    if (previousTotalLost > 0) {
+      percentChange = Math.round(((totalLost - previousTotalLost) / previousTotalLost) * 100);
+      if (totalLost < previousTotalLost) trend = 'down'; // Less loss is good
+      else if (totalLost > previousTotalLost) trend = 'up'; // More loss is bad
+    } else if (totalLost > 0) {
+      trend = 'up';
+      percentChange = 100;
+    }
+    
+    return { totalLost, cancelamentosValue, demissoesValue, previousTotalLost, trend, percentChange };
+  }, [contractData]);
 
   // Filter clients by gestaoProductFilter for status cards
   const gestaoFilteredClients = useMemo(() => {
@@ -1291,12 +1316,21 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
-                    <p className="text-3xl font-bold text-red-600">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.totalLost)}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-3xl font-bold text-red-600">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.totalLost)}
+                      </p>
+                      {lostFinancialValue.trend === 'down' && <TrendingDown className="h-5 w-5 text-green-500" />}
+                      {lostFinancialValue.trend === 'up' && <TrendingUp className="h-5 w-5 text-red-500" />}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Cancelamentos: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.cancelamentosValue)} | 
                       Demissões: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.demissoesValue)}
+                    </p>
+                    <p className={`text-xs mt-1 ${lostFinancialValue.trend === 'down' ? 'text-green-600' : lostFinancialValue.trend === 'up' ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      {lostFinancialValue.trend === 'down' && `↓ ${Math.abs(lostFinancialValue.percentChange)}% vs mês anterior`}
+                      {lostFinancialValue.trend === 'up' && `↑ ${lostFinancialValue.percentChange}% vs mês anterior`}
+                      {lostFinancialValue.trend === 'flat' && 'Sem alteração vs mês anterior'}
                     </p>
                   </div>
                   <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
