@@ -34,27 +34,12 @@ import {
   ListTodo,
   Filter,
   TrendingUp,
-  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskCard } from "@/components/tasks/TaskCard";
-import { DraggableTaskCard } from "@/components/tasks/DraggableTaskCard";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragStartEvent,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { TaskDropZone } from "@/components/tasks/TaskDropZone";
 
 interface User {
   id: string;
@@ -81,8 +66,6 @@ interface Task {
   assigned_user: User | null;
 }
 
-type Priority = "urgent" | "high" | "medium" | "low";
-
 export default function Tasks() {
   const { currentUser } = useCurrentUser();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -95,18 +78,6 @@ export default function Tasks() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   useEffect(() => {
     fetchTasks();
@@ -189,43 +160,6 @@ export default function Tasks() {
     }
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
-    const task = tasks.find(t => t.id === event.active.id);
-    if (task) {
-      setActiveTask(task);
-    }
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveTask(null);
-
-    if (!over) return;
-
-    const taskId = active.id as string;
-    const newPriority = over.id as Priority;
-    
-    const task = tasks.find(t => t.id === taskId);
-    if (!task || task.priority === newPriority) return;
-
-    // Optimistic update
-    setTasks(prev => prev.map(t => 
-      t.id === taskId ? { ...t, priority: newPriority } : t
-    ));
-
-    const { error } = await supabase
-      .from("internal_tasks")
-      .update({ priority: newPriority })
-      .eq("id", taskId);
-
-    if (error) {
-      toast.error("Erro ao mover tarefa");
-      fetchTasks(); // Revert on error
-    } else {
-      toast.success(`Prioridade alterada para ${PRIORITY_LABELS[newPriority]}`);
-    }
-  };
-
   const openEditDialog = (task: Task) => {
     setEditingTask(task);
     setDialogOpen(true);
@@ -267,14 +201,6 @@ export default function Tasks() {
   const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
   const doneCount = tasks.filter(t => t.status === "done").length;
 
-  // Group tasks by priority for pending view
-  const tasksByPriority: Record<Priority, Task[]> = {
-    urgent: filteredTasks.filter(t => t.priority === "urgent"),
-    high: filteredTasks.filter(t => t.priority === "high"),
-    medium: filteredTasks.filter(t => t.priority === "medium"),
-    low: filteredTasks.filter(t => t.priority === "low"),
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -296,7 +222,7 @@ export default function Tasks() {
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Tarefas</h1>
                 <p className="text-sm text-muted-foreground">
-                  Arraste tarefas entre grupos para mudar prioridade
+                  Gerencie suas tarefas e acompanhe o progresso
                 </p>
               </div>
             </div>
@@ -461,40 +387,18 @@ export default function Tasks() {
           {filteredTasks.length === 0 ? (
             <EmptyState />
           ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCorners}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-                {(["urgent", "high", "medium", "low"] as Priority[]).map((priority) => (
-                  <TaskDropZone
-                    key={priority}
-                    id={priority}
-                    priority={priority}
-                    tasks={tasksByPriority[priority]}
-                    onEdit={openEditDialog}
-                    onDelete={openDeleteDialog}
-                    onToggleComplete={handleToggleComplete}
-                  />
-                ))}
-              </div>
-
-              <DragOverlay>
-                {activeTask && (
-                  <div className="opacity-90 rotate-2 scale-105">
-                    <TaskCard
-                      task={activeTask}
-                      onEdit={() => {}}
-                      onDelete={() => {}}
-                      onToggleComplete={() => {}}
-                      showClient={true}
-                    />
-                  </div>
-                )}
-              </DragOverlay>
-            </DndContext>
+            <div className="space-y-2">
+              {filteredTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={openEditDialog}
+                  onDelete={openDeleteDialog}
+                  onToggleComplete={handleToggleComplete}
+                  showClient={true}
+                />
+              ))}
+            </div>
           )}
         </TabsContent>
 
@@ -565,13 +469,6 @@ export default function Tasks() {
     </div>
   );
 }
-
-const PRIORITY_LABELS: Record<Priority, string> = {
-  urgent: "Urgente",
-  high: "Alta",
-  medium: "Média",
-  low: "Baixa",
-};
 
 function EmptyState({ message = "Nenhuma tarefa encontrada" }: { message?: string }) {
   return (
