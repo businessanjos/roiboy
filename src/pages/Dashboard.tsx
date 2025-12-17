@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 
 interface ClientWithScore {
   id: string;
@@ -727,6 +728,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Churn Report */}
+          <ChurnReportSection />
 
           {/* Filters */}
           <Card className="shadow-card">

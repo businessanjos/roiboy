@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  TrendingDown,
   UserCircle,
   Package,
   Menu,
@@ -64,7 +63,6 @@ const navItems = [
   { to: "/products", icon: Package, label: "Produtos" },
   { to: "/events", icon: CalendarDays, label: "Eventos" },
   { to: "/forms", icon: FileText, label: "Formulários" },
-  { to: "/reports/churn", icon: TrendingDown, label: "Relatório de Churn" },
   { to: "/integrations", icon: Link2, label: "Integrações" },
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
