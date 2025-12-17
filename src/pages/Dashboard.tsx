@@ -871,30 +871,6 @@ export default function Dashboard() {
 
           {/* Status Cards - Single Row */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {/* Congelamentos */}
-            <Card className="shadow-card border-l-4 border-l-amber-500">
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
-                <p className="text-2xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
-              </CardContent>
-            </Card>
-
-            {/* Demissões */}
-            <Card className="shadow-card border-l-4 border-l-orange-500">
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Demissões</p>
-                <p className="text-2xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
-              </CardContent>
-            </Card>
-
-            {/* Cancelamentos */}
-            <Card className="shadow-card border-l-4 border-l-red-500">
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
-                <p className="text-2xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
-              </CardContent>
-            </Card>
-
             {/* Total de Clientes */}
             <Card className="shadow-card border-l-4 border-l-primary">
               <CardContent className="p-4">
@@ -908,6 +884,30 @@ export default function Dashboard() {
               <CardContent className="p-4">
                 <p className="text-xs font-medium text-muted-foreground">Ativos</p>
                 <p className="text-2xl font-bold text-green-600">{clients.filter(c => c.status === "active").length}</p>
+              </CardContent>
+            </Card>
+
+            {/* Cancelamentos */}
+            <Card className="shadow-card border-l-4 border-l-red-500">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
+                <p className="text-2xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
+              </CardContent>
+            </Card>
+
+            {/* Demissões */}
+            <Card className="shadow-card border-l-4 border-l-orange-500">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Demissões</p>
+                <p className="text-2xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
+              </CardContent>
+            </Card>
+
+            {/* Congelamentos */}
+            <Card className="shadow-card border-l-4 border-l-amber-500">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
+                <p className="text-2xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
               </CardContent>
             </Card>
           </div>
