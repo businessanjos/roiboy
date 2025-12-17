@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -216,13 +217,19 @@ const getFileTypeLabel = (fileName?: string) => {
   return types[ext || ""] || "Arquivo";
 };
 
-function CommentItem({ event }: { event: TimelineEvent }) {
+function CommentItem({ event, isHighlighted }: { event: TimelineEvent; isHighlighted?: boolean }) {
   const userName = event.metadata?.user_name || "Usuário";
   const userAvatar = event.metadata?.user_avatar;
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   
   return (
-    <div className="flex gap-3">
+    <div 
+      id={`comment-${event.id}`}
+      className={cn(
+        "flex gap-3 p-3 -mx-3 rounded-lg transition-all duration-500",
+        isHighlighted && "bg-primary/10 ring-2 ring-primary/30 animate-pulse"
+      )}
+    >
       <Avatar className="h-10 w-10 flex-shrink-0">
         <AvatarImage src={userAvatar} />
         <AvatarFallback className="bg-primary/10 text-primary text-sm">
@@ -397,11 +404,33 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
   const [mentionedUsers, setMentionedUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [clientName, setClientName] = useState<string>("");
   const [activeFilters, setActiveFilters] = useState<Set<EventFilter>>(new Set());
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const location = useLocation();
 
   useEffect(() => {
     fetchCurrentUser();
     if (clientId) fetchClientName();
   }, [clientId]);
+
+  // Handle scroll to comment from URL hash
+  useEffect(() => {
+    const hash = location.hash;
+    if (hash && hash.startsWith("#comment-")) {
+      const commentId = hash.replace("#comment-", "");
+      setHighlightedId(commentId);
+      setShowOlder(true); // Show all events to find the comment
+      
+      // Wait for DOM to update, then scroll
+      setTimeout(() => {
+        const element = document.getElementById(`comment-${commentId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Remove highlight after animation
+          setTimeout(() => setHighlightedId(null), 3000);
+        }
+      }, 100);
+    }
+  }, [location.hash]);
 
   const fetchCurrentUser = async () => {
     const { data } = await supabase
@@ -423,7 +452,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
     if (data) setClientName(data.full_name);
   };
 
-  const createNotifications = async (mentionedUserNames: string[], commentContent: string) => {
+  const createNotificationsWithAnchor = async (mentionedUserNames: string[], commentContent: string, followupId: string) => {
     if (!currentUser?.account_id || mentionedUserNames.length === 0) return;
 
     try {
@@ -435,7 +464,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
 
       if (!users || users.length === 0) return;
 
-      // Create notifications for each mentioned user (except self)
+      // Create notifications for each mentioned user (except self) with anchor link
       const notificationsToCreate = users
         .filter((u) => u.id !== currentUser.id)
         .map((user) => ({
@@ -444,10 +473,10 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
           type: "mention",
           title: `${currentUser.name} mencionou você`,
           content: `Em ${clientName}: "${commentContent.slice(0, 100)}${commentContent.length > 100 ? "..." : ""}"`,
-          link: `/clients/${clientId}`,
+          link: `/clients/${clientId}#comment-${followupId}`,
           triggered_by_user_id: currentUser.id,
           source_type: "client_followup",
-          source_id: clientId,
+          source_id: followupId,
         }));
 
       if (notificationsToCreate.length > 0) {
@@ -470,7 +499,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
 
       if (!userData) throw new Error("Usuário não encontrado");
 
-      const { error } = await supabase
+      const { data: newFollowup, error } = await supabase
         .from("client_followups")
         .insert({
           account_id: userData.account_id,
@@ -478,14 +507,16 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
           user_id: currentUser.id,
           type: "note",
           content: comment.trim(),
-        });
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
 
-      // Create notifications for mentioned users
+      // Create notifications for mentioned users with link to specific comment
       const mentionedNames = extractMentions(comment);
-      if (mentionedNames.length > 0) {
-        await createNotifications(mentionedNames, comment.trim());
+      if (mentionedNames.length > 0 && newFollowup) {
+        await createNotificationsWithAnchor(mentionedNames, comment.trim(), newFollowup.id);
       }
       
       setComment("");
@@ -661,7 +692,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         {visibleEvents.map((event, index) => (
           <div key={event.id} className="relative">
             {event.type === "comment" ? (
-              <CommentItem event={event} />
+              <CommentItem event={event} isHighlighted={highlightedId === event.id} />
             ) : event.type === "field_change" ? (
               <SystemEventItem event={event} />
             ) : (
