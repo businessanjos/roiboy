@@ -18,6 +18,8 @@ import Events from "./pages/Events";
 import Team from "./pages/Team";
 import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
+import Forms from "./pages/Forms";
+import PublicForm from "./pages/PublicForm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/f/:formId" element={<PublicForm />} />
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/clients" element={<Clients />} />
@@ -41,6 +44,7 @@ const App = () => (
                   <Route path="/clients/:id" element={<ClientDetail />} />
                   <Route path="/products" element={<Products />} />
                   <Route path="/events" element={<Events />} />
+                  <Route path="/forms" element={<Forms />} />
                   <Route path="/team" element={<Team />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications" element={<Notifications />} />

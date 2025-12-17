@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.check-contract-expiry]
 verify_jwt = false
+
+[functions.get-public-form]
+verify_jwt = false
+
+[functions.submit-form-response]
+verify_jwt = false
