@@ -559,10 +559,11 @@ export default function ClientDetail() {
 
       (followupsData || []).forEach((followup: any) => {
         const isNote = followup.type === "note";
+        const isFinancialNote = followup.type === "financial_note";
         timelineItems.push({
           id: followup.id,
-          type: isNote ? "comment" : "followup",
-          title: followup.title || (isNote ? "Comentário" : "Arquivo anexado"),
+          type: isFinancialNote ? "financial" : isNote ? "comment" : "followup",
+          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : "Arquivo anexado"),
           description: followup.content,
           timestamp: followup.created_at,
           metadata: {
@@ -572,7 +573,7 @@ export default function ClientDetail() {
             file_url: followup.file_url,
             file_name: followup.file_name,
             file_size: followup.file_size,
-            followup_type: followup.type as "note" | "file" | "image",
+            followup_type: followup.type as "note" | "file" | "image" | "financial_note",
           },
         });
       });
