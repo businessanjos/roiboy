@@ -360,7 +360,10 @@ export default function Clients() {
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      toast.error("Corrija os erros no formulário");
+      const errorCount = Object.keys(errors).length;
+      toast.error(`${errorCount} campo${errorCount > 1 ? 's' : ''} obrigatório${errorCount > 1 ? 's' : ''} não preenchido${errorCount > 1 ? 's' : ''}`, {
+        description: "Preencha os campos destacados em vermelho"
+      });
       return;
     }
     setFormErrors({});
@@ -874,13 +877,18 @@ export default function Clients() {
                                 <Check className="h-3 w-3" />
                                 Completo
                               </span>
+                            ) : Object.keys(formErrors).length > 0 ? (
+                              <span className="text-destructive flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Pendente
+                              </span>
                             ) : (
                               <span className="text-muted-foreground">{Math.round(progressPercent)}%</span>
                             )}
                           </div>
                           <Progress 
                             value={progressPercent} 
-                            className="h-1.5"
+                            className={`h-1.5 ${Object.keys(formErrors).length > 0 && filledCount < totalCount ? "[&>div]:bg-destructive" : ""}`}
                           />
                           <div className="flex flex-wrap gap-1.5 mt-1">
                             {requiredChecks.map((check, idx) => (
@@ -889,10 +897,16 @@ export default function Clients() {
                                 className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs transition-colors ${
                                   check.filled 
                                     ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                                    : "bg-muted text-muted-foreground"
+                                    : Object.keys(formErrors).length > 0
+                                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse"
+                                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                 }`}
                               >
-                                {check.filled && <Check className="h-2.5 w-2.5" />}
+                                {check.filled ? (
+                                  <Check className="h-2.5 w-2.5" />
+                                ) : (
+                                  <AlertCircle className="h-2.5 w-2.5" />
+                                )}
                                 {check.label}
                               </span>
                             ))}
@@ -987,14 +1001,19 @@ export default function Clients() {
                         <Layers className="h-4 w-4" />
                         Campos Obrigatórios
                       </Label>
-                      <div className="border rounded-lg p-2 sm:p-3 space-y-3 sm:space-y-4">
+                      <div className={`border rounded-lg p-2 sm:p-3 space-y-3 sm:space-y-4 transition-colors ${
+                        Object.keys(formErrors).some(k => k.startsWith('field_')) 
+                          ? "border-destructive/50 bg-destructive/5" 
+                          : ""
+                      }`}>
                         {requiredFields.map((field) => {
                           const value = newClientFieldValues[field.id];
                           const hasError = formErrors[`field_${field.id}`];
                           
                           return (
-                            <div key={field.id} className="space-y-1 sm:space-y-1.5">
-                              <Label className={`text-sm ${hasError ? "text-destructive" : ""}`}>
+                            <div key={field.id} className={`space-y-1 sm:space-y-1.5 ${hasError ? "animate-pulse" : ""}`}>
+                              <Label className={`text-sm flex items-center gap-1.5 ${hasError ? "text-destructive" : ""}`}>
+                                {hasError && <AlertCircle className="h-3 w-3" />}
                                 {field.name} *
                               </Label>
                               
