@@ -52,7 +52,16 @@ import {
   Heart,
   ImageIcon,
   Trash2,
+  Send,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -200,6 +209,9 @@ export default function ClientDetail() {
   const [editFormData, setEditFormData] = useState<ClientFormData>(getEmptyClientFormData());
   const [savingInfo, setSavingInfo] = useState(false);
 
+  // Forms for sending to client
+  const [availableForms, setAvailableForms] = useState<{ id: string; title: string }[]>([]);
+
   const fetchAllProducts = async () => {
     const { data, error } = await supabase
       .from("products")
@@ -208,6 +220,29 @@ export default function ClientDetail() {
       .order("name");
     
     if (!error) setAllProducts(data || []);
+  };
+
+  const fetchAvailableForms = async () => {
+    const { data, error } = await supabase
+      .from("forms")
+      .select("id, title")
+      .eq("is_active", true)
+      .order("title");
+    
+    if (!error) setAvailableForms(data || []);
+  };
+
+  const copyFormLink = (formId: string, formTitle: string) => {
+    const baseUrl = window.location.origin;
+    const formUrl = `${baseUrl}/f/${formId}?clientId=${id}`;
+    navigator.clipboard.writeText(formUrl);
+    toast.success(`Link do formulário "${formTitle}" copiado!`);
+  };
+
+  const openFormInNewTab = (formId: string) => {
+    const baseUrl = window.location.origin;
+    const formUrl = `${baseUrl}/f/${formId}?clientId=${id}`;
+    window.open(formUrl, '_blank');
   };
 
   const openProductsDialog = () => {
@@ -681,6 +716,7 @@ export default function ClientDetail() {
 
   useEffect(() => {
     fetchData();
+    fetchAvailableForms();
   }, [id]);
 
   // Realtime subscriptions
@@ -1399,7 +1435,58 @@ export default function ClientDetail() {
           </DialogContent>
         </Dialog>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Send Form Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Send className="h-4 w-4 mr-2" />
+                Enviar Formulário
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {availableForms.length === 0 ? (
+                <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                  Nenhum formulário disponível
+                </div>
+              ) : (
+                availableForms.map((form) => (
+                  <DropdownMenuItem
+                    key={form.id}
+                    className="flex items-center justify-between gap-2 cursor-pointer"
+                    onClick={() => copyFormLink(form.id, form.title)}
+                  >
+                    <span className="truncate flex-1">{form.title}</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openFormInNewTab(form.id);
+                        }}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyFormLink(form.id, form.title);
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Dialog open={roiDialogOpen} onOpenChange={setRoiDialogOpen}>
             <DialogTrigger asChild>
               <Button>
