@@ -43,6 +43,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { ClientTasks } from "./ClientTasks";
 import { format, isPast, isFuture, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -812,6 +813,11 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           </div>
         </div>
       )}
+
+      {/* Client Tasks Section */}
+      <div className="border-t pt-6 mt-6">
+        <ClientTasks clientId={clientId} />
+      </div>
     </div>
   );
 }

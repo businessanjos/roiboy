@@ -20,6 +20,7 @@ import {
   Bell,
   Moon,
   Sun,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/clients", icon: Users, label: "Clientes" },
   { to: "/team", icon: UserCircle, label: "Equipe" },
+  { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
   { to: "/products", icon: Package, label: "Produtos" },
   { to: "/events", icon: CalendarDays, label: "Eventos" },
   { to: "/forms", icon: FileText, label: "Formulários" },
