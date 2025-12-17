@@ -546,7 +546,7 @@ export default function ClientDetail() {
         });
       });
 
-      // Add followups as comments
+      // Add followups - notes as comments, files/images as followups
       const { data: followupsData } = await supabase
         .from("client_followups")
         .select(`
@@ -558,10 +558,11 @@ export default function ClientDetail() {
         .limit(30);
 
       (followupsData || []).forEach((followup: any) => {
+        const isNote = followup.type === "note";
         timelineItems.push({
           id: followup.id,
-          type: "comment",
-          title: followup.title || "Comentário",
+          type: isNote ? "comment" : "followup",
+          title: followup.title || (isNote ? "Comentário" : "Arquivo anexado"),
           description: followup.content,
           timestamp: followup.created_at,
           metadata: {
@@ -572,6 +573,52 @@ export default function ClientDetail() {
             file_name: followup.file_name,
             file_size: followup.file_size,
             followup_type: followup.type as "note" | "file" | "image",
+          },
+        });
+      });
+
+      // Add life events (Momentos CX)
+      const { data: lifeEventsData } = await supabase
+        .from("client_life_events")
+        .select("*")
+        .eq("client_id", id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      (lifeEventsData || []).forEach((event: any) => {
+        timelineItems.push({
+          id: event.id,
+          type: "life_event",
+          title: event.title,
+          description: event.description,
+          timestamp: event.created_at,
+          metadata: {
+            event_type: event.event_type,
+            is_recurring: event.is_recurring,
+            source: event.source,
+          },
+        });
+      });
+
+      // Add financial events (subscriptions)
+      const { data: subscriptionsData } = await supabase
+        .from("client_subscriptions")
+        .select("*")
+        .eq("client_id", id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      (subscriptionsData || []).forEach((sub: any) => {
+        timelineItems.push({
+          id: sub.id,
+          type: "financial",
+          title: sub.product_name,
+          description: `Status: ${sub.payment_status === "active" ? "Ativo" : sub.payment_status === "overdue" ? "Em atraso" : sub.payment_status}`,
+          timestamp: sub.created_at,
+          metadata: {
+            payment_status: sub.payment_status,
+            amount: sub.amount,
+            currency: sub.currency,
           },
         });
       });
@@ -1719,27 +1766,10 @@ export default function ClientDetail() {
         <TabsContent value="timeline">
           <Card className="shadow-card">
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Histórico Completo</CardTitle>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span>Comentários</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span>Mensagens</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>ROI</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span>Riscos</span>
-                  </div>
-                </div>
-              </div>
+              <CardTitle className="text-base">Histórico Completo</CardTitle>
+              <CardDescription>
+                Todas as interações e eventos do cliente em um só lugar
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
               <ClientFieldsSummary clientId={id!} />
