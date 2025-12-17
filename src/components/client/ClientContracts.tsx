@@ -52,7 +52,11 @@ import {
   DollarSign,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  RefreshCw,
+  History,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 
 interface Contract {
@@ -67,6 +71,7 @@ interface Contract {
   file_url: string | null;
   file_name: string | null;
   notes: string | null;
+  parent_contract_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -94,6 +99,8 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [renewingContract, setRenewingContract] = useState<Contract | null>(null);
+  const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,6 +150,25 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       file_name: "",
     });
     setEditingContract(null);
+    setRenewingContract(null);
+  };
+
+  const openRenewalDialog = (contract: Contract) => {
+    setRenewingContract(contract);
+    const nextDay = contract.end_date 
+      ? format(new Date(new Date(contract.end_date).getTime() + 86400000), "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd");
+    setFormData({
+      start_date: nextDay,
+      end_date: "",
+      value: contract.value.toString(),
+      payment_option: contract.payment_option || "",
+      notes: "",
+      file: null,
+      file_url: "",
+      file_name: "",
+    });
+    setDialogOpen(true);
   };
 
   const openEditDialog = (contract: Contract) => {
@@ -241,12 +267,16 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         notes: formData.notes || null,
         file_url: fileUrl || null,
         file_name: fileName || null,
+        parent_contract_id: renewingContract?.id || null,
       };
 
       if (editingContract) {
         const { error } = await supabase
           .from("client_contracts")
-          .update(contractData)
+          .update({
+            ...contractData,
+            parent_contract_id: editingContract.parent_contract_id, // Keep original parent
+          })
           .eq("id", editingContract.id);
 
         if (error) throw error;
@@ -257,7 +287,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
           .insert(contractData);
 
         if (error) throw error;
-        toast.success("Contrato adicionado");
+        toast.success(renewingContract ? "Contrato renovado" : "Contrato adicionado");
       }
 
       setDialogOpen(false);
@@ -321,6 +351,35 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     return PAYMENT_OPTIONS.find((o) => o.value === value)?.label || value;
   };
 
+  // Get contracts that are renewals of a given contract
+  const getRenewals = (contractId: string): Contract[] => {
+    return contracts.filter(c => c.parent_contract_id === contractId);
+  };
+
+  // Get the history chain (parent contracts)
+  const getHistory = (contract: Contract): Contract[] => {
+    const history: Contract[] = [];
+    let current = contract;
+    while (current.parent_contract_id) {
+      const parent = contracts.find(c => c.id === current.parent_contract_id);
+      if (parent) {
+        history.push(parent);
+        current = parent;
+      } else {
+        break;
+      }
+    }
+    return history;
+  };
+
+  // Check if a contract has history (is a renewal or has renewals)
+  const hasHistory = (contract: Contract): boolean => {
+    return !!contract.parent_contract_id || getRenewals(contract.id).length > 0;
+  };
+
+  // Get root contracts (contracts that are not renewals of others)
+  const rootContracts = contracts.filter(c => !c.parent_contract_id);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -348,8 +407,13 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingContract ? "Editar Contrato" : "Novo Contrato"}
+                {editingContract ? "Editar Contrato" : renewingContract ? "Renovar Contrato" : "Novo Contrato"}
               </DialogTitle>
+              {renewingContract && (
+                <p className="text-sm text-muted-foreground">
+                  Renovação do contrato de {format(new Date(renewingContract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                </p>
+              )}
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -481,25 +545,57 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]"></TableHead>
                 <TableHead>Período</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Pagamento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Arquivo</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
+                <TableHead className="w-[120px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contracts.map((contract) => {
                 const status = getContractStatus(contract);
                 const StatusIcon = status.icon;
+                const renewals = getRenewals(contract.id);
+                const history = getHistory(contract);
+                const isExpanded = expandedHistory === contract.id;
+                const hasRenewalsOrHistory = renewals.length > 0 || history.length > 0;
+                
                 return (
-                  <TableRow key={contract.id}>
+                  <TableRow key={contract.id} className={contract.parent_contract_id ? "bg-muted/30" : ""}>
+                    <TableCell className="py-2">
+                      {hasRenewalsOrHistory && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setExpandedHistory(isExpanded ? null : contract.id)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        {contract.parent_contract_id && (
+                          <RefreshCw className="h-3 w-3 text-primary" />
+                        )}
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <div className="text-sm">
-                          <div>{format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}</div>
+                          <div className="flex items-center gap-2">
+                            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                            {contract.parent_contract_id && (
+                              <Badge variant="outline" className="text-xs py-0 px-1">
+                                Renovação
+                              </Badge>
+                            )}
+                          </div>
                           {contract.end_date && (
                             <div className="text-muted-foreground">
                               até {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
@@ -542,6 +638,15 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Renovar contrato"
+                          onClick={() => openRenewalDialog(contract)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"

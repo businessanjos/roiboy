@@ -178,6 +178,7 @@ export type Database = {
           file_url: string | null
           id: string
           notes: string | null
+          parent_contract_id: string | null
           payment_option: string | null
           start_date: string
           updated_at: string
@@ -193,6 +194,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           notes?: string | null
+          parent_contract_id?: string | null
           payment_option?: string | null
           start_date: string
           updated_at?: string
@@ -208,6 +210,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           notes?: string | null
+          parent_contract_id?: string | null
           payment_option?: string | null
           start_date?: string
           updated_at?: string
@@ -226,6 +229,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_parent_contract_id_fkey"
+            columns: ["parent_contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
             referencedColumns: ["id"]
           },
         ]
