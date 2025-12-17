@@ -839,28 +839,28 @@ export default function Clients() {
             <DialogTrigger asChild>
               <Button size="sm" className="sm:size-default"><Plus className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Novo Cliente</span></Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh]">
+            <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Novo Cliente</DialogTitle>
-                <DialogDescription>Adicione um novo cliente com todos os dados cadastrais.</DialogDescription>
+                <DialogDescription className="hidden sm:block">Adicione um novo cliente com todos os dados cadastrais.</DialogDescription>
               </DialogHeader>
-              <ScrollArea className="max-h-[60vh] pr-4">
+              <ScrollArea className="max-h-[55vh] sm:max-h-[60vh] pr-2 sm:pr-4">
                 <div className="space-y-6">
                   {/* Avatar Upload */}
-                  <div className="flex flex-col items-center gap-3 pb-4 border-b">
+                  <div className="flex flex-col items-center gap-2 sm:gap-3 pb-3 sm:pb-4 border-b">
                     <div className="relative group">
                       {newClientAvatarPreview ? (
                         <div className="relative">
-                          <Avatar className="h-20 w-20 ring-2 ring-primary/20">
+                          <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-2 ring-primary/20">
                             <AvatarImage src={newClientAvatarPreview} alt="Preview" />
-                            <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                            <AvatarFallback className="bg-primary/10 text-primary text-lg sm:text-xl">
                               {newClientData.full_name ? newClientData.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "?"}
                             </AvatarFallback>
                           </Avatar>
                           <button
                             type="button"
                             onClick={clearNewClientAvatar}
-                            className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm hover:bg-destructive/90"
+                            className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm hover:bg-destructive/90"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -869,10 +869,10 @@ export default function Clients() {
                         <button
                           type="button"
                           onClick={() => avatarInputRef.current?.click()}
-                          className="h-20 w-20 rounded-full border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                          className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-0.5 sm:gap-1 hover:border-primary/50 hover:bg-muted/50 transition-colors"
                         >
-                          <Camera className="h-6 w-6 text-muted-foreground" />
-                          <span className="text-[10px] text-muted-foreground">Foto</span>
+                          <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground">Foto</span>
                         </button>
                       )}
                     </div>
@@ -883,7 +883,7 @@ export default function Clients() {
                       onChange={handleAvatarSelect}
                       className="hidden"
                     />
-                    <p className="text-xs text-muted-foreground">Clique para adicionar foto (opcional)</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Toque para adicionar foto</p>
                   </div>
 
                   <ClientInfoForm 
@@ -895,7 +895,7 @@ export default function Clients() {
                   
                   {/* Product Selection */}
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2 text-sm">
                       <Package className="h-4 w-4" />
                       Produtos
                     </Label>
@@ -904,18 +904,18 @@ export default function Clients() {
                         Nenhum produto cadastrado. <Link to="/products" className="text-primary underline">Criar produtos</Link>
                       </p>
                     ) : (
-                      <div className="border rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                      <div className="border rounded-lg p-2 sm:p-3 space-y-1 sm:space-y-2 max-h-32 sm:max-h-40 overflow-y-auto">
                         {products.map((product) => (
                           <label
                             key={product.id}
-                            className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                            className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded hover:bg-muted/50 cursor-pointer"
                           >
                             <Checkbox
                               checked={selectedProducts.includes(product.id)}
                               onCheckedChange={() => toggleProduct(product.id)}
                             />
-                            <span className="flex-1 text-sm">{product.name}</span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="flex-1 text-xs sm:text-sm truncate">{product.name}</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                               {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
                             </span>
                           </label>
@@ -926,18 +926,18 @@ export default function Clients() {
 
                   {/* Required Custom Fields */}
                   {requiredFields.length > 0 && (
-                    <div className="space-y-3">
-                      <Label className="flex items-center gap-2">
+                    <div className="space-y-2 sm:space-y-3">
+                      <Label className="flex items-center gap-2 text-sm">
                         <Layers className="h-4 w-4" />
                         Campos Obrigatórios
                       </Label>
-                      <div className="border rounded-lg p-3 space-y-4">
+                      <div className="border rounded-lg p-2 sm:p-3 space-y-3 sm:space-y-4">
                         {requiredFields.map((field) => {
                           const value = newClientFieldValues[field.id];
                           const hasError = formErrors[`field_${field.id}`];
                           
                           return (
-                            <div key={field.id} className="space-y-1.5">
+                            <div key={field.id} className="space-y-1 sm:space-y-1.5">
                               <Label className={`text-sm ${hasError ? "text-destructive" : ""}`}>
                                 {field.name} *
                               </Label>
@@ -980,14 +980,14 @@ export default function Clients() {
                               
                               {/* Multi-select */}
                               {field.field_type === "multi_select" && (
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                   {field.options.map((opt) => {
                                     const selectedValues = Array.isArray(value) ? value : [];
                                     const isSelected = selectedValues.includes(opt.value);
                                     return (
                                       <label
                                         key={opt.value}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
+                                        className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border cursor-pointer transition-colors ${
                                           isSelected 
                                             ? "bg-primary text-primary-foreground border-primary" 
                                             : "hover:bg-muted border-input"
@@ -1003,7 +1003,7 @@ export default function Clients() {
                                           }}
                                           className="hidden"
                                         />
-                                        <span className="text-sm">{opt.label}</span>
+                                        <span className="text-xs sm:text-sm">{opt.label}</span>
                                       </label>
                                     );
                                   })}
@@ -1012,14 +1012,14 @@ export default function Clients() {
                               
                               {/* User */}
                               {field.field_type === "user" && (
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                   {teamUsers.map((user) => {
                                     const selectedUsers = Array.isArray(value) ? value : [];
                                     const isSelected = selectedUsers.includes(user.id);
                                     return (
                                       <label
                                         key={user.id}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
+                                        className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border cursor-pointer transition-colors ${
                                           isSelected 
                                             ? "bg-primary text-primary-foreground border-primary" 
                                             : "hover:bg-muted border-input"
@@ -1036,7 +1036,7 @@ export default function Clients() {
                                           className="hidden"
                                         />
                                         <User className="h-3 w-3" />
-                                        <span className="text-sm">{user.name}</span>
+                                        <span className="text-xs sm:text-sm">{user.name}</span>
                                       </label>
                                     );
                                   })}
@@ -1094,9 +1094,9 @@ export default function Clients() {
                   )}
                 </div>
               </ScrollArea>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleAddClient}>Salvar</Button>
+              <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
+                <Button onClick={handleAddClient} className="w-full sm:w-auto">Salvar</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
