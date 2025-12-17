@@ -196,8 +196,6 @@ export default function ClientDetail() {
   const [editFormData, setEditFormData] = useState<ClientFormData>(getEmptyClientFormData());
   const [savingInfo, setSavingInfo] = useState(false);
 
-  // Omie sync state
-  const [syncingOmie, setSyncingOmie] = useState(false);
   const fetchAllProducts = async () => {
     const { data, error } = await supabase
       .from("products")
@@ -373,39 +371,6 @@ export default function ClientDetail() {
     }
   };
 
-  const handleSyncOmie = async () => {
-    if (!id || !client) return;
-    setSyncingOmie(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-omie', {
-        body: { 
-          client_id: id,
-          enrich_data: true,
-          use_cpf_cnpj: true,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.synced > 0) {
-        toast.success(`Sincronizado com sucesso! ${data.enriched > 0 ? 'Dados enriquecidos.' : ''}`);
-        fetchData(); // Refresh client data
-      } else if (data.not_found > 0) {
-        toast.error("Cliente não encontrado na Omie. Verifique se CPF/CNPJ está correto.");
-      } else if (data.details?.[0]?.status === 'no_receivables') {
-        toast.info("Cliente encontrado na Omie, mas sem contas a receber.");
-        fetchData();
-      } else {
-        toast.warning("Nenhum dado sincronizado.");
-      }
-    } catch (error: any) {
-      console.error("Error syncing with Omie:", error);
-      toast.error(error.message || "Erro ao sincronizar com Omie");
-    } finally {
-      setSyncingOmie(false);
-    }
-  };
 
   const fetchData = async () => {
     if (!id) return;
@@ -1231,20 +1196,6 @@ export default function ClientDetail() {
         </Dialog>
 
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleSyncOmie} 
-            disabled={syncingOmie}
-            title="Sincronizar dados com Omie usando CPF/CNPJ"
-          >
-            {syncingOmie ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Sync Omie
-          </Button>
-          
           <Dialog open={roiDialogOpen} onOpenChange={setRoiDialogOpen}>
             <DialogTrigger asChild>
               <Button>
