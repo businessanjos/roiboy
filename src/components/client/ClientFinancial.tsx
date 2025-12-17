@@ -327,69 +327,6 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
         </Button>
       </div>
 
-      {/* Quick Comment Input */}
-      {currentUser && (
-        <div className="flex gap-3 pb-4 border-b">
-          <Avatar className="h-9 w-9 flex-shrink-0">
-            <AvatarImage src={currentUser.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {currentUser.name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 relative">
-            <MentionInput
-              placeholder="Escreva uma nota financeira... Use @ para mencionar"
-              value={quickComment}
-              onChange={setQuickComment}
-              onKeyDown={handleQuickKeyDown}
-              className="pr-24"
-            />
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleQuickFileSelect(e, "image")}
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => handleQuickFileSelect(e, "file")}
-              />
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploading}
-                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                title="Enviar imagem"
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                title="Enviar arquivo"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              {(quickComment.trim() || saving) && (
-                <button
-                  type="button"
-                  onClick={handleQuickComment}
-                  disabled={saving || !quickComment.trim()}
-                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {subscriptions.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
@@ -511,6 +448,70 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Quick Comment Input - Bottom position */}
+      {currentUser && (
+        <div className="flex gap-3 pt-4 border-t">
+          <Avatar className="h-9 w-9 flex-shrink-0">
+            <AvatarImage src={currentUser.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              {currentUser.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 relative">
+            <MentionInput
+              placeholder="Escreva uma nota financeira... Use @ para mencionar"
+              value={quickComment}
+              onChange={setQuickComment}
+              onKeyDown={handleQuickKeyDown}
+              className="pr-24"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "image")}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "file")}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={uploading}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                title="Enviar imagem"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                title="Enviar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              {(quickComment.trim() || saving) && (
+                <button
+                  type="button"
+                  onClick={handleQuickComment}
+                  disabled={saving || !quickComment.trim()}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
