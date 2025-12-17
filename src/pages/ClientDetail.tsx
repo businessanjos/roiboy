@@ -232,17 +232,59 @@ export default function ClientDetail() {
     if (!error) setAvailableForms(data || []);
   };
 
-  const copyFormLink = (formId: string, formTitle: string) => {
+  const copyFormLink = async (formId: string, formTitle: string) => {
     const baseUrl = window.location.origin;
     const formUrl = `${baseUrl}/f/${formId}?clientId=${id}`;
     navigator.clipboard.writeText(formUrl);
     toast.success(`Link do formulário "${formTitle}" copiado!`);
+    
+    // Record form send
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .single();
+      
+      if (userData && id) {
+        await supabase
+          .from("client_form_sends")
+          .upsert({
+            account_id: userData.account_id,
+            client_id: id,
+            form_id: formId,
+            sent_at: new Date().toISOString(),
+          }, { onConflict: 'client_id,form_id' });
+      }
+    } catch (error) {
+      console.warn("Could not record form send:", error);
+    }
   };
 
-  const openFormInNewTab = (formId: string) => {
+  const openFormInNewTab = async (formId: string, formTitle: string) => {
     const baseUrl = window.location.origin;
     const formUrl = `${baseUrl}/f/${formId}?clientId=${id}`;
     window.open(formUrl, '_blank');
+    
+    // Record form send
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .single();
+      
+      if (userData && id) {
+        await supabase
+          .from("client_form_sends")
+          .upsert({
+            account_id: userData.account_id,
+            client_id: id,
+            form_id: formId,
+            sent_at: new Date().toISOString(),
+          }, { onConflict: 'client_id,form_id' });
+      }
+    } catch (error) {
+      console.warn("Could not record form send:", error);
+    }
   };
 
   const openProductsDialog = () => {
@@ -1464,7 +1506,7 @@ export default function ClientDetail() {
                         className="h-6 w-6 p-0"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openFormInNewTab(form.id);
+                          openFormInNewTab(form.id, form.title);
                         }}
                       >
                         <ExternalLink className="h-3 w-3" />

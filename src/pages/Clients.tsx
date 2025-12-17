@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -134,6 +134,9 @@ export default function Clients() {
   
   // Saving state for new client
   const [savingClient, setSavingClient] = useState(false);
+
+  // Pending form sends state - tracks clients with unanswered forms
+  const [pendingFormSends, setPendingFormSends] = useState<Record<string, { formId: string; formTitle: string; sentAt: string }[]>>({});
 
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
@@ -304,6 +307,32 @@ export default function Clients() {
     }
   };
 
+  const fetchPendingFormSends = async (clientIds: string[]) => {
+    if (clientIds.length === 0) return;
+
+    // Fetch pending form sends (sent but not responded)
+    const { data, error } = await supabase
+      .from("client_form_sends")
+      .select("client_id, form_id, sent_at, forms!inner(title)")
+      .in("client_id", clientIds)
+      .is("responded_at", null);
+
+    if (!error && data) {
+      const pendingMap: Record<string, { formId: string; formTitle: string; sentAt: string }[]> = {};
+      data.forEach((send: any) => {
+        if (!pendingMap[send.client_id]) {
+          pendingMap[send.client_id] = [];
+        }
+        pendingMap[send.client_id].push({
+          formId: send.form_id,
+          formTitle: send.forms?.title || "Formulário",
+          sentAt: send.sent_at,
+        });
+      });
+      setPendingFormSends(pendingMap);
+    }
+  };
+
   useEffect(() => {
     fetchClients();
     fetchProducts();
@@ -311,10 +340,12 @@ export default function Clients() {
     fetchTeamUsers();
   }, []);
 
-  // Fetch field values when clients are loaded
+  // Fetch field values and pending form sends when clients are loaded
   useEffect(() => {
     if (clients.length > 0) {
-      fetchFieldValues(clients.map(c => c.id));
+      const clientIds = clients.map(c => c.id);
+      fetchFieldValues(clientIds);
+      fetchPendingFormSends(clientIds);
     }
   }, [clients]);
 
@@ -1378,6 +1409,26 @@ export default function Clients() {
                                 </TooltipProvider>
                               );
                             })()}
+                            {/* Pending form sends indicator */}
+                            {pendingFormSends[client.id] && pendingFormSends[client.id].length > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex-shrink-0 p-1 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                      <FileText className="h-4 w-4" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs">
+                                      <p className="font-medium mb-1">Formulários pendentes:</p>
+                                      {pendingFormSends[client.id].map((form, idx) => (
+                                        <p key={idx}>{form.formTitle}</p>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -1618,6 +1669,26 @@ export default function Clients() {
                               </TooltipProvider>
                             );
                           })()}
+                          {/* Pending form sends indicator */}
+                          {pendingFormSends[client.id] && pendingFormSends[client.id].length > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex-shrink-0 p-1 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <FileText className="h-3.5 w-3.5" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-xs">
+                                    <p className="font-medium mb-1">Formulários pendentes:</p>
+                                    {pendingFormSends[client.id].map((form, idx) => (
+                                      <p key={idx}>{form.formTitle}</p>
+                                    ))}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
                         {clientProducts.length > 0 && (
