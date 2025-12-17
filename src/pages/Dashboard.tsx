@@ -12,7 +12,7 @@ import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
 import {
   Users,
   AlertTriangle,
@@ -967,55 +967,107 @@ export default function Dashboard() {
           </div>
 
           {/* Historical Chart */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                Evolução Mensal
-              </CardTitle>
-              <CardDescription>Novos, cancelamentos, encerramentos e congelamentos nos últimos 6 meses</CardDescription>
+          <Card className="shadow-card overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <BarChart3 className="h-4 w-4 text-primary" />
+                    </div>
+                    Evolução Mensal
+                  </CardTitle>
+                  <CardDescription className="mt-1">Novos, cancelamentos, encerramentos e congelamentos nos últimos 6 meses</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[280px] w-full">
-                <BarChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <CardContent className="pt-0">
+              <ChartContainer config={chartConfig} className="h-[320px] w-full">
+                <BarChart 
+                  data={monthlyChartData} 
+                  margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
+                  barCategoryGap="20%"
+                >
+                  <defs>
+                    <linearGradient id="novosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(142 76% 46%)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="hsl(142 76% 36%)" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="cancelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(0 84% 60%)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="hsl(0 84% 50%)" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="encerramentosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(25 95% 53%)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="hsl(25 95% 43%)" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="congelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="hsl(38 92% 40%)" stopOpacity={0.8} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    vertical={false} 
+                    stroke="hsl(var(--border))" 
+                    strokeOpacity={0.5}
+                  />
                   <XAxis 
                     dataKey="month" 
                     tickLine={false} 
                     axisLine={false} 
-                    className="text-xs"
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    dy={10}
                   />
                   <YAxis 
                     tickLine={false} 
                     axisLine={false} 
-                    className="text-xs"
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                     allowDecimals={false}
+                    dx={-5}
                   />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent />} 
+                    cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
+                  />
                   <Bar 
                     dataKey="novos" 
-                    fill="hsl(var(--success))" 
-                    radius={[4, 4, 0, 0]} 
+                    fill="url(#novosGradient)" 
+                    radius={[6, 6, 0, 0]} 
                     name="Novos"
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   />
                   <Bar 
                     dataKey="cancelamentos" 
-                    fill="hsl(var(--danger))" 
-                    radius={[4, 4, 0, 0]} 
+                    fill="url(#cancelamentosGradient)" 
+                    radius={[6, 6, 0, 0]} 
                     name="Cancelamentos"
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   />
                   <Bar 
                     dataKey="encerramentos" 
-                    fill="hsl(25 95% 53%)" 
-                    radius={[4, 4, 0, 0]} 
+                    fill="url(#encerramentosGradient)" 
+                    radius={[6, 6, 0, 0]} 
                     name="Encerramentos"
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   />
                   <Bar 
                     dataKey="congelamentos" 
-                    fill="hsl(38 92% 50%)" 
-                    radius={[4, 4, 0, 0]} 
+                    fill="url(#congelamentosGradient)" 
+                    radius={[6, 6, 0, 0]} 
                     name="Congelamentos"
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   />
-                  <Legend />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: 20 }}
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value) => <span className="text-sm text-muted-foreground ml-1">{value}</span>}
+                  />
                 </BarChart>
               </ChartContainer>
             </CardContent>
