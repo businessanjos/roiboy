@@ -42,10 +42,12 @@ import {
   Loader2,
   Eye,
   Link2,
+  Settings2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 
 interface CustomField {
   id: string;
@@ -84,6 +86,7 @@ export default function Forms() {
   const [requireClientInfo, setRequireClientInfo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingForm, setEditingForm] = useState<Form | null>(null);
+  const [customFieldsDialogOpen, setCustomFieldsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -469,17 +472,37 @@ export default function Forms() {
             </div>
 
             <div className="space-y-2">
-              <Label>Campos do Formulário *</Label>
-              <p className="text-sm text-muted-foreground mb-2">
-                Selecione os campos personalizados que aparecerão no formulário
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Campos do Formulário *</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Selecione os campos personalizados que aparecerão no formulário
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCustomFieldsDialogOpen(true)}
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Gerenciar Campos
+                </Button>
+              </div>
 
               {customFields.length === 0 ? (
                 <Card>
-                  <CardContent className="py-6 text-center text-muted-foreground">
-                    Nenhum campo personalizado criado.
-                    <br />
-                    Crie campos em Configurações → Campos Personalizados
+                  <CardContent className="py-6 text-center">
+                    <p className="text-muted-foreground mb-3">
+                      Nenhum campo personalizado criado.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCustomFieldsDialogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Campos
+                    </Button>
                   </CardContent>
                 </Card>
               ) : (
@@ -603,6 +626,17 @@ export default function Forms() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Custom Fields Manager */}
+      <CustomFieldsManager
+        open={customFieldsDialogOpen}
+        onOpenChange={(open) => {
+          setCustomFieldsDialogOpen(open);
+          if (!open) {
+            fetchCustomFields();
+          }
+        }}
+      />
     </div>
   );
 }

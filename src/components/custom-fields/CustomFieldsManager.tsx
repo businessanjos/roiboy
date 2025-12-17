@@ -155,11 +155,22 @@ function SortableFieldItem({
 
 interface CustomFieldsManagerProps {
   onFieldsChange?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps) {
+export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpenChange: externalOnOpenChange }: CustomFieldsManagerProps) {
   const [fields, setFields] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
+  const [internalDialogOpen, setInternalDialogOpen] = useState(false);
+  
+  // Use external control if provided, otherwise internal
+  const isControlled = externalOpen !== undefined;
+  const managerOpen = isControlled ? externalOpen : internalDialogOpen;
+  const setManagerOpen = isControlled 
+    ? (open: boolean) => externalOnOpenChange?.(open)
+    : setInternalDialogOpen;
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomField | null>(null);
   
@@ -363,7 +374,7 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
 
   const needsOptions = fieldType === "select" || fieldType === "multi_select";
 
-  return (
+  const content = (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
@@ -531,4 +542,17 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
       )}
     </div>
   );
+
+  // If externally controlled, wrap in a Dialog
+  if (isControlled) {
+    return (
+      <Dialog open={managerOpen} onOpenChange={setManagerOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {content}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return content;
 }
