@@ -582,26 +582,6 @@ export default function Clients() {
             </DialogContent>
           </Dialog>
 
-          {/* Bulk Omie Sync */}
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="sm:size-default"
-            onClick={handleBulkOmieSync}
-            disabled={bulkSyncing || clients.length === 0}
-          >
-            {bulkSyncing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                <span className="hidden sm:inline">{syncProgress.current}/{syncProgress.total}</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sincronizar Omie</span>
-              </>
-            )}
-          </Button>
 
           {/* Import CSV Dialog */}
           <Dialog open={importDialogOpen} onOpenChange={(open) => {
