@@ -32,6 +32,18 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Plus,
   Loader2,
@@ -54,6 +66,7 @@ import {
   CloudRain,
   Sparkles,
   Home,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isAfter } from "date-fns";
@@ -104,6 +117,12 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [editingEvent, setEditingEvent] = useState<LifeEvent | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Quick add state
+  const [quickTitle, setQuickTitle] = useState("");
+  const [quickType, setQuickType] = useState("birthday");
+  const [quickPopoverOpen, setQuickPopoverOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ name: string; avatar_url: string | null; account_id: string } | null>(null);
+
   // Form state
   const [formType, setFormType] = useState("birthday");
   const [formTitle, setFormTitle] = useState("");
@@ -114,6 +133,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
 
   useEffect(() => {
     fetchEvents();
+    fetchCurrentUser();
 
     // Realtime subscription for automatic updates when AI detects new events
     const channel = supabase
@@ -180,6 +200,51 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
       toast.error("Erro ao carregar momentos CX");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCurrentUser = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("name, avatar_url, account_id")
+      .single();
+    if (data) setCurrentUser(data);
+  };
+
+  const handleQuickAdd = async () => {
+    if (!quickTitle.trim() || !currentUser) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("client_life_events")
+        .insert({
+          account_id: currentUser.account_id,
+          client_id: clientId,
+          event_type: quickType,
+          title: quickTitle.trim(),
+          source: "manual",
+          is_recurring: quickType === "birthday" || quickType === "anniversary",
+        });
+
+      if (error) throw error;
+      toast.success("Momento adicionado!");
+      setQuickTitle("");
+      setQuickType("birthday");
+      setQuickPopoverOpen(false);
+      fetchEvents();
+    } catch (error: any) {
+      console.error("Error saving quick event:", error);
+      toast.error("Erro ao salvar momento");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleQuickKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleQuickAdd();
     }
   };
 
@@ -378,16 +443,93 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
         </Card>
       )}
 
-      {/* Action Button */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          Registre momentos importantes da vida do cliente para um atendimento mais humanizado.
-        </p>
-        <Button onClick={openNewDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Momento
-        </Button>
-      </div>
+      {/* Social Media Style Input */}
+      {currentUser && (
+        <div className="flex gap-3 pb-4 border-b">
+          <Avatar className="h-9 w-9 flex-shrink-0">
+            <AvatarImage src={currentUser.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              {currentUser.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 relative">
+            <Input
+              placeholder="Adicionar momento (ex: Aniversário do João)..."
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              onKeyDown={handleQuickKeyDown}
+              className="pr-24 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <TooltipProvider delayDuration={300}>
+                <Popover open={quickPopoverOpen} onOpenChange={setQuickPopoverOpen}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          {(() => {
+                            const typeInfo = EVENT_TYPES.find(t => t.value === quickType);
+                            const Icon = typeInfo?.icon || Star;
+                            return <Icon className={`h-4 w-4 ${typeInfo?.color || ''}`} />;
+                          })()}
+                        </button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Tipo de momento</TooltipContent>
+                  </Tooltip>
+                  <PopoverContent align="end" className="w-48 p-1">
+                    <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                      {EVENT_TYPES.map((type) => {
+                        const Icon = type.icon;
+                        return (
+                          <button
+                            key={type.value}
+                            onClick={() => {
+                              setQuickType(type.value);
+                              setQuickPopoverOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors ${
+                              quickType === type.value ? 'bg-muted' : ''
+                            }`}
+                          >
+                            <Icon className={`h-4 w-4 ${type.color}`} />
+                            <span className="truncate">{type.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={openNewDialog}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Formulário completo</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {quickTitle.trim() && (
+                <button
+                  type="button"
+                  onClick={handleQuickAdd}
+                  disabled={saving}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Events List */}
       {events.length === 0 ? (
