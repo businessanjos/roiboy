@@ -107,6 +107,8 @@ interface RoiEvent {
   evidence_snippet: string | null;
   impact: string;
   happened_at: string;
+  source: string;
+  image_url?: string | null;
 }
 
 interface Recommendation {
@@ -167,6 +169,21 @@ export default function ClientDetail() {
   const [riskScreenshot, setRiskScreenshot] = useState<File | null>(null);
   const [riskScreenshotPreview, setRiskScreenshotPreview] = useState<string | null>(null);
   const [uploadingRisk, setUploadingRisk] = useState(false);
+
+  // Edit ROI state
+  const [editingRoiId, setEditingRoiId] = useState<string | null>(null);
+  const [editRoiType, setEditRoiType] = useState<string>("tangible");
+  const [editRoiCategory, setEditRoiCategory] = useState<string>("revenue");
+  const [editRoiEvidence, setEditRoiEvidence] = useState("");
+  const [editRoiImpact, setEditRoiImpact] = useState<string>("medium");
+  const [savingEditRoi, setSavingEditRoi] = useState(false);
+
+  // Edit Risk state
+  const [editingRiskId, setEditingRiskId] = useState<string | null>(null);
+  const [editRiskLevel, setEditRiskLevel] = useState<string>("medium");
+  const [editRiskReason, setEditRiskReason] = useState("");
+  const [editRiskEvidence, setEditRiskEvidence] = useState("");
+  const [savingEditRisk, setSavingEditRisk] = useState(false);
 
   // Edit client info state
   const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
@@ -905,6 +922,111 @@ export default function ClientDetail() {
     }
   };
 
+  // Edit ROI handlers
+  const openEditRoiDialog = (roi: RoiEvent) => {
+    setEditingRoiId(roi.id);
+    setEditRoiType(roi.roi_type);
+    setEditRoiCategory(roi.category);
+    setEditRoiEvidence(roi.evidence_snippet || "");
+    setEditRoiImpact(roi.impact);
+  };
+
+  const handleSaveEditRoi = async () => {
+    if (!editingRoiId) return;
+    setSavingEditRoi(true);
+    try {
+      const { error } = await supabase
+        .from("roi_events")
+        .update({
+          roi_type: editRoiType as "tangible" | "intangible",
+          category: editRoiCategory as any,
+          evidence_snippet: editRoiEvidence || null,
+          impact: editRoiImpact as "low" | "medium" | "high",
+        })
+        .eq("id", editingRoiId);
+
+      if (error) throw error;
+      toast.success("ROI atualizado com sucesso!");
+      setEditingRoiId(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error updating ROI:", error);
+      toast.error("Erro ao atualizar ROI");
+    } finally {
+      setSavingEditRoi(false);
+    }
+  };
+
+  const handleDeleteRoi = async (roiId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este evento de ROI?")) return;
+    try {
+      const { error } = await supabase
+        .from("roi_events")
+        .delete()
+        .eq("id", roiId);
+
+      if (error) throw error;
+      toast.success("ROI excluído com sucesso!");
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting ROI:", error);
+      toast.error("Erro ao excluir ROI");
+    }
+  };
+
+  // Edit Risk handlers
+  const openEditRiskDialog = (risk: any) => {
+    setEditingRiskId(risk.id);
+    setEditRiskLevel(risk.risk_level);
+    setEditRiskReason(risk.reason);
+    setEditRiskEvidence(risk.evidence_snippet || "");
+  };
+
+  const handleSaveEditRisk = async () => {
+    if (!editingRiskId || !editRiskReason.trim()) {
+      toast.error("Preencha o motivo do risco");
+      return;
+    }
+    setSavingEditRisk(true);
+    try {
+      const { error } = await supabase
+        .from("risk_events")
+        .update({
+          risk_level: editRiskLevel as "low" | "medium" | "high",
+          reason: editRiskReason,
+          evidence_snippet: editRiskEvidence || null,
+        })
+        .eq("id", editingRiskId);
+
+      if (error) throw error;
+      toast.success("Risco atualizado com sucesso!");
+      setEditingRiskId(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error updating risk:", error);
+      toast.error("Erro ao atualizar risco");
+    } finally {
+      setSavingEditRisk(false);
+    }
+  };
+
+  const handleDeleteRisk = async (riskId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este evento de risco?")) return;
+    try {
+      const { error } = await supabase
+        .from("risk_events")
+        .delete()
+        .eq("id", riskId);
+
+      if (error) throw error;
+      toast.success("Risco excluído com sucesso!");
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting risk:", error);
+      toast.error("Erro ao excluir risco");
+    }
+  };
+
   const handleUpdateRecommendation = async (recId: string, status: "open" | "done" | "dismissed") => {
     try {
       const { error } = await supabase
@@ -1607,7 +1729,7 @@ export default function ClientDetail() {
                       className="flex items-start justify-between p-4 rounded-lg border border-border"
                     >
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <Badge
                             variant={roi.roi_type === "tangible" ? "default" : "secondary"}
                           >
@@ -1630,22 +1752,147 @@ export default function ClientDetail() {
                               ? "Médio"
                               : "Baixo"}
                           </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {roi.source === "manual" ? "Manual" : roi.source === "financial" ? "Financeiro" : "Auto"}
+                          </Badge>
                         </div>
                         {roi.evidence_snippet && (
                           <p className="text-sm text-muted-foreground mt-2">
                             {roi.evidence_snippet}
                           </p>
                         )}
+                        {roi.image_url && (
+                          <a 
+                            href={roi.image_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block mt-2"
+                          >
+                            <img
+                              src={roi.image_url}
+                              alt="Evidência"
+                              className="max-w-xs h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                            />
+                          </a>
+                        )}
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(roi.happened_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(roi.happened_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                        {roi.source === "manual" && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => openEditRoiDialog(roi)}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteRoi(roi.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Edit ROI Dialog */}
+          <Dialog open={!!editingRoiId} onOpenChange={(open) => !open && setEditingRoiId(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar ROI</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <Select value={editRoiType} onValueChange={setEditRoiType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tangible">Tangível</SelectItem>
+                        <SelectItem value="intangible">Intangível</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select value={editRoiCategory} onValueChange={setEditRoiCategory}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {editRoiType === "tangible" ? (
+                          <>
+                            <SelectItem value="revenue">Receita</SelectItem>
+                            <SelectItem value="cost">Redução de Custo</SelectItem>
+                            <SelectItem value="time">Economia de Tempo</SelectItem>
+                            <SelectItem value="process">Melhoria de Processo</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="clarity">Clareza</SelectItem>
+                            <SelectItem value="confidence">Confiança</SelectItem>
+                            <SelectItem value="tranquility">Tranquilidade</SelectItem>
+                            <SelectItem value="status_direction">Direção</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Impacto</Label>
+                  <Select value={editRoiImpact} onValueChange={setEditRoiImpact}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baixo</SelectItem>
+                      <SelectItem value="medium">Médio</SelectItem>
+                      <SelectItem value="high">Alto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Evidência</Label>
+                  <Textarea
+                    placeholder="Descreva a evidência de ROI..."
+                    value={editRoiEvidence}
+                    onChange={(e) => setEditRoiEvidence(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingRoiId(null)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveEditRoi} disabled={savingEditRoi}>
+                  {savingEditRoi ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="risks">
@@ -1667,7 +1914,7 @@ export default function ClientDetail() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <AlertTriangle className={`h-4 w-4 ${
                               risk.risk_level === "high"
                                 ? "text-red-500"
@@ -1721,9 +1968,31 @@ export default function ClientDetail() {
                             </a>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {format(new Date(risk.happened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {format(new Date(risk.happened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </span>
+                          {risk.source === "system" && (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => openEditRiskDialog(risk)}
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteRisk(risk.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1731,6 +2000,61 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit Risk Dialog */}
+          <Dialog open={!!editingRiskId} onOpenChange={(open) => !open && setEditingRiskId(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Risco</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nível de Risco</Label>
+                  <Select value={editRiskLevel} onValueChange={setEditRiskLevel}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baixo</SelectItem>
+                      <SelectItem value="medium">Médio</SelectItem>
+                      <SelectItem value="high">Alto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Motivo *</Label>
+                  <Input
+                    placeholder="Ex: Cliente demonstrou frustração..."
+                    value={editRiskReason}
+                    onChange={(e) => setEditRiskReason(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Evidência (opcional)</Label>
+                  <Textarea
+                    placeholder="Trecho de conversa ou contexto adicional..."
+                    value={editRiskEvidence}
+                    onChange={(e) => setEditRiskEvidence(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingRiskId(null)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveEditRisk} disabled={savingEditRisk}>
+                  {savingEditRisk ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="recommendations">
