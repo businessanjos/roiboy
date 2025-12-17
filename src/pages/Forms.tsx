@@ -18,14 +18,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -499,97 +491,134 @@ export default function Forms() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Título</TableHead>
-                <TableHead>Campos</TableHead>
-                <TableHead>Respostas</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Criado em</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {forms.map((form) => (
-                <TableRow key={form.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-foreground">{form.title}</p>
-                      {form.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {form.description}
-                        </p>
-                      )}
+        <div className="border rounded-lg bg-card">
+          {/* Table Header */}
+          <div className="hidden md:grid md:grid-cols-[1fr,100px,100px,120px,50px] gap-4 px-4 py-3 border-b text-sm text-muted-foreground">
+            <div></div>
+            <div className="text-right">Respostas</div>
+            <div className="text-right">Campos</div>
+            <div className="text-right">Atualizado</div>
+            <div></div>
+          </div>
+
+          {/* Form Rows */}
+          <div className="divide-y">
+            {forms.map((form, index) => {
+              // Generate a consistent color based on form index
+              const colors = [
+                "bg-slate-700",
+                "bg-blue-600",
+                "bg-emerald-600",
+                "bg-amber-600",
+                "bg-purple-600",
+                "bg-rose-600",
+                "bg-cyan-600",
+                "bg-indigo-600",
+              ];
+              const colorClass = colors[index % colors.length];
+
+              return (
+                <div
+                  key={form.id}
+                  className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => viewResponses(form)}
+                >
+                  {/* Icon */}
+                  <div
+                    className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${colorClass} ${
+                      !form.is_active ? "opacity-50" : ""
+                    }`}
+                  >
+                    <FileText className="h-4 w-4 text-white" />
+                  </div>
+
+                  {/* Title */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-medium text-foreground truncate ${!form.is_active ? "opacity-60" : ""}`}>
+                      {form.title}
+                    </p>
+                    {form.description && (
+                      <p className="text-sm text-muted-foreground truncate hidden sm:block">
+                        {form.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Stats - Desktop */}
+                  <div className="hidden md:flex items-center gap-4">
+                    <div className="w-[100px] text-right text-sm text-muted-foreground">
+                      {form._count || "-"}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{form.fields?.length || 0} campos</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{form._count || 0}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={form.is_active ? "default" : "secondary"}>
-                      {form.is_active ? "Ativo" : "Inativo"}
+                    <div className="w-[100px] text-right text-sm text-muted-foreground">
+                      {form.fields?.length || 0}
+                    </div>
+                    <div className="w-[120px] text-right text-sm text-muted-foreground">
+                      {format(new Date(form.created_at), "dd MMM yyyy", { locale: ptBR })}
+                    </div>
+                  </div>
+
+                  {/* Stats - Mobile */}
+                  <div className="flex md:hidden items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {form._count || 0}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(new Date(form.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => viewResponses(form)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver Respostas
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => copyFormLink(form)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copiar Link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => copyFormLink(form, true)}>
-                          <Link2 className="h-4 w-4 mr-2" />
-                          Link com Cliente
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => window.open(`/f/${form.id}`, "_blank")}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Abrir Formulário
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEditDialog(form)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => duplicateForm(form)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleFormActive(form)}>
-                          {form.is_active ? "Desativar" : "Ativar"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => deleteForm(form)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+                  </div>
+
+                  {/* Actions */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem onClick={() => viewResponses(form)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Ver Respostas
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => copyFormLink(form)}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copiar Link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => copyFormLink(form, true)}>
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Link com Cliente
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => window.open(`/f/${form.id}`, "_blank")}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Abrir Formulário
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => duplicateForm(form)}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Duplicar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleFormActive(form)}>
+                        {form.is_active ? "Desativar" : "Ativar"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => deleteForm(form)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Create/Edit Dialog */}
