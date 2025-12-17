@@ -31,6 +31,7 @@ import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNotifications } from "@/hooks/useNotifications";
+import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { useTheme } from "next-themes";
 import {
   Sheet,
@@ -70,7 +71,11 @@ const navItems = [
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { unreadCount } = useNotifications();
+  const { pendingCount: pendingTasksCount, overdueCount } = usePendingTasksCount();
   const { setTheme, theme } = useTheme();
+
+  // Total badge count = unread notifications + pending tasks
+  const totalBadgeCount = unreadCount + pendingTasksCount;
   const location = useLocation();
   const navigate = useNavigate();
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
@@ -163,16 +168,24 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         >
           <div className="relative">
             <Bell className="h-5 w-5 flex-shrink-0" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-                {unreadCount > 9 ? "9+" : unreadCount}
+            {totalBadgeCount > 0 && (
+              <span className={cn(
+                "absolute -top-1 -right-1 h-4 w-4 rounded-full text-[10px] font-medium flex items-center justify-center",
+                overdueCount > 0 
+                  ? "bg-destructive text-destructive-foreground" 
+                  : "bg-primary text-primary-foreground"
+              )}>
+                {totalBadgeCount > 9 ? "9+" : totalBadgeCount}
               </span>
             )}
           </div>
           {!collapsed && <span>Notificações</span>}
-          {!collapsed && unreadCount > 0 && (
-            <Badge variant="default" className="ml-auto h-5 px-1.5 text-[10px]">
-              {unreadCount}
+          {!collapsed && totalBadgeCount > 0 && (
+            <Badge 
+              variant={overdueCount > 0 ? "destructive" : "default"} 
+              className="ml-auto h-5 px-1.5 text-[10px]"
+            >
+              {totalBadgeCount}
             </Badge>
           )}
         </NavLink>
