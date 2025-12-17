@@ -17,6 +17,8 @@ import {
   User,
   Pencil,
   Bell,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,7 @@ import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useTheme } from "next-themes";
 import {
   Sheet,
   SheetContent,
@@ -65,11 +68,16 @@ const navItems = [
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { unreadCount } = useNotifications();
+  const { setTheme, theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -211,6 +219,19 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             <DropdownMenuItem onClick={() => { navigate("/settings"); onNavigate?.(); }}>
               <Settings className="mr-2 h-4 w-4" />
               Configurações
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={toggleTheme}>
+              {theme === "dark" ? (
+                <>
+                  <Sun className="mr-2 h-4 w-4" />
+                  Modo Claro
+                </>
+              ) : (
+                <>
+                  <Moon className="mr-2 h-4 w-4" />
+                  Modo Escuro
+                </>
+              )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
