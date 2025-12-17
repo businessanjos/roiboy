@@ -266,6 +266,8 @@ export default function Integrations() {
             <div className="grid gap-3 py-4">
               {availableIntegrations.map((integration) => {
                 const Icon = integration.icon;
+                const connectedIntegration = integrations.find(i => i.type === integration.id);
+                const isConnected = connectedIntegration?.status === "connected";
                 return (
                   <button
                     key={integration.id}
@@ -286,6 +288,12 @@ export default function Integrations() {
                         <h4 className="font-medium">{integration.name}</h4>
                         {integration.soon && (
                           <Badge variant="secondary" className="text-xs">Em breve</Badge>
+                        )}
+                        {isConnected && (
+                          <Badge variant="default" className="text-xs gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Conectado
+                          </Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">{integration.description}</p>
