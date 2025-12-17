@@ -399,6 +399,64 @@ export default function Forms() {
     return <Badge variant={t.variant}>{t.label}</Badge>;
   };
 
+  const getOptionLabel = (field: CustomField, value: string): string => {
+    if (!field.options || !Array.isArray(field.options)) return value;
+    const opt = field.options.find((o: any) => o.value === value);
+    return opt?.label || value;
+  };
+
+  const renderResponseValue = (field: CustomField, value: any) => {
+    switch (field.field_type) {
+      case "boolean":
+        return (
+          <Badge variant={value ? "default" : "secondary"}>
+            {value ? "Sim" : "Não"}
+          </Badge>
+        );
+      case "select":
+        const label = getOptionLabel(field, value);
+        const opt = field.options?.find((o: any) => o.value === value);
+        return (
+          <Badge
+            variant="outline"
+            style={opt?.color ? { borderColor: opt.color, color: opt.color } : undefined}
+          >
+            {label}
+          </Badge>
+        );
+      case "multi_select":
+        if (!Array.isArray(value)) return String(value);
+        return (
+          <div className="flex flex-wrap gap-1">
+            {value.map((v: string) => {
+              const opt = field.options?.find((o: any) => o.value === v);
+              return (
+                <Badge
+                  key={v}
+                  variant="outline"
+                  style={opt?.color ? { borderColor: opt.color, color: opt.color } : undefined}
+                >
+                  {getOptionLabel(field, v)}
+                </Badge>
+              );
+            })}
+          </div>
+        );
+      case "date":
+        try {
+          return format(new Date(value), "dd/MM/yyyy", { locale: ptBR });
+        } catch {
+          return String(value);
+        }
+      case "currency":
+        return `R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+      case "number":
+        return Number(value).toLocaleString("pt-BR");
+      default:
+        return String(value);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -696,77 +754,149 @@ export default function Forms() {
 
       {/* Responses Dialog */}
       <Dialog open={responsesDialogOpen} onOpenChange={setResponsesDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Respostas - {selectedForm?.title}</DialogTitle>
-            <DialogDescription>
-              {responses.length} resposta(s) recebida(s)
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Respostas - {selectedForm?.title}
+            </DialogTitle>
+            <DialogDescription className="flex items-center justify-between">
+              <span>{responses.length} resposta(s) recebida(s)</span>
+              {responses.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const headers = ["Cliente", "Telefone", "Data", ...customFields.filter(f => selectedForm?.fields?.includes(f.id)).map(f => f.name)];
+                    const rows = responses.map(r => {
+                      const clientName = r.clients?.full_name || r.client_name || "Não identificado";
+                      const phone = r.clients?.phone_e164 || r.client_phone || "";
+                      const date = format(new Date(r.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR });
+                      const fieldValues = customFields.filter(f => selectedForm?.fields?.includes(f.id)).map(field => {
+                        const value = r.responses?.[field.id];
+                        if (value === undefined || value === null) return "";
+                        if (Array.isArray(value)) return value.map(v => getOptionLabel(field, v)).join("; ");
+                        if (field.field_type === "boolean") return value ? "Sim" : "Não";
+                        if (field.field_type === "select") return getOptionLabel(field, value);
+                        if (field.field_type === "date") return format(new Date(value), "dd/MM/yyyy");
+                        if (field.field_type === "currency") return `R$ ${Number(value).toFixed(2)}`;
+                        return String(value);
+                      });
+                      return [clientName, phone, date, ...fieldValues];
+                    });
+                    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
+                    const blob = new Blob([csv], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `respostas-${selectedForm?.title || "formulario"}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("CSV exportado!");
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+              )}
             </DialogDescription>
           </DialogHeader>
 
-          {loadingResponses ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : responses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhuma resposta recebida ainda
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {responses.map((response) => (
-                <Card key={response.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">
-                        {response.clients?.full_name ||
-                          response.client_name ||
-                          "Cliente não identificado"}
-                      </CardTitle>
-                      <span className="text-sm text-muted-foreground">
-                        {format(new Date(response.submitted_at), "dd/MM/yyyy HH:mm", {
-                          locale: ptBR,
-                        })}
-                      </span>
-                    </div>
-                    {(response.clients?.phone_e164 || response.client_phone) && (
-                      <CardDescription>
-                        {response.clients?.phone_e164 || response.client_phone}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-2">
-                      {Object.entries(response.responses || {}).map(
-                        ([fieldId, value]) => {
-                          const field = customFields.find((f) => f.id === fieldId);
-                          return (
-                            <div
-                              key={fieldId}
-                              className="flex items-start gap-2 text-sm"
-                            >
-                              <span className="font-medium text-muted-foreground min-w-[120px]">
-                                {field?.name || fieldId}:
-                              </span>
-                              <span className="text-foreground">
-                                {Array.isArray(value)
-                                  ? value.join(", ")
-                                  : value === true
-                                  ? "Sim"
-                                  : value === false
-                                  ? "Não"
-                                  : String(value)}
-                              </span>
+          <div className="flex-1 overflow-y-auto mt-4">
+            {loadingResponses ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : responses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  Nenhuma resposta recebida
+                </h3>
+                <p className="text-muted-foreground text-sm max-w-sm">
+                  Compartilhe o link do formulário com seus clientes para começar a coletar respostas.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => {
+                    if (selectedForm) copyFormLink(selectedForm);
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar Link
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {responses.map((response, index) => {
+                  const orderedFields = selectedForm?.fields
+                    ?.map((fId: string) => customFields.find((f) => f.id === fId))
+                    .filter(Boolean) as CustomField[] || [];
+
+                  return (
+                    <Card key={response.id} className="overflow-hidden">
+                      <CardHeader className="bg-muted/30 py-3 px-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                              {index + 1}
                             </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                            <div>
+                              <CardTitle className="text-base">
+                                {response.clients?.full_name ||
+                                  response.client_name ||
+                                  "Cliente não identificado"}
+                              </CardTitle>
+                              {(response.clients?.phone_e164 || response.client_phone) && (
+                                <CardDescription className="text-xs">
+                                  {response.clients?.phone_e164 || response.client_phone}
+                                </CardDescription>
+                              )}
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs whitespace-nowrap">
+                            {format(new Date(response.submitted_at), "dd/MM/yyyy 'às' HH:mm", {
+                              locale: ptBR,
+                            })}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {orderedFields.map((field) => {
+                            const value = response.responses?.[field.id];
+                            const isEmpty = value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+
+                            return (
+                              <div
+                                key={field.id}
+                                className="flex flex-col gap-1 p-3 rounded-lg bg-muted/30"
+                              >
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                  {field.name}
+                                </span>
+                                <div className="text-sm text-foreground">
+                                  {isEmpty ? (
+                                    <span className="text-muted-foreground/60 italic">
+                                      Não preenchido
+                                    </span>
+                                  ) : (
+                                    renderResponseValue(field, value)
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
