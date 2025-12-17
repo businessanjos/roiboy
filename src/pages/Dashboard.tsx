@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusIndicator, QuadrantIndicator, TrendIndicator } from "@/components/ui/status-indicator";
 import { ScoreBadge } from "@/components/ui/score-badge";
@@ -42,8 +43,9 @@ import {
   Filter,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
+import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 
 interface ContractData {
@@ -131,6 +133,8 @@ export default function Dashboard() {
   const [contractData, setContractData] = useState<ContractData[]>([]);
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
+  const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
 
   const fetchProducts = async () => {
     try {
@@ -374,17 +378,46 @@ export default function Dashboard() {
     return map;
   }, [clients]);
 
+  // Calculate period start/end based on filter type
+  const gestaoPeriodRange = useMemo(() => {
+    const now = new Date();
+    let periodStart: Date;
+    let periodEnd: Date = now;
+    
+    switch (gestaoPeriodFilter) {
+      case "month":
+        periodStart = startOfMonth(now);
+        periodEnd = endOfMonth(now);
+        break;
+      case "7":
+        periodStart = subDays(now, 7);
+        break;
+      case "custom":
+        if (gestaoCustomDateRange?.from) {
+          periodStart = gestaoCustomDateRange.from;
+          periodEnd = gestaoCustomDateRange.to || gestaoCustomDateRange.from;
+        } else {
+          periodStart = subMonths(now, 6);
+        }
+        break;
+      default:
+        const months = parseInt(gestaoPeriodFilter);
+        periodStart = subMonths(now, months);
+    }
+    
+    return { periodStart, periodEnd };
+  }, [gestaoPeriodFilter, gestaoCustomDateRange]);
+
   // Filter contract data by product and period
   const filteredContractData = useMemo(() => {
-    const periodMonths = parseInt(gestaoPeriodFilter);
-    const periodStart = subMonths(new Date(), periodMonths);
+    const { periodStart, periodEnd } = gestaoPeriodRange;
     
     return contractData.filter(contract => {
       // Filter by period
       const contractDate = contract.status_changed_at 
         ? parseISO(contract.status_changed_at) 
         : parseISO(contract.start_date);
-      if (contractDate < periodStart) return false;
+      if (contractDate < periodStart || contractDate > periodEnd) return false;
       
       // Filter by product
       if (gestaoProductFilter !== "all") {
@@ -394,19 +427,24 @@ export default function Dashboard() {
       
       return true;
     });
-  }, [contractData, gestaoProductFilter, gestaoPeriodFilter, clientProductsMap]);
+  }, [contractData, gestaoProductFilter, gestaoPeriodRange, clientProductsMap]);
 
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
-    const periodMonths = parseInt(gestaoPeriodFilter);
+    const { periodStart, periodEnd } = gestaoPeriodRange;
     const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; congelamentos: number } } = {};
     
+    // Calculate the number of months to show
+    const monthsDiff = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+    
     // Initialize months based on period
-    for (let i = periodMonths - 1; i >= 0; i--) {
-      const date = subMonths(new Date(), i);
+    for (let i = monthsDiff - 1; i >= 0; i--) {
+      const date = subMonths(periodEnd, i);
       const key = format(date, "yyyy-MM");
       const label = format(date, "MMM/yy", { locale: ptBR });
-      months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, congelamentos: 0 };
+      if (!months[key]) {
+        months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, congelamentos: 0 };
+      }
     }
     
     filteredContractData.forEach((contract) => {
@@ -437,7 +475,7 @@ export default function Dashboard() {
     });
     
     return Object.values(months);
-  }, [filteredContractData, gestaoPeriodFilter]);
+  }, [filteredContractData, gestaoPeriodRange]);
 
   // Calculate retention metrics
   const retentionMetrics = useMemo(() => {
@@ -929,24 +967,72 @@ export default function Dashboard() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select value={gestaoPeriodFilter} onValueChange={setGestaoPeriodFilter}>
+                  <Select 
+                    value={gestaoPeriodFilter} 
+                    onValueChange={(value) => {
+                      setGestaoPeriodFilter(value);
+                      if (value === "custom") {
+                        setGestaoDatePickerOpen(true);
+                      }
+                    }}
+                  >
                     <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Período" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="7">Últimos 7 dias</SelectItem>
+                      <SelectItem value="month">Este mês</SelectItem>
                       <SelectItem value="3">Últimos 3 meses</SelectItem>
                       <SelectItem value="6">Últimos 6 meses</SelectItem>
                       <SelectItem value="12">Últimos 12 meses</SelectItem>
+                      <SelectItem value="custom">Período personalizado</SelectItem>
                     </SelectContent>
                   </Select>
+                  {gestaoPeriodFilter === "custom" && (
+                    <Popover open={gestaoDatePickerOpen} onOpenChange={setGestaoDatePickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto justify-start text-left font-normal"
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {gestaoCustomDateRange?.from ? (
+                            gestaoCustomDateRange.to ? (
+                              <>
+                                {format(gestaoCustomDateRange.from, "dd/MM/yy", { locale: ptBR })} -{" "}
+                                {format(gestaoCustomDateRange.to, "dd/MM/yy", { locale: ptBR })}
+                              </>
+                            ) : (
+                              format(gestaoCustomDateRange.from, "dd/MM/yyyy", { locale: ptBR })
+                            )
+                          ) : (
+                            <span className="text-muted-foreground">Selecionar período</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          initialFocus
+                          mode="range"
+                          defaultMonth={gestaoCustomDateRange?.from}
+                          selected={gestaoCustomDateRange}
+                          onSelect={setGestaoCustomDateRange}
+                          numberOfMonths={2}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
-                {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "6") && (
+                {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "6" || gestaoCustomDateRange) && (
                   <Button 
                     variant="ghost" 
                     size="sm"
                     onClick={() => {
                       setGestaoProductFilter("all");
                       setGestaoPeriodFilter("6");
+                      setGestaoCustomDateRange(undefined);
                     }}
                     className="text-muted-foreground hover:text-foreground"
                   >
