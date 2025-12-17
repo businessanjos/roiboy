@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Package, 
   Calendar, 
@@ -12,7 +13,10 @@ import {
   XCircle,
   PauseCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Pencil,
+  X,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -56,6 +60,9 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   const fetchSubscriptions = async () => {
     try {
@@ -128,6 +135,38 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     }
   };
 
+  const handleEditNote = (sub: Subscription) => {
+    setEditingNoteId(sub.id);
+    setNoteText(sub.notes || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNoteId(null);
+    setNoteText("");
+  };
+
+  const handleSaveNote = async (subId: string) => {
+    setSavingNote(true);
+    try {
+      const { error } = await supabase
+        .from("client_subscriptions")
+        .update({ notes: noteText.trim() || null })
+        .eq("id", subId);
+
+      if (error) throw error;
+
+      toast.success("Nota salva com sucesso!");
+      setEditingNoteId(null);
+      setNoteText("");
+      fetchSubscriptions();
+    } catch (error: any) {
+      console.error("Error saving note:", error);
+      toast.error("Erro ao salvar nota");
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -175,6 +214,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
           {subscriptions.map((sub) => {
             const statusConfig = paymentStatusConfig[sub.payment_status];
             const StatusIcon = statusConfig.icon;
+            const isEditing = editingNoteId === sub.id;
 
             return (
               <div key={sub.id} className="p-4 rounded-lg border border-border bg-card/50">
@@ -208,10 +248,59 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
                       )}
                     </div>
 
-                    {sub.notes && (
-                      <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                        {sub.notes}
-                      </p>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={noteText}
+                          onChange={(e) => setNoteText(e.target.value)}
+                          placeholder="Adicione uma nota sobre este item financeiro..."
+                          className="min-h-[80px] text-sm"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveNote(sub.id)}
+                            disabled={savingNote}
+                          >
+                            {savingNote ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3 mr-1" />
+                            )}
+                            Salvar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleCancelEdit}
+                            disabled={savingNote}
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        {sub.notes ? (
+                          <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded flex-1">
+                            {sub.notes}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground/50 italic flex-1">
+                            Sem notas
+                          </p>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => handleEditNote(sub)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
