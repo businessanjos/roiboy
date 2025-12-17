@@ -41,7 +41,13 @@ import {
   X,
   Download,
   ChevronLeft,
+  CalendarIcon,
+  User,
+  Phone,
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -453,6 +459,88 @@ export default function Forms() {
     }
   };
 
+  const renderPreviewField = (field: CustomField) => {
+    switch (field.field_type) {
+      case "boolean":
+        return (
+          <div className="flex items-center gap-3 p-3 rounded-md border border-border/50 bg-muted/30">
+            <Switch disabled />
+            <span className="text-sm text-muted-foreground">Não informado</span>
+          </div>
+        );
+
+      case "select":
+        const selectOptions = field.options || [];
+        return (
+          <RadioGroup className="p-3 rounded-md border border-border/50 bg-muted/30" disabled>
+            {selectOptions.map((opt: any) => (
+              <div key={opt.value} className="flex items-center space-x-2">
+                <RadioGroupItem value={opt.value} id={`preview-${field.id}-${opt.value}`} disabled />
+                <Label
+                  htmlFor={`preview-${field.id}-${opt.value}`}
+                  className="font-normal text-muted-foreground"
+                >
+                  {opt.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+
+      case "multi_select":
+        const multiOptions = field.options || [];
+        return (
+          <div className="space-y-2 p-3 rounded-md border border-border/50 bg-muted/30">
+            {multiOptions.map((opt: any) => (
+              <div key={opt.value} className="flex items-center space-x-2">
+                <Checkbox id={`preview-${field.id}-${opt.value}`} disabled />
+                <Label
+                  htmlFor={`preview-${field.id}-${opt.value}`}
+                  className="font-normal text-muted-foreground"
+                >
+                  {opt.label}
+                </Label>
+              </div>
+            ))}
+          </div>
+        );
+
+      case "number":
+      case "currency":
+        return (
+          <Input
+            type="number"
+            placeholder={field.field_type === "currency" ? "0.00" : "0"}
+            disabled
+            className="bg-muted/30"
+          />
+        );
+
+      case "date":
+        return (
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left font-normal text-muted-foreground"
+            disabled
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            Selecionar data
+          </Button>
+        );
+
+      case "text":
+      default:
+        return (
+          <Textarea
+            placeholder="Digite sua resposta..."
+            rows={3}
+            disabled
+            className="bg-muted/30"
+          />
+        );
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -802,9 +890,15 @@ export default function Forms() {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="responses" className="flex-1 flex flex-col overflow-hidden">
+          <Tabs defaultValue="preview" className="flex-1 flex flex-col overflow-hidden">
             <div className="px-4 border-b">
               <TabsList className="h-auto p-0 bg-transparent gap-4">
+                <TabsTrigger
+                  value="preview"
+                  className="pb-3 pt-2 px-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
+                >
+                  Preview
+                </TabsTrigger>
                 <TabsTrigger
                   value="insights"
                   className="pb-3 pt-2 px-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
@@ -819,6 +913,77 @@ export default function Forms() {
                 </TabsTrigger>
               </TabsList>
             </div>
+
+            {/* Preview Tab */}
+            <TabsContent value="preview" className="flex-1 overflow-auto m-0">
+              <div className="flex justify-center p-6">
+                <div className="w-full max-w-xl">
+                  <Card className="shadow-lg">
+                    <CardHeader className="space-y-2">
+                      <CardTitle className="text-2xl">{selectedForm?.title}</CardTitle>
+                      {selectedForm?.description && (
+                        <CardDescription className="text-base">
+                          {selectedForm.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Client Info Preview */}
+                      {selectedForm?.require_client_info && (
+                        <div className="space-y-4 pb-4 border-b">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              Seu nome *
+                            </Label>
+                            <Input placeholder="Digite seu nome completo" disabled />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Phone className="h-4 w-4" />
+                              Seu telefone *
+                            </Label>
+                            <Input placeholder="+55 11 99999-9999" disabled />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Form Fields Preview */}
+                      {selectedForm?.fields?.map((fieldId: string) => {
+                        const field = customFields.find((f) => f.id === fieldId);
+                        if (!field) return null;
+
+                        return (
+                          <div key={field.id} className="space-y-2">
+                            <Label>
+                              {field.name}
+                              {field.is_required && <span className="text-destructive ml-1">*</span>}
+                            </Label>
+                            {renderPreviewField(field)}
+                          </div>
+                        );
+                      })}
+
+                      {/* Submit Button Preview */}
+                      <Button className="w-full" disabled>
+                        Enviar
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Open Form Button */}
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open(`/f/${selectedForm?.id}`, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Abrir formulário em nova aba
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
 
             {/* Insights Tab */}
             <TabsContent value="insights" className="flex-1 overflow-auto p-6 m-0">
