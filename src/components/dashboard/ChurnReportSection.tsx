@@ -75,7 +75,7 @@ const PERIOD_OPTIONS = [
   { value: "all", label: "Todo o período" },
 ];
 
-export default function ChurnReport() {
+export function ChurnReportSection() {
   const [contracts, setContracts] = useState<ChurnContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -218,12 +218,12 @@ export default function ChurnReport() {
     <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Relatório de Churn</h1>
-            <p className="text-muted-foreground">
+            <h2 className="text-lg font-semibold">Relatório de Churn</h2>
+            <p className="text-sm text-muted-foreground">
               Histórico de contratos cancelados, encerrados e pausados
             </p>
           </div>
-          <Button variant="outline" onClick={exportCSV} disabled={filteredContracts.length === 0}>
+          <Button variant="outline" size="sm" onClick={exportCSV} disabled={filteredContracts.length === 0}>
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
