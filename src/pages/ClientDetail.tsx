@@ -1292,12 +1292,6 @@ export default function ClientDetail() {
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap mt-2">
-              {(client.contract_start_date || client.contract_end_date) && (
-                <ContractTimer 
-                  startDate={client.contract_start_date}
-                  endDate={client.contract_end_date}
-                />
-              )}
               {clientProducts.length > 0 ? (
                 clientProducts.map((product) => (
                   <Badge key={product.id} variant="secondary" className="text-xs">
