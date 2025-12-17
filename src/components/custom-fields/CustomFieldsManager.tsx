@@ -7,9 +7,25 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export interface CustomField {
   id: string;
@@ -47,6 +63,95 @@ const COLOR_OPTIONS = [
   { value: "gray", label: "Cinza", class: "bg-gray-500" },
 ];
 
+// Sortable field item component
+function SortableFieldItem({
+  field,
+  onEdit,
+  onDelete,
+}: {
+  field: CustomField;
+  onEdit: (field: CustomField) => void;
+  onDelete: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: field.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const fieldTypeInfo = FIELD_TYPES.find(t => t.value === field.field_type);
+  const TypeIcon = fieldTypeInfo?.icon || CheckCircle2;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="touch-none cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{field.name}</span>
+          <Badge variant="outline" className="text-xs gap-1">
+            <TypeIcon className="h-3 w-3" />
+            {fieldTypeInfo?.label || field.field_type}
+          </Badge>
+          {field.is_required && (
+            <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
+          )}
+        </div>
+        {field.options.length > 0 && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {field.options.slice(0, 5).map((opt) => (
+              <span
+                key={opt.value}
+                className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
+                  opt.color === "green" ? "bg-emerald-500/20 text-emerald-700" :
+                  opt.color === "red" ? "bg-red-500/20 text-red-700" :
+                  opt.color === "yellow" ? "bg-amber-500/20 text-amber-700" :
+                  opt.color === "blue" ? "bg-blue-500/20 text-blue-700" :
+                  opt.color === "purple" ? "bg-purple-500/20 text-purple-700" :
+                  opt.color === "pink" ? "bg-pink-500/20 text-pink-700" :
+                  opt.color === "orange" ? "bg-orange-500/20 text-orange-700" :
+                  "bg-gray-500/20 text-gray-700"
+                }`}
+              >
+                {opt.label}
+              </span>
+            ))}
+            {field.options.length > 5 && (
+              <span className="text-xs text-muted-foreground">+{field.options.length - 5}</span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(field)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(field.id)}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface CustomFieldsManagerProps {
   onFieldsChange?: () => void;
 }
@@ -65,6 +170,13 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
     { value: "opt_2", label: "", color: "red" },
   ]);
   const [isRequired, setIsRequired] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const fetchFields = async () => {
     const { data, error } = await supabase
@@ -132,16 +244,48 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = fields.findIndex((f) => f.id === active.id);
+      const newIndex = fields.findIndex((f) => f.id === over.id);
+
+      const newFields = arrayMove(fields, oldIndex, newIndex);
+      setFields(newFields);
+
+      // Update display_order in database
+      try {
+        const updates = newFields.map((field, index) => ({
+          id: field.id,
+          display_order: index,
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from("custom_fields")
+            .update({ display_order: update.display_order })
+            .eq("id", update.id);
+        }
+
+        onFieldsChange?.();
+      } catch (error: any) {
+        toast.error("Erro ao reordenar campos");
+        fetchFields(); // Revert on error
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Nome do campo é obrigatório");
       return;
     }
 
-    const needsOptions = fieldType === "select" || fieldType === "multi_select";
+    const needsOpts = fieldType === "select" || fieldType === "multi_select";
     const validOptions = options.filter(opt => opt.label.trim());
 
-    if (needsOptions && validOptions.length === 0) {
+    if (needsOpts && validOptions.length === 0) {
       toast.error("Adicione pelo menos uma opção");
       return;
     }
@@ -161,7 +305,7 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
         account_id: userData.account_id,
         name: name.trim(),
         field_type: fieldType,
-        options: needsOptions ? validOptions.map(opt => ({
+        options: needsOpts ? validOptions.map(opt => ({
           ...opt,
           label: opt.label.trim(),
           value: opt.value || `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -370,64 +514,24 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {fields.map((field) => {
-            const fieldTypeInfo = FIELD_TYPES.find(t => t.value === field.field_type);
-            const TypeIcon = fieldTypeInfo?.icon || CheckCircle2;
-            return (
-              <div
-                key={field.id}
-                className="flex items-center gap-3 p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors"
-              >
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{field.name}</span>
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <TypeIcon className="h-3 w-3" />
-                      {fieldTypeInfo?.label || field.field_type}
-                    </Badge>
-                    {field.is_required && (
-                      <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
-                    )}
-                  </div>
-                  {field.options.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                      {field.options.slice(0, 5).map((opt) => (
-                        <span
-                          key={opt.value}
-                          className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
-                            opt.color === "green" ? "bg-emerald-500/20 text-emerald-700" :
-                            opt.color === "red" ? "bg-red-500/20 text-red-700" :
-                            opt.color === "yellow" ? "bg-amber-500/20 text-amber-700" :
-                            opt.color === "blue" ? "bg-blue-500/20 text-blue-700" :
-                            opt.color === "purple" ? "bg-purple-500/20 text-purple-700" :
-                            opt.color === "pink" ? "bg-pink-500/20 text-pink-700" :
-                            opt.color === "orange" ? "bg-orange-500/20 text-orange-700" :
-                            "bg-gray-500/20 text-gray-700"
-                          }`}
-                        >
-                          {opt.label}
-                        </span>
-                      ))}
-                      {field.options.length > 5 && (
-                        <span className="text-xs text-muted-foreground">+{field.options.length - 5}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => openEditDialog(field)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(field.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {fields.map((field) => (
+                <SortableFieldItem
+                  key={field.id}
+                  field={field}
+                  onEdit={openEditDialog}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
