@@ -15,8 +15,11 @@ import {
   X,
   CalendarDays,
   User,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +31,14 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,13 +60,47 @@ const navItems = [
 ];
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
-  const { currentUser } = useCurrentUser();
+  const { currentUser, updateUser } = useCurrentUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isEditNameOpen, setIsEditNameOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const openEditName = () => {
+    setEditName(currentUser?.name || "");
+    setIsEditNameOpen(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!currentUser || !editName.trim()) {
+      toast.error("Nome não pode estar vazio");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ name: editName.trim() })
+        .eq("id", currentUser.id);
+
+      if (error) throw error;
+
+      updateUser({ name: editName.trim() });
+      toast.success("Nome atualizado!");
+      setIsEditNameOpen(false);
+    } catch (error: any) {
+      console.error("Error updating name:", error);
+      toast.error(error.message || "Erro ao atualizar nome");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -124,6 +169,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           <DropdownMenuContent align={collapsed ? "center" : "start"} side="top" className="w-56">
             <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={openEditName}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar Nome
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => { navigate("/profile"); onNavigate?.(); }}>
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
@@ -139,6 +188,34 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Edit Name Dialog */}
+        <Dialog open={isEditNameOpen} onOpenChange={setIsEditNameOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Editar Nome</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="edit-user-name">Nome</Label>
+              <Input
+                id="edit-user-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Seu nome completo"
+                className="mt-2"
+                onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditNameOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveName} disabled={saving}>
+                {saving ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
