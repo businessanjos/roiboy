@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users, DollarSign, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -21,6 +22,11 @@ export default function Integrations() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
+  
+  // Omie sync state
+  const [bulkSyncing, setBulkSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
+  const [clientCount, setClientCount] = useState(0);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const zoomWebhookUrl = `${supabaseUrl}/functions/v1/zoom-webhook`;
@@ -37,8 +43,88 @@ export default function Integrations() {
     if (user) {
       fetchIntegrations();
       fetchAccountId();
+      fetchClientCount();
     }
   }, [user]);
+
+  const fetchClientCount = async () => {
+    const { count, error } = await supabase
+      .from("clients")
+      .select("*", { count: "exact", head: true });
+    
+    if (!error && count !== null) {
+      setClientCount(count);
+    }
+  };
+
+  const handleBulkOmieSync = async () => {
+    if (clientCount === 0) {
+      toast({
+        title: "Nenhum cliente",
+        description: "Não há clientes para sincronizar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBulkSyncing(true);
+    setSyncProgress({ current: 0, total: clientCount, success: 0, failed: 0 });
+
+    // Fetch all clients
+    const { data: clients, error } = await supabase
+      .from("clients")
+      .select("id, full_name");
+
+    if (error || !clients) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível buscar os clientes.",
+        variant: "destructive",
+      });
+      setBulkSyncing(false);
+      return;
+    }
+
+    let success = 0;
+    let failed = 0;
+
+    for (let i = 0; i < clients.length; i++) {
+      const client = clients[i];
+      setSyncProgress(prev => ({ ...prev, current: i + 1 }));
+
+      try {
+        const { error } = await supabase.functions.invoke('sync-omie', {
+          body: { client_id: client.id, enrich_data: true, use_cpf_cnpj: true }
+        });
+
+        if (error) {
+          console.error(`Sync failed for ${client.full_name}:`, error);
+          failed++;
+        } else {
+          success++;
+        }
+      } catch (err) {
+        console.error(`Sync error for ${client.full_name}:`, err);
+        failed++;
+      }
+    }
+
+    setSyncProgress(prev => ({ ...prev, success, failed }));
+    setBulkSyncing(false);
+
+    if (failed === 0) {
+      toast({
+        title: "Sucesso!",
+        description: `${success} cliente(s) sincronizado(s) com sucesso!`,
+      });
+    } else {
+      toast({
+        title: "Sincronização concluída",
+        description: `${success} sucesso, ${failed} falha(s)`,
+        variant: "default",
+      });
+    }
+  };
 
   const fetchAccountId = async () => {
     const { data, error } = await supabase
@@ -165,6 +251,10 @@ export default function Integrations() {
             <TabsTrigger value="pipedrive" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Pipedrive</span>
+            </TabsTrigger>
+            <TabsTrigger value="omie" className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline">Omie</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -617,6 +707,95 @@ Headers: x-ryka-secret: [seu_secret]
                   <li>Cole a Webhook URL completa acima</li>
                   <li>Marque "Active" e salve</li>
                 </ol>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="omie" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Omie</CardTitle>
+                  <CardDescription>
+                    Sincronize dados financeiros e de pagamento com a Omie
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="rounded-lg border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Sincronização em massa</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Sincronize todos os {clientCount} cliente(s) com a Omie
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleBulkOmieSync}
+                    disabled={bulkSyncing || clientCount === 0}
+                  >
+                    {bulkSyncing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {syncProgress.current}/{syncProgress.total}
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Sincronizar Todos
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {bulkSyncing && (
+                  <div className="space-y-2">
+                    <Progress value={(syncProgress.current / syncProgress.total) * 100} />
+                    <p className="text-xs text-muted-foreground text-center">
+                      Processando cliente {syncProgress.current} de {syncProgress.total}...
+                    </p>
+                  </div>
+                )}
+
+                {!bulkSyncing && syncProgress.total > 0 && (
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-sm">
+                      Última sincronização: <span className="text-success">{syncProgress.success} sucesso</span>
+                      {syncProgress.failed > 0 && <>, <span className="text-destructive">{syncProgress.failed} falha(s)</span></>}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Dados sincronizados:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Status de pagamento (Ativo, Em Atraso, etc.)</li>
+                  <li>• Emails e telefones adicionais</li>
+                  <li>• Endereço completo</li>
+                  <li>• Razão social / Nome da empresa</li>
+                  <li>• CPF/CNPJ para matching</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                <h4 className="font-medium">Configuração:</h4>
+                <p className="text-sm text-muted-foreground">
+                  As credenciais da Omie (OMIE_APP_KEY e OMIE_APP_SECRET) devem estar configuradas nas secrets do projeto.
+                  A sincronização usa CPF/CNPJ do cliente para buscar os dados na Omie.
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <strong>Sincronização automática:</strong> O sistema sincroniza automaticamente a cada 2 horas via cron job.
+                </p>
               </div>
             </CardContent>
           </Card>
