@@ -38,7 +38,7 @@ import {
 
 export interface TimelineEvent {
   id: string;
-  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup";
+  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup" | "form_response";
   title: string;
   description?: string;
   timestamp: string;
@@ -72,6 +72,9 @@ export interface TimelineEvent {
     payment_status?: string;
     amount?: number;
     currency?: string;
+    // Form response specific
+    form_title?: string;
+    form_responses?: Record<string, any>;
   };
 }
 
@@ -161,6 +164,13 @@ const getEventConfig = (event: TimelineEvent) => {
         bgColor: "bg-cyan-500",
         textColor: "text-cyan-500",
         label: "Acompanhamento",
+      };
+    case "form_response":
+      return {
+        icon: <FileText className="h-4 w-4" />,
+        bgColor: "bg-purple-500",
+        textColor: "text-purple-500",
+        label: "Formulário",
       };
     default:
       return {
@@ -378,7 +388,7 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
   );
 }
 
-type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup";
+type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup" | "form_response";
 
 const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   comment: { label: "Comentários", color: "bg-primary" },
@@ -389,6 +399,7 @@ const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   life_event: { label: "Momentos CX", color: "bg-pink-500" },
   financial: { label: "Financeiro", color: "bg-amber-500" },
   followup: { label: "Acompanhamento", color: "bg-cyan-500" },
+  form_response: { label: "Formulários", color: "bg-purple-500" },
 };
 
 export function Timeline({ events, className, clientId, onCommentAdded }: TimelineProps) {
