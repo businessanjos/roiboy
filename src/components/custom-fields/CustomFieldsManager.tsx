@@ -362,8 +362,6 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
   };
 
   const needsOptions = fieldType === "select" || fieldType === "multi_select";
-  const currentFieldType = FIELD_TYPES.find(t => t.value === fieldType);
-  const FieldIcon = currentFieldType?.icon || CheckCircle2;
 
   return (
     <div className="space-y-4">
@@ -407,10 +405,7 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
                   <Label className="text-sm">Tipo de campo</Label>
                   <Select value={fieldType} onValueChange={(v) => setFieldType(v as CustomField["field_type"])}>
                     <SelectTrigger>
-                      <div className="flex items-center gap-2">
-                        <FieldIcon className="h-4 w-4 text-muted-foreground" />
-                        <SelectValue />
-                      </div>
+                      <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
                       {FIELD_TYPES.map(({ value, label, icon: Icon }) => (
