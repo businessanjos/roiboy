@@ -909,6 +909,55 @@ export type Database = {
           },
         ]
       }
+      followup_reactions: {
+        Row: {
+          account_id: string
+          created_at: string
+          emoji: string
+          followup_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          emoji: string
+          followup_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          emoji?: string
+          followup_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_reactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followup_reactions_followup_id_fkey"
+            columns: ["followup_id"]
+            isOneToOne: false
+            referencedRelation: "client_followups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followup_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_responses: {
         Row: {
           account_id: string
