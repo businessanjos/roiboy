@@ -33,6 +33,7 @@ export interface TimelineEvent {
     priority?: string;
     status?: string;
     roi_type?: string;
+    image_url?: string;
   };
 }
 
@@ -278,6 +279,24 @@ export function Timeline({ events, className }: TimelineProps) {
                           <p className="text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-3 group-hover:line-clamp-none transition-all">
                             "{event.description}"
                           </p>
+                        )}
+
+                        {/* Image attachment for ROI events */}
+                        {event.metadata?.image_url && (
+                          <div className="mt-3">
+                            <a
+                              href={event.metadata.image_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
+                              <img
+                                src={event.metadata.image_url}
+                                alt="Print anexado"
+                                className="w-full max-h-48 object-cover rounded-lg border hover:opacity-90 transition-opacity cursor-pointer"
+                              />
+                            </a>
+                          </div>
                         )}
 
                         {/* Footer with source indicator */}
