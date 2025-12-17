@@ -53,6 +53,12 @@ interface ClientWithScore {
   recommendation?: string;
   vnps_score?: number;
   vnps_class?: "promoter" | "neutral" | "detractor";
+  product_ids?: string[];
+}
+
+interface Product {
+  id: string;
+  name: string;
 }
 
 interface LifeEvent {
@@ -102,9 +108,26 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [quadrantFilter, setQuadrantFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [products, setProducts] = useState<Product[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<LifeEvent[]>([]);
   const [roiStats, setROIStats] = useState<ROIStats | null>(null);
   const [riskStats, setRiskStats] = useState<RiskStats | null>(null);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
 
   const fetchClients = async () => {
     setLoading(true);
@@ -115,6 +138,20 @@ export default function Dashboard() {
         .order("created_at", { ascending: false });
 
       if (clientsError) throw clientsError;
+
+      // Fetch all client_products at once for efficiency
+      const { data: clientProductsData } = await supabase
+        .from("client_products")
+        .select("client_id, product_id");
+
+      // Create a map of client_id -> product_ids
+      const clientProductsMap: Record<string, string[]> = {};
+      (clientProductsData || []).forEach((cp: any) => {
+        if (!clientProductsMap[cp.client_id]) {
+          clientProductsMap[cp.client_id] = [];
+        }
+        clientProductsMap[cp.client_id].push(cp.product_id);
+      });
 
       const clientsWithScores: ClientWithScore[] = await Promise.all(
         (clientsData || []).map(async (client) => {
@@ -164,6 +201,7 @@ export default function Dashboard() {
             recommendation: recData?.action_text,
             vnps_score: vnpsData?.vnps_score,
             vnps_class: vnpsData?.vnps_class as ClientWithScore["vnps_class"],
+            product_ids: clientProductsMap[client.id] || [],
           };
         })
       );
@@ -293,6 +331,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    fetchProducts();
     fetchClients();
     fetchUpcomingEvents();
     fetchROIStats();
@@ -305,7 +344,8 @@ export default function Dashboard() {
       client.phone_e164.includes(searchQuery);
     const matchesStatus = statusFilter === "all" || client.status === statusFilter;
     const matchesQuadrant = quadrantFilter === "all" || client.quadrant === quadrantFilter;
-    return matchesSearch && matchesStatus && matchesQuadrant;
+    const matchesProduct = productFilter === "all" || (client.product_ids?.includes(productFilter) ?? false);
+    return matchesSearch && matchesStatus && matchesQuadrant && matchesProduct;
   });
 
   const totalClients = clients.length;
@@ -723,6 +763,19 @@ export default function Dashboard() {
                     <SelectItem value="highE_lowROI">Risco de Cobrança</SelectItem>
                     <SelectItem value="lowE_highROI">Risco Silencioso</SelectItem>
                     <SelectItem value="lowE_lowROI">Churn Iminente</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={productFilter} onValueChange={setProductFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Produtos</SelectItem>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
