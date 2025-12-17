@@ -1629,15 +1629,15 @@ export default function ClientDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="agenda" className="space-y-4">
+      <Tabs defaultValue="timeline" className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="cx">Momentos CX</TabsTrigger>
             <TabsTrigger value="followup">Acompanhamento</TabsTrigger>
             <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
             <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
             <TabsTrigger value="risks">Riscos ({riskEvents.length})</TabsTrigger>
             <TabsTrigger value="recommendations">
