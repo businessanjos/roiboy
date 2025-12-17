@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import Products from "./pages/Products";
 import Events from "./pages/Events";
 import Team from "./pages/Team";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/products" element={<Products />} />
               <Route path="/events" element={<Events />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
