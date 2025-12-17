@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import { CustomFieldsManager, CustomField, FieldOption, FieldValueEditor } from "@/components/custom-fields";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -114,6 +115,7 @@ export default function Clients() {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
 
   const fetchClients = async () => {
     // Get account_id first
@@ -243,6 +245,17 @@ export default function Clients() {
     }
   };
 
+  const fetchTeamUsers = async () => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email")
+      .order("name");
+    
+    if (!error && data) {
+      setTeamUsers(data);
+    }
+  };
+
   const fetchFieldValues = async (clientIds: string[]) => {
     if (clientIds.length === 0) return;
 
@@ -273,6 +286,7 @@ export default function Clients() {
     fetchClients();
     fetchProducts();
     fetchCustomFields();
+    fetchTeamUsers();
   }, []);
 
   // Fetch field values when clients are loaded
@@ -496,6 +510,27 @@ export default function Clients() {
         [fieldId]: newValue
       }
     }));
+  };
+
+  // Helper to get responsible users for a client
+  const getResponsibleUsers = (clientId: string) => {
+    const userField = customFields.find(f => f.field_type === "user");
+    if (!userField) return [];
+    
+    const userIds = fieldValues[clientId]?.[userField.id];
+    if (!Array.isArray(userIds) || userIds.length === 0) return [];
+    
+    return teamUsers.filter(u => userIds.includes(u.id));
+  };
+
+  // Helper to get initials from name
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
   };
 
   return (
@@ -792,9 +827,44 @@ export default function Clients() {
                     filtered.map((client) => (
                       <TableRow key={client.id} className="hover:bg-muted/30">
                         <TableCell className="sticky left-0 bg-background z-10">
-                          <div className="min-w-[180px]">
-                            <p className="font-medium truncate">{client.full_name}</p>
-                            <p className="text-xs text-muted-foreground">{client.phone_e164}</p>
+                          <div className="min-w-[180px] flex items-center gap-2">
+                            {/* Responsible users avatars */}
+                            {getResponsibleUsers(client.id).length > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex -space-x-2">
+                                      {getResponsibleUsers(client.id).slice(0, 3).map((user) => (
+                                        <Avatar key={user.id} className="h-7 w-7 border-2 border-background">
+                                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                            {getInitials(user.name)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      ))}
+                                      {getResponsibleUsers(client.id).length > 3 && (
+                                        <Avatar className="h-7 w-7 border-2 border-background">
+                                          <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                            +{getResponsibleUsers(client.id).length - 3}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs">
+                                      <p className="font-medium mb-1">Responsáveis:</p>
+                                      {getResponsibleUsers(client.id).map(u => (
+                                        <p key={u.id}>{u.name}</p>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{client.full_name}</p>
+                              <p className="text-xs text-muted-foreground">{client.phone_e164}</p>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -849,19 +919,54 @@ export default function Clients() {
               <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1 min-w-0 flex-1">
-                      <p className="font-medium truncate">{client.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
-                      {clientProducts.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                          {clientProducts.map((productName: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              <Package className="h-3 w-3 mr-1" />
-                              {productName}
-                            </Badge>
-                          ))}
-                        </div>
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      {/* Responsible users avatars */}
+                      {getResponsibleUsers(client.id).length > 0 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex -space-x-2 flex-shrink-0">
+                                {getResponsibleUsers(client.id).slice(0, 2).map((user) => (
+                                  <Avatar key={user.id} className="h-8 w-8 border-2 border-background">
+                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                      {getInitials(user.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                ))}
+                                {getResponsibleUsers(client.id).length > 2 && (
+                                  <Avatar className="h-8 w-8 border-2 border-background">
+                                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                      +{getResponsibleUsers(client.id).length - 2}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs">
+                                <p className="font-medium mb-1">Responsáveis:</p>
+                                {getResponsibleUsers(client.id).map(u => (
+                                  <p key={u.id}>{u.name}</p>
+                                ))}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
+                      <div className="space-y-1 min-w-0">
+                        <p className="font-medium truncate">{client.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
+                        {clientProducts.length > 0 && (
+                          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                            {clientProducts.map((productName: string, idx: number) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                <Package className="h-3 w-3 mr-1" />
+                                {productName}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
                       {/* WhatsApp indicator */}
