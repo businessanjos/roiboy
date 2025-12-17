@@ -189,6 +189,7 @@ export default function ClientDetail() {
   // Delete confirmation state
   const [deletingRoiId, setDeletingRoiId] = useState<string | null>(null);
   const [deletingRiskId, setDeletingRiskId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Edit client info state
   const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
@@ -964,6 +965,7 @@ export default function ClientDetail() {
 
   const handleDeleteRoi = async () => {
     if (!deletingRoiId) return;
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from("roi_events")
@@ -977,6 +979,8 @@ export default function ClientDetail() {
     } catch (error) {
       console.error("Error deleting ROI:", error);
       toast.error("Erro ao excluir ROI");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1018,6 +1022,7 @@ export default function ClientDetail() {
 
   const handleDeleteRisk = async () => {
     if (!deletingRiskId) return;
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from("risk_events")
@@ -1031,6 +1036,8 @@ export default function ClientDetail() {
     } catch (error) {
       console.error("Error deleting risk:", error);
       toast.error("Erro ao excluir risco");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1902,7 +1909,7 @@ export default function ClientDetail() {
           </Dialog>
 
           {/* Delete ROI Confirmation */}
-          <AlertDialog open={!!deletingRoiId} onOpenChange={(open) => !open && setDeletingRoiId(null)}>
+          <AlertDialog open={!!deletingRoiId} onOpenChange={(open) => !open && !isDeleting && setDeletingRoiId(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Excluir evento de ROI?</AlertDialogTitle>
@@ -1911,9 +1918,20 @@ export default function ClientDetail() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteRoi} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Excluir
+                <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteRoi} 
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    "Excluir"
+                  )}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -2082,7 +2100,7 @@ export default function ClientDetail() {
           </Dialog>
 
           {/* Delete Risk Confirmation */}
-          <AlertDialog open={!!deletingRiskId} onOpenChange={(open) => !open && setDeletingRiskId(null)}>
+          <AlertDialog open={!!deletingRiskId} onOpenChange={(open) => !open && !isDeleting && setDeletingRiskId(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Excluir evento de risco?</AlertDialogTitle>
@@ -2091,9 +2109,20 @@ export default function ClientDetail() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteRisk} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Excluir
+                <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteRisk} 
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    "Excluir"
+                  )}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
