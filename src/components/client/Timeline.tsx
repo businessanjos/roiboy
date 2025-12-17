@@ -217,7 +217,7 @@ const getFileTypeLabel = (fileName?: string) => {
   return types[ext || ""] || "Arquivo";
 };
 
-function CommentItem({ event, isHighlighted }: { event: TimelineEvent; isHighlighted?: boolean }) {
+function CommentItem({ event, highlightState }: { event: TimelineEvent; highlightState?: "glow" | "fading" | null }) {
   const userName = event.metadata?.user_name || "Usuário";
   const userAvatar = event.metadata?.user_avatar;
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -226,8 +226,9 @@ function CommentItem({ event, isHighlighted }: { event: TimelineEvent; isHighlig
     <div 
       id={`comment-${event.id}`}
       className={cn(
-        "flex gap-3 p-3 -mx-3 rounded-lg transition-all duration-500",
-        isHighlighted && "bg-primary/10 ring-2 ring-primary/30 animate-pulse"
+        "flex gap-3 p-3 -mx-3 rounded-lg",
+        highlightState === "glow" && "animate-highlight-glow",
+        highlightState === "fading" && "animate-highlight-fade"
       )}
     >
       <Avatar className="h-10 w-10 flex-shrink-0">
@@ -405,6 +406,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
   const [clientName, setClientName] = useState<string>("");
   const [activeFilters, setActiveFilters] = useState<Set<EventFilter>>(new Set());
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [highlightState, setHighlightState] = useState<"glow" | "fading" | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -418,6 +420,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
     if (hash && hash.startsWith("#comment-")) {
       const commentId = hash.replace("#comment-", "");
       setHighlightedId(commentId);
+      setHighlightState("glow");
       setShowOlder(true); // Show all events to find the comment
       
       // Wait for DOM to update, then scroll
@@ -425,8 +428,16 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         const element = document.getElementById(`comment-${commentId}`);
         if (element) {
           element.scrollIntoView({ behavior: "smooth", block: "center" });
-          // Remove highlight after animation
-          setTimeout(() => setHighlightedId(null), 3000);
+          
+          // After 2.5s of glow, start fade-out
+          setTimeout(() => {
+            setHighlightState("fading");
+            // After fade completes, remove highlight
+            setTimeout(() => {
+              setHighlightedId(null);
+              setHighlightState(null);
+            }, 500);
+          }, 2500);
         }
       }, 100);
     }
@@ -692,7 +703,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         {visibleEvents.map((event, index) => (
           <div key={event.id} className="relative">
             {event.type === "comment" ? (
-              <CommentItem event={event} isHighlighted={highlightedId === event.id} />
+              <CommentItem event={event} highlightState={highlightedId === event.id ? highlightState : null} />
             ) : event.type === "field_change" ? (
               <SystemEventItem event={event} />
             ) : (
