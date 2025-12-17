@@ -535,6 +535,7 @@ export type Database = {
         Row: {
           account_id: string
           additional_phones: Json | null
+          avatar_url: string | null
           birth_date: string | null
           city: string | null
           cnpj: string | null
@@ -558,6 +559,7 @@ export type Database = {
         Insert: {
           account_id: string
           additional_phones?: Json | null
+          avatar_url?: string | null
           birth_date?: string | null
           city?: string | null
           cnpj?: string | null
@@ -581,6 +583,7 @@ export type Database = {
         Update: {
           account_id?: string
           additional_phones?: Json | null
+          avatar_url?: string | null
           birth_date?: string | null
           city?: string | null
           cnpj?: string | null
