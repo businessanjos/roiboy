@@ -3,10 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Package, 
   Calendar, 
@@ -21,8 +19,8 @@ import {
   Pencil,
   X,
   Check,
-  Plus,
-  Trash2
+  Trash2,
+  Send
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -62,11 +60,6 @@ const billingPeriodLabels = {
   one_time: "Único",
 };
 
-const emptyForm = {
-  title: "",
-  content: "",
-};
-
 export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,10 +67,12 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  
+  // Quick comment state
+  const [quickComment, setQuickComment] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id: string } | null>(null);
 
   const fetchSubscriptions = async () => {
     try {
@@ -96,8 +91,17 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     }
   };
 
+  const fetchCurrentUser = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("id, name, avatar_url, account_id")
+      .single();
+    if (data) setCurrentUser(data);
+  };
+
   useEffect(() => {
     fetchSubscriptions();
+    fetchCurrentUser();
 
     const channel = supabase
       .channel(`subscriptions-${clientId}`)
@@ -182,40 +186,35 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     }
   };
 
-  const handleAddNote = async () => {
-    if (!formData.title.trim()) {
-      toast.error("Título é obrigatório");
-      return;
-    }
-
+  const handleQuickComment = async () => {
+    if (!quickComment.trim() || !currentUser) return;
+    
     setSaving(true);
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id, id")
-        .single();
-
-      if (!userData) throw new Error("Usuário não encontrado");
-
       const { error } = await supabase.from("client_followups").insert({
-        account_id: userData.account_id,
+        account_id: currentUser.account_id,
         client_id: clientId,
-        user_id: userData.id,
+        user_id: currentUser.id,
         type: "financial_note",
-        title: formData.title.trim(),
-        content: formData.content.trim() || null,
+        title: null,
+        content: quickComment.trim(),
       });
 
       if (error) throw error;
-
       toast.success("Nota financeira adicionada!");
-      setDialogOpen(false);
-      setFormData(emptyForm);
+      setQuickComment("");
     } catch (error: any) {
       console.error("Error adding note:", error);
       toast.error(error.message || "Erro ao adicionar nota");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleQuickKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleQuickComment();
     }
   };
 
@@ -258,68 +257,53 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center gap-2 flex-wrap">
         <h3 className="font-medium">Dados Financeiros</h3>
-        <div className="flex gap-2">
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Manual
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Nota Financeira</DialogTitle>
-                <DialogDescription>
-                  Registre uma informação ou observação financeira sobre o cliente
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Título *</Label>
-                  <Input
-                    placeholder="Ex: Negociação de desconto, Revisão de contrato..."
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Detalhes</Label>
-                  <Textarea
-                    placeholder="Descreva os detalhes da informação financeira..."
-                    value={formData.content}
-                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                    className="min-h-[120px]"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleAddNote} disabled={saving}>
-                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  Adicionar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleSyncOmie}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Sincronizar Omie
-          </Button>
-        </div>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={handleSyncOmie}
+          disabled={syncing}
+        >
+          {syncing ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
+          Sincronizar Omie
+        </Button>
       </div>
+
+      {/* Quick Comment Input */}
+      {currentUser && (
+        <div className="flex gap-3 pb-4 border-b">
+          <Avatar className="h-9 w-9 flex-shrink-0">
+            <AvatarImage src={currentUser.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              {currentUser.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 relative">
+            <Input
+              placeholder="Escreva uma nota financeira..."
+              value={quickComment}
+              onChange={(e) => setQuickComment(e.target.value)}
+              onKeyDown={handleQuickKeyDown}
+              className="pr-12 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              {(quickComment.trim() || saving) && (
+                <button
+                  type="button"
+                  onClick={handleQuickComment}
+                  disabled={saving || !quickComment.trim()}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {subscriptions.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
