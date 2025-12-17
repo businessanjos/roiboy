@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, subMonths, startOfMonth } from "date-fns";
+import { format, subMonths, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Loader2,
@@ -34,6 +34,16 @@ import {
   Calendar,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 interface ChurnContract {
   id: string;
@@ -135,6 +145,45 @@ export default function ChurnReport() {
       .reduce((sum, c) => sum + c.value, 0),
   };
 
+  // Calculate monthly trend data for chart
+  const monthlyTrendData = useMemo(() => {
+    const monthsToShow = periodFilter === "all" ? 12 : parseInt(periodFilter);
+    const months: { [key: string]: { cancelled: number; ended: number; paused: number; value: number } } = {};
+    
+    // Initialize last N months
+    for (let i = monthsToShow - 1; i >= 0; i--) {
+      const date = subMonths(new Date(), i);
+      const key = format(date, "yyyy-MM");
+      months[key] = { cancelled: 0, ended: 0, paused: 0, value: 0 };
+    }
+    
+    // Count contracts per month
+    contracts.forEach((contract) => {
+      if (!contract.status_changed_at) return;
+      const date = parseISO(contract.status_changed_at);
+      const key = format(date, "yyyy-MM");
+      if (months[key]) {
+        if (contract.status === "cancelled") {
+          months[key].cancelled++;
+          months[key].value += contract.value;
+        } else if (contract.status === "ended") {
+          months[key].ended++;
+        } else if (contract.status === "paused") {
+          months[key].paused++;
+        }
+      }
+    });
+    
+    // Convert to array for chart
+    return Object.entries(months).map(([month, data]) => ({
+      month: format(parseISO(`${month}-01`), "MMM/yy", { locale: ptBR }),
+      Cancelados: data.cancelled,
+      Encerrados: data.ended,
+      Pausados: data.paused,
+      valor: data.value,
+    }));
+  }, [contracts, periodFilter]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -234,6 +283,61 @@ export default function ChurnReport() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Monthly Trend Chart */}
+        {!loading && monthlyTrendData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                Tendência Mensal
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="month" 
+                      tick={{ fontSize: 12 }}
+                      className="text-muted-foreground"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      className="text-muted-foreground"
+                      allowDecimals={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="Cancelados" 
+                      fill="hsl(0, 84%, 60%)" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="Encerrados" 
+                      fill="hsl(215, 14%, 45%)" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="Pausados" 
+                      fill="hsl(45, 93%, 47%)" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
