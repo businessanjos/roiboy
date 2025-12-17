@@ -22,6 +22,7 @@ import { ClientAgenda } from "@/components/client/ClientAgenda";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { ClientFollowup } from "@/components/client/ClientFollowup";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
+import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -1256,6 +1257,7 @@ export default function ClientDetail() {
               </div>
             </CardHeader>
             <CardContent className="pt-4">
+              <ClientFieldsSummary clientId={id!} />
               <Timeline events={timeline} />
             </CardContent>
           </Card>
