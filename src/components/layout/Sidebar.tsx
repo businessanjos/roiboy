@@ -16,15 +16,18 @@ import {
   CalendarDays,
   User,
   Pencil,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   Sheet,
   SheetContent,
@@ -61,6 +64,7 @@ const navItems = [
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
@@ -135,6 +139,33 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             </NavLink>
           );
         })}
+
+        {/* Notifications */}
+        <NavLink
+          to="/notifications"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
+            location.pathname === "/notifications"
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <div className="relative">
+            <Bell className="h-5 w-5 flex-shrink-0" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </div>
+          {!collapsed && <span>Notificações</span>}
+          {!collapsed && unreadCount > 0 && (
+            <Badge variant="default" className="ml-auto h-5 px-1.5 text-[10px]">
+              {unreadCount}
+            </Badge>
+          )}
+        </NavLink>
       </nav>
 
       {/* User Menu */}
