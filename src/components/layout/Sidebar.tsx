@@ -14,9 +14,10 @@ import {
   Menu,
   X,
   CalendarDays,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -26,6 +27,22 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface CurrentUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+}
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -37,17 +54,22 @@ const navItems = [
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
-const bottomNavItems = [
-  { to: "/profile", icon: UserCircle, label: "Meu Perfil" },
-];
-
-function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+function SidebarContent({ collapsed, onNavigate, currentUser }: { collapsed: boolean; onNavigate?: () => void; currentUser: CurrentUser | null }) {
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -75,39 +97,53 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         })}
       </nav>
 
-      {/* Bottom navigation and Logout */}
-      <div className="p-3 border-t border-border space-y-1">
-        {bottomNavItems.map((item) => {
-          const isActive = location.pathname === item.to;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={onNavigate}
+      {/* User Menu */}
+      <div className="p-3 border-t border-border">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                collapsed && "justify-center"
+                "w-full justify-start gap-3 px-2 py-2 h-auto hover:bg-muted",
+                collapsed && "justify-center px-0"
               )}
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </NavLink>
-          );
-        })}
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-muted",
-            collapsed && "justify-center"
-          )}
-          onClick={handleLogout}
-        >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && <span>Sair</span>}
-        </Button>
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={currentUser?.avatar_url || undefined} alt={currentUser?.name} />
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                  {currentUser ? getInitials(currentUser.name) : "?"}
+                </AvatarFallback>
+              </Avatar>
+              {!collapsed && currentUser && (
+                <div className="flex flex-col items-start text-left overflow-hidden">
+                  <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
+                    {currentUser.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+                    {currentUser.email}
+                  </span>
+                </div>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align={collapsed ? "center" : "start"} side="top" className="w-56">
+            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => { navigate("/profile"); onNavigate?.(); }}>
+              <User className="mr-2 h-4 w-4" />
+              Meu Perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { navigate("/settings"); onNavigate?.(); }}>
+              <Settings className="mr-2 h-4 w-4" />
+              Configurações
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </>
   );
@@ -115,6 +151,19 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  const fetchCurrentUser = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("id, name, email, avatar_url")
+      .maybeSingle();
+    if (data) setCurrentUser(data);
+  };
 
   return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
@@ -151,7 +200,7 @@ export function MobileHeader() {
                 </Button>
               </SheetClose>
             </div>
-            <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} />
+            <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} currentUser={currentUser} />
           </div>
         </SheetContent>
       </Sheet>
@@ -161,7 +210,20 @@ export function MobileHeader() {
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  const fetchCurrentUser = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("id, name, email, avatar_url")
+      .maybeSingle();
+    if (data) setCurrentUser(data);
+  };
 
   if (isMobile) {
     return null;
@@ -200,7 +262,7 @@ export function Sidebar() {
         </Button>
       </div>
 
-      <SidebarContent collapsed={collapsed} />
+      <SidebarContent collapsed={collapsed} currentUser={currentUser} />
     </aside>
   );
 }
