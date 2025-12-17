@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { ScoreBadge } from "@/components/ui/score-badge";
 import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Legend } from "recharts";
 import {
   Users,
   AlertTriangle,
@@ -35,11 +37,18 @@ import {
   MessageSquare,
   TrendingDown,
   Minus,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth } from "date-fns";
+import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
+
+interface ContractStatusChange {
+  id: string;
+  status: string;
+  status_changed_at: string | null;
+}
 
 interface ClientWithScore {
   id: string;
@@ -114,6 +123,7 @@ export default function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState<LifeEvent[]>([]);
   const [roiStats, setROIStats] = useState<ROIStats | null>(null);
   const [riskStats, setRiskStats] = useState<RiskStats | null>(null);
+  const [contractStatusChanges, setContractStatusChanges] = useState<ContractStatusChange[]>([]);
 
   const fetchProducts = async () => {
     try {
@@ -331,12 +341,71 @@ export default function Dashboard() {
     }
   };
 
+  const fetchContractStatusChanges = async () => {
+    try {
+      const sixMonthsAgo = subMonths(new Date(), 6);
+      
+      const { data, error } = await supabase
+        .from("client_contracts")
+        .select("id, status, status_changed_at")
+        .in("status", ["churned", "paused", "ended"])
+        .gte("status_changed_at", sixMonthsAgo.toISOString())
+        .order("status_changed_at", { ascending: true });
+
+      if (error) throw error;
+      setContractStatusChanges(data || []);
+    } catch (error) {
+      console.error("Error fetching contract status changes:", error);
+    }
+  };
+
+  // Calculate monthly chart data
+  const monthlyChartData = useMemo(() => {
+    const months: { [key: string]: { month: string; cancelamentos: number; congelamentos: number } } = {};
+    
+    // Initialize last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = subMonths(new Date(), i);
+      const key = format(date, "yyyy-MM");
+      const label = format(date, "MMM/yy", { locale: ptBR });
+      months[key] = { month: label, cancelamentos: 0, congelamentos: 0 };
+    }
+    
+    contractStatusChanges.forEach((contract) => {
+      if (!contract.status_changed_at) return;
+      const date = parseISO(contract.status_changed_at);
+      const key = format(date, "yyyy-MM");
+      
+      if (months[key]) {
+        if (contract.status === "churned" || contract.status === "ended") {
+          months[key].cancelamentos++;
+        } else if (contract.status === "paused") {
+          months[key].congelamentos++;
+        }
+      }
+    });
+    
+    return Object.values(months);
+  }, [contractStatusChanges]);
+
+  const chartConfig = {
+    cancelamentos: {
+      label: "Cancelamentos",
+      color: "hsl(var(--danger))",
+    },
+    congelamentos: {
+      label: "Congelamentos",
+      color: "hsl(38 92% 50%)",
+    },
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchClients();
     fetchUpcomingEvents();
     fetchROIStats();
     fetchRiskStats();
+    fetchContractStatusChanges();
 
     // Real-time subscription for client changes
     const channel = supabase
@@ -361,6 +430,17 @@ export default function Dashboard() {
         },
         () => {
           fetchClients();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "client_contracts",
+        },
+        () => {
+          fetchContractStatusChanges();
         }
       )
       .subscribe();
@@ -415,7 +495,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => { fetchClients(); fetchUpcomingEvents(); fetchROIStats(); fetchRiskStats(); }} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { fetchClients(); fetchUpcomingEvents(); fetchROIStats(); fetchRiskStats(); fetchContractStatusChanges(); }} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
@@ -792,6 +872,49 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Historical Chart */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Evolução Mensal
+              </CardTitle>
+              <CardDescription>Cancelamentos e congelamentos nos últimos 6 meses</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[280px] w-full">
+                <BarChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <XAxis 
+                    dataKey="month" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    className="text-xs"
+                  />
+                  <YAxis 
+                    tickLine={false} 
+                    axisLine={false} 
+                    className="text-xs"
+                    allowDecimals={false}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar 
+                    dataKey="cancelamentos" 
+                    fill="hsl(var(--danger))" 
+                    radius={[4, 4, 0, 0]} 
+                    name="Cancelamentos"
+                  />
+                  <Bar 
+                    dataKey="congelamentos" 
+                    fill="hsl(38 92% 50%)" 
+                    radius={[4, 4, 0, 0]} 
+                    name="Congelamentos"
+                  />
+                  <Legend />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
 
           {/* Summary Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
