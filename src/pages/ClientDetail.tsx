@@ -1655,35 +1655,17 @@ export default function ClientDetail() {
             <div className="flex flex-col items-center justify-center h-full gap-2">
               <p className="text-sm font-medium text-muted-foreground">V-NPS</p>
               {vnps ? (
-                <div className="flex flex-col items-center gap-2">
-                  <VNPSBadge
-                    score={vnps.vnps_score}
-                    vnpsClass={vnps.vnps_class}
-                    trend={vnps.trend}
-                    explanation={vnps.explanation || undefined}
-                    eligible={vnps.eligible_for_nps_ask}
-                    size="lg"
-                    showClass
-                  />
-                  {(client.contract_start_date || client.contract_end_date) && (
-                    <ContractTimer 
-                      startDate={client.contract_start_date}
-                      endDate={client.contract_end_date}
-                      variant="compact"
-                    />
-                  )}
-                </div>
+                <VNPSBadge
+                  score={vnps.vnps_score}
+                  vnpsClass={vnps.vnps_class}
+                  trend={vnps.trend}
+                  explanation={vnps.explanation || undefined}
+                  eligible={vnps.eligible_for_nps_ask}
+                  size="lg"
+                  showClass
+                />
               ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-2xl font-bold text-muted-foreground">—</span>
-                  {(client.contract_start_date || client.contract_end_date) && (
-                    <ContractTimer 
-                      startDate={client.contract_start_date}
-                      endDate={client.contract_end_date}
-                      variant="compact"
-                    />
-                  )}
-                </div>
+                <span className="text-2xl font-bold text-muted-foreground">—</span>
               )}
             </div>
           </CardContent>
@@ -1714,29 +1696,52 @@ export default function ClientDetail() {
         </Card>
       </div>
 
-      {/* V-NPS Explanation */}
-      {vnps && (
-        <Card className="shadow-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <HelpCircle className="h-4 w-4 text-muted-foreground" />
-              Por que esse V-NPS?
-            </CardTitle>
-            <CardDescription>
-              Probabilidade real de recomendação, calculada continuamente a partir de ROI percebido, engajamento e risco.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <VNPSExplanation
-              explanation={vnps.explanation || "V-NPS calculado com base nos dados disponíveis."}
-              roizometer={vnps.roizometer}
-              escore={vnps.escore}
-              riskIndex={vnps.risk_index}
-              eligible={vnps.eligible_for_nps_ask}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* V-NPS Explanation + Contract Timer side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {vnps && (
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                Por que esse V-NPS?
+              </CardTitle>
+              <CardDescription>
+                Probabilidade real de recomendação, calculada continuamente a partir de ROI percebido, engajamento e risco.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <VNPSExplanation
+                explanation={vnps.explanation || "V-NPS calculado com base nos dados disponíveis."}
+                roizometer={vnps.roizometer}
+                escore={vnps.escore}
+                riskIndex={vnps.risk_index}
+                eligible={vnps.eligible_for_nps_ask}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {(client.contract_start_date || client.contract_end_date) && (
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                Vigência do Contrato
+              </CardTitle>
+              <CardDescription>
+                Período e progresso do contrato atual
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ContractTimer 
+                startDate={client.contract_start_date}
+                endDate={client.contract_end_date}
+                variant="full"
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Risk Alerts */}
       {riskEvents.length > 0 && (
