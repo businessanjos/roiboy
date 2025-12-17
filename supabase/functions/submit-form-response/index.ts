@@ -135,6 +135,22 @@ Deno.serve(async (req) => {
 
     console.log(`Response submitted successfully: ${response.id}`);
 
+    // Mark form send as responded if client linked
+    if (resolvedClientId) {
+      const { error: updateSendError } = await supabase
+        .from("client_form_sends")
+        .update({ responded_at: new Date().toISOString() })
+        .eq("client_id", resolvedClientId)
+        .eq("form_id", formId)
+        .is("responded_at", null);
+
+      if (updateSendError) {
+        console.warn("Could not update form send status:", updateSendError);
+      } else {
+        console.log(`Marked form send as responded for client ${resolvedClientId}`);
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, responseId: response.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -454,6 +454,58 @@ export type Database = {
           },
         ]
       }
+      client_form_sends: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          form_id: string
+          id: string
+          responded_at: string | null
+          sent_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          form_id: string
+          id?: string
+          responded_at?: string | null
+          sent_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          form_id?: string
+          id?: string
+          responded_at?: string | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_form_sends_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_form_sends_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_form_sends_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_life_events: {
         Row: {
           account_id: string
