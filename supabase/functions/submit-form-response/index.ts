@@ -35,10 +35,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch form to get account_id and validate
+    // Fetch form to get account_id, title and validate
     const { data: form, error: formError } = await supabase
       .from("forms")
-      .select("id, account_id, is_active, require_client_info")
+      .select("id, account_id, is_active, require_client_info, title")
       .eq("id", formId)
       .eq("is_active", true)
       .maybeSingle();
@@ -149,6 +149,55 @@ Deno.serve(async (req) => {
       } else {
         console.log(`Marked form send as responded for client ${resolvedClientId}`);
       }
+    }
+
+    // Create notifications for all users in the account
+    try {
+      // Get all users in the account
+      const { data: accountUsers, error: usersError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("account_id", form.account_id);
+
+      if (!usersError && accountUsers && accountUsers.length > 0) {
+        // Get client name for notification
+        let notificationClientName = clientName || "Cliente";
+        if (resolvedClientId) {
+          const { data: clientData } = await supabase
+            .from("clients")
+            .select("full_name")
+            .eq("id", resolvedClientId)
+            .maybeSingle();
+          
+          if (clientData?.full_name) {
+            notificationClientName = clientData.full_name;
+          }
+        }
+
+        // Create notification for each user
+        const notifications = accountUsers.map((user: { id: string }) => ({
+          account_id: form.account_id,
+          user_id: user.id,
+          type: "form_response",
+          title: "Nova resposta de formulário",
+          content: `${notificationClientName} respondeu ao formulário "${form.title}"`,
+          link: resolvedClientId ? `/clients/${resolvedClientId}` : "/forms",
+          source_type: "form_response",
+          source_id: response.id,
+        }));
+
+        const { error: notifyError } = await supabase
+          .from("notifications")
+          .insert(notifications);
+
+        if (notifyError) {
+          console.warn("Could not create notifications:", notifyError);
+        } else {
+          console.log(`Created ${notifications.length} notifications for form response`);
+        }
+      }
+    } catch (notifyErr) {
+      console.warn("Error creating notifications:", notifyErr);
     }
 
     return new Response(
