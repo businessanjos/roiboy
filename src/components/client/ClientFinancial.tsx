@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { 
   Package, 
   Calendar, 
@@ -282,12 +282,12 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 relative">
-            <Input
-              placeholder="Escreva uma nota financeira..."
+            <MentionInput
+              placeholder="Escreva uma nota financeira... Use @ para mencionar"
               value={quickComment}
-              onChange={(e) => setQuickComment(e.target.value)}
+              onChange={setQuickComment}
               onKeyDown={handleQuickKeyDown}
-              className="pr-12 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
+              className="pr-12"
             />
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
               {(quickComment.trim() || saving) && (

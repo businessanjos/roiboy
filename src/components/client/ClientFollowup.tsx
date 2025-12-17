@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -630,12 +631,12 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 relative">
-            <Input
-              placeholder="Escreva uma nota..."
+            <MentionInput
+              placeholder="Escreva uma nota... Use @ para mencionar"
               value={quickComment}
-              onChange={(e) => setQuickComment(e.target.value)}
+              onChange={setQuickComment}
               onKeyDown={handleQuickKeyDown}
-              className="pr-24 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
+              className="pr-24"
             />
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
               <input
