@@ -874,40 +874,65 @@ export default function Dashboard() {
             {/* Total de Clientes */}
             <Card className="shadow-card border-l-4 border-l-primary">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
-                <p className="text-2xl font-bold text-foreground">{totalClients}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
+                    <p className="text-2xl font-bold text-foreground">{totalClients}</p>
+                  </div>
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
               </CardContent>
             </Card>
 
             {/* Ativos */}
             <Card className="shadow-card border-l-4 border-l-green-500">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Ativos</p>
-                <p className="text-2xl font-bold text-green-600">{clients.filter(c => c.status === "active").length}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Ativos</p>
+                    <p className="text-2xl font-bold text-green-600">{clients.filter(c => c.status === "active").length}</p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-green-500" />
+                </div>
               </CardContent>
             </Card>
 
             {/* Cancelamentos */}
             <Card className="shadow-card border-l-4 border-l-red-500">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
-                <p className="text-2xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
+                    <p className="text-2xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
+                  </div>
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                </div>
               </CardContent>
             </Card>
 
             {/* Demissões */}
             <Card className="shadow-card border-l-4 border-l-orange-500">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Demissões</p>
-                <p className="text-2xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Demissões</p>
+                    <p className="text-2xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
+                  </div>
+                  <TrendingDown className="h-5 w-5 text-orange-500" />
+                </div>
               </CardContent>
             </Card>
 
             {/* Congelamentos */}
             <Card className="shadow-card border-l-4 border-l-amber-500">
               <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
-                <p className="text-2xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
+                    <p className="text-2xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
+                  </div>
+                  <Minus className="h-5 w-5 text-amber-500" />
+                </div>
               </CardContent>
             </Card>
           </div>
