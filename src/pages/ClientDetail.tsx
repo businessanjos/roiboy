@@ -546,6 +546,36 @@ export default function ClientDetail() {
         });
       });
 
+      // Add followups as comments
+      const { data: followupsData } = await supabase
+        .from("client_followups")
+        .select(`
+          *,
+          users (name, avatar_url)
+        `)
+        .eq("client_id", id)
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      (followupsData || []).forEach((followup: any) => {
+        timelineItems.push({
+          id: followup.id,
+          type: "comment",
+          title: followup.title || "Comentário",
+          description: followup.content,
+          timestamp: followup.created_at,
+          metadata: {
+            user_id: followup.user_id,
+            user_name: followup.users?.name || "Usuário",
+            user_avatar: followup.users?.avatar_url,
+            file_url: followup.file_url,
+            file_name: followup.file_name,
+            file_size: followup.file_size,
+            followup_type: followup.type as "note" | "file" | "image",
+          },
+        });
+      });
+
       // Sort by timestamp
       timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setTimeline(timelineItems.slice(0, 50));
@@ -686,6 +716,48 @@ export default function ClientDetail() {
               prev.map(r => r.id === rec.id ? rec : r)
             );
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'client_followups',
+          filter: `client_id=eq.${id}`,
+        },
+        async (payload) => {
+          console.log('New followup:', payload);
+          const followup = payload.new as any;
+          
+          // Fetch user info for the followup
+          const { data: userData } = await supabase
+            .from("users")
+            .select("name, avatar_url")
+            .eq("id", followup.user_id)
+            .single();
+          
+          setTimeline((prev) => {
+            const newEvent: TimelineEvent = {
+              id: followup.id,
+              type: "comment",
+              title: followup.title || "Comentário",
+              description: followup.content,
+              timestamp: followup.created_at,
+              metadata: {
+                user_id: followup.user_id,
+                user_name: userData?.name || "Usuário",
+                user_avatar: userData?.avatar_url,
+                file_url: followup.file_url,
+                file_name: followup.file_name,
+                file_size: followup.file_size,
+                followup_type: followup.type as "note" | "file" | "image",
+              },
+            };
+            const updated = [newEvent, ...prev.filter(e => e.id !== followup.id)];
+            updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            return updated.slice(0, 50);
+          });
         }
       )
       .subscribe((status) => {
@@ -1649,7 +1721,11 @@ export default function ClientDetail() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Histórico Completo</CardTitle>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span>Comentários</span>
+                  </div>
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-blue-500" />
                     <span>Mensagens</span>
@@ -1662,16 +1738,16 @@ export default function ClientDetail() {
                     <div className="w-2 h-2 rounded-full bg-red-500" />
                     <span>Riscos</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full bg-violet-500" />
-                    <span>Ações</span>
-                  </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-4">
               <ClientFieldsSummary clientId={id!} />
-              <Timeline events={timeline} />
+              <Timeline 
+                events={timeline} 
+                clientId={id!} 
+                onCommentAdded={fetchData}
+              />
             </CardContent>
           </Card>
         </TabsContent>
