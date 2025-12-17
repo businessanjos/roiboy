@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Plus,
   FileText,
@@ -43,6 +50,9 @@ import {
   ArrowUp,
   Search,
   X,
+  Send,
+  Camera,
+  Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -99,10 +109,19 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Quick comment state
+  const [quickComment, setQuickComment] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id: string } | null>(null);
+  
+  // File input refs
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const PAGE_SIZE = 10;
 
   useEffect(() => {
     fetchFollowups();
+    fetchCurrentUser();
   }, [clientId, sortOrder]);
 
   const fetchFollowups = async (loadMore = false) => {
@@ -163,6 +182,90 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     const fileNameMatch = followup.file_name?.toLowerCase().includes(query);
     return titleMatch || contentMatch || fileNameMatch;
   });
+
+  const fetchCurrentUser = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("id, name, avatar_url, account_id")
+      .single();
+    if (data) setCurrentUser(data);
+  };
+
+  const handleQuickComment = async () => {
+    if (!quickComment.trim() || !currentUser) return;
+    
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("client_followups")
+        .insert({
+          account_id: currentUser.account_id,
+          client_id: clientId,
+          user_id: currentUser.id,
+          type: "note",
+          title: null,
+          content: quickComment.trim(),
+        });
+
+      if (error) throw error;
+      toast.success("Nota adicionada!");
+      setQuickComment("");
+      fetchFollowups();
+    } catch (error: any) {
+      console.error("Error saving quick comment:", error);
+      toast.error("Erro ao salvar nota");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleQuickKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleQuickComment();
+    }
+  };
+
+  const handleQuickFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 10MB.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileData = await uploadFile(file);
+      
+      const { error } = await supabase
+        .from("client_followups")
+        .insert({
+          account_id: currentUser.account_id,
+          client_id: clientId,
+          user_id: currentUser.id,
+          type: type,
+          title: file.name,
+          content: null,
+          file_url: fileData.url,
+          file_name: fileData.name,
+          file_size: fileData.size,
+        });
+
+      if (error) throw error;
+      toast.success(type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+      fetchFollowups();
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast.error("Erro ao enviar arquivo");
+    } finally {
+      setUploading(false);
+      // Reset input
+      if (imageInputRef.current) imageInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const resetForm = () => {
     setFormType("note");
@@ -517,58 +620,110 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => openNewDialog("note")}>
-          <StickyNote className="h-4 w-4 mr-2" />
-          Nova Nota
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => openNewDialog("file")}>
-          <File className="h-4 w-4 mr-2" />
-          Subir Arquivo
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => openNewDialog("image")}>
-          <Image className="h-4 w-4 mr-2" />
-          Subir Imagem
-        </Button>
+      {/* Social Media Style Input */}
+      {currentUser && (
+        <div className="flex gap-3 pb-4 border-b">
+          <Avatar className="h-9 w-9 flex-shrink-0">
+            <AvatarImage src={currentUser.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              {currentUser.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 relative">
+            <Input
+              placeholder="Escreva uma nota..."
+              value={quickComment}
+              onChange={(e) => setQuickComment(e.target.value)}
+              onKeyDown={handleQuickKeyDown}
+              className="pr-24 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "image")}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "file")}
+              />
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {(quickComment.trim() || uploading) && (
+                <button
+                  type="button"
+                  onClick={handleQuickComment}
+                  disabled={saving || uploading || !quickComment.trim()}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {saving || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-        <div className="flex-1" />
-
-        {/* Sort Toggle */}
+      {/* Search and Sort */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 h-8"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
-          className="gap-2"
+          className="gap-1 h-8 px-2"
         >
-          {sortOrder === "desc" ? (
-            <ArrowDown className="h-4 w-4" />
-          ) : (
-            <ArrowUp className="h-4 w-4" />
-          )}
-          {sortOrder === "desc" ? "Mais recentes" : "Mais antigos"}
+          {sortOrder === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+          <span className="text-xs">{sortOrder === "desc" ? "Recentes" : "Antigos"}</span>
         </Button>
-      </div>
-
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por título ou conteúdo..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 pr-9"
-        />
-        {searchQuery && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-            onClick={() => setSearchQuery("")}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
       </div>
 
       {/* Followups List */}
