@@ -112,11 +112,12 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
         setAccountId(userData.account_id);
       }
 
-      // Fetch active custom fields
+      // Fetch active custom fields that should appear in clients
       const { data: fieldsData, error: fieldsError } = await supabase
         .from("custom_fields")
         .select("*")
         .eq("is_active", true)
+        .eq("show_in_clients", true)
         .order("display_order");
 
       if (fieldsError) throw fieldsError;

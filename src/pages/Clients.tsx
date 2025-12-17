@@ -250,6 +250,7 @@ export default function Clients() {
       .from("custom_fields")
       .select("*")
       .eq("is_active", true)
+      .eq("show_in_clients", true)
       .order("display_order");
 
     if (!error && data) {
