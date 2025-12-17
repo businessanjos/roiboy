@@ -11,7 +11,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -121,6 +123,12 @@ export default function Clients() {
   const [newClientAvatar, setNewClientAvatar] = useState<File | null>(null);
   const [newClientAvatarPreview, setNewClientAvatarPreview] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  
+  // Custom field values for new client
+  const [newClientFieldValues, setNewClientFieldValues] = useState<Record<string, any>>({});
+
+  // Get required custom fields
+  const requiredFields = customFields.filter(f => f.is_required);
 
   const fetchClients = async () => {
     // Get account_id first
@@ -340,6 +348,16 @@ export default function Clients() {
     if (newClientData.cpf && !validateCPF(newClientData.cpf)) errors.cpf = "CPF inválido";
     if (newClientData.cnpj && !validateCNPJ(newClientData.cnpj)) errors.cnpj = "CNPJ inválido";
     
+    // Validate required custom fields
+    requiredFields.forEach(field => {
+      const value = newClientFieldValues[field.id];
+      const isEmpty = value === null || value === undefined || value === "" || 
+                      (Array.isArray(value) && value.length === 0);
+      if (isEmpty) {
+        errors[`field_${field.id}`] = `${field.name} é obrigatório`;
+      }
+    });
+    
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       toast.error("Corrija os erros no formulário");
@@ -416,6 +434,52 @@ export default function Clients() {
         }));
         await supabase.from("client_products").insert(clientProducts);
       }
+
+      // Save custom field values
+      if (Object.keys(newClientFieldValues).length > 0 && newClient) {
+        const fieldValuesToInsert = Object.entries(newClientFieldValues).map(([fieldId, value]) => {
+          const field = customFields.find(f => f.id === fieldId);
+          if (!field) return null;
+          
+          const valueData: any = {
+            account_id: userData.account_id,
+            client_id: newClient.id,
+            field_id: fieldId,
+            value_text: null,
+            value_number: null,
+            value_boolean: null,
+            value_date: null,
+            value_json: null,
+          };
+
+          switch (field.field_type) {
+            case "boolean":
+              valueData.value_boolean = value;
+              break;
+            case "number":
+            case "currency":
+              valueData.value_number = value;
+              break;
+            case "date":
+              valueData.value_date = value;
+              break;
+            case "select":
+            case "text":
+              valueData.value_text = value;
+              break;
+            case "multi_select":
+            case "user":
+              valueData.value_json = value;
+              break;
+          }
+
+          return valueData;
+        }).filter(Boolean);
+
+        if (fieldValuesToInsert.length > 0) {
+          await supabase.from("client_field_values").insert(fieldValuesToInsert);
+        }
+      }
       
       toast.success("Cliente adicionado!");
       setDialogOpen(false);
@@ -423,6 +487,7 @@ export default function Clients() {
       setSelectedProducts([]);
       setNewClientAvatar(null);
       setNewClientAvatarPreview(null);
+      setNewClientFieldValues({});
       fetchClients();
     } catch (error: any) {
       toast.error(error.message || "Erro ao adicionar cliente");
@@ -768,6 +833,7 @@ export default function Clients() {
               setFormErrors({});
               setNewClientAvatar(null);
               setNewClientAvatarPreview(null);
+              setNewClientFieldValues({});
             }
           }}>
             <DialogTrigger asChild>
@@ -857,6 +923,175 @@ export default function Clients() {
                       </div>
                     )}
                   </div>
+
+                  {/* Required Custom Fields */}
+                  {requiredFields.length > 0 && (
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Layers className="h-4 w-4" />
+                        Campos Obrigatórios
+                      </Label>
+                      <div className="border rounded-lg p-3 space-y-4">
+                        {requiredFields.map((field) => {
+                          const value = newClientFieldValues[field.id];
+                          const hasError = formErrors[`field_${field.id}`];
+                          
+                          return (
+                            <div key={field.id} className="space-y-1.5">
+                              <Label className={`text-sm ${hasError ? "text-destructive" : ""}`}>
+                                {field.name} *
+                              </Label>
+                              
+                              {/* Boolean */}
+                              {field.field_type === "boolean" && (
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={value === true}
+                                    onCheckedChange={(checked) => 
+                                      setNewClientFieldValues(prev => ({ ...prev, [field.id]: checked }))
+                                    }
+                                  />
+                                  <span className="text-sm text-muted-foreground">
+                                    {value === true ? "Sim" : value === false ? "Não" : "Não definido"}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Select */}
+                              {field.field_type === "select" && (
+                                <Select
+                                  value={value || ""}
+                                  onValueChange={(v) => 
+                                    setNewClientFieldValues(prev => ({ ...prev, [field.id]: v }))
+                                  }
+                                >
+                                  <SelectTrigger className={hasError ? "border-destructive" : ""}>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {field.options.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              
+                              {/* Multi-select */}
+                              {field.field_type === "multi_select" && (
+                                <div className="flex flex-wrap gap-2">
+                                  {field.options.map((opt) => {
+                                    const selectedValues = Array.isArray(value) ? value : [];
+                                    const isSelected = selectedValues.includes(opt.value);
+                                    return (
+                                      <label
+                                        key={opt.value}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
+                                          isSelected 
+                                            ? "bg-primary text-primary-foreground border-primary" 
+                                            : "hover:bg-muted border-input"
+                                        }`}
+                                      >
+                                        <Checkbox
+                                          checked={isSelected}
+                                          onCheckedChange={() => {
+                                            const newValues = isSelected
+                                              ? selectedValues.filter(v => v !== opt.value)
+                                              : [...selectedValues, opt.value];
+                                            setNewClientFieldValues(prev => ({ ...prev, [field.id]: newValues }));
+                                          }}
+                                          className="hidden"
+                                        />
+                                        <span className="text-sm">{opt.label}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              
+                              {/* User */}
+                              {field.field_type === "user" && (
+                                <div className="flex flex-wrap gap-2">
+                                  {teamUsers.map((user) => {
+                                    const selectedUsers = Array.isArray(value) ? value : [];
+                                    const isSelected = selectedUsers.includes(user.id);
+                                    return (
+                                      <label
+                                        key={user.id}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
+                                          isSelected 
+                                            ? "bg-primary text-primary-foreground border-primary" 
+                                            : "hover:bg-muted border-input"
+                                        }`}
+                                      >
+                                        <Checkbox
+                                          checked={isSelected}
+                                          onCheckedChange={() => {
+                                            const newValues = isSelected
+                                              ? selectedUsers.filter(id => id !== user.id)
+                                              : [...selectedUsers, user.id];
+                                            setNewClientFieldValues(prev => ({ ...prev, [field.id]: newValues }));
+                                          }}
+                                          className="hidden"
+                                        />
+                                        <User className="h-3 w-3" />
+                                        <span className="text-sm">{user.name}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              
+                              {/* Number / Currency */}
+                              {(field.field_type === "number" || field.field_type === "currency") && (
+                                <Input
+                                  type="number"
+                                  value={value ?? ""}
+                                  onChange={(e) => 
+                                    setNewClientFieldValues(prev => ({ 
+                                      ...prev, 
+                                      [field.id]: e.target.value ? parseFloat(e.target.value) : null 
+                                    }))
+                                  }
+                                  placeholder={field.field_type === "currency" ? "R$ 0,00" : "0"}
+                                  className={hasError ? "border-destructive" : ""}
+                                />
+                              )}
+                              
+                              {/* Date */}
+                              {field.field_type === "date" && (
+                                <Input
+                                  type="date"
+                                  value={value || ""}
+                                  onChange={(e) => 
+                                    setNewClientFieldValues(prev => ({ ...prev, [field.id]: e.target.value || null }))
+                                  }
+                                  className={hasError ? "border-destructive" : ""}
+                                />
+                              )}
+                              
+                              {/* Text */}
+                              {field.field_type === "text" && (
+                                <Input
+                                  value={value || ""}
+                                  onChange={(e) => 
+                                    setNewClientFieldValues(prev => ({ ...prev, [field.id]: e.target.value || null }))
+                                  }
+                                  placeholder="Digite..."
+                                  className={hasError ? "border-destructive" : ""}
+                                />
+                              )}
+                              
+                              {hasError && (
+                                <p className="text-xs text-destructive">{hasError}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
               <DialogFooter>
