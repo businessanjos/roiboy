@@ -348,6 +348,16 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
   );
 }
 
+type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment";
+
+const filterConfig: Record<EventFilter, { label: string; color: string }> = {
+  comment: { label: "Comentários", color: "bg-primary" },
+  message: { label: "Mensagens", color: "bg-blue-500" },
+  roi: { label: "ROI", color: "bg-emerald-500" },
+  risk: { label: "Riscos", color: "bg-red-500" },
+  recommendation: { label: "Recomendações", color: "bg-violet-500" },
+};
+
 export function Timeline({ events, className, clientId, onCommentAdded }: TimelineProps) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -355,6 +365,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
   const [showOlder, setShowOlder] = useState(false);
   const [mentionedUsers, setMentionedUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [clientName, setClientName] = useState<string>("");
+  const [activeFilters, setActiveFilters] = useState<Set<EventFilter>>(new Set());
 
   useEffect(() => {
     fetchCurrentUser();
@@ -465,9 +476,48 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
     }
   };
 
-  if (events.length === 0) {
+  const toggleFilter = (filter: EventFilter) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(filter)) {
+        next.delete(filter);
+      } else {
+        next.add(filter);
+      }
+      return next;
+    });
+  };
+
+  // Filter events based on active filters
+  const filteredEvents = activeFilters.size === 0 
+    ? events 
+    : events.filter((e) => {
+        if (e.type === "field_change" || e.type === "session") return true; // Always show these
+        return activeFilters.has(e.type as EventFilter);
+      });
+
+  if (filteredEvents.length === 0 && events.length === 0) {
     return (
       <div className="space-y-4">
+        {/* Filter Buttons */}
+        <div className="flex flex-wrap gap-2 pb-2">
+          {(Object.entries(filterConfig) as [EventFilter, { label: string; color: string }][]).map(([key, config]) => (
+            <button
+              key={key}
+              onClick={() => toggleFilter(key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+                activeFilters.has(key)
+                  ? `${config.color} text-white`
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              <div className={cn("w-2 h-2 rounded-full", activeFilters.has(key) ? "bg-white" : config.color)} />
+              {config.label}
+            </button>
+          ))}
+        </div>
+        
         <div className="text-center py-12 text-muted-foreground">
           <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p>Nenhum evento na timeline ainda.</p>
@@ -534,17 +584,47 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
     );
   }
 
-  // Separate comments from system events
-  const commentEvents = events.filter(e => e.type === "comment");
-  const systemEvents = events.filter(e => e.type !== "comment");
-  
   // Show limited number initially
-  const visibleLimit = showOlder ? events.length : 10;
-  const visibleEvents = events.slice(0, visibleLimit);
-  const hiddenCount = events.length - visibleLimit;
+  const visibleLimit = showOlder ? filteredEvents.length : 10;
+  const visibleEvents = filteredEvents.slice(0, visibleLimit);
+  const hiddenCount = filteredEvents.length - visibleLimit;
 
   return (
     <div className={cn("space-y-4", className)}>
+      {/* Filter Buttons */}
+      <div className="flex flex-wrap gap-2 pb-2 border-b">
+        {(Object.entries(filterConfig) as [EventFilter, { label: string; color: string }][]).map(([key, config]) => (
+          <button
+            key={key}
+            onClick={() => toggleFilter(key)}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+              activeFilters.has(key)
+                ? `${config.color} text-white`
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+          >
+            <div className={cn("w-2 h-2 rounded-full", activeFilters.has(key) ? "bg-white" : config.color)} />
+            {config.label}
+          </button>
+        ))}
+        {activeFilters.size > 0 && (
+          <button
+            onClick={() => setActiveFilters(new Set())}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {/* No results message */}
+      {filteredEvents.length === 0 && events.length > 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>Nenhum evento encontrado com os filtros selecionados.</p>
+        </div>
+      )}
+
       {/* Events List */}
       <div className="space-y-4">
         {visibleEvents.map((event, index) => (
