@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, User, Users } from "lucide-react";
+import { Plus, Search, Pencil, User, Users, Camera, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type UserRole = Database["public"]["Enums"]["user_role"];
@@ -79,6 +79,9 @@ export default function Team() {
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formRole, setFormRole] = useState<UserRole>("mentor");
+  const [formAvatarUrl, setFormAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -168,6 +171,7 @@ export default function Team() {
     setFormName("");
     setFormEmail("");
     setFormRole("mentor");
+    setFormAvatarUrl(null);
   };
 
   const openEditDialog = (user: TeamUser) => {
@@ -175,7 +179,60 @@ export default function Team() {
     setFormName(user.name);
     setFormEmail(user.email);
     setFormRole(user.role);
+    setFormAvatarUrl(user.avatar_url);
     setIsEditDialogOpen(true);
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedUser) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione uma imagem");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const uniqueId = selectedUser.auth_user_id || selectedUser.id;
+      const fileName = `${uniqueId}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
+
+      const avatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+      setFormAvatarUrl(avatarUrl);
+
+      // Update user profile immediately
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", selectedUser.id);
+
+      if (updateError) throw updateError;
+
+      setSelectedUser({ ...selectedUser, avatar_url: avatarUrl });
+      toast.success("Foto atualizada!");
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast.error(error.message || "Erro ao enviar foto");
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -379,6 +436,39 @@ export default function Team() {
             <DialogTitle>Editar Membro</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Avatar Upload */}
+            <div className="flex justify-center">
+              <div className="relative group">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={formAvatarUrl || undefined} alt={formName} />
+                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                    {getInitials(formName || "U")}
+                  </AvatarFallback>
+                </Avatar>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  type="button"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit-name">Nome *</Label>
               <Input
