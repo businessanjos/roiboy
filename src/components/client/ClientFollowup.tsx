@@ -56,10 +56,21 @@ import {
   Paperclip,
   MessageSquare,
   CornerDownRight,
+  Smile,
+  Heart,
+  ThumbsUp,
+  Laugh,
+  Angry,
+  Frown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Followup {
   id: string;
@@ -78,7 +89,25 @@ interface Followup {
     avatar_url: string | null;
   };
   replies?: Followup[];
+  reactions?: Reaction[];
 }
+
+interface Reaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+  users?: {
+    name: string;
+  };
+}
+
+interface ReactionCount {
+  emoji: string;
+  count: number;
+  userReacted: boolean;
+}
+
+const EMOJI_OPTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
 
 interface ClientFollowupProps {
   clientId: string;
@@ -95,6 +124,9 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const [editingFollowup, setEditingFollowup] = useState<Followup | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  
+  // Reactions state
+  const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
 
   // Form state
   const [formType, setFormType] = useState<"note" | "file" | "image">("note");
@@ -178,6 +210,37 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         repliesData = replies || [];
       }
 
+      // Fetch all followup IDs (parents + replies) for reactions
+      const allFollowupIds = [...followupIds, ...repliesData.map(r => r.id)];
+      
+      if (allFollowupIds.length > 0) {
+        const { data: reactionsData } = await supabase
+          .from("followup_reactions")
+          .select(`
+            id,
+            followup_id,
+            emoji,
+            user_id,
+            users (name)
+          `)
+          .in("followup_id", allFollowupIds);
+        
+        // Group reactions by followup_id
+        const reactionsByFollowup: Record<string, Reaction[]> = {};
+        (reactionsData || []).forEach((reaction: any) => {
+          if (!reactionsByFollowup[reaction.followup_id]) {
+            reactionsByFollowup[reaction.followup_id] = [];
+          }
+          reactionsByFollowup[reaction.followup_id].push({
+            id: reaction.id,
+            emoji: reaction.emoji,
+            user_id: reaction.user_id,
+            users: reaction.users,
+          });
+        });
+        setReactions(prev => ({ ...prev, ...reactionsByFollowup }));
+      }
+
       // Group replies by parent_id
       const repliesByParent: Record<string, Followup[]> = {};
       repliesData.forEach((reply) => {
@@ -208,6 +271,74 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     } finally {
       setLoading(false);
       setLoadingMore(false);
+    }
+  };
+
+  // Get reaction counts for a followup
+  const getReactionCounts = (followupId: string): ReactionCount[] => {
+    const followupReactions = reactions[followupId] || [];
+    const counts: Record<string, { count: number; userReacted: boolean }> = {};
+    
+    followupReactions.forEach((r) => {
+      if (!counts[r.emoji]) {
+        counts[r.emoji] = { count: 0, userReacted: false };
+      }
+      counts[r.emoji].count++;
+      if (currentUser && r.user_id === currentUser.id) {
+        counts[r.emoji].userReacted = true;
+      }
+    });
+    
+    return Object.entries(counts).map(([emoji, data]) => ({
+      emoji,
+      count: data.count,
+      userReacted: data.userReacted,
+    }));
+  };
+
+  // Toggle a reaction on a followup
+  const toggleReaction = async (followupId: string, emoji: string) => {
+    if (!currentUser) return;
+    
+    const existingReaction = (reactions[followupId] || []).find(
+      (r) => r.user_id === currentUser.id && r.emoji === emoji
+    );
+    
+    try {
+      if (existingReaction) {
+        // Remove reaction
+        await supabase
+          .from("followup_reactions")
+          .delete()
+          .eq("id", existingReaction.id);
+        
+        setReactions(prev => ({
+          ...prev,
+          [followupId]: (prev[followupId] || []).filter(r => r.id !== existingReaction.id),
+        }));
+      } else {
+        // Add reaction
+        const { data, error } = await supabase
+          .from("followup_reactions")
+          .insert({
+            account_id: currentUser.account_id,
+            followup_id: followupId,
+            user_id: currentUser.id,
+            emoji,
+          })
+          .select("id, emoji, user_id")
+          .single();
+        
+        if (error) throw error;
+        
+        setReactions(prev => ({
+          ...prev,
+          [followupId]: [...(prev[followupId] || []), { ...data, users: { name: currentUser.name } }],
+        }));
+      }
+    } catch (error: any) {
+      console.error("Error toggling reaction:", error);
+      toast.error("Erro ao reagir");
     }
   };
 
@@ -866,8 +997,49 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
                       </a>
                     )}
 
-                    {/* Reply Button */}
-                    <div className="flex items-center gap-3 mt-2">
+                    {/* Reactions & Reply Button */}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {/* Existing Reactions */}
+                      {getReactionCounts(followup.id).map((reaction) => (
+                        <button
+                          key={reaction.emoji}
+                          onClick={() => toggleReaction(followup.id, reaction.emoji)}
+                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors ${
+                            reaction.userReacted
+                              ? "bg-primary/20 text-primary border border-primary/30"
+                              : "bg-muted hover:bg-muted/80"
+                          }`}
+                        >
+                          <span>{reaction.emoji}</span>
+                          <span>{reaction.count}</span>
+                        </button>
+                      ))}
+
+                      {/* Add Reaction Button */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                            <Smile className="h-3.5 w-3.5" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-2" align="start">
+                          <div className="flex gap-1">
+                            {EMOJI_OPTIONS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                onClick={() => toggleReaction(followup.id, emoji)}
+                                className="p-1.5 text-lg hover:bg-muted rounded transition-colors"
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+
+                      <span className="text-muted-foreground">·</span>
+
+                      {/* Reply Button */}
                       <button
                         onClick={() => startReply(followup.id)}
                         className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
@@ -928,6 +1100,44 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
                               {reply.content}
                             </p>
                           )}
+                          
+                          {/* Reactions for replies */}
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {getReactionCounts(reply.id).map((reaction) => (
+                              <button
+                                key={reaction.emoji}
+                                onClick={() => toggleReaction(reply.id, reaction.emoji)}
+                                className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${
+                                  reaction.userReacted
+                                    ? "bg-primary/20 text-primary border border-primary/30"
+                                    : "bg-muted hover:bg-muted/80"
+                                }`}
+                              >
+                                <span>{reaction.emoji}</span>
+                                <span>{reaction.count}</span>
+                              </button>
+                            ))}
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="p-0.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100">
+                                  <Smile className="h-3 w-3" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-2" align="start">
+                                <div className="flex gap-1">
+                                  {EMOJI_OPTIONS.map((emoji) => (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => toggleReaction(reply.id, emoji)}
+                                      className="p-1.5 text-lg hover:bg-muted rounded transition-colors"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </div>
                       </div>
                     ))}
