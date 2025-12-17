@@ -610,6 +610,32 @@ export default function ClientDetail() {
         });
       });
 
+      // Add form responses
+      const { data: formResponsesData } = await supabase
+        .from("form_responses")
+        .select(`
+          *,
+          forms (title)
+        `)
+        .eq("client_id", id)
+        .order("submitted_at", { ascending: false })
+        .limit(20);
+
+      (formResponsesData || []).forEach((response: any) => {
+        const responseCount = Object.keys(response.responses || {}).length;
+        timelineItems.push({
+          id: response.id,
+          type: "form_response",
+          title: response.forms?.title || "Formulário",
+          description: `${responseCount} campo(s) preenchido(s)`,
+          timestamp: response.submitted_at,
+          metadata: {
+            form_title: response.forms?.title,
+            form_responses: response.responses,
+          },
+        });
+      });
+
       // Add financial events (subscriptions)
       const { data: subscriptionsData } = await supabase
         .from("client_subscriptions")
@@ -812,6 +838,44 @@ export default function ClientDetail() {
               },
             };
             const updated = [newEvent, ...prev.filter(e => e.id !== followup.id)];
+            updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            return updated.slice(0, 50);
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'form_responses',
+          filter: `client_id=eq.${id}`,
+        },
+        async (payload) => {
+          console.log('New form response:', payload);
+          const response = payload.new as any;
+          
+          // Fetch form title
+          const { data: formData } = await supabase
+            .from("forms")
+            .select("title")
+            .eq("id", response.form_id)
+            .single();
+          
+          const responseCount = Object.keys(response.responses || {}).length;
+          setTimeline((prev) => {
+            const newEvent: TimelineEvent = {
+              id: response.id,
+              type: "form_response",
+              title: formData?.title || "Formulário",
+              description: `${responseCount} campo(s) preenchido(s)`,
+              timestamp: response.submitted_at,
+              metadata: {
+                form_title: formData?.title,
+                form_responses: response.responses,
+              },
+            };
+            const updated = [newEvent, ...prev.filter(e => e.id !== response.id)];
             updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             return updated.slice(0, 50);
           });
