@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
@@ -34,12 +34,27 @@ import {
   ListTodo,
   Filter,
   TrendingUp,
+  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskCard } from "@/components/tasks/TaskCard";
+import { DraggableTaskCard } from "@/components/tasks/DraggableTaskCard";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { TaskDropZone } from "@/components/tasks/TaskDropZone";
 
 interface User {
   id: string;
@@ -66,6 +81,8 @@ interface Task {
   assigned_user: User | null;
 }
 
+type Priority = "urgent" | "high" | "medium" | "low";
+
 export default function Tasks() {
   const { currentUser } = useCurrentUser();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -78,6 +95,18 @@ export default function Tasks() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchTasks();
@@ -160,6 +189,43 @@ export default function Tasks() {
     }
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = tasks.find(t => t.id === event.active.id);
+    if (task) {
+      setActiveTask(task);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const newPriority = over.id as Priority;
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.priority === newPriority) return;
+
+    // Optimistic update
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, priority: newPriority } : t
+    ));
+
+    const { error } = await supabase
+      .from("internal_tasks")
+      .update({ priority: newPriority })
+      .eq("id", taskId);
+
+    if (error) {
+      toast.error("Erro ao mover tarefa");
+      fetchTasks(); // Revert on error
+    } else {
+      toast.success(`Prioridade alterada para ${PRIORITY_LABELS[newPriority]}`);
+    }
+  };
+
   const openEditDialog = (task: Task) => {
     setEditingTask(task);
     setDialogOpen(true);
@@ -202,10 +268,12 @@ export default function Tasks() {
   const doneCount = tasks.filter(t => t.status === "done").length;
 
   // Group tasks by priority for pending view
-  const urgentTasks = filteredTasks.filter(t => t.priority === "urgent");
-  const highTasks = filteredTasks.filter(t => t.priority === "high");
-  const mediumTasks = filteredTasks.filter(t => t.priority === "medium");
-  const lowTasks = filteredTasks.filter(t => t.priority === "low");
+  const tasksByPriority: Record<Priority, Task[]> = {
+    urgent: filteredTasks.filter(t => t.priority === "urgent"),
+    high: filteredTasks.filter(t => t.priority === "high"),
+    medium: filteredTasks.filter(t => t.priority === "medium"),
+    low: filteredTasks.filter(t => t.priority === "low"),
+  };
 
   if (loading) {
     return (
@@ -228,7 +296,7 @@ export default function Tasks() {
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Tarefas</h1>
                 <p className="text-sm text-muted-foreground">
-                  Gerencie as tarefas internas da equipe
+                  Arraste tarefas entre grupos para mudar prioridade
                 </p>
               </div>
             </div>
@@ -389,63 +457,44 @@ export default function Tasks() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="mt-6 space-y-6">
+        <TabsContent value="pending" className="mt-6">
           {filteredTasks.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="space-y-6">
-              {/* Urgent */}
-              {urgentTasks.length > 0 && (
-                <TaskGroup 
-                  title="Urgentes" 
-                  count={urgentTasks.length}
-                  accentColor="destructive"
-                  tasks={urgentTasks}
-                  onEdit={openEditDialog}
-                  onDelete={openDeleteDialog}
-                  onToggleComplete={handleToggleComplete}
-                />
-              )}
-              
-              {/* High Priority */}
-              {highTasks.length > 0 && (
-                <TaskGroup 
-                  title="Alta Prioridade" 
-                  count={highTasks.length}
-                  accentColor="amber"
-                  tasks={highTasks}
-                  onEdit={openEditDialog}
-                  onDelete={openDeleteDialog}
-                  onToggleComplete={handleToggleComplete}
-                />
-              )}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+                {(["urgent", "high", "medium", "low"] as Priority[]).map((priority) => (
+                  <TaskDropZone
+                    key={priority}
+                    id={priority}
+                    priority={priority}
+                    tasks={tasksByPriority[priority]}
+                    onEdit={openEditDialog}
+                    onDelete={openDeleteDialog}
+                    onToggleComplete={handleToggleComplete}
+                  />
+                ))}
+              </div>
 
-              {/* Medium Priority */}
-              {mediumTasks.length > 0 && (
-                <TaskGroup 
-                  title="Média Prioridade" 
-                  count={mediumTasks.length}
-                  accentColor="blue"
-                  tasks={mediumTasks}
-                  onEdit={openEditDialog}
-                  onDelete={openDeleteDialog}
-                  onToggleComplete={handleToggleComplete}
-                />
-              )}
-
-              {/* Low Priority */}
-              {lowTasks.length > 0 && (
-                <TaskGroup 
-                  title="Baixa Prioridade" 
-                  count={lowTasks.length}
-                  accentColor="muted"
-                  tasks={lowTasks}
-                  onEdit={openEditDialog}
-                  onDelete={openDeleteDialog}
-                  onToggleComplete={handleToggleComplete}
-                />
-              )}
-            </div>
+              <DragOverlay>
+                {activeTask && (
+                  <div className="opacity-90 rotate-2 scale-105">
+                    <TaskCard
+                      task={activeTask}
+                      onEdit={() => {}}
+                      onDelete={() => {}}
+                      onToggleComplete={() => {}}
+                      showClient={true}
+                    />
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
           )}
         </TabsContent>
 
@@ -517,6 +566,13 @@ export default function Tasks() {
   );
 }
 
+const PRIORITY_LABELS: Record<Priority, string> = {
+  urgent: "Urgente",
+  high: "Alta",
+  medium: "Média",
+  low: "Baixa",
+};
+
 function EmptyState({ message = "Nenhuma tarefa encontrada" }: { message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -525,63 +581,6 @@ function EmptyState({ message = "Nenhuma tarefa encontrada" }: { message?: strin
       </div>
       <p className="font-medium">{message}</p>
       <p className="text-sm mt-1">Clique em "Nova Tarefa" para começar</p>
-    </div>
-  );
-}
-
-interface TaskGroupProps {
-  title: string;
-  count: number;
-  accentColor: "destructive" | "amber" | "blue" | "muted";
-  tasks: Task[];
-  onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
-  onToggleComplete: (task: Task) => void;
-}
-
-const colorMap = {
-  destructive: {
-    badge: "bg-destructive/10 text-destructive border-destructive/20",
-    bar: "bg-destructive",
-  },
-  amber: {
-    badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    bar: "bg-amber-500",
-  },
-  blue: {
-    badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    bar: "bg-blue-500",
-  },
-  muted: {
-    badge: "bg-muted text-muted-foreground border-muted",
-    bar: "bg-muted-foreground/30",
-  },
-};
-
-function TaskGroup({ title, count, accentColor, tasks, onEdit, onDelete, onToggleComplete }: TaskGroupProps) {
-  const colors = colorMap[accentColor];
-  
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <div className={cn("w-1 h-5 rounded-full", colors.bar)} />
-        <h3 className="font-semibold text-sm">{title}</h3>
-        <Badge variant="outline" className={cn("text-[10px] h-5", colors.badge)}>
-          {count}
-        </Badge>
-      </div>
-      <div className="space-y-2 pl-4">
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onToggleComplete={onToggleComplete}
-            showClient={true}
-          />
-        ))}
-      </div>
     </div>
   );
 }
