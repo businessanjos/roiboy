@@ -128,29 +128,35 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             Dados Básicos
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2" data-error={!!errors.full_name}>
+            <div className={`space-y-2 ${errors.full_name ? "animate-shake" : ""}`} data-error={!!errors.full_name}>
               <Label>Nome completo *</Label>
               <Input
                 value={data.full_name}
                 onChange={(e) => updateField("full_name", e.target.value)}
                 placeholder="João Silva"
-                className={errors.full_name ? "border-destructive" : ""}
+                className={errors.full_name ? "border-destructive ring-1 ring-destructive/30" : ""}
               />
               {errors.full_name && (
-                <p className="text-xs text-destructive">{errors.full_name}</p>
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.full_name}
+                </p>
               )}
             </div>
-            <div className="space-y-2" data-error={!!errors.phone_e164}>
+            <div className={`space-y-2 ${errors.phone_e164 ? "animate-shake" : ""}`} data-error={!!errors.phone_e164}>
               <Label>Telefone principal (E.164) *</Label>
               <Input
                 value={data.phone_e164}
                 onChange={(e) => updateField("phone_e164", formatPhoneInput(e.target.value))}
                 placeholder="+5511999999999"
                 maxLength={16}
-                className={errors.phone_e164 ? "border-destructive" : ""}
+                className={errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : ""}
               />
               {errors.phone_e164 && (
-                <p className="text-xs text-destructive">{errors.phone_e164}</p>
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.phone_e164}
+                </p>
               )}
             </div>
           </div>

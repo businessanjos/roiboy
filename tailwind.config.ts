@@ -119,6 +119,11 @@ export default {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
+        "shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
+        },
         "highlight-glow": {
           "0%, 100%": { 
             boxShadow: "0 0 0 2px hsl(var(--primary) / 0.3), 0 0 20px hsl(var(--primary) / 0.2)",
@@ -146,6 +151,7 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-up": "slide-up 0.4s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
+        "shake": "shake 0.5s ease-in-out",
         "highlight-glow": "highlight-glow 1s ease-in-out infinite",
         "highlight-fade": "highlight-fade-out 0.5s ease-out forwards",
       },

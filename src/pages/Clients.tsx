@@ -906,7 +906,7 @@ export default function Clients() {
                                   check.filled 
                                     ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
                                     : Object.keys(formErrors).length > 0
-                                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse"
+                                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-shake"
                                       : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                 }`}
                               >
@@ -1019,7 +1019,7 @@ export default function Clients() {
                           const hasError = formErrors[`field_${field.id}`];
                           
                           return (
-                            <div key={field.id} data-error={!!hasError} className={`space-y-1 sm:space-y-1.5 ${hasError ? "animate-pulse" : ""}`}>
+                            <div key={field.id} data-error={!!hasError} className={`space-y-1 sm:space-y-1.5 ${hasError ? "animate-shake" : ""}`}>
                               <Label className={`text-sm flex items-center gap-1.5 ${hasError ? "text-destructive" : ""}`}>
                                 {hasError && <AlertCircle className="h-3 w-3" />}
                                 {field.name} *
