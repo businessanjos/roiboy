@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -184,6 +185,10 @@ export default function ClientDetail() {
   const [editRiskReason, setEditRiskReason] = useState("");
   const [editRiskEvidence, setEditRiskEvidence] = useState("");
   const [savingEditRisk, setSavingEditRisk] = useState(false);
+
+  // Delete confirmation state
+  const [deletingRoiId, setDeletingRoiId] = useState<string | null>(null);
+  const [deletingRiskId, setDeletingRiskId] = useState<string | null>(null);
 
   // Edit client info state
   const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
@@ -957,16 +962,17 @@ export default function ClientDetail() {
     }
   };
 
-  const handleDeleteRoi = async (roiId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este evento de ROI?")) return;
+  const handleDeleteRoi = async () => {
+    if (!deletingRoiId) return;
     try {
       const { error } = await supabase
         .from("roi_events")
         .delete()
-        .eq("id", roiId);
+        .eq("id", deletingRoiId);
 
       if (error) throw error;
       toast.success("ROI excluído com sucesso!");
+      setDeletingRoiId(null);
       fetchData();
     } catch (error) {
       console.error("Error deleting ROI:", error);
@@ -1010,16 +1016,17 @@ export default function ClientDetail() {
     }
   };
 
-  const handleDeleteRisk = async (riskId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este evento de risco?")) return;
+  const handleDeleteRisk = async () => {
+    if (!deletingRiskId) return;
     try {
       const { error } = await supabase
         .from("risk_events")
         .delete()
-        .eq("id", riskId);
+        .eq("id", deletingRiskId);
 
       if (error) throw error;
       toast.success("Risco excluído com sucesso!");
+      setDeletingRiskId(null);
       fetchData();
     } catch (error) {
       console.error("Error deleting risk:", error);
@@ -1794,7 +1801,7 @@ export default function ClientDetail() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteRoi(roi.id)}
+                              onClick={() => setDeletingRoiId(roi.id)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -1893,6 +1900,24 @@ export default function ClientDetail() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Delete ROI Confirmation */}
+          <AlertDialog open={!!deletingRoiId} onOpenChange={(open) => !open && setDeletingRoiId(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir evento de ROI?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. O evento de ROI será permanentemente removido.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteRoi} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
 
         <TabsContent value="risks">
@@ -1986,7 +2011,7 @@ export default function ClientDetail() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => handleDeleteRisk(risk.id)}
+                                onClick={() => setDeletingRiskId(risk.id)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -2055,6 +2080,24 @@ export default function ClientDetail() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Delete Risk Confirmation */}
+          <AlertDialog open={!!deletingRiskId} onOpenChange={(open) => !open && setDeletingRiskId(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir evento de risco?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. O evento de risco será permanentemente removido.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteRisk} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
 
         <TabsContent value="recommendations">
