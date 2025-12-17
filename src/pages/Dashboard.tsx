@@ -401,6 +401,32 @@ export default function Dashboard() {
     return Object.values(months);
   }, [contractData]);
 
+  // Calculate retention metrics
+  const retentionMetrics = useMemo(() => {
+    const currentMonth = monthlyChartData[monthlyChartData.length - 1];
+    const lastMonth = monthlyChartData[monthlyChartData.length - 2];
+    
+    if (!currentMonth) return { rate: 0, trend: 'flat' as const, novos: 0, saidas: 0 };
+    
+    const novos = currentMonth.novos;
+    const saidas = currentMonth.cancelamentos + currentMonth.encerramentos + currentMonth.congelamentos;
+    const netChange = novos - saidas;
+    
+    // Calculate rate: positive means growth, negative means churn
+    const rate = saidas > 0 ? Math.round((novos / saidas) * 100) : (novos > 0 ? 100 : 0);
+    
+    // Compare with last month
+    let trend: 'up' | 'flat' | 'down' = 'flat';
+    if (lastMonth) {
+      const lastSaidas = lastMonth.cancelamentos + lastMonth.encerramentos + lastMonth.congelamentos;
+      const lastRate = lastSaidas > 0 ? Math.round((lastMonth.novos / lastSaidas) * 100) : (lastMonth.novos > 0 ? 100 : 0);
+      if (rate > lastRate) trend = 'up';
+      else if (rate < lastRate) trend = 'down';
+    }
+    
+    return { rate, trend, novos, saidas, netChange };
+  }, [monthlyChartData]);
+
   const chartConfig = {
     novos: {
       label: "Novos",
@@ -950,7 +976,31 @@ export default function Dashboard() {
           </Card>
 
           {/* Summary Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Retention Rate Card */}
+            <Card className={`shadow-card border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
+                    <div className="flex items-center gap-2">
+                      <p className={`text-3xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                        {retentionMetrics.rate}%
+                      </p>
+                      {retentionMetrics.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-500" />}
+                      {retentionMetrics.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-500" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
+                    </p>
+                  </div>
+                  <div className={`h-12 w-12 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                    <Target className={`h-6 w-6 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="shadow-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
