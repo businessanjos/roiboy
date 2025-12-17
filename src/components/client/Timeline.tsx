@@ -17,20 +17,29 @@ import {
   Target,
   Zap,
   FileText,
-  Image,
+  Image as ImageIcon,
   File,
   Download,
   ChevronDown,
   Send,
   Loader2,
   StickyNote,
+  Paperclip,
+  Smile,
+  Camera,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface TimelineEvent {
   id: string;
@@ -410,31 +419,59 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
           <p className="text-sm mt-1">Interações e análises aparecerão aqui.</p>
         </div>
         
-        {/* Comment Input */}
+        {/* Comment Input - Facebook Style */}
         {clientId && currentUser && (
           <div className="flex gap-3 pt-4 border-t">
-            <Avatar className="h-10 w-10 flex-shrink-0">
+            <Avatar className="h-9 w-9 flex-shrink-0">
               <AvatarImage src={currentUser.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary">
+              <AvatarFallback className="bg-primary/10 text-primary text-sm">
                 {currentUser.name?.charAt(0) || "U"}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 flex gap-2">
-              <Textarea
-                placeholder="Adicionar um comentário..."
+            <div className="flex-1 relative">
+              <Input
+                placeholder="Escreva um comentário..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="min-h-[40px] max-h-[120px] resize-none"
-                rows={1}
+                className="pr-24 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
               />
-              <Button
-                size="icon"
-                onClick={handleSubmitComment}
-                disabled={!comment.trim() || submitting}
-              >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Camera className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {comment.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitComment}
+                    disabled={submitting}
+                    className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -478,31 +515,59 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         ))}
       </div>
 
-      {/* Comment Input */}
+      {/* Comment Input - Facebook Style */}
       {clientId && currentUser && (
         <div className="flex gap-3 pt-4 border-t">
-          <Avatar className="h-10 w-10 flex-shrink-0">
+          <Avatar className="h-9 w-9 flex-shrink-0">
             <AvatarImage src={currentUser.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary">
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
               {currentUser.name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 flex gap-2">
-            <Textarea
-              placeholder="Adicionar um comentário..."
+          <div className="flex-1 relative">
+            <Input
+              placeholder="Escreva um comentário..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="min-h-[40px] max-h-[120px] resize-none"
-              rows={1}
+              className="pr-24 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
             />
-            <Button
-              size="icon"
-              onClick={handleSubmitComment}
-              disabled={!comment.trim() || submitting}
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {comment.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSubmitComment}
+                  disabled={submitting}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
