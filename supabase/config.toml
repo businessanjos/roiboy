@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.list-clients]
 verify_jwt = false
+
+[functions.check-contract-expiry]
+verify_jwt = false
