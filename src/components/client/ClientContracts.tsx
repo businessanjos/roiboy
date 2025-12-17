@@ -56,8 +56,19 @@ import {
   RefreshCw,
   History,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  XCircle,
+  PauseCircle,
+  Ban,
+  MoreHorizontal
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Contract {
   id: string;
@@ -72,9 +83,21 @@ interface Contract {
   file_name: string | null;
   notes: string | null;
   parent_contract_id: string | null;
+  status: string;
+  status_reason: string | null;
+  status_changed_at: string | null;
   created_at: string;
   updated_at: string;
 }
+
+type ContractStatusAction = 'cancelled' | 'ended' | 'paused' | 'active';
+
+const CONTRACT_STATUS_CONFIG = {
+  active: { label: "Ativo", icon: CheckCircle, className: "border-green-500 text-green-600" },
+  cancelled: { label: "Cancelado (Churn)", icon: XCircle, className: "border-red-500 text-red-600" },
+  ended: { label: "Encerrado", icon: Ban, className: "border-slate-500 text-slate-600" },
+  paused: { label: "Pausado", icon: PauseCircle, className: "border-amber-500 text-amber-600" },
+};
 
 interface ClientContractsProps {
   clientId: string;
@@ -113,6 +136,13 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Status action dialog state
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusAction, setStatusAction] = useState<ContractStatusAction | null>(null);
+  const [statusContract, setStatusContract] = useState<Contract | null>(null);
+  const [statusReason, setStatusReason] = useState("");
+  const [statusSaving, setStatusSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     start_date: "",
@@ -366,21 +396,86 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     }
   };
 
+  const openStatusDialog = (contract: Contract, action: ContractStatusAction) => {
+    setStatusContract(contract);
+    setStatusAction(action);
+    setStatusReason("");
+    setStatusDialogOpen(true);
+  };
+
+  const handleStatusChange = async () => {
+    if (!statusContract || !statusAction) return;
+    
+    // Require reason for pause action
+    if (statusAction === 'paused' && !statusReason.trim()) {
+      toast.error("Digite o motivo da pausa");
+      return;
+    }
+
+    setStatusSaving(true);
+    try {
+      const { error } = await supabase
+        .from("client_contracts")
+        .update({
+          status: statusAction,
+          status_reason: statusAction === 'active' ? null : statusReason.trim() || null,
+          status_changed_at: new Date().toISOString(),
+        })
+        .eq("id", statusContract.id);
+
+      if (error) throw error;
+      
+      const actionLabels = {
+        cancelled: "Contrato cancelado (churn)",
+        ended: "Contrato encerrado",
+        paused: "Contrato pausado",
+        active: "Contrato reativado",
+      };
+      toast.success(actionLabels[statusAction]);
+      
+      setStatusDialogOpen(false);
+      setStatusContract(null);
+      setStatusAction(null);
+      setStatusReason("");
+      fetchContracts();
+    } catch (error) {
+      console.error("Error updating contract status:", error);
+      toast.error("Erro ao atualizar status do contrato");
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
   const getContractStatus = (contract: Contract) => {
+    // First check contract status field
+    if (contract.status && contract.status !== 'active') {
+      const config = CONTRACT_STATUS_CONFIG[contract.status as keyof typeof CONTRACT_STATUS_CONFIG];
+      if (config) {
+        return { 
+          label: config.label, 
+          variant: "outline" as const, 
+          icon: config.icon, 
+          className: config.className,
+          reason: contract.status_reason
+        };
+      }
+    }
+    
+    // Then check date-based status for active contracts
     if (!contract.end_date) {
-      return { label: "Sem término", variant: "secondary" as const, icon: Clock, className: "" };
+      return { label: "Sem término", variant: "secondary" as const, icon: Clock, className: "", reason: null };
     }
     
     const endDate = new Date(contract.end_date);
     const daysRemaining = differenceInDays(endDate, new Date());
     
     if (isPast(endDate)) {
-      return { label: "Expirado", variant: "destructive" as const, icon: AlertTriangle, className: "" };
+      return { label: "Expirado", variant: "destructive" as const, icon: AlertTriangle, className: "", reason: null };
     }
     if (daysRemaining <= 30) {
-      return { label: `${daysRemaining}d restantes`, variant: "outline" as const, icon: AlertTriangle, className: "border-amber-500 text-amber-600" };
+      return { label: `${daysRemaining}d restantes`, variant: "outline" as const, icon: AlertTriangle, className: "border-amber-500 text-amber-600", reason: null };
     }
-    return { label: "Ativo", variant: "outline" as const, icon: CheckCircle, className: "border-green-500 text-green-600" };
+    return { label: "Ativo", variant: "outline" as const, icon: CheckCircle, className: "border-green-500 text-green-600", reason: null };
   };
 
   const formatCurrency = (value: number) => {
@@ -714,13 +809,20 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>{getPaymentLabel(contract.payment_option)}</TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={status.variant}
-                        className={status.className}
-                      >
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {status.label}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge 
+                          variant={status.variant}
+                          className={status.className}
+                        >
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {status.label}
+                        </Badge>
+                        {status.reason && (
+                          <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={status.reason}>
+                            {status.reason}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {contract.file_url ? (
@@ -740,34 +842,79 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="Renovar contrato"
-                          onClick={() => openRenewalDialog(contract)}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openEditDialog(contract)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setContractToDelete(contract.id);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {contract.status === 'active' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Renovar contrato"
+                            onClick={() => openRenewalDialog(contract)}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(contract)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            {contract.status === 'active' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => openStatusDialog(contract, 'paused')}
+                                  className="text-amber-600"
+                                >
+                                  <PauseCircle className="h-4 w-4 mr-2" />
+                                  Pausar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => openStatusDialog(contract, 'ended')}
+                                  className="text-slate-600"
+                                >
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Encerrar (Demissão)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => openStatusDialog(contract, 'cancelled')}
+                                  className="text-destructive"
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Cancelar (Churn)
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {contract.status !== 'active' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => openStatusDialog(contract, 'active')}
+                                  className="text-green-600"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Reativar
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setContractToDelete(contract.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -794,6 +941,87 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Status change dialog */}
+      <Dialog open={statusDialogOpen} onOpenChange={(open) => {
+        setStatusDialogOpen(open);
+        if (!open) {
+          setStatusContract(null);
+          setStatusAction(null);
+          setStatusReason("");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {statusAction === 'cancelled' && "Cancelar Contrato (Churn)"}
+              {statusAction === 'ended' && "Encerrar Contrato (Demissão)"}
+              {statusAction === 'paused' && "Pausar Contrato"}
+              {statusAction === 'active' && "Reativar Contrato"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {statusAction === 'cancelled' && (
+              <p className="text-sm text-muted-foreground">
+                O contrato será marcado como cancelado por churn do cliente.
+              </p>
+            )}
+            {statusAction === 'ended' && (
+              <p className="text-sm text-muted-foreground">
+                O contrato será marcado como encerrado (demissão/término acordado).
+              </p>
+            )}
+            {statusAction === 'paused' && (
+              <p className="text-sm text-muted-foreground">
+                O contrato será pausado temporariamente.
+              </p>
+            )}
+            {statusAction === 'active' && (
+              <p className="text-sm text-muted-foreground">
+                O contrato será reativado.
+              </p>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="status_reason">
+                {statusAction === 'paused' ? 'Motivo da pausa *' : 'Motivo (opcional)'}
+              </Label>
+              <Textarea
+                id="status_reason"
+                placeholder={
+                  statusAction === 'cancelled' ? "Motivo do cancelamento..." :
+                  statusAction === 'ended' ? "Motivo do encerramento..." :
+                  statusAction === 'paused' ? "Descreva o motivo da pausa..." :
+                  "Motivo da reativação..."
+                }
+                value={statusReason}
+                onChange={(e) => setStatusReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleStatusChange} 
+                disabled={statusSaving}
+                variant={statusAction === 'cancelled' ? 'destructive' : 'default'}
+              >
+                {statusSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Confirmar"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
