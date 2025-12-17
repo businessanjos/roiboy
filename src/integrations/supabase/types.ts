@@ -1518,7 +1518,15 @@ export type Database = {
         | "financial"
       roi_type: "tangible" | "intangible"
       trend_type: "up" | "flat" | "down"
-      user_role: "admin" | "leader" | "mentor"
+      user_role:
+        | "admin"
+        | "leader"
+        | "mentor"
+        | "cx"
+        | "cs"
+        | "consultor"
+        | "head"
+        | "gestor"
       vnps_class: "detractor" | "neutral" | "promoter"
     }
     CompositeTypes: {
@@ -1716,7 +1724,16 @@ export const Constants = {
       ],
       roi_type: ["tangible", "intangible"],
       trend_type: ["up", "flat", "down"],
-      user_role: ["admin", "leader", "mentor"],
+      user_role: [
+        "admin",
+        "leader",
+        "mentor",
+        "cx",
+        "cs",
+        "consultor",
+        "head",
+        "gestor",
+      ],
       vnps_class: ["detractor", "neutral", "promoter"],
     },
   },

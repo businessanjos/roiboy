@@ -30,11 +30,11 @@ import {
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/clients", icon: Users, label: "Clientes" },
+  { to: "/team", icon: UserCircle, label: "Equipe" },
   { to: "/products", icon: Package, label: "Produtos" },
   { to: "/events", icon: CalendarDays, label: "Eventos" },
   { to: "/integrations", icon: Link2, label: "Integrações" },
   { to: "/settings", icon: Settings, label: "Configurações" },
-  { to: "/profile", icon: UserCircle, label: "Meu Perfil" },
 ];
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
