@@ -25,6 +25,7 @@ import { ClientFollowup } from "@/components/client/ClientFollowup";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
+import { ContractTimer } from "@/components/client/ContractTimer";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -79,6 +80,8 @@ interface Client {
   state?: string;
   zip_code?: string;
   avatar_url?: string | null;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
 }
 
 interface ScoreSnapshot {
@@ -291,6 +294,8 @@ export default function ClientDetail() {
       city: client.city || "",
       state: client.state || "",
       zip_code: client.zip_code || "",
+      contract_start_date: client.contract_start_date || "",
+      contract_end_date: client.contract_end_date || "",
     });
     setEditInfoDialogOpen(true);
   };
@@ -336,6 +341,8 @@ export default function ClientDetail() {
           city: editFormData.city || null,
           state: editFormData.state || null,
           zip_code: editFormData.zip_code?.replace(/\D/g, '') || null,
+          contract_start_date: editFormData.contract_start_date || null,
+          contract_end_date: editFormData.contract_end_date || null,
         })
         .eq("id", id);
 
@@ -359,6 +366,8 @@ export default function ClientDetail() {
         city: editFormData.city,
         state: editFormData.state,
         zip_code: editFormData.zip_code,
+        contract_start_date: editFormData.contract_start_date,
+        contract_end_date: editFormData.contract_end_date,
       });
 
       toast.success("Informações atualizadas!");
@@ -1219,6 +1228,12 @@ export default function ClientDetail() {
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap mt-2">
+              {(client.contract_start_date || client.contract_end_date) && (
+                <ContractTimer 
+                  startDate={client.contract_start_date}
+                  endDate={client.contract_end_date}
+                />
+              )}
               {clientProducts.length > 0 ? (
                 clientProducts.map((product) => (
                   <Badge key={product.id} variant="secondary" className="text-xs">
