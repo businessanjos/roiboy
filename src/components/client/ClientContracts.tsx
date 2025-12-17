@@ -80,16 +80,25 @@ interface ClientContractsProps {
   clientId: string;
 }
 
-const PAYMENT_OPTIONS = [
+const PAYMENT_TYPES = [
   { value: "a_vista", label: "À Vista" },
-  { value: "parcelado_2x", label: "Parcelado 2x" },
-  { value: "parcelado_3x", label: "Parcelado 3x" },
-  { value: "parcelado_6x", label: "Parcelado 6x" },
-  { value: "parcelado_12x", label: "Parcelado 12x" },
-  { value: "mensal", label: "Mensal" },
-  { value: "trimestral", label: "Trimestral" },
-  { value: "semestral", label: "Semestral" },
-  { value: "anual", label: "Anual" },
+  { value: "parcelado", label: "Parcelado" },
+];
+
+const INSTALLMENT_OPTIONS = [
+  { value: "2x", label: "2x" },
+  { value: "3x", label: "3x" },
+  { value: "4x", label: "4x" },
+  { value: "6x", label: "6x" },
+  { value: "10x", label: "10x" },
+  { value: "12x", label: "12x" },
+];
+
+const PAYMENT_METHODS = [
+  { value: "pix", label: "PIX" },
+  { value: "boleto", label: "Boleto" },
+  { value: "cartao", label: "Cartão" },
+  { value: "cheque", label: "Cheque" },
 ];
 
 export function ClientContracts({ clientId }: ClientContractsProps) {
@@ -109,7 +118,9 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     start_date: "",
     end_date: "",
     value: "",
-    payment_option: "",
+    payment_type: "",
+    installments: "",
+    payment_method: "",
     notes: "",
     file: null as File | null,
     file_url: "",
@@ -143,7 +154,9 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       start_date: "",
       end_date: "",
       value: "",
-      payment_option: "",
+      payment_type: "",
+      installments: "",
+      payment_method: "",
       notes: "",
       file: null,
       file_url: "",
@@ -153,16 +166,44 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     setRenewingContract(null);
   };
 
+  // Parse payment_option string into its components
+  const parsePaymentOption = (option: string | null) => {
+    if (!option) return { type: "", installments: "", method: "" };
+    const parts = option.split("_");
+    if (parts[0] === "a" && parts[1] === "vista") {
+      return { type: "a_vista", installments: "", method: parts[2] || "" };
+    }
+    if (parts[0] === "parcelado") {
+      return { type: "parcelado", installments: parts[1] || "", method: parts[2] || "" };
+    }
+    return { type: "", installments: "", method: "" };
+  };
+
+  // Build payment_option string from components
+  const buildPaymentOption = () => {
+    if (!formData.payment_type) return null;
+    if (formData.payment_type === "a_vista") {
+      return formData.payment_method ? `a_vista_${formData.payment_method}` : "a_vista";
+    }
+    const installments = formData.installments || "1x";
+    return formData.payment_method 
+      ? `parcelado_${installments}_${formData.payment_method}`
+      : `parcelado_${installments}`;
+  };
+
   const openRenewalDialog = (contract: Contract) => {
     setRenewingContract(contract);
     const nextDay = contract.end_date 
       ? format(new Date(new Date(contract.end_date).getTime() + 86400000), "yyyy-MM-dd")
       : format(new Date(), "yyyy-MM-dd");
+    const parsed = parsePaymentOption(contract.payment_option);
     setFormData({
       start_date: nextDay,
       end_date: "",
       value: contract.value.toString(),
-      payment_option: contract.payment_option || "",
+      payment_type: parsed.type,
+      installments: parsed.installments,
+      payment_method: parsed.method,
       notes: "",
       file: null,
       file_url: "",
@@ -173,11 +214,14 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
 
   const openEditDialog = (contract: Contract) => {
     setEditingContract(contract);
+    const parsed = parsePaymentOption(contract.payment_option);
     setFormData({
       start_date: contract.start_date,
       end_date: contract.end_date || "",
       value: contract.value.toString(),
-      payment_option: contract.payment_option || "",
+      payment_type: parsed.type,
+      installments: parsed.installments,
+      payment_method: parsed.method,
       notes: contract.notes || "",
       file: null,
       file_url: contract.file_url || "",
@@ -263,7 +307,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         start_date: formData.start_date,
         end_date: formData.end_date || null,
         value: parseFloat(formData.value) || 0,
-        payment_option: formData.payment_option || null,
+        payment_option: buildPaymentOption(),
         notes: formData.notes || null,
         file_url: fileUrl || null,
         file_name: fileName || null,
@@ -348,7 +392,21 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
 
   const getPaymentLabel = (value: string | null) => {
     if (!value) return "-";
-    return PAYMENT_OPTIONS.find((o) => o.value === value)?.label || value;
+    const parts = value.split("_");
+    
+    if (parts[0] === "a" && parts[1] === "vista") {
+      const method = PAYMENT_METHODS.find(m => m.value === parts[2])?.label || "";
+      return method ? `À Vista (${method})` : "À Vista";
+    }
+    
+    if (parts[0] === "parcelado") {
+      const installments = parts[1] || "";
+      const method = PAYMENT_METHODS.find(m => m.value === parts[2])?.label || "";
+      const base = installments ? `Parcelado ${installments}` : "Parcelado";
+      return method ? `${base} (${method})` : base;
+    }
+    
+    return value;
   };
 
   // Get contracts that are renewals of a given contract
@@ -450,16 +508,20 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="payment_option">Forma de Pagamento</Label>
+                  <Label>Tipo de Pagamento</Label>
                   <Select
-                    value={formData.payment_option}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_option: value }))}
+                    value={formData.payment_type}
+                    onValueChange={(value) => setFormData((prev) => ({ 
+                      ...prev, 
+                      payment_type: value,
+                      installments: value === "a_vista" ? "" : prev.installments
+                    }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {PAYMENT_OPTIONS.map((option) => (
+                      {PAYMENT_TYPES.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -467,6 +529,46 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {formData.payment_type === "parcelado" && (
+                <div className="space-y-2">
+                  <Label>Número de Parcelas</Label>
+                  <Select
+                    value={formData.installments}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, installments: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INSTALLMENT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Select
+                  value={formData.payment_method}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_method: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
