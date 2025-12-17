@@ -337,6 +337,37 @@ export default function Dashboard() {
     fetchUpcomingEvents();
     fetchROIStats();
     fetchRiskStats();
+
+    // Real-time subscription for client changes
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "clients",
+        },
+        () => {
+          fetchClients();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "client_products",
+        },
+        () => {
+          fetchClients();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredClients = clients.filter((client) => {
@@ -670,8 +701,100 @@ export default function Dashboard() {
 
         {/* Gestão Tab */}
         <TabsContent value="gestao" className="space-y-6">
-          {/* Gestão Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Clients per Product */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Clientes por Produto
+              </CardTitle>
+              <CardDescription>Distribuição em tempo real</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {products.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum produto cadastrado.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {products.map((product) => {
+                    const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
+                    return (
+                      <div
+                        key={product.id}
+                        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Target className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">Clientes ativos</p>
+                          </div>
+                        </div>
+                        <span className="text-2xl font-bold text-primary">{clientCount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Status Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Congelamentos (Pausados) */}
+            <Card className="shadow-card border-l-4 border-l-amber-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Congelamentos</p>
+                    <p className="text-4xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Clientes pausados</p>
+                  </div>
+                  <div className="h-14 w-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Minus className="h-7 w-7 text-amber-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Demissões (Em Risco de Churn) */}
+            <Card className="shadow-card border-l-4 border-l-orange-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Demissões</p>
+                    <p className="text-4xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Em risco de saída</p>
+                  </div>
+                  <div className="h-14 w-14 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <TrendingDown className="h-7 w-7 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cancelamentos (Churned) */}
+            <Card className="shadow-card border-l-4 border-l-red-500">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Cancelamentos</p>
+                    <p className="text-4xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Clientes perdidos</p>
+                  </div>
+                  <div className="h-14 w-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <AlertTriangle className="h-7 w-7 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Summary Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card className="shadow-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
@@ -690,20 +813,6 @@ export default function Dashboard() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Em Risco</p>
-                    <p className="text-3xl font-bold text-danger">{churnRiskCount}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
-                    <AlertTriangle className="h-6 w-6 text-danger" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
                     <p className="text-sm font-medium text-muted-foreground">Ativos</p>
                     <p className="text-3xl font-bold text-success">{clients.filter(c => c.status === "active").length}</p>
                   </div>
@@ -713,164 +822,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Pausados</p>
-                    <p className="text-3xl font-bold text-muted-foreground">{clients.filter(c => c.status === "paused").length}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                    <Minus className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
-
-          {/* Churn Report */}
-          <ChurnReportSection />
-
-          {/* Filters */}
-          <Card className="shadow-card">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome ou telefone..."
-                    className="pl-9"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="active">Saudável</SelectItem>
-                    <SelectItem value="churn_risk">Em Risco</SelectItem>
-                    <SelectItem value="churned">Crítico</SelectItem>
-                    <SelectItem value="paused">Pausado</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={quadrantFilter} onValueChange={setQuadrantFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Quadrante" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="highE_highROI">Encantado</SelectItem>
-                    <SelectItem value="highE_lowROI">Risco de Cobrança</SelectItem>
-                    <SelectItem value="lowE_highROI">Risco Silencioso</SelectItem>
-                    <SelectItem value="lowE_lowROI">Churn Iminente</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={productFilter} onValueChange={setProductFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Produtos</SelectItem>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Clients Table */}
-          <Card className="shadow-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Cliente
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      ROIzômetro
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      E-Score
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Tendência
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Quadrante
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Último Alerta
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Ação
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                        <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
-                        Carregando...
-                      </td>
-                    </tr>
-                  ) : filteredClients.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                        {clients.length === 0
-                          ? "Nenhum cliente cadastrado. Adicione seu primeiro cliente!"
-                          : "Nenhum cliente encontrado com os filtros aplicados."}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredClients.map((client) => (
-                      <tr key={client.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium text-foreground">{client.full_name}</p>
-                            <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <ScoreBadge score={client.roizometer} size="sm" />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <ScoreBadge score={client.escore} size="sm" />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <TrendIndicator trend={client.trend} size="sm" />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <QuadrantIndicator quadrant={client.quadrant} size="sm" />
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm text-muted-foreground max-w-48 truncate">
-                            {client.last_risk || "—"}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/clients/${client.id}`}>
-                              Ver <ArrowRight className="h-4 w-4 ml-1" />
-                            </Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
