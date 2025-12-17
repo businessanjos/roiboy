@@ -39,6 +39,7 @@ import {
   Minus,
   BarChart3,
   DollarSign,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
@@ -51,6 +52,7 @@ interface ContractData {
   status_changed_at: string | null;
   start_date: string;
   value: number;
+  client_id: string;
 }
 
 interface ClientWithScore {
@@ -127,6 +129,8 @@ export default function Dashboard() {
   const [roiStats, setROIStats] = useState<ROIStats | null>(null);
   const [riskStats, setRiskStats] = useState<RiskStats | null>(null);
   const [contractData, setContractData] = useState<ContractData[]>([]);
+  const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
+  const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
 
   const fetchProducts = async () => {
     try {
@@ -346,12 +350,12 @@ export default function Dashboard() {
 
   const fetchContractData = async () => {
     try {
-      const sixMonthsAgo = subMonths(new Date(), 6);
+      const twelveMonthsAgo = subMonths(new Date(), 12);
       
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, status, status_changed_at, start_date, value")
-        .or(`start_date.gte.${format(sixMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${sixMonthsAgo.toISOString()}`)
+        .select("id, status, status_changed_at, start_date, value, client_id")
+        .or(`start_date.gte.${format(twelveMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${twelveMonthsAgo.toISOString()}`)
         .order("start_date", { ascending: true });
 
       if (error) throw error;
@@ -361,19 +365,51 @@ export default function Dashboard() {
     }
   };
 
+  // Get client to products mapping
+  const clientProductsMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    clients.forEach(client => {
+      map[client.id] = client.product_ids || [];
+    });
+    return map;
+  }, [clients]);
+
+  // Filter contract data by product and period
+  const filteredContractData = useMemo(() => {
+    const periodMonths = parseInt(gestaoPeriodFilter);
+    const periodStart = subMonths(new Date(), periodMonths);
+    
+    return contractData.filter(contract => {
+      // Filter by period
+      const contractDate = contract.status_changed_at 
+        ? parseISO(contract.status_changed_at) 
+        : parseISO(contract.start_date);
+      if (contractDate < periodStart) return false;
+      
+      // Filter by product
+      if (gestaoProductFilter !== "all") {
+        const clientProducts = clientProductsMap[contract.client_id] || [];
+        if (!clientProducts.includes(gestaoProductFilter)) return false;
+      }
+      
+      return true;
+    });
+  }, [contractData, gestaoProductFilter, gestaoPeriodFilter, clientProductsMap]);
+
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
+    const periodMonths = parseInt(gestaoPeriodFilter);
     const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; congelamentos: number } } = {};
     
-    // Initialize last 6 months
-    for (let i = 5; i >= 0; i--) {
+    // Initialize months based on period
+    for (let i = periodMonths - 1; i >= 0; i--) {
       const date = subMonths(new Date(), i);
       const key = format(date, "yyyy-MM");
       const label = format(date, "MMM/yy", { locale: ptBR });
       months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, congelamentos: 0 };
     }
     
-    contractData.forEach((contract) => {
+    filteredContractData.forEach((contract) => {
       // Count new contracts by start_date
       if (contract.start_date) {
         const startDate = parseISO(contract.start_date);
@@ -401,7 +437,7 @@ export default function Dashboard() {
     });
     
     return Object.values(months);
-  }, [contractData]);
+  }, [filteredContractData, gestaoPeriodFilter]);
 
   // Calculate retention metrics
   const retentionMetrics = useMemo(() => {
@@ -438,7 +474,7 @@ export default function Dashboard() {
     let cancelamentosValue = 0;
     let demissoesValue = 0;
     
-    contractData.forEach((contract) => {
+    filteredContractData.forEach((contract) => {
       if (contract.status_changed_at) {
         const changedAt = parseISO(contract.status_changed_at);
         if (changedAt >= currentMonthStart && changedAt <= currentMonthEnd) {
@@ -454,7 +490,21 @@ export default function Dashboard() {
     totalLost = cancelamentosValue + demissoesValue;
     
     return { totalLost, cancelamentosValue, demissoesValue };
-  }, [contractData]);
+  }, [filteredContractData]);
+
+  // Filter clients by gestaoProductFilter for status cards
+  const gestaoFilteredClients = useMemo(() => {
+    if (gestaoProductFilter === "all") return clients;
+    return clients.filter(c => c.product_ids?.includes(gestaoProductFilter));
+  }, [clients, gestaoProductFilter]);
+
+  const gestaoClientStats = useMemo(() => ({
+    total: gestaoFilteredClients.length,
+    active: gestaoFilteredClients.filter(c => c.status === "active").length,
+    churned: gestaoFilteredClients.filter(c => c.status === "churned").length,
+    churnRisk: gestaoFilteredClients.filter(c => c.status === "churn_risk").length,
+    paused: gestaoFilteredClients.filter(c => c.status === "paused").length,
+  }), [gestaoFilteredClients]);
 
   const chartConfig = {
     novos: {
@@ -857,6 +907,56 @@ export default function Dashboard() {
 
         {/* Gestão Tab */}
         <TabsContent value="gestao" className="space-y-6">
+          {/* Filters */}
+          <Card className="shadow-card">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Filter className="h-4 w-4" />
+                  <span className="text-sm font-medium">Filtros:</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                  <Select value={gestaoProductFilter} onValueChange={setGestaoProductFilter}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Todos os produtos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os produtos</SelectItem>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={gestaoPeriodFilter} onValueChange={setGestaoPeriodFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">Últimos 3 meses</SelectItem>
+                      <SelectItem value="6">Últimos 6 meses</SelectItem>
+                      <SelectItem value="12">Últimos 12 meses</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "6") && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setGestaoProductFilter("all");
+                      setGestaoPeriodFilter("6");
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Clients per Product */}
           <Card className="shadow-card">
             <CardHeader>
@@ -906,7 +1006,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
-                    <p className="text-2xl font-bold text-foreground">{totalClients}</p>
+                    <p className="text-2xl font-bold text-foreground">{gestaoClientStats.total}</p>
                   </div>
                   <Users className="h-5 w-5 text-primary" />
                 </div>
@@ -919,7 +1019,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Ativos</p>
-                    <p className="text-2xl font-bold text-green-600">{clients.filter(c => c.status === "active").length}</p>
+                    <p className="text-2xl font-bold text-green-600">{gestaoClientStats.active}</p>
                   </div>
                   <TrendingUp className="h-5 w-5 text-green-500" />
                 </div>
@@ -932,7 +1032,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
-                    <p className="text-2xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
+                    <p className="text-2xl font-bold text-red-600">{gestaoClientStats.churned}</p>
                   </div>
                   <AlertTriangle className="h-5 w-5 text-red-500" />
                 </div>
@@ -945,7 +1045,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Demissões</p>
-                    <p className="text-2xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
+                    <p className="text-2xl font-bold text-orange-600">{gestaoClientStats.churnRisk}</p>
                   </div>
                   <TrendingDown className="h-5 w-5 text-orange-500" />
                 </div>
@@ -958,7 +1058,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
-                    <p className="text-2xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
+                    <p className="text-2xl font-bold text-amber-600">{gestaoClientStats.paused}</p>
                   </div>
                   <Minus className="h-5 w-5 text-amber-500" />
                 </div>
