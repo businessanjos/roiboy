@@ -342,6 +342,15 @@ export default function Forms() {
     toast.success("Link copiado!");
   };
 
+  const duplicateForm = (form: Form) => {
+    setEditingForm(null);
+    setFormTitle(`Cópia de ${form.title}`);
+    setFormDescription(form.description || "");
+    setSelectedFields(form.fields || []);
+    setRequireClientInfo(form.require_client_info);
+    setDialogOpen(true);
+  };
+
   const viewResponses = async (form: Form) => {
     setSelectedForm(form);
     setLoadingResponses(true);
@@ -500,6 +509,10 @@ export default function Forms() {
                         <DropdownMenuItem onClick={() => openEditDialog(form)}>
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => duplicateForm(form)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleFormActive(form)}>
                           {form.is_active ? "Desativar" : "Ativar"}
