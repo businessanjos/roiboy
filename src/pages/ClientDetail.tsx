@@ -81,6 +81,8 @@ interface Client {
   avatar_url?: string | null;
   contract_start_date?: string | null;
   contract_end_date?: string | null;
+  is_mls?: boolean;
+  mls_level?: string | null;
 }
 
 interface ScoreSnapshot {
@@ -295,6 +297,8 @@ export default function ClientDetail() {
       zip_code: client.zip_code || "",
       contract_start_date: client.contract_start_date || "",
       contract_end_date: client.contract_end_date || "",
+      is_mls: client.is_mls || false,
+      mls_level: client.mls_level || "",
     });
     setEditInfoDialogOpen(true);
   };
@@ -342,6 +346,8 @@ export default function ClientDetail() {
           zip_code: editFormData.zip_code?.replace(/\D/g, '') || null,
           contract_start_date: editFormData.contract_start_date || null,
           contract_end_date: editFormData.contract_end_date || null,
+          is_mls: editFormData.is_mls,
+          mls_level: editFormData.is_mls ? (editFormData.mls_level || null) : null,
         })
         .eq("id", id);
 
@@ -367,6 +373,8 @@ export default function ClientDetail() {
         zip_code: editFormData.zip_code,
         contract_start_date: editFormData.contract_start_date,
         contract_end_date: editFormData.contract_end_date,
+        is_mls: editFormData.is_mls,
+        mls_level: editFormData.mls_level,
       });
 
       toast.success("Informações atualizadas!");

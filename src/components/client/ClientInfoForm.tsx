@@ -5,7 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award } from "lucide-react";
 import { 
   validateCPF, 
   validateCNPJ, 
@@ -34,6 +36,8 @@ export interface ClientFormData {
   zip_code: string;
   contract_start_date: string;
   contract_end_date: string;
+  is_mls: boolean;
+  mls_level: string;
 }
 
 interface ClientInfoFormProps {
@@ -47,6 +51,14 @@ const BRAZILIAN_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
   "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
+
+const MLS_LEVELS = [
+  { value: "bronze", label: "Bronze", color: "bg-amber-700" },
+  { value: "prata", label: "Prata", color: "bg-gray-400" },
+  { value: "ouro", label: "Ouro", color: "bg-yellow-500" },
+  { value: "diamond", label: "Diamond", color: "bg-cyan-400" },
+  { value: "platinum", label: "Platinum", color: "bg-slate-300" },
 ];
 
 export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true }: ClientInfoFormProps) {
@@ -347,6 +359,52 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
       <Separator />
 
+      {/* MLS */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Award className="h-4 w-4" />
+          MLS
+        </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="is_mls">Cliente MLS</Label>
+            <Switch
+              id="is_mls"
+              checked={data.is_mls}
+              onCheckedChange={(checked) => {
+                updateField("is_mls", checked);
+                if (!checked) updateField("mls_level", "");
+              }}
+            />
+          </div>
+          {data.is_mls && (
+            <div className="space-y-2">
+              <Label>Nível MLS</Label>
+              <Select
+                value={data.mls_level}
+                onValueChange={(value) => updateField("mls_level", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o nível" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MLS_LEVELS.map((level) => (
+                    <SelectItem key={level.value} value={level.value}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${level.color}`} />
+                        {level.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
       {/* Address */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -458,4 +516,6 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   zip_code: "",
   contract_start_date: "",
   contract_end_date: "",
+  is_mls: false,
+  mls_level: "",
 });
