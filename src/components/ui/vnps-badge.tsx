@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Star, ThumbsUp, ThumbsDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Star, ThumbsUp, ThumbsDown, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface VNPSBadgeProps {
@@ -12,6 +12,10 @@ interface VNPSBadgeProps {
   showTrend?: boolean;
   showClass?: boolean;
   className?: string;
+  // Additional data for tooltip
+  roizometer?: number;
+  escore?: number;
+  riskIndex?: number;
 }
 
 export function VNPSBadge({
@@ -24,6 +28,9 @@ export function VNPSBadge({
   showTrend = true,
   showClass = false,
   className,
+  roizometer,
+  escore,
+  riskIndex,
 }: VNPSBadgeProps) {
   const getClassColor = () => {
     switch (vnpsClass) {
@@ -75,10 +82,12 @@ export function VNPSBadge({
     lg: "text-base px-3 py-1.5 gap-2",
   };
 
+  const hasDetailedInfo = roizometer !== undefined || escore !== undefined || riskIndex !== undefined;
+
   const badge = (
     <div
       className={cn(
-        "inline-flex items-center font-semibold rounded-full border transition-all",
+        "inline-flex items-center font-semibold rounded-full border transition-all cursor-help",
         getClassColor(),
         sizeClasses[size],
         className
@@ -92,13 +101,46 @@ export function VNPSBadge({
     </div>
   );
 
-  if (explanation) {
+  if (hasDetailedInfo || explanation) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>{badge}</TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p className="text-sm">{explanation}</p>
+          <TooltipContent className="max-w-xs p-3" side="bottom">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <HelpCircle className="h-3 w-3" />
+                Por que esse V-NPS?
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Probabilidade real de recomendação, calculada a partir de ROI percebido, engajamento e risco.
+              </p>
+              {explanation && (
+                <p className="text-xs">{explanation}</p>
+              )}
+              {hasDetailedInfo && (
+                <div className="grid grid-cols-3 gap-1.5 pt-1">
+                  <div className="p-1.5 rounded bg-muted/50 text-center">
+                    <div className="text-[10px] text-muted-foreground">ROI</div>
+                    <div className="text-xs font-semibold">{roizometer ?? 0}/100</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-muted/50 text-center">
+                    <div className="text-[10px] text-muted-foreground">Engajamento</div>
+                    <div className="text-xs font-semibold">{escore ?? 0}/100</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-muted/50 text-center">
+                    <div className="text-[10px] text-muted-foreground">Risco</div>
+                    <div className="text-xs font-semibold">{riskIndex ?? 0}/100</div>
+                  </div>
+                </div>
+              )}
+              {eligible && (
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 rounded">
+                  <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                  <span>Elegível para indicação</span>
+                </div>
+              )}
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
