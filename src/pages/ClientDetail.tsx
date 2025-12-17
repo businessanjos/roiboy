@@ -1681,6 +1681,7 @@ export default function ClientDetail() {
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="cx">Momentos CX</TabsTrigger>
             <TabsTrigger value="followup">Acompanhamento</TabsTrigger>
@@ -1764,6 +1765,23 @@ export default function ClientDetail() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="campos">
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Campos Personalizados
+              </CardTitle>
+              <CardDescription>
+                Informações personalizadas do cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <ClientFieldsSummary clientId={id!} expanded />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="timeline">
           <Card className="shadow-card">
             <CardHeader className="pb-2">
@@ -1773,7 +1791,6 @@ export default function ClientDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              <ClientFieldsSummary clientId={id!} />
               <Timeline 
                 events={timeline} 
                 clientId={id!} 
