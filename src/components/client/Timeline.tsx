@@ -43,7 +43,7 @@ import {
 
 export interface TimelineEvent {
   id: string;
-  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change";
+  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup";
   title: string;
   description?: string;
   timestamp: string;
@@ -70,6 +70,13 @@ export interface TimelineEvent {
     old_value?: string;
     new_value?: string;
     new_value_color?: string;
+    // Life event specific
+    event_type?: string;
+    is_recurring?: boolean;
+    // Financial specific
+    payment_status?: string;
+    amount?: number;
+    currency?: string;
   };
 }
 
@@ -138,6 +145,27 @@ const getEventConfig = (event: TimelineEvent) => {
         bgColor: "bg-primary",
         textColor: "text-primary",
         label: "Comentário",
+      };
+    case "life_event":
+      return {
+        icon: <Heart className="h-4 w-4" />,
+        bgColor: "bg-pink-500",
+        textColor: "text-pink-500",
+        label: "Momento CX",
+      };
+    case "financial":
+      return {
+        icon: <DollarSign className="h-4 w-4" />,
+        bgColor: "bg-amber-500",
+        textColor: "text-amber-500",
+        label: "Financeiro",
+      };
+    case "followup":
+      return {
+        icon: <FileText className="h-4 w-4" />,
+        bgColor: "bg-cyan-500",
+        textColor: "text-cyan-500",
+        label: "Acompanhamento",
       };
     default:
       return {
@@ -348,7 +376,7 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
   );
 }
 
-type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment";
+type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup";
 
 const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   comment: { label: "Comentários", color: "bg-primary" },
@@ -356,6 +384,9 @@ const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   roi: { label: "ROI", color: "bg-emerald-500" },
   risk: { label: "Riscos", color: "bg-red-500" },
   recommendation: { label: "Recomendações", color: "bg-violet-500" },
+  life_event: { label: "Momentos CX", color: "bg-pink-500" },
+  financial: { label: "Financeiro", color: "bg-amber-500" },
+  followup: { label: "Acompanhamento", color: "bg-cyan-500" },
 };
 
 export function Timeline({ events, className, clientId, onCommentAdded }: TimelineProps) {
