@@ -43,11 +43,30 @@ import {
   Eye,
   Link2,
   Settings2,
+  GripVertical,
+  X,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface CustomField {
   id: string;
@@ -66,6 +85,60 @@ interface Form {
   require_client_info: boolean;
   created_at: string;
   _count?: number;
+}
+
+interface SortableFieldItemProps {
+  field: CustomField;
+  onRemove: (id: string) => void;
+  getFieldTypeBadge: (type: string) => React.ReactNode;
+}
+
+function SortableFieldItem({ field, onRemove, getFieldTypeBadge }: SortableFieldItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: field.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 p-2 bg-background border rounded-md ${
+        isDragging ? "opacity-50 shadow-lg" : ""
+      }`}
+    >
+      <button
+        type="button"
+        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium">{field.name}</span>
+      </div>
+      {getFieldTypeBadge(field.field_type)}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-0"
+        onClick={() => onRemove(field.id)}
+      >
+        <X className="h-3 w-3" />
+      </Button>
+    </div>
+  );
 }
 
 export default function Forms() {
@@ -87,6 +160,30 @@ export default function Forms() {
   const [saving, setSaving] = useState(false);
   const [editingForm, setEditingForm] = useState<Form | null>(null);
   const [customFieldsDialogOpen, setCustomFieldsDialogOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSelectedFields((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const getSelectedFieldsData = () => {
+    return selectedFields
+      .map((id) => customFields.find((f) => f.id === id))
+      .filter(Boolean) as CustomField[];
+  };
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -506,28 +603,61 @@ export default function Forms() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="border rounded-lg divide-y max-h-[300px] overflow-y-auto">
-                  {customFields.map((field) => (
-                    <div
-                      key={field.id}
-                      className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => toggleField(field.id)}
-                    >
-                      <Checkbox
-                        checked={selectedFields.includes(field.id)}
-                        onCheckedChange={() => toggleField(field.id)}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground">{field.name}</p>
-                        {field.is_required && (
-                          <span className="text-xs text-muted-foreground">
-                            Obrigatório
-                          </span>
-                        )}
+                <div className="space-y-3">
+                  {/* Available fields to select */}
+                  <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+                    {customFields.map((field) => (
+                      <div
+                        key={field.id}
+                        className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
+                        onClick={() => toggleField(field.id)}
+                      >
+                        <Checkbox
+                          checked={selectedFields.includes(field.id)}
+                          onCheckedChange={() => toggleField(field.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground">{field.name}</p>
+                          {field.is_required && (
+                            <span className="text-xs text-muted-foreground">
+                              Obrigatório
+                            </span>
+                          )}
+                        </div>
+                        {getFieldTypeBadge(field.field_type)}
                       </div>
-                      {getFieldTypeBadge(field.field_type)}
+                    ))}
+                  </div>
+
+                  {/* Sortable selected fields */}
+                  {selectedFields.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">
+                        Ordem dos campos (arraste para reordenar)
+                      </Label>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={selectedFields}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2">
+                            {getSelectedFieldsData().map((field) => (
+                              <SortableFieldItem
+                                key={field.id}
+                                field={field}
+                                onRemove={toggleField}
+                                getFieldTypeBadge={getFieldTypeBadge}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
 
