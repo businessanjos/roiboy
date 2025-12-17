@@ -513,7 +513,8 @@ export default function ClientDetail() {
             impact: roi.impact, 
             category: roi.category, 
             roi_type: roi.roi_type,
-            source: roi.source 
+            source: roi.source,
+            image_url: roi.image_url,
           },
         });
       });
