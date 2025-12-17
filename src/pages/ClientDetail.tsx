@@ -469,13 +469,12 @@ export default function ClientDetail() {
 
       setRoiEvents((roiData || []) as RoiEvent[]);
 
-      // Fetch risk events
+      // Fetch risk events (all for the Risks tab)
       const { data: riskData } = await supabase
         .from("risk_events")
         .select("*")
         .eq("client_id", id)
-        .order("happened_at", { ascending: false })
-        .limit(3);
+        .order("happened_at", { ascending: false });
 
       setRiskEvents(riskData || []);
 
@@ -651,7 +650,7 @@ export default function ClientDetail() {
         (payload) => {
           console.log('New risk event:', payload);
           const risk = payload.new as any;
-          setRiskEvents((prev) => [risk, ...prev.slice(0, 2)]);
+          setRiskEvents((prev) => [risk, ...prev]);
           setTimeline((prev) => {
             const newEvent: TimelineEvent = {
               id: risk.id,
@@ -1454,7 +1453,7 @@ export default function ClientDetail() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {riskEvents.map((risk) => (
+              {riskEvents.slice(0, 3).map((risk) => (
                 <div
                   key={risk.id}
                   className="flex items-start justify-between p-2 bg-card rounded-lg"
@@ -1481,6 +1480,7 @@ export default function ClientDetail() {
             <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
+            <TabsTrigger value="risks">Riscos ({riskEvents.length})</TabsTrigger>
             <TabsTrigger value="recommendations">
               Recomendações ({recommendations.filter((r) => r.status === "open").length})
             </TabsTrigger>
@@ -1640,6 +1640,91 @@ export default function ClientDetail() {
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(roi.happened_at), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="risks">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base">Eventos de Risco</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {riskEvents.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  Nenhum evento de risco registrado. Clique em "Adicionar Risco" para começar.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {riskEvents.map((risk) => (
+                    <div
+                      key={risk.id}
+                      className="p-4 rounded-lg border border-border"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <AlertTriangle className={`h-4 w-4 ${
+                              risk.risk_level === "high"
+                                ? "text-red-500"
+                                : risk.risk_level === "medium"
+                                ? "text-amber-500"
+                                : "text-muted-foreground"
+                            }`} />
+                            <Badge
+                              variant="outline"
+                              className={
+                                risk.risk_level === "high"
+                                  ? "border-red-500 text-red-500"
+                                  : risk.risk_level === "medium"
+                                  ? "border-amber-500 text-amber-500"
+                                  : "border-muted-foreground"
+                              }
+                            >
+                              {risk.risk_level === "high"
+                                ? "Alto"
+                                : risk.risk_level === "medium"
+                                ? "Médio"
+                                : "Baixo"}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {risk.source === "whatsapp_text" ? "WhatsApp" 
+                                : risk.source === "whatsapp_audio" ? "Áudio"
+                                : risk.source === "zoom" ? "Zoom"
+                                : risk.source === "google_meet" ? "Google Meet"
+                                : risk.source === "financial" ? "Financeiro"
+                                : "Manual"}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-medium mt-2">{risk.reason}</p>
+                          {risk.evidence_snippet && (
+                            <p className="text-sm text-muted-foreground mt-1 italic">
+                              "{risk.evidence_snippet}"
+                            </p>
+                          )}
+                          {risk.image_url && (
+                            <a 
+                              href={risk.image_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="block mt-2"
+                            >
+                              <img
+                                src={risk.image_url}
+                                alt="Evidência"
+                                className="max-w-xs h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                              />
+                            </a>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(risk.happened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
