@@ -35,6 +35,7 @@ export interface CustomField {
   is_required: boolean;
   display_order: number;
   is_active: boolean;
+  show_in_clients?: boolean;
 }
 
 export interface FieldOption {
@@ -115,6 +116,9 @@ function SortableFieldItem({
           {field.is_required && (
             <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
           )}
+          {field.show_in_clients === false && (
+            <Badge variant="outline" className="text-xs text-muted-foreground">Só formulários</Badge>
+          )}
         </div>
         {field.options.length > 0 && (
           <div className="flex items-center gap-1 mt-1 flex-wrap">
@@ -182,6 +186,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
     { value: "opt_2", label: "", color: "red" },
   ]);
   const [isRequired, setIsRequired] = useState(false);
+  const [showInClients, setShowInClients] = useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -206,6 +211,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
         is_required: f.is_required,
         display_order: f.display_order,
         is_active: f.is_active,
+        show_in_clients: f.show_in_clients,
       }));
       setFields(mappedFields);
     }
@@ -224,10 +230,11 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
       { value: "opt_2", label: "", color: "red" },
     ]);
     setIsRequired(false);
+    setShowInClients(true);
     setEditingField(null);
   };
 
-  const openEditDialog = (field: CustomField) => {
+  const openEditDialog = (field: CustomField & { show_in_clients?: boolean }) => {
     setEditingField(field);
     setName(field.name);
     setFieldType(field.field_type);
@@ -236,6 +243,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
       { value: "opt_2", label: "", color: "red" },
     ]);
     setIsRequired(field.is_required);
+    setShowInClients(field.show_in_clients !== false);
     setDialogOpen(true);
   };
 
@@ -323,6 +331,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
           value: opt.value || `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         })) : [],
         is_required: isRequired,
+        show_in_clients: showInClients,
         display_order: editingField?.display_order ?? fields.length,
       };
 
@@ -495,6 +504,14 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
                   <p className="text-xs text-muted-foreground">Campo deve ser preenchido</p>
                 </div>
                 <Switch checked={isRequired} onCheckedChange={setIsRequired} />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <div>
+                  <Label className="text-sm">Exibir em clientes</Label>
+                  <p className="text-xs text-muted-foreground">Campo aparece na ficha do cliente</p>
+                </div>
+                <Switch checked={showInClients} onCheckedChange={setShowInClients} />
               </div>
             </div>
 

@@ -673,6 +673,7 @@ export type Database = {
           is_required: boolean | null
           name: string
           options: Json | null
+          show_in_clients: boolean
           updated_at: string
         }
         Insert: {
@@ -685,6 +686,7 @@ export type Database = {
           is_required?: boolean | null
           name: string
           options?: Json | null
+          show_in_clients?: boolean
           updated_at?: string
         }
         Update: {
@@ -697,6 +699,7 @@ export type Database = {
           is_required?: boolean | null
           name?: string
           options?: Json | null
+          show_in_clients?: boolean
           updated_at?: string
         }
         Relationships: [
