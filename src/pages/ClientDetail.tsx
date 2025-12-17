@@ -23,6 +23,7 @@ import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/compon
 import { ClientFollowup } from "@/components/client/ClientFollowup";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
+import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -74,6 +75,7 @@ interface Client {
   city?: string;
   state?: string;
   zip_code?: string;
+  avatar_url?: string | null;
 }
 
 interface ScoreSnapshot {
@@ -398,6 +400,7 @@ export default function ClientDetail() {
         city: clientData.city || "",
         state: clientData.state || "",
         zip_code: clientData.zip_code || "",
+        avatar_url: clientData.avatar_url || null,
       });
 
       // Fetch client products
@@ -786,6 +789,13 @@ export default function ClientDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
+          <ClientAvatarUpload
+            clientId={client.id}
+            clientName={client.full_name}
+            currentAvatarUrl={client.avatar_url}
+            onAvatarChange={(url) => setClient({ ...client, avatar_url: url })}
+            size="lg"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">{client.full_name}</h1>
