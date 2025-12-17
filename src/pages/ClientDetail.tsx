@@ -1661,7 +1661,7 @@ export default function ClientDetail() {
             <div className="flex flex-col items-center justify-center h-full gap-2">
               <p className="text-sm font-medium text-muted-foreground">V-NPS</p>
               {vnps ? (
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-2">
                   <VNPSBadge
                     score={vnps.vnps_score}
                     vnpsClass={vnps.vnps_class}
@@ -1671,9 +1671,25 @@ export default function ClientDetail() {
                     size="lg"
                     showClass
                   />
+                  {(client.contract_start_date || client.contract_end_date) && (
+                    <ContractTimer 
+                      startDate={client.contract_start_date}
+                      endDate={client.contract_end_date}
+                      variant="compact"
+                    />
+                  )}
                 </div>
               ) : (
-                <span className="text-2xl font-bold text-muted-foreground">—</span>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-2xl font-bold text-muted-foreground">—</span>
+                  {(client.contract_start_date || client.contract_end_date) && (
+                    <ContractTimer 
+                      startDate={client.contract_start_date}
+                      endDate={client.contract_end_date}
+                      variant="compact"
+                    />
+                  )}
+                </div>
               )}
             </div>
           </CardContent>
@@ -1723,28 +1739,6 @@ export default function ClientDetail() {
               escore={vnps.escore}
               riskIndex={vnps.risk_index}
               eligible={vnps.eligible_for_nps_ask}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Contract Timer Card */}
-      {(client.contract_start_date || client.contract_end_date) && (
-        <Card className="shadow-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              Vigência do Contrato
-            </CardTitle>
-            <CardDescription>
-              Período e progresso do contrato atual
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ContractTimer 
-              startDate={client.contract_start_date}
-              endDate={client.contract_end_date}
-              variant="full"
             />
           </CardContent>
         </Card>
