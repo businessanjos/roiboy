@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -116,6 +116,11 @@ export default function Clients() {
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  
+  // Avatar upload state for new client
+  const [newClientAvatar, setNewClientAvatar] = useState<File | null>(null);
+  const [newClientAvatarPreview, setNewClientAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const fetchClients = async () => {
     // Get account_id first
@@ -296,6 +301,36 @@ export default function Clients() {
     }
   }, [clients]);
 
+  // Avatar handlers for new client
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione uma imagem válida");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 10MB");
+      return;
+    }
+    
+    setNewClientAvatar(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNewClientAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearNewClientAvatar = () => {
+    setNewClientAvatar(null);
+    setNewClientAvatarPreview(null);
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
+  };
+
   const handleAddClient = async () => {
     const errors: Record<string, string> = {};
     if (!newClientData.full_name.trim()) errors.full_name = "Nome é obrigatório";
@@ -323,6 +358,7 @@ export default function Clients() {
         return;
       }
 
+      // Create client first
       const { data: newClient, error } = await supabase.from("clients").insert({
         account_id: userData.account_id,
         full_name: newClientData.full_name.trim(),
@@ -345,6 +381,33 @@ export default function Clients() {
 
       if (error) throw error;
 
+      // Upload avatar if provided
+      if (newClientAvatar && newClient) {
+        try {
+          const fileName = `clients/${newClient.id}-${Date.now()}.jpg`;
+          const { error: uploadError } = await supabase.storage
+            .from("avatars")
+            .upload(fileName, newClientAvatar, { 
+              upsert: true,
+              contentType: newClientAvatar.type
+            });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from("avatars")
+              .getPublicUrl(fileName);
+
+            await supabase
+              .from("clients")
+              .update({ avatar_url: urlData.publicUrl })
+              .eq("id", newClient.id);
+          }
+        } catch (avatarError) {
+          console.error("Error uploading avatar:", avatarError);
+          // Don't fail the whole operation if avatar upload fails
+        }
+      }
+
       if (selectedProducts.length > 0 && newClient) {
         const clientProducts = selectedProducts.map(productId => ({
           account_id: userData.account_id,
@@ -358,6 +421,8 @@ export default function Clients() {
       setDialogOpen(false);
       setNewClientData(getEmptyClientFormData());
       setSelectedProducts([]);
+      setNewClientAvatar(null);
+      setNewClientAvatarPreview(null);
       fetchClients();
     } catch (error: any) {
       toast.error(error.message || "Erro ao adicionar cliente");
@@ -701,6 +766,8 @@ export default function Clients() {
               setNewClientData(getEmptyClientFormData());
               setSelectedProducts([]);
               setFormErrors({});
+              setNewClientAvatar(null);
+              setNewClientAvatarPreview(null);
             }
           }}>
             <DialogTrigger asChild>
@@ -713,6 +780,46 @@ export default function Clients() {
               </DialogHeader>
               <ScrollArea className="max-h-[60vh] pr-4">
                 <div className="space-y-6">
+                  {/* Avatar Upload */}
+                  <div className="flex flex-col items-center gap-3 pb-4 border-b">
+                    <div className="relative group">
+                      {newClientAvatarPreview ? (
+                        <div className="relative">
+                          <Avatar className="h-20 w-20 ring-2 ring-primary/20">
+                            <AvatarImage src={newClientAvatarPreview} alt="Preview" />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                              {newClientData.full_name ? newClientData.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <button
+                            type="button"
+                            onClick={clearNewClientAvatar}
+                            className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm hover:bg-destructive/90"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => avatarInputRef.current?.click()}
+                          className="h-20 w-20 rounded-full border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                        >
+                          <Camera className="h-6 w-6 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">Foto</span>
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarSelect}
+                      className="hidden"
+                    />
+                    <p className="text-xs text-muted-foreground">Clique para adicionar foto (opcional)</p>
+                  </div>
+
                   <ClientInfoForm 
                     data={newClientData} 
                     onChange={setNewClientData}
