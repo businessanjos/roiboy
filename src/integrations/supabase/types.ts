@@ -541,6 +541,8 @@ export type Database = {
           cnpj: string | null
           company_name: string | null
           complement: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
           cpf: string | null
           created_at: string
           emails: Json | null
@@ -565,6 +567,8 @@ export type Database = {
           cnpj?: string | null
           company_name?: string | null
           complement?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           cpf?: string | null
           created_at?: string
           emails?: Json | null
@@ -589,6 +593,8 @@ export type Database = {
           cnpj?: string | null
           company_name?: string | null
           complement?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           cpf?: string | null
           created_at?: string
           emails?: Json | null

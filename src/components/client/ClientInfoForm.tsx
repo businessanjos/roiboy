@@ -32,6 +32,8 @@ export interface ClientFormData {
   city: string;
   state: string;
   zip_code: string;
+  contract_start_date: string;
+  contract_end_date: string;
 }
 
 interface ClientInfoFormProps {
@@ -317,6 +319,34 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
       <Separator />
 
+      {/* Contract Dates */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          Contrato
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Data de Início</Label>
+            <Input
+              type="date"
+              value={data.contract_start_date}
+              onChange={(e) => updateField("contract_start_date", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Data de Fim</Label>
+            <Input
+              type="date"
+              value={data.contract_end_date}
+              onChange={(e) => updateField("contract_end_date", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
       {/* Address */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -426,4 +456,6 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   city: "",
   state: "",
   zip_code: "",
+  contract_start_date: "",
+  contract_end_date: "",
 });
