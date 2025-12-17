@@ -8,8 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users, DollarSign, Loader2 } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users, DollarSign, Loader2, Plus, MessageSquare, CreditCard, ShoppingCart, Mail, Webhook } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -27,6 +35,20 @@ export default function Integrations() {
   const [bulkSyncing, setBulkSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
   const [clientCount, setClientCount] = useState(0);
+  const [newIntegrationOpen, setNewIntegrationOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("zoom");
+
+  const availableIntegrations = [
+    { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video, category: "Videoconferência" },
+    { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar, category: "Videoconferência" },
+    { id: "whatsapp", name: "WhatsApp Web", description: "Captura de mensagens via Chrome Extension", icon: MessageSquare, category: "Comunicação" },
+    { id: "pipedrive", name: "Pipedrive", description: "Cadastre clientes ao fechar vendas", icon: Users, category: "CRM" },
+    { id: "ryka", name: "Clínica Ryka", description: "Receba metas e vendas automaticamente", icon: TrendingUp, category: "Vendas" },
+    { id: "omie", name: "Omie", description: "Sincronize dados financeiros e pagamentos", icon: DollarSign, category: "Financeiro" },
+    { id: "stripe", name: "Stripe", description: "Pagamentos e assinaturas recorrentes", icon: CreditCard, category: "Pagamentos", soon: true },
+    { id: "hubspot", name: "HubSpot", description: "Sincronização de contatos e deals", icon: Users, category: "CRM", soon: true },
+    { id: "slack", name: "Slack", description: "Notificações e alertas em canais", icon: MessageSquare, category: "Comunicação", soon: true },
+  ];
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const zoomWebhookUrl = `${supabaseUrl}/functions/v1/zoom-webhook`;
@@ -220,14 +242,64 @@ export default function Integrations() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Integrações</h1>
-        <p className="text-muted-foreground">
-          Configure webhooks e conexões com Zoom, Google Meet e WhatsApp.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Integrações</h1>
+          <p className="text-muted-foreground">
+            Configure webhooks e conexões com ferramentas externas.
+          </p>
+        </div>
+        <Dialog open={newIntegrationOpen} onOpenChange={setNewIntegrationOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Integração
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Adicionar Integração</DialogTitle>
+              <DialogDescription>
+                Selecione uma ferramenta para integrar ao ROIBOY
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3 py-4">
+              {availableIntegrations.map((integration) => {
+                const Icon = integration.icon;
+                return (
+                  <button
+                    key={integration.id}
+                    onClick={() => {
+                      if (!integration.soon) {
+                        setActiveTab(integration.id);
+                        setNewIntegrationOpen(false);
+                      }
+                    }}
+                    disabled={integration.soon}
+                    className="flex items-center gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{integration.name}</h4>
+                        {integration.soon && (
+                          <Badge variant="secondary" className="text-xs">Em breve</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{integration.description}</p>
+                      <span className="text-xs text-muted-foreground">{integration.category}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Tabs defaultValue="zoom" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
             <TabsTrigger value="zoom" className="gap-2">
