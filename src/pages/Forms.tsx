@@ -44,6 +44,10 @@ import {
   CalendarIcon,
   User,
   Phone,
+  LayoutTemplate,
+  Star,
+  ThumbsUp,
+  MessageSquare,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -143,6 +147,114 @@ function SortableFieldItem({ field, onRemove, getFieldTypeBadge }: SortableField
   );
 }
 
+// Form Templates
+interface FormTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  title: string;
+  formDescription: string;
+  requireClientInfo: boolean;
+  fields: Array<{
+    name: string;
+    field_type: string;
+    is_required: boolean;
+    options?: any[];
+  }>;
+}
+
+const FORM_TEMPLATES: FormTemplate[] = [
+  {
+    id: "nps",
+    name: "NPS",
+    description: "Net Promoter Score - Pergunta de 0-10 sobre recomendação",
+    icon: <Star className="h-5 w-5" />,
+    title: "Pesquisa NPS",
+    formDescription: "Em uma escala de 0 a 10, o quanto você recomendaria nossos serviços?",
+    requireClientInfo: true,
+    fields: [
+      {
+        name: "Nota NPS (0-10)",
+        field_type: "select",
+        is_required: true,
+        options: [
+          { value: "0", label: "0 - Não recomendaria", color: "#ef4444" },
+          { value: "1", label: "1", color: "#ef4444" },
+          { value: "2", label: "2", color: "#ef4444" },
+          { value: "3", label: "3", color: "#f97316" },
+          { value: "4", label: "4", color: "#f97316" },
+          { value: "5", label: "5", color: "#f97316" },
+          { value: "6", label: "6", color: "#f97316" },
+          { value: "7", label: "7 - Neutro", color: "#eab308" },
+          { value: "8", label: "8 - Neutro", color: "#eab308" },
+          { value: "9", label: "9 - Promotor", color: "#22c55e" },
+          { value: "10", label: "10 - Promotor", color: "#22c55e" },
+        ],
+      },
+      {
+        name: "Comentário (opcional)",
+        field_type: "text",
+        is_required: false,
+      },
+    ],
+  },
+  {
+    id: "csat",
+    name: "CSAT",
+    description: "Satisfação - Escala de Muito Insatisfeito a Muito Satisfeito",
+    icon: <ThumbsUp className="h-5 w-5" />,
+    title: "Pesquisa de Satisfação",
+    formDescription: "Como você avalia sua experiência conosco?",
+    requireClientInfo: true,
+    fields: [
+      {
+        name: "Nível de Satisfação",
+        field_type: "select",
+        is_required: true,
+        options: [
+          { value: "muito_insatisfeito", label: "Muito Insatisfeito", color: "#ef4444" },
+          { value: "insatisfeito", label: "Insatisfeito", color: "#f97316" },
+          { value: "neutro", label: "Neutro", color: "#eab308" },
+          { value: "satisfeito", label: "Satisfeito", color: "#84cc16" },
+          { value: "muito_satisfeito", label: "Muito Satisfeito", color: "#22c55e" },
+        ],
+      },
+      {
+        name: "O que podemos melhorar?",
+        field_type: "text",
+        is_required: false,
+      },
+    ],
+  },
+  {
+    id: "feedback",
+    name: "Feedback Geral",
+    description: "Campos abertos para sugestões e comentários",
+    icon: <MessageSquare className="h-5 w-5" />,
+    title: "Formulário de Feedback",
+    formDescription: "Compartilhe sua opinião conosco!",
+    requireClientInfo: true,
+    fields: [
+      {
+        name: "Sugestões",
+        field_type: "text",
+        is_required: false,
+      },
+      {
+        name: "Comentários Gerais",
+        field_type: "text",
+        is_required: false,
+      },
+      {
+        name: "O que você mais gosta?",
+        field_type: "text",
+        is_required: false,
+      },
+    ],
+  },
+];
+
 export default function Forms() {
   const { currentUser } = useCurrentUser();
   const [forms, setForms] = useState<Form[]>([]);
@@ -162,6 +274,8 @@ export default function Forms() {
   const [saving, setSaving] = useState(false);
   const [editingForm, setEditingForm] = useState<Form | null>(null);
   const [customFieldsDialogOpen, setCustomFieldsDialogOpen] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   // Preview state (interactive testing)
   const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
@@ -249,6 +363,7 @@ export default function Forms() {
     setFormDescription("");
     setSelectedFields([]);
     setRequireClientInfo(false);
+    setShowTemplates(true);
     setDialogOpen(true);
   };
 
@@ -258,7 +373,64 @@ export default function Forms() {
     setFormDescription(form.description || "");
     setSelectedFields(form.fields || []);
     setRequireClientInfo(form.require_client_info);
+    setShowTemplates(false);
     setDialogOpen(true);
+  };
+
+  const applyTemplate = async (template: FormTemplate) => {
+    setApplyingTemplate(true);
+    try {
+      // Create custom fields if they don't exist and collect their IDs
+      const fieldIds: string[] = [];
+      
+      for (const fieldDef of template.fields) {
+        // Check if field with same name exists
+        const existingField = customFields.find(f => f.name === fieldDef.name);
+        
+        if (existingField) {
+          fieldIds.push(existingField.id);
+        } else {
+          // Create the field
+          const { data, error } = await supabase
+            .from("custom_fields")
+            .insert({
+              account_id: currentUser!.account_id,
+              name: fieldDef.name,
+              field_type: fieldDef.field_type,
+              is_required: fieldDef.is_required,
+              options: fieldDef.options || [],
+              is_active: true,
+              show_in_clients: false, // Template fields are form-only by default
+            })
+            .select("id")
+            .single();
+          
+          if (error) throw error;
+          if (data) fieldIds.push(data.id);
+        }
+      }
+
+      // Refresh custom fields list
+      await fetchCustomFields();
+
+      // Pre-fill form with template data
+      setFormTitle(template.title);
+      setFormDescription(template.formDescription);
+      setRequireClientInfo(template.requireClientInfo);
+      setSelectedFields(fieldIds);
+      setShowTemplates(false);
+      
+      toast.success(`Modelo "${template.name}" aplicado!`);
+    } catch (error: any) {
+      console.error("Error applying template:", error);
+      toast.error("Erro ao aplicar modelo");
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
+  const startFromScratch = () => {
+    setShowTemplates(false);
   };
 
   const handleSave = async () => {
@@ -763,14 +935,63 @@ export default function Forms() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingForm ? "Editar Formulário" : "Novo Formulário"}
+              {editingForm ? "Editar Formulário" : showTemplates ? "Novo Formulário" : "Configurar Formulário"}
             </DialogTitle>
             <DialogDescription>
-              Configure os campos que aparecerão no formulário público
+              {showTemplates 
+                ? "Escolha um modelo para começar rapidamente ou crie do zero" 
+                : "Configure os campos que aparecerão no formulário público"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          {/* Template Selection */}
+          {showTemplates && !editingForm ? (
+            <div className="space-y-4 py-4">
+              <div className="grid gap-3">
+                {FORM_TEMPLATES.map((template) => (
+                  <Card
+                    key={template.id}
+                    className="cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                    onClick={() => !applyingTemplate && applyTemplate(template)}
+                  >
+                    <CardContent className="flex items-start gap-4 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        {template.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium">{template.name}</h4>
+                        <p className="text-sm text-muted-foreground">{template.description}</p>
+                      </div>
+                      {applyingTemplate && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={startFromScratch}
+                disabled={applyingTemplate}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Criar do zero
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título *</Label>
               <Input
@@ -915,6 +1136,8 @@ export default function Forms() {
               {editingForm ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
