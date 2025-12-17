@@ -86,6 +86,7 @@ interface Contract {
   status: string;
   status_reason: string | null;
   status_changed_at: string | null;
+  contract_type: string;
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +125,13 @@ const PAYMENT_METHODS = [
   { value: "cheque", label: "Cheque" },
 ];
 
+const CONTRACT_TYPES = [
+  { value: "compra", label: "Contrato de Compra" },
+  { value: "confissao_divida", label: "Confissão de Dívida" },
+  { value: "termo_congelamento", label: "Termo de Congelamento" },
+  { value: "distrato", label: "Distrato" },
+];
+
 export function ClientContracts({ clientId }: ClientContractsProps) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,6 +156,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     start_date: "",
     end_date: "",
     value: "",
+    contract_type: "compra",
     payment_type: "",
     installments: "",
     payment_method: "",
@@ -184,6 +193,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       start_date: "",
       end_date: "",
       value: "",
+      contract_type: "compra",
       payment_type: "",
       installments: "",
       payment_method: "",
@@ -231,6 +241,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       start_date: nextDay,
       end_date: "",
       value: contract.value.toString(),
+      contract_type: contract.contract_type || "compra",
       payment_type: parsed.type,
       installments: parsed.installments,
       payment_method: parsed.method,
@@ -249,6 +260,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       start_date: contract.start_date,
       end_date: contract.end_date || "",
       value: contract.value.toString(),
+      contract_type: contract.contract_type || "compra",
       payment_type: parsed.type,
       installments: parsed.installments,
       payment_method: parsed.method,
@@ -337,6 +349,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         start_date: formData.start_date,
         end_date: formData.end_date || null,
         value: parseFloat(formData.value) || 0,
+        contract_type: formData.contract_type,
         payment_option: buildPaymentOption(),
         notes: formData.notes || null,
         file_url: fileUrl || null,
@@ -590,6 +603,25 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label>Tipo de Contrato *</Label>
+                <Select
+                  value={formData.contract_type}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, contract_type: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTRACT_TYPES.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="value">Valor (R$) *</Label>
@@ -743,6 +775,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[40px]"></TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Período</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Pagamento</TableHead>
@@ -777,6 +810,11 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                           )}
                         </Button>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-normal">
+                        {CONTRACT_TYPES.find(t => t.value === contract.contract_type)?.label || "Compra"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

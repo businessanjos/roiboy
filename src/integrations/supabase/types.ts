@@ -171,6 +171,7 @@ export type Database = {
         Row: {
           account_id: string
           client_id: string
+          contract_type: string
           created_at: string
           currency: string
           end_date: string | null
@@ -190,6 +191,7 @@ export type Database = {
         Insert: {
           account_id: string
           client_id: string
+          contract_type?: string
           created_at?: string
           currency?: string
           end_date?: string | null
@@ -209,6 +211,7 @@ export type Database = {
         Update: {
           account_id?: string
           client_id?: string
+          contract_type?: string
           created_at?: string
           currency?: string
           end_date?: string | null
