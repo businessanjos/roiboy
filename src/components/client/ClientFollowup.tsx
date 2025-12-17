@@ -621,79 +621,6 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         </div>
       )}
 
-      {/* Social Media Style Input */}
-      {currentUser && (
-        <div className="flex gap-3 pb-4 border-b">
-          <Avatar className="h-9 w-9 flex-shrink-0">
-            <AvatarImage src={currentUser.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {currentUser.name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 relative">
-            <MentionInput
-              placeholder="Escreva uma nota... Use @ para mencionar"
-              value={quickComment}
-              onChange={setQuickComment}
-              onKeyDown={handleQuickKeyDown}
-              className="pr-24"
-            />
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleQuickFileSelect(e, "image")}
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => handleQuickFileSelect(e, "file")}
-              />
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      disabled={uploading}
-                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    >
-                      <Camera className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              {(quickComment.trim() || uploading) && (
-                <button
-                  type="button"
-                  onClick={handleQuickComment}
-                  disabled={saving || uploading || !quickComment.trim()}
-                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                >
-                  {saving || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Search and Sort */}
       <div className="flex items-center gap-2">
@@ -873,6 +800,80 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
             )}
           </div>
         </ScrollArea>
+      )}
+
+      {/* Social Media Style Input - Bottom position */}
+      {currentUser && (
+        <div className="flex gap-3 pt-4 border-t">
+          <Avatar className="h-9 w-9 flex-shrink-0">
+            <AvatarImage src={currentUser.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              {currentUser.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 relative">
+            <MentionInput
+              placeholder="Escreva uma nota... Use @ para mencionar"
+              value={quickComment}
+              onChange={setQuickComment}
+              onKeyDown={handleQuickKeyDown}
+              className="pr-24"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "image")}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "file")}
+              />
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {(quickComment.trim() || uploading) && (
+                <button
+                  type="button"
+                  onClick={handleQuickComment}
+                  disabled={saving || uploading || !quickComment.trim()}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {saving || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Create/Edit Dialog */}
