@@ -3,23 +3,30 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Bell,
+  BellRing,
   CheckCheck,
   Loader2,
-  MessageSquare,
   AtSign,
   ExternalLink,
 } from "lucide-react";
 
 export default function Notifications() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } =
-    useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    loading, 
+    notificationPermission,
+    markAsRead, 
+    markAllAsRead,
+    requestNotificationPermission,
+  } = useNotifications();
 
   const handleNotificationClick = async (notification: any) => {
     if (!notification.is_read) {
@@ -49,7 +56,7 @@ export default function Notifications() {
 
   return (
     <div className="container max-w-3xl py-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-semibold">Notificações</h1>
@@ -57,12 +64,31 @@ export default function Notifications() {
             <Badge variant="default">{unreadCount} não lidas</Badge>
           )}
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={markAllAsRead}>
-            <CheckCheck className="h-4 w-4 mr-2" />
-            Marcar todas como lidas
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {notificationPermission === "default" && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={requestNotificationPermission}
+              className="gap-2"
+            >
+              <BellRing className="h-4 w-4" />
+              Ativar push
+            </Button>
+          )}
+          {notificationPermission === "granted" && (
+            <Badge variant="secondary" className="gap-1">
+              <BellRing className="h-3 w-3" />
+              Push ativo
+            </Badge>
+          )}
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={markAllAsRead}>
+              <CheckCheck className="h-4 w-4 mr-2" />
+              Marcar todas como lidas
+            </Button>
+          )}
+        </div>
       </div>
 
       {notifications.length === 0 ? (

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -24,17 +24,68 @@ interface NotificationsContextType {
   notifications: Notification[];
   unreadCount: number;
   loading: boolean;
+  notificationPermission: NotificationPermission | "unsupported";
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refetch: () => Promise<void>;
+  requestNotificationPermission: () => Promise<void>;
 }
 
 const NotificationsContext = createContext<NotificationsContextType | null>(null);
+
+// Check if browser supports notifications
+const supportsNotifications = () => "Notification" in window;
+
+// Show browser push notification
+const showBrowserNotification = (title: string, body: string, link?: string | null) => {
+  if (!supportsNotifications() || Notification.permission !== "granted") return;
+
+  const notification = new Notification(title, {
+    body,
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+    tag: `roiboy-${Date.now()}`, // Unique tag to allow multiple notifications
+  });
+
+  if (link) {
+    notification.onclick = () => {
+      window.focus();
+      window.location.href = link;
+      notification.close();
+    };
+  }
+
+  // Auto close after 5 seconds
+  setTimeout(() => notification.close(), 5000);
+};
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(
+    supportsNotifications() ? Notification.permission : "unsupported"
+  );
+
+  const requestNotificationPermission = useCallback(async () => {
+    if (!supportsNotifications()) {
+      setNotificationPermission("unsupported");
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      
+      if (permission === "granted") {
+        toast.success("Notificações ativadas!");
+      } else if (permission === "denied") {
+        toast.error("Permissão de notificações negada");
+      }
+    } catch (error) {
+      console.error("Error requesting notification permission:", error);
+    }
+  }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -96,7 +147,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             if (data) {
               setNotifications((prev) => [data, ...prev]);
               
-              // Show toast notification
+              // Show toast notification (in-app)
               toast.info(data.title, {
                 description: data.content || undefined,
                 action: data.link ? {
@@ -104,6 +155,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                   onClick: () => window.location.href = data.link!,
                 } : undefined,
               });
+
+              // Show browser push notification
+              showBrowserNotification(
+                data.title,
+                data.content || "Nova notificação",
+                data.link
+              );
             }
           }
         }
@@ -156,9 +214,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         notifications,
         unreadCount,
         loading,
+        notificationPermission,
         markAsRead,
         markAllAsRead,
         refetch: fetchNotifications,
+        requestNotificationPermission,
       }}
     >
       {children}
