@@ -56,6 +56,7 @@ export default function PublicForm() {
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchFormData();
@@ -102,29 +103,62 @@ export default function PublicForm() {
     }
   };
 
+  const isFieldEmpty = (field: CustomField, value: any): boolean => {
+    if (value === undefined || value === null) return true;
+    
+    switch (field.field_type) {
+      case "boolean":
+        return value !== true && value !== false;
+      case "multi_select":
+        return !Array.isArray(value) || value.length === 0;
+      case "number":
+      case "currency":
+        return value === "" || isNaN(value);
+      case "text":
+      case "select":
+      case "date":
+        return !value || (typeof value === "string" && !value.trim());
+      default:
+        return !value;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate required fields
-    const missingFields = customFields.filter(
-      (field) => field.is_required && !responses[field.id]
-    );
+    const errors: Record<string, boolean> = {};
+    const missingFields: CustomField[] = [];
 
-    if (missingFields.length > 0) {
-      toast.error(`Preencha os campos obrigatórios: ${missingFields.map((f) => f.name).join(", ")}`);
-      return;
-    }
+    customFields.forEach((field) => {
+      if (field.is_required && isFieldEmpty(field, responses[field.id])) {
+        errors[field.id] = true;
+        missingFields.push(field);
+      }
+    });
 
     // Validate client info if required
+    let clientNameError = false;
+    let clientPhoneError = false;
+
     if (formData?.require_client_info && !clientId) {
       if (!clientName.trim()) {
-        toast.error("Nome é obrigatório");
-        return;
+        clientNameError = true;
       }
       if (!clientPhone.trim()) {
-        toast.error("Telefone é obrigatório");
-        return;
+        clientPhoneError = true;
       }
+    }
+
+    setFieldErrors({ ...errors, clientName: clientNameError, clientPhone: clientPhoneError });
+
+    if (missingFields.length > 0 || clientNameError || clientPhoneError) {
+      const errorMessages: string[] = [];
+      if (clientNameError) errorMessages.push("Nome");
+      if (clientPhoneError) errorMessages.push("Telefone");
+      errorMessages.push(...missingFields.map((f) => f.name));
+      toast.error(`Preencha os campos obrigatórios: ${errorMessages.join(", ")}`);
+      return;
     }
 
     setSubmitting(true);
@@ -158,6 +192,10 @@ export default function PublicForm() {
 
   const updateResponse = (fieldId: string, value: any) => {
     setResponses((prev) => ({ ...prev, [fieldId]: value }));
+    // Clear error when user fills the field
+    if (fieldErrors[fieldId]) {
+      setFieldErrors((prev) => ({ ...prev, [fieldId]: false }));
+    }
   };
 
   const renderField = (field: CustomField) => {
@@ -166,7 +204,10 @@ export default function PublicForm() {
     switch (field.field_type) {
       case "boolean":
         return (
-          <div className="flex items-center gap-3">
+          <div className={cn(
+            "flex items-center gap-3 p-3 rounded-md border",
+            fieldErrors[field.id] ? "border-destructive" : "border-transparent"
+          )}>
             <Switch
               checked={value === true}
               onCheckedChange={(checked) => updateResponse(field.id, checked)}
@@ -183,6 +224,10 @@ export default function PublicForm() {
           <RadioGroup
             value={value || ""}
             onValueChange={(v) => updateResponse(field.id, v)}
+            className={cn(
+              "p-3 rounded-md border",
+              fieldErrors[field.id] ? "border-destructive" : "border-transparent"
+            )}
           >
             {selectOptions.map((opt: any) => (
               <div key={opt.value} className="flex items-center space-x-2">
@@ -202,7 +247,10 @@ export default function PublicForm() {
         const multiOptions = field.options || [];
         const selectedValues = (value as string[]) || [];
         return (
-          <div className="space-y-2">
+          <div className={cn(
+            "space-y-2 p-3 rounded-md border",
+            fieldErrors[field.id] ? "border-destructive" : "border-transparent"
+          )}>
             {multiOptions.map((opt: any) => (
               <div key={opt.value} className="flex items-center space-x-2">
                 <Checkbox
@@ -239,6 +287,7 @@ export default function PublicForm() {
             onChange={(e) => updateResponse(field.id, e.target.value ? Number(e.target.value) : null)}
             placeholder={field.field_type === "currency" ? "0.00" : "0"}
             step={field.field_type === "currency" ? "0.01" : "1"}
+            className={cn(fieldErrors[field.id] && "border-destructive ring-destructive")}
           />
         );
 
@@ -250,7 +299,8 @@ export default function PublicForm() {
                 variant="outline"
                 className={cn(
                   "w-full justify-start text-left font-normal",
-                  !value && "text-muted-foreground"
+                  !value && "text-muted-foreground",
+                  fieldErrors[field.id] && "border-destructive ring-destructive"
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -278,6 +328,7 @@ export default function PublicForm() {
             onChange={(e) => updateResponse(field.id, e.target.value)}
             placeholder="Digite sua resposta..."
             rows={3}
+            className={cn(fieldErrors[field.id] && "border-destructive ring-destructive")}
           />
         );
     }
@@ -361,26 +412,44 @@ export default function PublicForm() {
               {formData?.require_client_info && !clientId && (
                 <div className="space-y-4 pb-4 border-b">
                   <div className="space-y-2">
-                    <Label htmlFor="clientName">
+                    <Label htmlFor="clientName" className={cn(fieldErrors.clientName && "text-destructive")}>
                       Nome <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="clientName"
                       value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
+                      onChange={(e) => {
+                        setClientName(e.target.value);
+                        if (fieldErrors.clientName) {
+                          setFieldErrors((prev) => ({ ...prev, clientName: false }));
+                        }
+                      }}
                       placeholder="Seu nome completo"
+                      className={cn(fieldErrors.clientName && "border-destructive ring-destructive")}
                     />
+                    {fieldErrors.clientName && (
+                      <p className="text-sm text-destructive">Nome é obrigatório</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="clientPhone">
+                    <Label htmlFor="clientPhone" className={cn(fieldErrors.clientPhone && "text-destructive")}>
                       Telefone <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="clientPhone"
                       value={clientPhone}
-                      onChange={(e) => setClientPhone(e.target.value)}
+                      onChange={(e) => {
+                        setClientPhone(e.target.value);
+                        if (fieldErrors.clientPhone) {
+                          setFieldErrors((prev) => ({ ...prev, clientPhone: false }));
+                        }
+                      }}
                       placeholder="(11) 99999-9999"
+                      className={cn(fieldErrors.clientPhone && "border-destructive ring-destructive")}
                     />
+                    {fieldErrors.clientPhone && (
+                      <p className="text-sm text-destructive">Telefone é obrigatório</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -388,13 +457,16 @@ export default function PublicForm() {
               {/* Custom fields */}
               {customFields.map((field) => (
                 <div key={field.id} className="space-y-2">
-                  <Label>
+                  <Label className={cn(fieldErrors[field.id] && "text-destructive")}>
                     {field.name}
                     {field.is_required && (
                       <span className="text-destructive ml-1">*</span>
                     )}
                   </Label>
                   {renderField(field)}
+                  {fieldErrors[field.id] && (
+                    <p className="text-sm text-destructive">Este campo é obrigatório</p>
+                  )}
                 </div>
               ))}
 
