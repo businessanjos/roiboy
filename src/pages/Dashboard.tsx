@@ -869,53 +869,45 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Status Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Congelamentos (Pausados) */}
+          {/* Status Cards - Single Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {/* Congelamentos */}
             <Card className="shadow-card border-l-4 border-l-amber-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Congelamentos</p>
-                    <p className="text-4xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Clientes pausados</p>
-                  </div>
-                  <div className="h-14 w-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <Minus className="h-7 w-7 text-amber-600" />
-                  </div>
-                </div>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
+                <p className="text-2xl font-bold text-amber-600">{clients.filter(c => c.status === "paused").length}</p>
               </CardContent>
             </Card>
 
-            {/* Demissões (Em Risco de Churn) */}
+            {/* Demissões */}
             <Card className="shadow-card border-l-4 border-l-orange-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Demissões</p>
-                    <p className="text-4xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Em risco de saída</p>
-                  </div>
-                  <div className="h-14 w-14 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                    <TrendingDown className="h-7 w-7 text-orange-600" />
-                  </div>
-                </div>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Demissões</p>
+                <p className="text-2xl font-bold text-orange-600">{clients.filter(c => c.status === "churn_risk").length}</p>
               </CardContent>
             </Card>
 
-            {/* Cancelamentos (Churned) */}
+            {/* Cancelamentos */}
             <Card className="shadow-card border-l-4 border-l-red-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Cancelamentos</p>
-                    <p className="text-4xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Clientes perdidos</p>
-                  </div>
-                  <div className="h-14 w-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <AlertTriangle className="h-7 w-7 text-red-600" />
-                  </div>
-                </div>
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
+                <p className="text-2xl font-bold text-red-600">{clients.filter(c => c.status === "churned").length}</p>
+              </CardContent>
+            </Card>
+
+            {/* Total de Clientes */}
+            <Card className="shadow-card border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
+                <p className="text-2xl font-bold text-foreground">{totalClients}</p>
+              </CardContent>
+            </Card>
+
+            {/* Ativos */}
+            <Card className="shadow-card border-l-4 border-l-green-500">
+              <CardContent className="p-4">
+                <p className="text-xs font-medium text-muted-foreground">Ativos</p>
+                <p className="text-2xl font-bold text-green-600">{clients.filter(c => c.status === "active").length}</p>
               </CardContent>
             </Card>
           </div>
@@ -975,60 +967,29 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Summary Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Retention Rate Card */}
-            <Card className={`shadow-card border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
-                    <div className="flex items-center gap-2">
-                      <p className={`text-3xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                        {retentionMetrics.rate}%
-                      </p>
-                      {retentionMetrics.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-500" />}
-                      {retentionMetrics.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-500" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
+          {/* Retention Rate Card */}
+          <Card className={`shadow-card border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-3xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {retentionMetrics.rate}%
                     </p>
+                    {retentionMetrics.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-500" />}
+                    {retentionMetrics.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-500" />}
                   </div>
-                  <div className={`h-12 w-12 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                    <Target className={`h-6 w-6 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total de Clientes</p>
-                    <p className="text-3xl font-bold text-foreground">{totalClients}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-6 w-6 text-primary" />
-                  </div>
+                <div className={`h-12 w-12 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                  <Target className={`h-6 w-6 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Ativos</p>
-                    <p className="text-3xl font-bold text-success">{clients.filter(c => c.status === "active").length}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                    <Users className="h-6 w-6 text-success" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
