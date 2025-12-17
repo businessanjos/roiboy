@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Products from "./pages/Products";
 import Events from "./pages/Events";
 import Team from "./pages/Team";
+import Tasks from "./pages/Tasks";
 import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import Forms from "./pages/Forms";
@@ -44,11 +45,11 @@ const App = () => (
                   <Route path="/clients/:id" element={<ClientDetail />} />
                   <Route path="/products" element={<Products />} />
                   <Route path="/events" element={<Events />} />
+                  <Route path="/tasks" element={<Tasks />} />
                   <Route path="/forms" element={<Forms />} />
                   <Route path="/team" element={<Team />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/integrations" element={<Integrations />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
