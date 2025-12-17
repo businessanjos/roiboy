@@ -19,14 +19,14 @@ import {
   Pencil, 
   Trash2, 
   Calendar, 
-  User as UserIcon,
   AlertTriangle,
   Clock,
   CheckCircle2,
   XCircle,
   ArrowRight,
+  User2,
 } from "lucide-react";
-import { format, isPast, isToday, differenceInDays } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -63,13 +63,6 @@ interface TaskCardProps {
   showClient?: boolean;
 }
 
-const PRIORITY_CONFIG = {
-  low: { label: "Baixa", className: "bg-muted text-muted-foreground" },
-  medium: { label: "Média", className: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
-  high: { label: "Alta", className: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  urgent: { label: "Urgente", className: "bg-destructive/10 text-destructive" },
-};
-
 const STATUS_CONFIG = {
   pending: { label: "Pendente", icon: Clock, className: "text-muted-foreground" },
   in_progress: { label: "Em andamento", icon: ArrowRight, className: "text-blue-500" },
@@ -79,11 +72,11 @@ const STATUS_CONFIG = {
 };
 
 export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient = true }: TaskCardProps) {
-  const priorityConfig = PRIORITY_CONFIG[task.priority];
   const statusConfig = STATUS_CONFIG[task.status];
   const StatusIcon = statusConfig.icon;
   const isCompleted = task.status === "done";
   const isCancelled = task.status === "cancelled";
+  const isOverdue = task.status === "overdue";
 
   const getDueDateInfo = () => {
     if (!task.due_date) return null;
@@ -95,22 +88,22 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
     const daysDiff = differenceInDays(dueDate, today);
     
     if (isCompleted || isCancelled) {
-      return { text: format(dueDate, "dd/MM", { locale: ptBR }), className: "text-muted-foreground" };
+      return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground", urgent: false };
     }
     
     if (daysDiff < 0) {
-      return { text: `Atrasado ${Math.abs(daysDiff)}d`, className: "text-destructive" };
+      return { text: `${Math.abs(daysDiff)}d atrasado`, className: "text-destructive font-medium", urgent: true };
     }
     if (daysDiff === 0) {
-      return { text: "Hoje", className: "text-amber-600 dark:text-amber-400" };
+      return { text: "Hoje", className: "text-amber-600 dark:text-amber-400 font-medium", urgent: true };
     }
     if (daysDiff === 1) {
-      return { text: "Amanhã", className: "text-amber-600 dark:text-amber-400" };
+      return { text: "Amanhã", className: "text-amber-600 dark:text-amber-400", urgent: false };
     }
     if (daysDiff <= 7) {
-      return { text: `${daysDiff}d`, className: "text-foreground" };
+      return { text: `${daysDiff} dias`, className: "text-foreground", urgent: false };
     }
-    return { text: format(dueDate, "dd/MM", { locale: ptBR }), className: "text-muted-foreground" };
+    return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground", urgent: false };
   };
 
   const dueDateInfo = getDueDateInfo();
@@ -122,44 +115,55 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
   return (
     <div
       className={cn(
-        "group flex items-start gap-3 p-3 rounded-lg border bg-card transition-colors hover:bg-muted/50",
-        (isCompleted || isCancelled) && "opacity-60"
+        "group relative flex items-start gap-4 p-4 rounded-xl border bg-card transition-all duration-200",
+        "hover:shadow-md hover:border-primary/20",
+        (isCompleted || isCancelled) && "opacity-60 hover:opacity-80",
+        isOverdue && "border-destructive/30 bg-destructive/5"
       )}
     >
-      <Checkbox
-        checked={isCompleted}
-        onCheckedChange={() => onToggleComplete(task)}
-        className="mt-0.5"
-        disabled={isCancelled}
-      />
+      {/* Checkbox */}
+      <div className="pt-0.5">
+        <Checkbox
+          checked={isCompleted}
+          onCheckedChange={() => onToggleComplete(task)}
+          className={cn(
+            "h-5 w-5 rounded-full border-2 transition-colors",
+            isCompleted && "bg-green-500 border-green-500 text-white"
+          )}
+          disabled={isCancelled}
+        />
+      </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
+      {/* Content */}
+      <div className="flex-1 min-w-0 space-y-2">
+        {/* Title row */}
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className={cn(
-              "font-medium text-sm",
+              "font-medium leading-tight",
               (isCompleted || isCancelled) && "line-through text-muted-foreground"
             )}>
               {task.title}
             </p>
             {task.description && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                 {task.description}
               </p>
             )}
           </div>
 
+          {/* Actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={() => onEdit(task)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
@@ -175,42 +179,57 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
           </DropdownMenu>
         </div>
 
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <Badge variant="outline" className={cn("text-[10px] h-5", priorityConfig.className)}>
-            {priorityConfig.label}
-          </Badge>
-
-          <div className={cn("flex items-center gap-1 text-xs", statusConfig.className)}>
-            <StatusIcon className="h-3 w-3" />
+        {/* Meta row */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Status badge */}
+          <div className={cn(
+            "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+            task.status === "in_progress" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+            task.status === "pending" && "bg-muted text-muted-foreground",
+            task.status === "overdue" && "bg-destructive/10 text-destructive",
+            task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
+            task.status === "cancelled" && "bg-muted text-muted-foreground"
+          )}>
+            <StatusIcon className="h-3.5 w-3.5" />
             <span>{statusConfig.label}</span>
           </div>
 
+          {/* Due date */}
           {dueDateInfo && (
-            <div className={cn("flex items-center gap-1 text-xs", dueDateInfo.className)}>
-              <Calendar className="h-3 w-3" />
+            <div className={cn(
+              "flex items-center gap-1.5 text-xs",
+              dueDateInfo.className
+            )}>
+              <Calendar className="h-3.5 w-3.5" />
               <span>{dueDateInfo.text}</span>
             </div>
           )}
 
+          {/* Client */}
           {showClient && task.clients && (
-            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-              {task.clients.full_name}
-            </span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User2 className="h-3.5 w-3.5" />
+              <span className="truncate max-w-[140px]">{task.clients.full_name}</span>
+            </div>
           )}
 
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Assigned user */}
           {task.assigned_user && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Avatar className="h-5 w-5 ml-auto">
+                  <Avatar className="h-6 w-6 border-2 border-background shadow-sm">
                     <AvatarImage src={task.assigned_user.avatar_url || undefined} />
-                    <AvatarFallback className="text-[9px] bg-primary/10">
+                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
                       {getInitials(task.assigned_user.name)}
                     </AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
-                  {task.assigned_user.name}
+                  <span className="font-medium">{task.assigned_user.name}</span>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
