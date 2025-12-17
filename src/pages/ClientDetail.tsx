@@ -25,6 +25,7 @@ import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
+import { ClientContracts } from "@/components/client/ClientContracts";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -1777,6 +1778,7 @@ export default function ClientDetail() {
             <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="cx">Momentos CX</TabsTrigger>
+            <TabsTrigger value="contracts">Contratos</TabsTrigger>
             <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
             <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
             <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
@@ -1820,6 +1822,23 @@ export default function ClientDetail() {
             </CardHeader>
             <CardContent className="pt-4">
               <ClientLifeEvents clientId={id!} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contracts">
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Contratos
+              </CardTitle>
+              <CardDescription>
+                Gerencie os contratos do cliente com arquivos PDF anexados
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <ClientContracts clientId={id!} />
             </CardContent>
           </Card>
         </TabsContent>
