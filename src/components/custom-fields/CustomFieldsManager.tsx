@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft } from "lucide-react";
+import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -30,7 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 export interface CustomField {
   id: string;
   name: string;
-  field_type: "select" | "boolean" | "multi_select" | "number" | "currency" | "text" | "date";
+  field_type: "select" | "boolean" | "multi_select" | "number" | "currency" | "text" | "date" | "user";
   options: FieldOption[];
   is_required: boolean;
   display_order: number;
@@ -46,6 +46,7 @@ export interface FieldOption {
 const FIELD_TYPES = [
   { value: "select", label: "Seleção única", icon: CheckCircle2 },
   { value: "multi_select", label: "Seleção múltipla", icon: ListChecks },
+  { value: "user", label: "Responsável", icon: Users },
   { value: "date", label: "Data", icon: Calendar },
   { value: "text", label: "Texto", icon: Type },
   { value: "number", label: "Número", icon: Hash },
