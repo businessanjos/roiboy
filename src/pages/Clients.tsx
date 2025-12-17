@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -680,6 +680,27 @@ export default function Clients() {
       .toUpperCase();
   };
 
+  // Helper to check contract expiry status
+  const getContractExpiryStatus = (contractEndDate?: string | null) => {
+    if (!contractEndDate) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(contractEndDate);
+    endDate.setHours(0, 0, 0, 0);
+    
+    const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { type: "expired", days: Math.abs(diffDays), label: `Expirado há ${Math.abs(diffDays)} dia(s)` };
+    } else if (diffDays <= 30) {
+      return { type: "urgent", days: diffDays, label: `Expira em ${diffDays} dia(s)` };
+    } else if (diffDays <= 60) {
+      return { type: "warning", days: diffDays, label: `Expira em ${diffDays} dia(s)` };
+    }
+    return null;
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -1297,6 +1318,35 @@ export default function Clients() {
                                 </Tooltip>
                               </TooltipProvider>
                             )}
+                            {/* Contract expiry alert */}
+                            {(() => {
+                              const expiryStatus = getContractExpiryStatus(client.contract_end_date);
+                              if (!expiryStatus) return null;
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className={`flex-shrink-0 p-1 rounded-full ${
+                                        expiryStatus.type === "expired" 
+                                          ? "bg-destructive/10 text-destructive" 
+                                          : expiryStatus.type === "urgent"
+                                            ? "bg-destructive/10 text-destructive animate-pulse"
+                                            : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                      }`}>
+                                        {expiryStatus.type === "expired" ? (
+                                          <AlertTriangle className="h-4 w-4" />
+                                        ) : (
+                                          <Clock className="h-4 w-4" />
+                                        )}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs font-medium">{expiryStatus.label}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })()}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -1397,6 +1447,35 @@ export default function Clients() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
+                          {/* Contract expiry alert */}
+                          {(() => {
+                            const expiryStatus = getContractExpiryStatus(client.contract_end_date);
+                            if (!expiryStatus) return null;
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className={`flex-shrink-0 p-1 rounded-full ${
+                                      expiryStatus.type === "expired" 
+                                        ? "bg-destructive/10 text-destructive" 
+                                        : expiryStatus.type === "urgent"
+                                          ? "bg-destructive/10 text-destructive animate-pulse"
+                                          : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                    }`}>
+                                      {expiryStatus.type === "expired" ? (
+                                        <AlertTriangle className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <Clock className="h-3.5 w-3.5" />
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs font-medium">{expiryStatus.label}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
                         </div>
                         <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
                         {clientProducts.length > 0 && (
