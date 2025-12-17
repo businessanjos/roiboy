@@ -384,6 +384,7 @@ export type Database = {
           file_size: number | null
           file_url: string | null
           id: string
+          parent_id: string | null
           title: string | null
           type: string
           updated_at: string
@@ -398,6 +399,7 @@ export type Database = {
           file_size?: number | null
           file_url?: string | null
           id?: string
+          parent_id?: string | null
           title?: string | null
           type?: string
           updated_at?: string
@@ -412,6 +414,7 @@ export type Database = {
           file_size?: number | null
           file_url?: string | null
           id?: string
+          parent_id?: string | null
           title?: string | null
           type?: string
           updated_at?: string
@@ -430,6 +433,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_followups_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "client_followups"
             referencedColumns: ["id"]
           },
           {

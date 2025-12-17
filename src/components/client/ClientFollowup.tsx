@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,8 @@ import {
   Send,
   Camera,
   Paperclip,
+  MessageSquare,
+  CornerDownRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -70,9 +72,12 @@ interface Followup {
   created_at: string;
   updated_at: string;
   user_id: string;
+  parent_id: string | null;
   users?: {
     name: string;
+    avatar_url: string | null;
   };
+  replies?: Followup[];
 }
 
 interface ClientFollowupProps {
@@ -113,10 +118,16 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   // Quick comment state
   const [quickComment, setQuickComment] = useState("");
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id: string } | null>(null);
+
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [savingReply, setSavingReply] = useState(false);
   
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replyInputRef = useRef<HTMLInputElement>(null);
 
   const PAGE_SIZE = 10;
 
@@ -136,28 +147,60 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     try {
       const offset = loadMore ? followups.length : 0;
       
+      // Fetch only top-level comments (parent_id is null)
       const { data, error, count } = await supabase
         .from("client_followups")
         .select(`
           *,
-          users (name)
+          users (name, avatar_url)
         `, { count: "exact" })
         .eq("client_id", clientId)
+        .is("parent_id", null)
         .order("created_at", { ascending: sortOrder === "asc" })
         .range(offset, offset + PAGE_SIZE - 1);
 
       if (error) throw error;
 
-      const newFollowups = (data || []) as Followup[];
+      // Fetch replies for these followups
+      const followupIds = (data || []).map(f => f.id);
+      let repliesData: any[] = [];
+      
+      if (followupIds.length > 0) {
+        const { data: replies } = await supabase
+          .from("client_followups")
+          .select(`
+            *,
+            users (name, avatar_url)
+          `)
+          .in("parent_id", followupIds)
+          .order("created_at", { ascending: true });
+        
+        repliesData = replies || [];
+      }
+
+      // Group replies by parent_id
+      const repliesByParent: Record<string, Followup[]> = {};
+      repliesData.forEach((reply) => {
+        if (!repliesByParent[reply.parent_id]) {
+          repliesByParent[reply.parent_id] = [];
+        }
+        repliesByParent[reply.parent_id].push(reply as Followup);
+      });
+
+      // Attach replies to their parent followups
+      const followupsWithReplies = (data || []).map((followup) => ({
+        ...followup,
+        replies: repliesByParent[followup.id] || [],
+      })) as Followup[];
       
       if (loadMore) {
-        setFollowups((prev) => [...prev, ...newFollowups]);
+        setFollowups((prev) => [...prev, ...followupsWithReplies]);
       } else {
-        setFollowups(newFollowups);
+        setFollowups(followupsWithReplies);
       }
 
       // Check if there are more items to load
-      const totalLoaded = loadMore ? followups.length + newFollowups.length : newFollowups.length;
+      const totalLoaded = loadMore ? followups.length + followupsWithReplies.length : followupsWithReplies.length;
       setHasMore(count !== null && totalLoaded < count);
     } catch (error: any) {
       console.error("Error fetching followups:", error);
@@ -225,6 +268,57 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
       e.preventDefault();
       handleQuickComment();
     }
+  };
+
+  // Handle reply submission
+  const handleReply = async (parentId: string) => {
+    if (!replyContent.trim() || !currentUser) return;
+    
+    setSavingReply(true);
+    try {
+      const { error } = await supabase
+        .from("client_followups")
+        .insert({
+          account_id: currentUser.account_id,
+          client_id: clientId,
+          user_id: currentUser.id,
+          type: "note",
+          title: null,
+          content: replyContent.trim(),
+          parent_id: parentId,
+        });
+
+      if (error) throw error;
+      toast.success("Resposta enviada!");
+      setReplyContent("");
+      setReplyingTo(null);
+      fetchFollowups();
+    } catch (error: any) {
+      console.error("Error saving reply:", error);
+      toast.error("Erro ao enviar resposta");
+    } finally {
+      setSavingReply(false);
+    }
+  };
+
+  const handleReplyKeyDown = (e: React.KeyboardEvent, parentId: string) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleReply(parentId);
+    }
+    if (e.key === "Escape") {
+      setReplyingTo(null);
+      setReplyContent("");
+    }
+  };
+
+  const startReply = (followupId: string) => {
+    setReplyingTo(followupId);
+    setReplyContent("");
+    // Focus the reply input after state update
+    setTimeout(() => {
+      replyInputRef.current?.focus();
+    }, 100);
   };
 
   const handleQuickFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
@@ -674,101 +768,211 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         <ScrollArea className="h-[400px]">
           <div className="space-y-4 pr-4">
             {filteredFollowups.map((followup) => (
-              <div key={followup.id} className="flex gap-3 group">
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback className="text-xs bg-muted">
-                    {(followup.users?.name || "U").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-sm">{followup.users?.name || "Usuário"}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(followup.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                    {followup.type !== "note" && (
-                      <Badge variant="outline" className="gap-1 h-5 text-xs">
-                        {getTypeIcon(followup.type)}
-                        {getTypeLabel(followup.type)}
-                      </Badge>
+              <div key={followup.id} className="space-y-2">
+                {/* Main Comment */}
+                <div className="flex gap-3 group">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarImage src={followup.users?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs bg-muted">
+                      {(followup.users?.name || "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{followup.users?.name || "Usuário"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(followup.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                      {followup.type !== "note" && (
+                        <Badge variant="outline" className="gap-1 h-5 text-xs">
+                          {getTypeIcon(followup.type)}
+                          {getTypeLabel(followup.type)}
+                        </Badge>
+                      )}
+                      <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => openEditDialog(followup)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setFollowupToDelete(followup);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {followup.content && (
+                      <p className="text-sm text-foreground whitespace-pre-wrap mt-1">
+                        {followup.content}
+                      </p>
                     )}
-                    <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => openEditDialog(followup)}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setFollowupToDelete(followup);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
 
-                  {followup.content && (
-                    <p className="text-sm text-foreground whitespace-pre-wrap mt-1">
-                      {followup.content}
-                    </p>
-                  )}
+                    {followup.type === "image" && followup.file_url && (
+                      <div className="mt-2 relative group/img inline-block">
+                        <img
+                          src={followup.file_url}
+                          alt={followup.file_name || "Imagem"}
+                          className="max-w-xs max-h-48 rounded-md object-cover cursor-pointer transition-opacity hover:opacity-90"
+                          onClick={() => {
+                            setLightboxImage({
+                              url: followup.file_url!,
+                              name: followup.file_name || followup.title || "Imagem",
+                            });
+                            setLightboxOpen(true);
+                          }}
+                        />
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="absolute bottom-2 right-2 h-6 w-6 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setLightboxImage({
+                              url: followup.file_url!,
+                              name: followup.file_name || followup.title || "Imagem",
+                            });
+                            setLightboxOpen(true);
+                          }}
+                        >
+                          <Expand className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
 
-                  {followup.type === "image" && followup.file_url && (
-                    <div className="mt-2 relative group/img inline-block">
-                      <img
-                        src={followup.file_url}
-                        alt={followup.file_name || "Imagem"}
-                        className="max-w-xs max-h-48 rounded-md object-cover cursor-pointer transition-opacity hover:opacity-90"
-                        onClick={() => {
-                          setLightboxImage({
-                            url: followup.file_url!,
-                            name: followup.file_name || followup.title || "Imagem",
-                          });
-                          setLightboxOpen(true);
-                        }}
-                      />
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="absolute bottom-2 right-2 h-6 w-6 opacity-0 group-hover/img:opacity-100 transition-opacity"
-                        onClick={() => {
-                          setLightboxImage({
-                            url: followup.file_url!,
-                            name: followup.file_name || followup.title || "Imagem",
-                          });
-                          setLightboxOpen(true);
-                        }}
+                    {followup.type === "file" && followup.file_url && (
+                      <a
+                        href={followup.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-1"
                       >
-                        <Expand className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
+                        <Download className="h-4 w-4" />
+                        {followup.file_name}
+                        {followup.file_size && (
+                          <span className="text-muted-foreground">
+                            ({formatFileSize(followup.file_size)})
+                          </span>
+                        )}
+                      </a>
+                    )}
 
-                  {followup.type === "file" && followup.file_url && (
-                    <a
-                      href={followup.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-1"
-                    >
-                      <Download className="h-4 w-4" />
-                      {followup.file_name}
-                      {followup.file_size && (
-                        <span className="text-muted-foreground">
-                          ({formatFileSize(followup.file_size)})
+                    {/* Reply Button */}
+                    <div className="flex items-center gap-3 mt-2">
+                      <button
+                        onClick={() => startReply(followup.id)}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      >
+                        <MessageSquare className="h-3 w-3" />
+                        Responder
+                      </button>
+                      {followup.replies && followup.replies.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {followup.replies.length} {followup.replies.length === 1 ? "resposta" : "respostas"}
                         </span>
                       )}
-                    </a>
-                  )}
+                    </div>
+                  </div>
                 </div>
+
+                {/* Replies */}
+                {followup.replies && followup.replies.length > 0 && (
+                  <div className="ml-11 space-y-3 border-l-2 border-muted pl-4">
+                    {followup.replies.map((reply) => (
+                      <div key={reply.id} className="flex gap-3 group">
+                        <Avatar className="h-6 w-6 flex-shrink-0">
+                          <AvatarImage src={reply.users?.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px] bg-muted">
+                            {(reply.users?.name || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-xs">{reply.users?.name || "Usuário"}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(reply.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                            <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5"
+                                onClick={() => openEditDialog(reply)}
+                              >
+                                <Pencil className="h-2.5 w-2.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  setFollowupToDelete(reply);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-2.5 w-2.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          {reply.content && (
+                            <p className="text-xs text-foreground whitespace-pre-wrap mt-0.5">
+                              {reply.content}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reply Input */}
+                {replyingTo === followup.id && currentUser && (
+                  <div className="ml-11 flex gap-2 items-start">
+                    <Avatar className="h-6 w-6 flex-shrink-0">
+                      <AvatarImage src={currentUser.avatar_url || undefined} />
+                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                        {currentUser.name?.charAt(0) || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 relative">
+                      <MentionInput
+                        ref={replyInputRef}
+                        placeholder="Escreva uma resposta..."
+                        value={replyContent}
+                        onChange={setReplyContent}
+                        onKeyDown={(e) => handleReplyKeyDown(e, followup.id)}
+                        className="text-sm pr-16 min-h-[36px]"
+                      />
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setReplyingTo(null);
+                            setReplyContent("");
+                          }}
+                          className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleReply(followup.id)}
+                          disabled={savingReply || !replyContent.trim()}
+                          className="p-1 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                        >
+                          {savingReply ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
 
