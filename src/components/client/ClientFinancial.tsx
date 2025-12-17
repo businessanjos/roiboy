@@ -63,14 +63,8 @@ const billingPeriodLabels = {
 };
 
 const emptyForm = {
-  product_name: "",
-  payment_status: "active" as const,
-  billing_period: "monthly" as const,
-  amount: "",
-  currency: "BRL",
-  start_date: new Date().toISOString().split("T")[0],
-  next_billing_date: "",
-  notes: "",
+  title: "",
+  content: "",
 };
 
 export function ClientFinancial({ clientId }: ClientFinancialProps) {
@@ -188,9 +182,9 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     }
   };
 
-  const handleAddSubscription = async () => {
-    if (!formData.product_name.trim()) {
-      toast.error("Nome do produto é obrigatório");
+  const handleAddNote = async () => {
+    if (!formData.title.trim()) {
+      toast.error("Título é obrigatório");
       return;
     }
 
@@ -198,33 +192,28 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     try {
       const { data: userData } = await supabase
         .from("users")
-        .select("account_id")
+        .select("account_id, id")
         .single();
 
       if (!userData) throw new Error("Usuário não encontrado");
 
-      const { error } = await supabase.from("client_subscriptions").insert({
+      const { error } = await supabase.from("client_followups").insert({
         account_id: userData.account_id,
         client_id: clientId,
-        product_name: formData.product_name.trim(),
-        payment_status: formData.payment_status,
-        billing_period: formData.billing_period,
-        amount: parseFloat(formData.amount) || 0,
-        currency: formData.currency,
-        start_date: formData.start_date,
-        next_billing_date: formData.next_billing_date || null,
-        notes: formData.notes.trim() || null,
+        user_id: userData.id,
+        type: "financial_note",
+        title: formData.title.trim(),
+        content: formData.content.trim() || null,
       });
 
       if (error) throw error;
 
-      toast.success("Registro financeiro adicionado!");
+      toast.success("Nota financeira adicionada!");
       setDialogOpen(false);
       setFormData(emptyForm);
-      fetchSubscriptions();
     } catch (error: any) {
-      console.error("Error adding subscription:", error);
-      toast.error(error.message || "Erro ao adicionar registro");
+      console.error("Error adding note:", error);
+      toast.error(error.message || "Erro ao adicionar nota");
     } finally {
       setSaving(false);
     }
@@ -279,117 +268,28 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Adicionar Registro Financeiro</DialogTitle>
+                <DialogTitle>Adicionar Nota Financeira</DialogTitle>
                 <DialogDescription>
-                  Adicione manualmente um produto ou assinatura do cliente
+                  Registre uma informação ou observação financeira sobre o cliente
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Nome do Produto *</Label>
+                  <Label>Título *</Label>
                   <Input
-                    placeholder="Ex: Mentoria Premium"
-                    value={formData.product_name}
-                    onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
+                    placeholder="Ex: Negociação de desconto, Revisão de contrato..."
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Status de Pagamento</Label>
-                    <Select
-                      value={formData.payment_status}
-                      onValueChange={(v) => setFormData({ ...formData, payment_status: v as any })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Ativo</SelectItem>
-                        <SelectItem value="overdue">Em Atraso</SelectItem>
-                        <SelectItem value="pending">Pendente</SelectItem>
-                        <SelectItem value="trial">Trial</SelectItem>
-                        <SelectItem value="paused">Pausado</SelectItem>
-                        <SelectItem value="cancelled">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Período de Cobrança</Label>
-                    <Select
-                      value={formData.billing_period}
-                      onValueChange={(v) => setFormData({ ...formData, billing_period: v as any })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="monthly">Mensal</SelectItem>
-                        <SelectItem value="quarterly">Trimestral</SelectItem>
-                        <SelectItem value="semiannual">Semestral</SelectItem>
-                        <SelectItem value="annual">Anual</SelectItem>
-                        <SelectItem value="one_time">Único</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Valor</Label>
-                    <Input
-                      type="number"
-                      placeholder="0,00"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Moeda</Label>
-                    <Select
-                      value={formData.currency}
-                      onValueChange={(v) => setFormData({ ...formData, currency: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BRL">BRL (R$)</SelectItem>
-                        <SelectItem value="USD">USD ($)</SelectItem>
-                        <SelectItem value="EUR">EUR (€)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Data de Início</Label>
-                    <Input
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Próximo Vencimento</Label>
-                    <Input
-                      type="date"
-                      value={formData.next_billing_date}
-                      onChange={(e) => setFormData({ ...formData, next_billing_date: e.target.value })}
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
-                  <Label>Observações</Label>
+                  <Label>Detalhes</Label>
                   <Textarea
-                    placeholder="Notas adicionais..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Descreva os detalhes da informação financeira..."
+                    value={formData.content}
+                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    className="min-h-[120px]"
                   />
                 </div>
               </div>
@@ -397,7 +297,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleAddSubscription} disabled={saving}>
+                <Button onClick={handleAddNote} disabled={saving}>
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                   Adicionar
                 </Button>

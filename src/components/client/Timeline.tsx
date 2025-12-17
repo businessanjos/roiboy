@@ -64,7 +64,7 @@ export interface TimelineEvent {
     file_url?: string;
     file_name?: string;
     file_size?: number;
-    followup_type?: "note" | "file" | "image";
+    followup_type?: "note" | "file" | "image" | "financial_note";
     // Field change specific
     field_name?: string;
     old_value?: string;
