@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Plus,
   MoreHorizontal,
@@ -37,6 +39,8 @@ import {
   Settings2,
   GripVertical,
   X,
+  Download,
+  ChevronLeft,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
@@ -783,149 +787,270 @@ export default function Forms() {
 
       {/* Responses Dialog */}
       <Dialog open={responsesDialogOpen} onOpenChange={setResponsesDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Respostas - {selectedForm?.title}
-            </DialogTitle>
-            <DialogDescription className="flex items-center justify-between">
-              <span>{responses.length} resposta(s) recebida(s)</span>
-              {responses.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const headers = ["Cliente", "Telefone", "Data", ...customFields.filter(f => selectedForm?.fields?.includes(f.id)).map(f => f.name)];
-                    const rows = responses.map(r => {
-                      const clientName = r.clients?.full_name || r.client_name || "Não identificado";
-                      const phone = r.clients?.phone_e164 || r.client_phone || "";
-                      const date = format(new Date(r.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR });
-                      const fieldValues = customFields.filter(f => selectedForm?.fields?.includes(f.id)).map(field => {
-                        const value = r.responses?.[field.id];
-                        if (value === undefined || value === null) return "";
-                        if (Array.isArray(value)) return value.map(v => getOptionLabel(field, v)).join("; ");
-                        if (field.field_type === "boolean") return value ? "Sim" : "Não";
-                        if (field.field_type === "select") return getOptionLabel(field, value);
-                        if (field.field_type === "date") return format(new Date(value), "dd/MM/yyyy");
-                        if (field.field_type === "currency") return `R$ ${Number(value).toFixed(2)}`;
-                        return String(value);
-                      });
-                      return [clientName, phone, date, ...fieldValues];
-                    });
-                    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
-                    const blob = new Blob([csv], { type: "text/csv" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `respostas-${selectedForm?.title || "formulario"}.csv`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    toast.success("CSV exportado!");
-                  }}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Exportar CSV
-                </Button>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto mt-4">
-            {loadingResponses ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : responses.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">
-                  Nenhuma resposta recebida
-                </h3>
-                <p className="text-muted-foreground text-sm max-w-sm">
-                  Compartilhe o link do formulário com seus clientes para começar a coletar respostas.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => {
-                    if (selectedForm) copyFormLink(selectedForm);
-                  }}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar Link
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {responses.map((response, index) => {
-                  const orderedFields = selectedForm?.fields
-                    ?.map((fId: string) => customFields.find((f) => f.id === fId))
-                    .filter(Boolean) as CustomField[] || [];
-
-                  return (
-                    <Card key={response.id} className="overflow-hidden">
-                      <CardHeader className="bg-muted/30 py-3 px-4">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <CardTitle className="text-base">
-                                {response.clients?.full_name ||
-                                  response.client_name ||
-                                  "Cliente não identificado"}
-                              </CardTitle>
-                              {(response.clients?.phone_e164 || response.client_phone) && (
-                                <CardDescription className="text-xs">
-                                  {response.clients?.phone_e164 || response.client_phone}
-                                </CardDescription>
-                              )}
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-xs whitespace-nowrap">
-                            {format(new Date(response.submitted_at), "dd/MM/yyyy 'às' HH:mm", {
-                              locale: ptBR,
-                            })}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-4">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {orderedFields.map((field) => {
-                            const value = response.responses?.[field.id];
-                            const isEmpty = value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
-
-                            return (
-                              <div
-                                key={field.id}
-                                className="flex flex-col gap-1 p-3 rounded-lg bg-muted/30"
-                              >
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                  {field.name}
-                                </span>
-                                <div className="text-sm text-foreground">
-                                  {isEmpty ? (
-                                    <span className="text-muted-foreground/60 italic">
-                                      Não preenchido
-                                    </span>
-                                  ) : (
-                                    renderResponseValue(field, value)
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+        <DialogContent className="max-w-[95vw] w-full max-h-[90vh] flex flex-col p-0">
+          {/* Header with breadcrumb */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-muted-foreground hover:text-foreground"
+              onClick={() => setResponsesDialogOpen(false)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Formulários
+            </Button>
+            <span className="text-muted-foreground">/</span>
+            <span className="font-medium truncate">{selectedForm?.title}</span>
           </div>
+
+          {/* Tabs */}
+          <Tabs defaultValue="responses" className="flex-1 flex flex-col overflow-hidden">
+            <div className="px-4 border-b">
+              <TabsList className="h-auto p-0 bg-transparent gap-4">
+                <TabsTrigger
+                  value="insights"
+                  className="pb-3 pt-2 px-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
+                >
+                  Insights
+                </TabsTrigger>
+                <TabsTrigger
+                  value="responses"
+                  className="pb-3 pt-2 px-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none bg-transparent"
+                >
+                  Respostas [{responses.length}]
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* Insights Tab */}
+            <TabsContent value="insights" className="flex-1 overflow-auto p-6 m-0">
+              <div className="space-y-6">
+                {/* Stats Cards */}
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Visão geral</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Respostas</p>
+                      <p className="text-3xl font-bold">{responses.length}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Campos</p>
+                      <p className="text-3xl font-bold">{selectedForm?.fields?.length || 0}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Taxa de preenchimento</p>
+                      <p className="text-3xl font-bold">
+                        {responses.length > 0
+                          ? (() => {
+                              const totalFields = (selectedForm?.fields?.length || 0) * responses.length;
+                              if (totalFields === 0) return "—";
+                              const filledFields = responses.reduce((acc, r) => {
+                                return acc + Object.values(r.responses || {}).filter(
+                                  (v) => v !== undefined && v !== null && v !== "" && (!Array.isArray(v) || v.length > 0)
+                                ).length;
+                              }, 0);
+                              return `${Math.round((filledFields / totalFields) * 100)}%`;
+                            })()
+                          : "—"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Última resposta</p>
+                      <p className="text-3xl font-bold">
+                        {responses.length > 0
+                          ? format(new Date(responses[0].submitted_at), "dd MMM", { locale: ptBR })
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Empty State */}
+                {responses.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">
+                      Nenhuma resposta recebida
+                    </h3>
+                    <p className="text-muted-foreground text-sm max-w-sm">
+                      Compartilhe o link do formulário com seus clientes para começar a coletar respostas.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => {
+                        if (selectedForm) copyFormLink(selectedForm);
+                      }}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copiar Link
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Responses Tab - Table Style */}
+            <TabsContent value="responses" className="flex-1 flex flex-col overflow-hidden m-0">
+              {loadingResponses ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : responses.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    Nenhuma resposta recebida
+                  </h3>
+                  <p className="text-muted-foreground text-sm max-w-sm">
+                    Compartilhe o link do formulário com seus clientes para começar a coletar respostas.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => {
+                      if (selectedForm) copyFormLink(selectedForm);
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar Link
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Toolbar */}
+                  <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+                    <div className="text-sm text-muted-foreground">
+                      {responses.length} resposta(s)
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const orderedFields = selectedForm?.fields
+                          ?.map((fId: string) => customFields.find((f) => f.id === fId))
+                          .filter(Boolean) as CustomField[] || [];
+                        const headers = ["Cliente", "Telefone", "Data", ...orderedFields.map(f => f.name)];
+                        const rows = responses.map(r => {
+                          const clientName = r.clients?.full_name || r.client_name || "Não identificado";
+                          const phone = r.clients?.phone_e164 || r.client_phone || "";
+                          const date = format(new Date(r.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR });
+                          const fieldValues = orderedFields.map(field => {
+                            const value = r.responses?.[field.id];
+                            if (value === undefined || value === null) return "";
+                            if (Array.isArray(value)) return value.map(v => getOptionLabel(field, v)).join("; ");
+                            if (field.field_type === "boolean") return value ? "Sim" : "Não";
+                            if (field.field_type === "select") return getOptionLabel(field, value);
+                            if (field.field_type === "date") return format(new Date(value), "dd/MM/yyyy");
+                            if (field.field_type === "currency") return `R$ ${Number(value).toFixed(2)}`;
+                            return String(value);
+                          });
+                          return [clientName, phone, date, ...fieldValues];
+                        });
+                        const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
+                        const blob = new Blob([csv], { type: "text/csv" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `respostas-${selectedForm?.title || "formulario"}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        toast.success("CSV exportado!");
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                  </div>
+
+                  {/* Table with horizontal scroll */}
+                  <ScrollArea className="flex-1">
+                    <div className="min-w-max">
+                      {/* Table Header */}
+                      <div className="flex border-b bg-muted/30 sticky top-0">
+                        <div className="w-10 flex-shrink-0 px-2 py-3"></div>
+                        <div className="w-[180px] flex-shrink-0 px-3 py-3 text-xs font-medium text-muted-foreground">
+                          Cliente
+                        </div>
+                        <div className="w-[100px] flex-shrink-0 px-3 py-3 text-xs font-medium text-muted-foreground">
+                          Data
+                        </div>
+                        {(selectedForm?.fields || []).map((fieldId: string) => {
+                          const field = customFields.find(f => f.id === fieldId);
+                          return (
+                            <div
+                              key={fieldId}
+                              className="w-[160px] flex-shrink-0 px-3 py-3 text-xs font-medium text-muted-foreground truncate"
+                              title={field?.name}
+                            >
+                              {field?.name || "Campo"}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Table Body */}
+                      <div className="divide-y">
+                        {responses.map((response) => {
+                          const orderedFields = selectedForm?.fields
+                            ?.map((fId: string) => customFields.find((f) => f.id === fId))
+                            .filter(Boolean) as CustomField[] || [];
+
+                          return (
+                            <div key={response.id} className="flex hover:bg-muted/50 transition-colors">
+                              <div className="w-10 flex-shrink-0 px-2 py-3 flex items-center justify-center">
+                                <Checkbox className="h-4 w-4" />
+                              </div>
+                              <div className="w-[180px] flex-shrink-0 px-3 py-3">
+                                <p className="text-sm font-medium truncate">
+                                  {response.clients?.full_name || response.client_name || "—"}
+                                </p>
+                                {(response.clients?.phone_e164 || response.client_phone) && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {response.clients?.phone_e164 || response.client_phone}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="w-[100px] flex-shrink-0 px-3 py-3">
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(response.submitted_at), "dd MMM yyyy", { locale: ptBR })}
+                                </p>
+                                <p className="text-xs text-muted-foreground/70">
+                                  {format(new Date(response.submitted_at), "HH:mm", { locale: ptBR })}
+                                </p>
+                              </div>
+                              {orderedFields.map((field) => {
+                                const value = response.responses?.[field.id];
+                                const isEmpty = value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+
+                                return (
+                                  <div
+                                    key={field.id}
+                                    className="w-[160px] flex-shrink-0 px-3 py-3 text-sm"
+                                  >
+                                    {isEmpty ? (
+                                      <span className="text-muted-foreground/50">—</span>
+                                    ) : (
+                                      <div className="truncate" title={String(value)}>
+                                        {renderResponseValue(field, value)}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
