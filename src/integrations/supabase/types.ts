@@ -997,6 +997,73 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          account_id: string
+          content: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          source_id: string | null
+          source_type: string | null
+          title: string
+          triggered_by_user_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          title: string
+          triggered_by_user_id?: string | null
+          type?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          title?: string
+          triggered_by_user_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_triggered_by_user_id_fkey"
+            columns: ["triggered_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           account_id: string

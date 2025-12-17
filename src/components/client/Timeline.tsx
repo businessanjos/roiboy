@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +28,7 @@ import {
   Smile,
   Camera,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -351,12 +351,15 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
 export function Timeline({ events, className, clientId, onCommentAdded }: TimelineProps) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [showOlder, setShowOlder] = useState(false);
+  const [mentionedUsers, setMentionedUsers] = useState<Array<{ id: string; name: string }>>([]);
+  const [clientName, setClientName] = useState<string>("");
 
   useEffect(() => {
     fetchCurrentUser();
-  }, []);
+    if (clientId) fetchClientName();
+  }, [clientId]);
 
   const fetchCurrentUser = async () => {
     const { data } = await supabase
@@ -365,6 +368,51 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
       .single();
     if (data) {
       setCurrentUser(data);
+    }
+  };
+
+  const fetchClientName = async () => {
+    if (!clientId) return;
+    const { data } = await supabase
+      .from("clients")
+      .select("full_name")
+      .eq("id", clientId)
+      .single();
+    if (data) setClientName(data.full_name);
+  };
+
+  const createNotifications = async (mentionedUserNames: string[], commentContent: string) => {
+    if (!currentUser?.account_id || mentionedUserNames.length === 0) return;
+
+    try {
+      // Find user IDs by name
+      const { data: users } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("name", mentionedUserNames);
+
+      if (!users || users.length === 0) return;
+
+      // Create notifications for each mentioned user (except self)
+      const notificationsToCreate = users
+        .filter((u) => u.id !== currentUser.id)
+        .map((user) => ({
+          account_id: currentUser.account_id!,
+          user_id: user.id,
+          type: "mention",
+          title: `${currentUser.name} mencionou você`,
+          content: `Em ${clientName}: "${commentContent.slice(0, 100)}${commentContent.length > 100 ? "..." : ""}"`,
+          link: `/clients/${clientId}`,
+          triggered_by_user_id: currentUser.id,
+          source_type: "client_followup",
+          source_id: clientId,
+        }));
+
+      if (notificationsToCreate.length > 0) {
+        await supabase.from("notifications").insert(notificationsToCreate);
+      }
+    } catch (error) {
+      console.error("Error creating notifications:", error);
     }
   };
 
@@ -391,8 +439,15 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         });
 
       if (error) throw error;
+
+      // Create notifications for mentioned users
+      const mentionedNames = extractMentions(comment);
+      if (mentionedNames.length > 0) {
+        await createNotifications(mentionedNames, comment.trim());
+      }
       
       setComment("");
+      setMentionedUsers([]);
       onCommentAdded?.();
       toast.success("Comentário adicionado!");
     } catch (error: any) {
@@ -419,7 +474,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
           <p className="text-sm mt-1">Interações e análises aparecerão aqui.</p>
         </div>
         
-        {/* Comment Input - Facebook Style */}
+        {/* Comment Input - Facebook Style with @mentions */}
         {clientId && currentUser && (
           <div className="flex gap-3 pt-4 border-t">
             <Avatar className="h-9 w-9 flex-shrink-0">
@@ -429,12 +484,12 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 relative">
-              <Input
-                placeholder="Escreva um comentário..."
+              <MentionInput
+                placeholder="Escreva um comentário... Use @ para mencionar"
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={setComment}
                 onKeyDown={handleKeyDown}
-                className="pr-24 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
+                className="pr-24"
               />
               <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                 <TooltipProvider delayDuration={300}>
@@ -515,7 +570,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         ))}
       </div>
 
-      {/* Comment Input - Facebook Style */}
+      {/* Comment Input - Facebook Style with @mentions */}
       {clientId && currentUser && (
         <div className="flex gap-3 pt-4 border-t">
           <Avatar className="h-9 w-9 flex-shrink-0">
@@ -525,12 +580,12 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 relative">
-            <Input
-              placeholder="Escreva um comentário..."
+            <MentionInput
+              placeholder="Escreva um comentário... Use @ para mencionar"
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={setComment}
               onKeyDown={handleKeyDown}
-              className="pr-24 bg-muted/50 border-0 rounded-full h-9 text-sm placeholder:text-muted-foreground/60"
+              className="pr-24"
             />
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
               <TooltipProvider delayDuration={300}>
