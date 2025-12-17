@@ -163,6 +163,11 @@ export default function Forms() {
   const [editingForm, setEditingForm] = useState<Form | null>(null);
   const [customFieldsDialogOpen, setCustomFieldsDialogOpen] = useState(false);
 
+  // Preview state (interactive testing)
+  const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
+  const [previewClientName, setPreviewClientName] = useState("");
+  const [previewClientPhone, setPreviewClientPhone] = useState("");
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -357,6 +362,7 @@ export default function Forms() {
     setSelectedForm(form);
     setLoadingResponses(true);
     setResponsesDialogOpen(true);
+    resetPreview(); // Clear preview state when opening a new form
 
     try {
       const { data, error } = await supabase
@@ -459,26 +465,45 @@ export default function Forms() {
     }
   };
 
-  const renderPreviewField = (field: CustomField) => {
+  const resetPreview = () => {
+    setPreviewValues({});
+    setPreviewClientName("");
+    setPreviewClientPhone("");
+  };
+
+  const updatePreviewValue = (fieldId: string, value: any) => {
+    setPreviewValues(prev => ({ ...prev, [fieldId]: value }));
+  };
+
+  const renderInteractiveField = (field: CustomField) => {
+    const value = previewValues[field.id];
+
     switch (field.field_type) {
       case "boolean":
         return (
-          <div className="flex items-center gap-3 p-3 rounded-md border border-border/50 bg-muted/30">
-            <Switch disabled />
-            <span className="text-sm text-muted-foreground">Não informado</span>
+          <div className="flex items-center gap-3 p-3 rounded-md border bg-card">
+            <Switch 
+              checked={value === true}
+              onCheckedChange={(checked) => updatePreviewValue(field.id, checked)}
+            />
+            <span className="text-sm">{value === true ? "Sim" : value === false ? "Não" : "Não informado"}</span>
           </div>
         );
 
       case "select":
         const selectOptions = field.options || [];
         return (
-          <RadioGroup className="p-3 rounded-md border border-border/50 bg-muted/30" disabled>
+          <RadioGroup 
+            className="p-3 rounded-md border bg-card" 
+            value={value || ""}
+            onValueChange={(v) => updatePreviewValue(field.id, v)}
+          >
             {selectOptions.map((opt: any) => (
               <div key={opt.value} className="flex items-center space-x-2">
-                <RadioGroupItem value={opt.value} id={`preview-${field.id}-${opt.value}`} disabled />
+                <RadioGroupItem value={opt.value} id={`preview-${field.id}-${opt.value}`} />
                 <Label
                   htmlFor={`preview-${field.id}-${opt.value}`}
-                  className="font-normal text-muted-foreground"
+                  className="font-normal cursor-pointer"
                 >
                   {opt.label}
                 </Label>
@@ -489,14 +514,25 @@ export default function Forms() {
 
       case "multi_select":
         const multiOptions = field.options || [];
+        const selectedValues = Array.isArray(value) ? value : [];
         return (
-          <div className="space-y-2 p-3 rounded-md border border-border/50 bg-muted/30">
+          <div className="space-y-2 p-3 rounded-md border bg-card">
             {multiOptions.map((opt: any) => (
               <div key={opt.value} className="flex items-center space-x-2">
-                <Checkbox id={`preview-${field.id}-${opt.value}`} disabled />
+                <Checkbox 
+                  id={`preview-${field.id}-${opt.value}`}
+                  checked={selectedValues.includes(opt.value)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      updatePreviewValue(field.id, [...selectedValues, opt.value]);
+                    } else {
+                      updatePreviewValue(field.id, selectedValues.filter((v: string) => v !== opt.value));
+                    }
+                  }}
+                />
                 <Label
                   htmlFor={`preview-${field.id}-${opt.value}`}
-                  className="font-normal text-muted-foreground"
+                  className="font-normal cursor-pointer"
                 >
                   {opt.label}
                 </Label>
@@ -511,21 +547,32 @@ export default function Forms() {
           <Input
             type="number"
             placeholder={field.field_type === "currency" ? "0.00" : "0"}
-            disabled
-            className="bg-muted/30"
+            value={value || ""}
+            onChange={(e) => updatePreviewValue(field.id, e.target.value ? Number(e.target.value) : null)}
           />
         );
 
       case "date":
         return (
-          <Button
-            variant="outline"
-            className="w-full justify-start text-left font-normal text-muted-foreground"
-            disabled
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            Selecionar data
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(new Date(value), "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={value ? new Date(value) : undefined}
+                onSelect={(date) => updatePreviewValue(field.id, date ? format(date, "yyyy-MM-dd") : null)}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
         );
 
       case "text":
@@ -534,8 +581,8 @@ export default function Forms() {
           <Textarea
             placeholder="Digite sua resposta..."
             rows={3}
-            disabled
-            className="bg-muted/30"
+            value={value || ""}
+            onChange={(e) => updatePreviewValue(field.id, e.target.value)}
           />
         );
     }
@@ -914,10 +961,15 @@ export default function Forms() {
               </TabsList>
             </div>
 
-            {/* Preview Tab */}
+            {/* Preview Tab - Interactive */}
             <TabsContent value="preview" className="flex-1 overflow-auto m-0">
               <div className="flex justify-center p-6">
                 <div className="w-full max-w-xl">
+                  {/* Info banner */}
+                  <div className="mb-4 p-3 rounded-lg bg-muted/50 border border-dashed text-sm text-muted-foreground text-center">
+                    Teste o formulário abaixo. Os dados não serão salvos.
+                  </div>
+
                   <Card className="shadow-lg">
                     <CardHeader className="space-y-2">
                       <CardTitle className="text-2xl">{selectedForm?.title}</CardTitle>
@@ -928,7 +980,7 @@ export default function Forms() {
                       )}
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Client Info Preview */}
+                      {/* Client Info - Interactive */}
                       {selectedForm?.require_client_info && (
                         <div className="space-y-4 pb-4 border-b">
                           <div className="space-y-2">
@@ -936,19 +988,27 @@ export default function Forms() {
                               <User className="h-4 w-4" />
                               Seu nome *
                             </Label>
-                            <Input placeholder="Digite seu nome completo" disabled />
+                            <Input 
+                              placeholder="Digite seu nome completo" 
+                              value={previewClientName}
+                              onChange={(e) => setPreviewClientName(e.target.value)}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label className="flex items-center gap-2">
                               <Phone className="h-4 w-4" />
                               Seu telefone *
                             </Label>
-                            <Input placeholder="+55 11 99999-9999" disabled />
+                            <Input 
+                              placeholder="+55 11 99999-9999" 
+                              value={previewClientPhone}
+                              onChange={(e) => setPreviewClientPhone(e.target.value)}
+                            />
                           </div>
                         </div>
                       )}
 
-                      {/* Form Fields Preview */}
+                      {/* Form Fields - Interactive */}
                       {selectedForm?.fields?.map((fieldId: string) => {
                         const field = customFields.find((f) => f.id === fieldId);
                         if (!field) return null;
@@ -959,26 +1019,38 @@ export default function Forms() {
                               {field.name}
                               {field.is_required && <span className="text-destructive ml-1">*</span>}
                             </Label>
-                            {renderPreviewField(field)}
+                            {renderInteractiveField(field)}
                           </div>
                         );
                       })}
 
-                      {/* Submit Button Preview */}
-                      <Button className="w-full" disabled>
+                      {/* Submit Button - Shows feedback */}
+                      <Button 
+                        className="w-full" 
+                        onClick={() => toast.success("Formulário válido! (dados de teste não salvos)")}
+                      >
                         Enviar
                       </Button>
                     </CardContent>
                   </Card>
 
-                  {/* Open Form Button */}
-                  <div className="mt-4 flex justify-center">
+                  {/* Action Buttons */}
+                  <div className="mt-4 flex justify-center gap-3">
                     <Button
                       variant="outline"
+                      size="sm"
+                      onClick={resetPreview}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Limpar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => window.open(`/f/${selectedForm?.id}`, "_blank")}
                     >
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      Abrir formulário em nova aba
+                      Abrir formulário
                     </Button>
                   </div>
                 </div>
