@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,9 @@ import {
   X,
   Check,
   Trash2,
-  Send
+  Send,
+  Camera,
+  Paperclip
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -72,7 +74,12 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   // Quick comment state
   const [quickComment, setQuickComment] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id: string } | null>(null);
+  
+  // File input refs
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchSubscriptions = async () => {
     try {
@@ -218,6 +225,54 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     }
   };
 
+  const handleQuickFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 10MB.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${clientId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("client-followups")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("client-followups")
+        .getPublicUrl(fileName);
+
+      const { error } = await supabase.from("client_followups").insert({
+        account_id: currentUser.account_id,
+        client_id: clientId,
+        user_id: currentUser.id,
+        type: type,
+        title: file.name,
+        content: null,
+        file_url: urlData.publicUrl,
+        file_name: file.name,
+        file_size: file.size,
+      });
+
+      if (error) throw error;
+      toast.success(type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast.error("Erro ao enviar arquivo");
+    } finally {
+      setUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleDelete = async (subId: string) => {
     setDeletingId(subId);
     try {
@@ -287,9 +342,40 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
               value={quickComment}
               onChange={setQuickComment}
               onKeyDown={handleQuickKeyDown}
-              className="pr-12"
+              className="pr-24"
             />
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "image")}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => handleQuickFileSelect(e, "file")}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={uploading}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                title="Enviar imagem"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                title="Enviar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
               {(quickComment.trim() || saving) && (
                 <button
                   type="button"
