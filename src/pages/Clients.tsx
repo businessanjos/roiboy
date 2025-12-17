@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -23,6 +23,11 @@ import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/compon
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import { CustomFieldsManager, CustomField, FieldOption, FieldValueEditor } from "@/components/custom-fields";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -701,6 +706,28 @@ export default function Clients() {
     return null;
   };
 
+  const updateContractDate = async (clientId: string, field: 'contract_start_date' | 'contract_end_date', date: Date | undefined) => {
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({ [field]: date ? format(date, 'yyyy-MM-dd') : null })
+        .eq("id", clientId);
+
+      if (error) throw error;
+
+      // Update local state
+      setClients(prev => prev.map(c => 
+        c.id === clientId 
+          ? { ...c, [field]: date ? format(date, 'yyyy-MM-dd') : null }
+          : c
+      ));
+      toast.success("Data do contrato atualizada");
+    } catch (error: any) {
+      console.error("Error updating contract date:", error);
+      toast.error("Erro ao atualizar data do contrato");
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -1366,45 +1393,115 @@ export default function Clients() {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {client.contract_end_date ? (
-                            (() => {
-                              const expiryStatus = getContractExpiryStatus(client.contract_end_date);
-                              const endDate = new Date(client.contract_end_date).toLocaleDateString('pt-BR');
-                              return (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
-                                        expiryStatus?.type === "expired" 
-                                          ? "bg-destructive/10 text-destructive" 
-                                          : expiryStatus?.type === "urgent"
-                                            ? "bg-destructive/10 text-destructive"
-                                            : expiryStatus?.type === "warning"
-                                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                      }`}>
-                                        {expiryStatus?.type === "expired" ? (
-                                          <AlertTriangle className="h-3 w-3" />
-                                        ) : expiryStatus ? (
-                                          <Clock className="h-3 w-3" />
-                                        ) : (
-                                          <CheckCircle2 className="h-3 w-3" />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              {client.contract_end_date ? (
+                                (() => {
+                                  const expiryStatus = getContractExpiryStatus(client.contract_end_date);
+                                  const endDate = new Date(client.contract_end_date).toLocaleDateString('pt-BR');
+                                  return (
+                                    <button className={cn(
+                                      "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity",
+                                      expiryStatus?.type === "expired" 
+                                        ? "bg-destructive/10 text-destructive" 
+                                        : expiryStatus?.type === "urgent"
+                                          ? "bg-destructive/10 text-destructive"
+                                          : expiryStatus?.type === "warning"
+                                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    )}>
+                                      {expiryStatus?.type === "expired" ? (
+                                        <AlertTriangle className="h-3 w-3" />
+                                      ) : expiryStatus ? (
+                                        <Clock className="h-3 w-3" />
+                                      ) : (
+                                        <CheckCircle2 className="h-3 w-3" />
+                                      )}
+                                      {endDate}
+                                      <Pencil className="h-3 w-3 ml-1 opacity-50" />
+                                    </button>
+                                  );
+                                })()
+                              ) : (
+                                <button className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer">
+                                  <CalendarIcon className="h-3 w-3" />
+                                  <span>Definir</span>
+                                </button>
+                              )}
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-4" align="center">
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-medium">Início do Contrato</Label>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={cn(
+                                          "w-full justify-start text-left font-normal",
+                                          !client.contract_start_date && "text-muted-foreground"
                                         )}
-                                        {endDate}
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="text-xs">
-                                        {expiryStatus ? expiryStatus.label : "Contrato ativo"}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              );
-                            })()
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                                      >
+                                        <CalendarIcon className="mr-2 h-3 w-3" />
+                                        {client.contract_start_date 
+                                          ? format(new Date(client.contract_start_date), "dd/MM/yyyy", { locale: ptBR })
+                                          : "Selecionar data"}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <Calendar
+                                        mode="single"
+                                        selected={client.contract_start_date ? new Date(client.contract_start_date) : undefined}
+                                        onSelect={(date) => updateContractDate(client.id, 'contract_start_date', date)}
+                                        initialFocus
+                                        className="pointer-events-auto"
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-medium">Fim do Contrato</Label>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={cn(
+                                          "w-full justify-start text-left font-normal",
+                                          !client.contract_end_date && "text-muted-foreground"
+                                        )}
+                                      >
+                                        <CalendarIcon className="mr-2 h-3 w-3" />
+                                        {client.contract_end_date 
+                                          ? format(new Date(client.contract_end_date), "dd/MM/yyyy", { locale: ptBR })
+                                          : "Selecionar data"}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <Calendar
+                                        mode="single"
+                                        selected={client.contract_end_date ? new Date(client.contract_end_date) : undefined}
+                                        onSelect={(date) => updateContractDate(client.id, 'contract_end_date', date)}
+                                        initialFocus
+                                        className="pointer-events-auto"
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                                {client.contract_end_date && (
+                                  <div className="pt-2 border-t">
+                                    <p className="text-xs text-muted-foreground">
+                                      {(() => {
+                                        const expiryStatus = getContractExpiryStatus(client.contract_end_date);
+                                        return expiryStatus ? expiryStatus.label : "Contrato ativo";
+                                      })()}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </TableCell>
                         {customFields.map((field) => (
                           <TableCell key={field.id} className="text-center">
