@@ -37,6 +37,10 @@ const navItems = [
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
+const bottomNavItems = [
+  { to: "/profile", icon: UserCircle, label: "Meu Perfil" },
+];
+
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -71,8 +75,28 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-border">
+      {/* Bottom navigation and Logout */}
+      <div className="p-3 border-t border-border space-y-1">
+        {bottomNavItems.map((item) => {
+          const isActive = location.pathname === item.to;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                isActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                collapsed && "justify-center"
+              )}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
+            </NavLink>
+          );
+        })}
         <Button
           variant="ghost"
           className={cn(

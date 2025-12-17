@@ -129,6 +129,11 @@ export default function Profile() {
       admin: "Administrador",
       leader: "Líder",
       mentor: "Mentor",
+      cx: "CX",
+      cs: "CS",
+      consultor: "Consultor",
+      head: "Head",
+      gestor: "Gestor",
     };
     return labels[role] || role;
   };
