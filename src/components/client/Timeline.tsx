@@ -38,7 +38,7 @@ import {
 
 export interface TimelineEvent {
   id: string;
-  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup" | "form_response";
+  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup" | "form_response" | "sales";
   title: string;
   description?: string;
   timestamp: string;
@@ -59,7 +59,7 @@ export interface TimelineEvent {
     file_url?: string;
     file_name?: string;
     file_size?: number;
-    followup_type?: "note" | "file" | "image" | "financial_note";
+    followup_type?: "note" | "file" | "image" | "financial_note" | "sales_note";
     // Field change specific
     field_name?: string;
     old_value?: string;
@@ -171,6 +171,13 @@ const getEventConfig = (event: TimelineEvent) => {
         bgColor: "bg-purple-500",
         textColor: "text-purple-500",
         label: "Formulário",
+      };
+    case "sales":
+      return {
+        icon: <Target className="h-4 w-4" />,
+        bgColor: "bg-green-500",
+        textColor: "text-green-500",
+        label: "Vendas",
       };
     default:
       return {
@@ -388,7 +395,7 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
   );
 }
 
-type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup" | "form_response";
+type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup" | "form_response" | "sales";
 
 const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   comment: { label: "Comentários", color: "bg-primary" },
@@ -400,6 +407,7 @@ const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   financial: { label: "Financeiro", color: "bg-amber-500" },
   followup: { label: "Acompanhamento", color: "bg-cyan-500" },
   form_response: { label: "Formulários", color: "bg-purple-500" },
+  sales: { label: "Vendas", color: "bg-green-500" },
 };
 
 export function Timeline({ events, className, clientId, onCommentAdded }: TimelineProps) {

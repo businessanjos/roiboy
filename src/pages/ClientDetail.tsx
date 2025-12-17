@@ -569,10 +569,11 @@ export default function ClientDetail() {
       (followupsData || []).forEach((followup: any) => {
         const isNote = followup.type === "note";
         const isFinancialNote = followup.type === "financial_note";
+        const isSalesNote = followup.type === "sales_note";
         timelineItems.push({
           id: followup.id,
-          type: isFinancialNote ? "financial" : isNote ? "comment" : "followup",
-          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : "Arquivo anexado"),
+          type: isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup",
+          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : "Arquivo anexado"),
           description: followup.content,
           timestamp: followup.created_at,
           metadata: {
@@ -582,7 +583,7 @@ export default function ClientDetail() {
             file_url: followup.file_url,
             file_name: followup.file_name,
             file_size: followup.file_size,
-            followup_type: followup.type as "note" | "file" | "image" | "financial_note",
+            followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
           },
         });
       });
@@ -821,10 +822,13 @@ export default function ClientDetail() {
             .single();
           
           setTimeline((prev) => {
+            const isNote = followup.type === "note";
+            const isFinancialNote = followup.type === "financial_note";
+            const isSalesNote = followup.type === "sales_note";
             const newEvent: TimelineEvent = {
               id: followup.id,
-              type: "comment",
-              title: followup.title || "Comentário",
+              type: isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup",
+              title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : "Arquivo anexado"),
               description: followup.content,
               timestamp: followup.created_at,
               metadata: {
@@ -834,7 +838,7 @@ export default function ClientDetail() {
                 file_url: followup.file_url,
                 file_name: followup.file_name,
                 file_size: followup.file_size,
-                followup_type: followup.type as "note" | "file" | "image",
+                followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
               },
             };
             const updated = [newEvent, ...prev.filter(e => e.id !== followup.id)];
