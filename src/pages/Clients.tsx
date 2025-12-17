@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { StatusIndicator } from "@/components/ui/status-indicator";
 import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
+import { CustomFieldsManager, CustomField, FieldOption, FieldValueEditor } from "@/components/custom-fields";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -107,7 +108,24 @@ export default function Clients() {
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Custom fields state
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, Record<string, any>>>({});
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+
   const fetchClients = async () => {
+    // Get account_id first
+    const { data: userData } = await supabase
+      .from("users")
+      .select("account_id")
+      .single();
+    
+    if (userData) {
+      setAccountId(userData.account_id);
+    }
+
     const { data, error } = await supabase
       .from("clients")
       .select(`
@@ -204,10 +222,65 @@ export default function Clients() {
     if (!error) setProducts(data || []);
   };
 
+  const fetchCustomFields = async () => {
+    const { data, error } = await supabase
+      .from("custom_fields")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order");
+
+    if (!error && data) {
+      const mappedFields: CustomField[] = data.map(f => ({
+        id: f.id,
+        name: f.name,
+        field_type: f.field_type as CustomField["field_type"],
+        options: (f.options as unknown as FieldOption[]) || [],
+        is_required: f.is_required,
+        display_order: f.display_order,
+        is_active: f.is_active,
+      }));
+      setCustomFields(mappedFields);
+    }
+  };
+
+  const fetchFieldValues = async (clientIds: string[]) => {
+    if (clientIds.length === 0) return;
+
+    const { data, error } = await supabase
+      .from("client_field_values")
+      .select("*")
+      .in("client_id", clientIds);
+
+    if (!error && data) {
+      const valuesMap: Record<string, Record<string, any>> = {};
+      data.forEach((v: any) => {
+        if (!valuesMap[v.client_id]) {
+          valuesMap[v.client_id] = {};
+        }
+        // Get the value based on field type
+        const value = v.value_boolean !== null ? v.value_boolean :
+                     v.value_number !== null ? v.value_number :
+                     v.value_date !== null ? v.value_date :
+                     v.value_json !== null ? v.value_json :
+                     v.value_text;
+        valuesMap[v.client_id][v.field_id] = value;
+      });
+      setFieldValues(valuesMap);
+    }
+  };
+
   useEffect(() => {
     fetchClients();
     fetchProducts();
+    fetchCustomFields();
   }, []);
+
+  // Fetch field values when clients are loaded
+  useEffect(() => {
+    if (clients.length > 0) {
+      fetchFieldValues(clients.map(c => c.id));
+    }
+  }, [clients]);
 
   const handleAddClient = async () => {
     const errors: Record<string, string> = {};
@@ -415,11 +488,65 @@ export default function Clients() {
     c.phone_e164.includes(searchQuery)
   );
 
+  const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [clientId]: {
+        ...(prev[clientId] || {}),
+        [fieldId]: newValue
+      }
+    }));
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
         <div className="flex gap-2 flex-wrap">
+          {/* View Mode Toggle */}
+          <div className="flex items-center border rounded-lg overflow-hidden">
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode("table")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode("cards")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Custom Fields Manager */}
+          <Dialog open={fieldsDialogOpen} onOpenChange={setFieldsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Campos</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle>Configurar Campos</DialogTitle>
+                <DialogDescription>
+                  Crie campos personalizados para acompanhar o processo dos clientes
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh]">
+                <CustomFieldsManager onFieldsChange={() => {
+                  fetchCustomFields();
+                  setFieldsDialogOpen(false);
+                }} />
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+
           {/* Bulk Omie Sync */}
           <Button 
             variant="outline" 
@@ -629,87 +756,173 @@ export default function Clients() {
         />
       </div>
 
-      <div className="grid gap-3">
-        {filtered.map((client) => {
-          const clientProducts = client.client_products?.map((cp: any) => cp.products?.name).filter(Boolean) || [];
-          
-          return (
-            <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <p className="font-medium truncate">{client.full_name}</p>
-                    <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
-                    {clientProducts.length > 0 && (
-                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                        {clientProducts.map((productName: string, idx: number) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            <Package className="h-3 w-3 mr-1" />
-                            {productName}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                    {/* WhatsApp indicator */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                            whatsappMap[client.id]?.messageCount > 0 
-                              ? "bg-emerald-500/10 text-emerald-600" 
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            <MessageCircle className="h-3.5 w-3.5" />
-                            {whatsappMap[client.id]?.messageCount > 0 && (
-                              <span className="font-medium">{whatsappMap[client.id].messageCount}</span>
-                            )}
+      {viewMode === "table" ? (
+        <Card className="shadow-card overflow-hidden">
+          <ScrollArea className="w-full">
+            <div className="min-w-max">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-medium sticky left-0 bg-muted/50 z-10 min-w-[200px]">Cliente</TableHead>
+                    <TableHead className="font-medium text-center min-w-[80px]">Status</TableHead>
+                    <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
+                    {customFields.map((field) => (
+                      <TableHead key={field.id} className="font-medium text-center min-w-[120px]">
+                        {field.name}
+                      </TableHead>
+                    ))}
+                    <TableHead className="font-medium text-right min-w-[80px]">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={4 + customFields.length} className="text-center py-8">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                        Carregando...
+                      </TableCell>
+                    </TableRow>
+                  ) : filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4 + customFields.length} className="text-center py-8 text-muted-foreground">
+                        Nenhum cliente encontrado.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((client) => (
+                      <TableRow key={client.id} className="hover:bg-muted/30">
+                        <TableCell className="sticky left-0 bg-background z-10">
+                          <div className="min-w-[180px]">
+                            <p className="font-medium truncate">{client.full_name}</p>
+                            <p className="text-xs text-muted-foreground">{client.phone_e164}</p>
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {whatsappMap[client.id]?.messageCount > 0 ? (
-                            <div className="text-xs">
-                              <p className="font-medium">WhatsApp conectado</p>
-                              <p>{whatsappMap[client.id].messageCount} mensagem(ns)</p>
-                              {whatsappMap[client.id].lastMessageAt && (
-                                <p className="text-muted-foreground">
-                                  Última: {new Date(whatsappMap[client.id].lastMessageAt!).toLocaleDateString('pt-BR')}
-                                </p>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <StatusIndicator status={client.status} size="sm" />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {vnpsMap[client.id] ? (
+                            <VNPSBadge
+                              score={vnpsMap[client.id].vnps_score}
+                              vnpsClass={vnpsMap[client.id].vnps_class}
+                              trend={vnpsMap[client.id].trend}
+                              size="sm"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        {customFields.map((field) => (
+                          <TableCell key={field.id} className="text-center">
+                            {accountId && (
+                              <FieldValueEditor
+                                field={field}
+                                clientId={client.id}
+                                accountId={accountId}
+                                currentValue={fieldValues[client.id]?.[field.id]}
+                                onValueChange={(fieldId, newValue) => handleFieldValueChange(client.id, fieldId, newValue)}
+                              />
+                            )}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/clients/${client.id}`}>
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
+        </Card>
+      ) : (
+        <div className="grid gap-3">
+          {filtered.map((client) => {
+            const clientProducts = client.client_products?.map((cp: any) => cp.products?.name).filter(Boolean) || [];
+            
+            return (
+              <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <p className="font-medium truncate">{client.full_name}</p>
+                      <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
+                      {clientProducts.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                          {clientProducts.map((productName: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              <Package className="h-3 w-3 mr-1" />
+                              {productName}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+                      {/* WhatsApp indicator */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                              whatsappMap[client.id]?.messageCount > 0 
+                                ? "bg-emerald-500/10 text-emerald-600" 
+                                : "bg-muted text-muted-foreground"
+                            }`}>
+                              <MessageCircle className="h-3.5 w-3.5" />
+                              {whatsappMap[client.id]?.messageCount > 0 && (
+                                <span className="font-medium">{whatsappMap[client.id].messageCount}</span>
                               )}
                             </div>
-                          ) : (
-                            <p className="text-xs">Sem mensagens WhatsApp</p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    {vnpsMap[client.id] && (
-                      <VNPSBadge
-                        score={vnpsMap[client.id].vnps_score}
-                        vnpsClass={vnpsMap[client.id].vnps_class}
-                        trend={vnpsMap[client.id].trend}
-                        size="sm"
-                      />
-                    )}
-                    <StatusIndicator status={client.status} size="sm" />
-                    <Button variant="ghost" size="sm" asChild className="ml-auto sm:ml-0">
-                      <Link to={`/clients/${client.id}`}>
-                        <span className="hidden sm:inline">Ver</span>
-                        <ArrowRight className="h-4 w-4 sm:ml-1" />
-                      </Link>
-                    </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {whatsappMap[client.id]?.messageCount > 0 ? (
+                              <div className="text-xs">
+                                <p className="font-medium">WhatsApp conectado</p>
+                                <p>{whatsappMap[client.id].messageCount} mensagem(ns)</p>
+                                {whatsappMap[client.id].lastMessageAt && (
+                                  <p className="text-muted-foreground">
+                                    Última: {new Date(whatsappMap[client.id].lastMessageAt!).toLocaleDateString('pt-BR')}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs">Sem mensagens WhatsApp</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      {vnpsMap[client.id] && (
+                        <VNPSBadge
+                          score={vnpsMap[client.id].vnps_score}
+                          vnpsClass={vnpsMap[client.id].vnps_class}
+                          trend={vnpsMap[client.id].trend}
+                          size="sm"
+                        />
+                      )}
+                      <StatusIndicator status={client.status} size="sm" />
+                      <Button variant="ghost" size="sm" asChild className="ml-auto sm:ml-0">
+                        <Link to={`/clients/${client.id}`}>
+                          <span className="hidden sm:inline">Ver</span>
+                          <ArrowRight className="h-4 w-4 sm:ml-1" />
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-        {!loading && filtered.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</p>
-        )}
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+          {!loading && filtered.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
