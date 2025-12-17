@@ -34,6 +34,7 @@ import {
   ListTodo,
   Filter,
   TrendingUp,
+  ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskCard } from "@/components/tasks/TaskCard";
@@ -66,6 +67,15 @@ interface Task {
   assigned_user: User | null;
 }
 
+type SortOption = "priority" | "due_date" | "created_at";
+
+const PRIORITY_ORDER: Record<string, number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
 export default function Tasks() {
   const { currentUser } = useCurrentUser();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -73,6 +83,7 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [activeTab, setActiveTab] = useState("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -192,6 +203,20 @@ export default function Tasks() {
     }
 
     return matchesSearch && matchesUser && matchesTab;
+  });
+
+  // Sort tasks
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (sortBy === "priority") {
+      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+    } else if (sortBy === "due_date") {
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    } else {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
   });
 
   const pendingCount = tasks.filter(t => 
@@ -324,14 +349,14 @@ export default function Tasks() {
               />
             </div>
             <Select value={filterUser} onValueChange={setFilterUser}>
-              <SelectTrigger className="w-full sm:w-[220px] bg-background">
+              <SelectTrigger className="w-full sm:w-[180px] bg-background">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="Filtrar por responsável" />
+                  <SelectValue placeholder="Responsável" />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os responsáveis</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="mine">
                   <div className="flex items-center gap-2">
                     <span>🎯</span>
@@ -351,6 +376,19 @@ export default function Tasks() {
                     </div>
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+              <SelectTrigger className="w-full sm:w-[160px] bg-background">
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Ordenar por" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="priority">Prioridade</SelectItem>
+                <SelectItem value="due_date">Data de entrega</SelectItem>
+                <SelectItem value="created_at">Data de criação</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -384,11 +422,11 @@ export default function Tasks() {
         </TabsList>
 
         <TabsContent value="pending" className="mt-6">
-          {filteredTasks.length === 0 ? (
+          {sortedTasks.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="space-y-2">
-              {filteredTasks.map((task) => (
+              {sortedTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
@@ -403,11 +441,11 @@ export default function Tasks() {
         </TabsContent>
 
         <TabsContent value="done" className="mt-6">
-          {filteredTasks.length === 0 ? (
+          {sortedTasks.length === 0 ? (
             <EmptyState message="Nenhuma tarefa concluída" />
           ) : (
             <div className="space-y-2">
-              {filteredTasks.map((task) => (
+              {sortedTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
@@ -422,11 +460,11 @@ export default function Tasks() {
         </TabsContent>
 
         <TabsContent value="cancelled" className="mt-6">
-          {filteredTasks.length === 0 ? (
+          {sortedTasks.length === 0 ? (
             <EmptyState message="Nenhuma tarefa cancelada" />
           ) : (
             <div className="space-y-2">
-              {filteredTasks.map((task) => (
+              {sortedTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
