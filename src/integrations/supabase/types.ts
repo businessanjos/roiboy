@@ -167,6 +167,69 @@ export type Database = {
           },
         ]
       }
+      client_contracts: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          currency: string
+          end_date: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          notes: string | null
+          payment_option: string | null
+          start_date: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          payment_option?: string | null
+          start_date: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          payment_option?: string | null
+          start_date?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contracts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_event_deliveries: {
         Row: {
           account_id: string
