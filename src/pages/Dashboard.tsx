@@ -44,10 +44,11 @@ import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, 
 import { ptBR } from "date-fns/locale";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 
-interface ContractStatusChange {
+interface ContractData {
   id: string;
   status: string;
   status_changed_at: string | null;
+  start_date: string;
 }
 
 interface ClientWithScore {
@@ -123,7 +124,7 @@ export default function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState<LifeEvent[]>([]);
   const [roiStats, setROIStats] = useState<ROIStats | null>(null);
   const [riskStats, setRiskStats] = useState<RiskStats | null>(null);
-  const [contractStatusChanges, setContractStatusChanges] = useState<ContractStatusChange[]>([]);
+  const [contractData, setContractData] = useState<ContractData[]>([]);
 
   const fetchProducts = async () => {
     try {
@@ -341,57 +342,77 @@ export default function Dashboard() {
     }
   };
 
-  const fetchContractStatusChanges = async () => {
+  const fetchContractData = async () => {
     try {
       const sixMonthsAgo = subMonths(new Date(), 6);
       
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, status, status_changed_at")
-        .in("status", ["churned", "paused", "ended"])
-        .gte("status_changed_at", sixMonthsAgo.toISOString())
-        .order("status_changed_at", { ascending: true });
+        .select("id, status, status_changed_at, start_date")
+        .or(`start_date.gte.${format(sixMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${sixMonthsAgo.toISOString()}`)
+        .order("start_date", { ascending: true });
 
       if (error) throw error;
-      setContractStatusChanges(data || []);
+      setContractData(data || []);
     } catch (error) {
-      console.error("Error fetching contract status changes:", error);
+      console.error("Error fetching contract data:", error);
     }
   };
 
-  // Calculate monthly chart data
+  // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
-    const months: { [key: string]: { month: string; cancelamentos: number; congelamentos: number } } = {};
+    const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; congelamentos: number } } = {};
     
     // Initialize last 6 months
     for (let i = 5; i >= 0; i--) {
       const date = subMonths(new Date(), i);
       const key = format(date, "yyyy-MM");
       const label = format(date, "MMM/yy", { locale: ptBR });
-      months[key] = { month: label, cancelamentos: 0, congelamentos: 0 };
+      months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, congelamentos: 0 };
     }
     
-    contractStatusChanges.forEach((contract) => {
-      if (!contract.status_changed_at) return;
-      const date = parseISO(contract.status_changed_at);
-      const key = format(date, "yyyy-MM");
+    contractData.forEach((contract) => {
+      // Count new contracts by start_date
+      if (contract.start_date) {
+        const startDate = parseISO(contract.start_date);
+        const startKey = format(startDate, "yyyy-MM");
+        if (months[startKey] && contract.status === "active") {
+          months[startKey].novos++;
+        }
+      }
       
-      if (months[key]) {
-        if (contract.status === "churned" || contract.status === "ended") {
-          months[key].cancelamentos++;
-        } else if (contract.status === "paused") {
-          months[key].congelamentos++;
+      // Count status changes
+      if (contract.status_changed_at && contract.status !== "active") {
+        const date = parseISO(contract.status_changed_at);
+        const key = format(date, "yyyy-MM");
+        
+        if (months[key]) {
+          if (contract.status === "churned") {
+            months[key].cancelamentos++;
+          } else if (contract.status === "ended") {
+            months[key].encerramentos++;
+          } else if (contract.status === "paused") {
+            months[key].congelamentos++;
+          }
         }
       }
     });
     
     return Object.values(months);
-  }, [contractStatusChanges]);
+  }, [contractData]);
 
   const chartConfig = {
+    novos: {
+      label: "Novos",
+      color: "hsl(var(--success))",
+    },
     cancelamentos: {
       label: "Cancelamentos",
       color: "hsl(var(--danger))",
+    },
+    encerramentos: {
+      label: "Encerramentos",
+      color: "hsl(25 95% 53%)",
     },
     congelamentos: {
       label: "Congelamentos",
@@ -405,7 +426,7 @@ export default function Dashboard() {
     fetchUpcomingEvents();
     fetchROIStats();
     fetchRiskStats();
-    fetchContractStatusChanges();
+    fetchContractData();
 
     // Real-time subscription for client changes
     const channel = supabase
@@ -440,7 +461,7 @@ export default function Dashboard() {
           table: "client_contracts",
         },
         () => {
-          fetchContractStatusChanges();
+          fetchContractData();
         }
       )
       .subscribe();
@@ -495,7 +516,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => { fetchClients(); fetchUpcomingEvents(); fetchROIStats(); fetchRiskStats(); fetchContractStatusChanges(); }} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { fetchClients(); fetchUpcomingEvents(); fetchROIStats(); fetchRiskStats(); fetchContractData(); }} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
@@ -880,7 +901,7 @@ export default function Dashboard() {
                 <BarChart3 className="h-5 w-5 text-primary" />
                 Evolução Mensal
               </CardTitle>
-              <CardDescription>Cancelamentos e congelamentos nos últimos 6 meses</CardDescription>
+              <CardDescription>Novos, cancelamentos, encerramentos e congelamentos nos últimos 6 meses</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[280px] w-full">
@@ -899,10 +920,22 @@ export default function Dashboard() {
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar 
+                    dataKey="novos" 
+                    fill="hsl(var(--success))" 
+                    radius={[4, 4, 0, 0]} 
+                    name="Novos"
+                  />
+                  <Bar 
                     dataKey="cancelamentos" 
                     fill="hsl(var(--danger))" 
                     radius={[4, 4, 0, 0]} 
                     name="Cancelamentos"
+                  />
+                  <Bar 
+                    dataKey="encerramentos" 
+                    fill="hsl(25 95% 53%)" 
+                    radius={[4, 4, 0, 0]} 
+                    name="Encerramentos"
                   />
                   <Bar 
                     dataKey="congelamentos" 
