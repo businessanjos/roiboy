@@ -910,67 +910,62 @@ export default function Team() {
 
       {/* Role Dialog */}
       <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-        <DialogContent className="max-w-lg p-0 gap-0">
-          {/* Header with color accent */}
-          <div 
-            className="h-1.5 w-full rounded-t-lg"
-            style={{ backgroundColor: roleFormColor }}
-          />
-          
-          <div className="p-6 pb-4">
-            <DialogHeader className="space-y-1">
-              <DialogTitle>
+        <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 space-y-1.5">
+            <DialogHeader>
+              <DialogTitle className="text-lg">
                 {selectedRole ? "Editar Função" : "Nova Função"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm">
                 Defina nome, cor e permissões
               </DialogDescription>
             </DialogHeader>
           </div>
           
-          <ScrollArea className="max-h-[60vh] px-6">
-            <div className="space-y-5 pb-6">
-              {/* Name & Description */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role-name">Nome *</Label>
-                  <Input
-                    id="role-name"
-                    value={roleFormName}
-                    onChange={(e) => setRoleFormName(e.target.value)}
-                    placeholder="Ex: Suporte"
-                    disabled={selectedRole?.is_system}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role-description">Descrição</Label>
-                  <Input
-                    id="role-description"
-                    value={roleFormDescription}
-                    onChange={(e) => setRoleFormDescription(e.target.value)}
-                    placeholder="Descrição da função"
-                  />
-                </div>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="px-6 pb-6 space-y-6">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="role-name" className="text-sm font-medium">Nome *</Label>
+                <Input
+                  id="role-name"
+                  value={roleFormName}
+                  onChange={(e) => setRoleFormName(e.target.value)}
+                  placeholder="Ex: Suporte"
+                  disabled={selectedRole?.is_system}
+                />
+              </div>
+              
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
+                <Input
+                  id="role-description"
+                  value={roleFormDescription}
+                  onChange={(e) => setRoleFormDescription(e.target.value)}
+                  placeholder="Descrição da função"
+                />
               </div>
               
               {/* Color Picker */}
               <div className="space-y-2">
-                <Label>Cor</Label>
-                <div className="flex flex-wrap gap-2">
+                <Label className="text-sm font-medium">Cor</Label>
+                <div className="flex gap-2">
                   {DEFAULT_ROLE_COLORS.map((color) => (
                     <button
                       key={color}
                       type="button"
-                      className={`w-8 h-8 rounded-lg transition-all duration-150 flex items-center justify-center ${
+                      className={`w-9 h-9 rounded-lg transition-all duration-150 flex items-center justify-center ${
                         roleFormColor === color 
-                          ? 'ring-2 ring-offset-2 ring-foreground scale-110' 
-                          : 'hover:scale-105'
+                          ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground' 
+                          : 'hover:opacity-80'
                       }`}
                       style={{ backgroundColor: color }}
                       onClick={() => setRoleFormColor(color)}
                     >
                       {roleFormColor === color && (
-                        <Check className="h-4 w-4 text-white" />
+                        <Check className="h-4 w-4 text-white drop-shadow-sm" />
                       )}
                     </button>
                   ))}
@@ -980,13 +975,13 @@ export default function Team() {
               {/* Permissions */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>Permissões</Label>
-                  <Badge variant="secondary" className="text-xs">
+                  <Label className="text-sm font-medium">Permissões</Label>
+                  <Badge variant="outline" className="text-xs font-normal">
                     {roleFormPermissions.length} selecionadas
                   </Badge>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {PERMISSION_CATEGORIES.map(category => {
                     const categoryPerms = Object.entries(PERMISSION_LABELS)
                       .filter(([_, v]) => v.category === category);
@@ -994,32 +989,29 @@ export default function Team() {
                     if (categoryPerms.length === 0) return null;
                     
                     return (
-                      <div key={category} className="rounded-lg border bg-card">
-                        <div className="px-3 py-2 border-b bg-muted/40">
-                          <span className="text-xs font-medium text-muted-foreground">
+                      <div key={category} className="rounded-lg border bg-muted/30">
+                        <div className="px-3 py-2 border-b bg-muted/50">
+                          <span className="text-xs font-medium">
                             {category}
                           </span>
                         </div>
-                        <div className="p-2 grid grid-cols-2 gap-1">
+                        <div className="p-3 grid grid-cols-2 gap-x-4 gap-y-2">
                           {categoryPerms.map(([perm, { label }]) => {
                             const isChecked = roleFormPermissions.includes(perm);
                             return (
-                              <div 
+                              <label 
                                 key={perm}
-                                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                                  isChecked 
-                                    ? 'bg-primary/10 text-foreground' 
-                                    : 'hover:bg-muted/50 text-muted-foreground'
-                                }`}
-                                onClick={() => togglePermission(perm)}
+                                className="flex items-center gap-2 cursor-pointer"
                               >
                                 <Checkbox
                                   checked={isChecked}
                                   onCheckedChange={() => togglePermission(perm)}
-                                  className="h-3.5 w-3.5"
+                                  className="h-4 w-4"
                                 />
-                                <span className="text-xs">{label}</span>
-                              </div>
+                                <span className={`text-sm ${isChecked ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                  {label}
+                                </span>
+                              </label>
                             );
                           })}
                         </div>
@@ -1031,12 +1023,11 @@ export default function Team() {
             </div>
           </ScrollArea>
           
-          <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsRoleDialogOpen(false)}>
+          <div className="px-6 py-4 border-t bg-muted/30 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
               Cancelar
             </Button>
             <Button 
-              size="sm"
               onClick={handleSaveRole}
               style={{ backgroundColor: roleFormColor }}
               className="text-white hover:opacity-90"
