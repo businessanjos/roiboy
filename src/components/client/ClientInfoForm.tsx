@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award } from "lucide-react";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check } from "lucide-react";
 import { 
   validateCPF, 
   validateCNPJ, 
@@ -54,6 +54,21 @@ const BRAZILIAN_STATES = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
+// Validation indicator component
+function ValidationIndicator({ isValid, isEmpty }: { isValid: boolean; isEmpty: boolean }) {
+  if (isEmpty) return null;
+  
+  return (
+    <div className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-200 ${isValid ? "text-emerald-500" : "text-destructive"}`}>
+      {isValid ? (
+        <Check className="h-4 w-4" />
+      ) : (
+        <X className="h-4 w-4" />
+      )}
+    </div>
+  );
+}
+
 // Using shared MLS_LEVELS from mls-utils
 
 export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true }: ClientInfoFormProps) {
@@ -61,6 +76,41 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   const [newPhone, setNewPhone] = useState("");
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
+
+  // Real-time validation states
+  const validation = useMemo(() => {
+    const phoneDigits = data.phone_e164.replace(/\D/g, "");
+    const cpfDigits = data.cpf.replace(/\D/g, "");
+    const cnpjDigits = data.cnpj.replace(/\D/g, "");
+    const cepDigits = data.zip_code.replace(/\D/g, "");
+    
+    return {
+      phone: {
+        isEmpty: !data.phone_e164 || phoneDigits.length === 0,
+        isValid: /^\+[1-9]\d{10,14}$/.test(data.phone_e164),
+        isPartial: phoneDigits.length > 0 && phoneDigits.length < 11
+      },
+      cpf: {
+        isEmpty: cpfDigits.length === 0,
+        isValid: cpfDigits.length === 11 && validateCPF(data.cpf),
+        isPartial: cpfDigits.length > 0 && cpfDigits.length < 11
+      },
+      cnpj: {
+        isEmpty: cnpjDigits.length === 0,
+        isValid: cnpjDigits.length === 14 && validateCNPJ(data.cnpj),
+        isPartial: cnpjDigits.length > 0 && cnpjDigits.length < 14
+      },
+      cep: {
+        isEmpty: cepDigits.length === 0,
+        isValid: cepDigits.length === 8,
+        isPartial: cepDigits.length > 0 && cepDigits.length < 8
+      },
+      newEmail: {
+        isEmpty: !newEmail.trim(),
+        isValid: validateEmail(newEmail.trim())
+      }
+    };
+  }, [data.phone_e164, data.cpf, data.cnpj, data.zip_code, newEmail]);
 
   const updateField = (field: keyof ClientFormData, value: any) => {
     onChange({ ...data, [field]: value });
@@ -125,8 +175,14 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
     updateField("zip_code", formatCEP(value));
   };
 
-  const cpfValid = !data.cpf || validateCPF(data.cpf);
-  const cnpjValid = !data.cnpj || validateCNPJ(data.cnpj);
+  // Helper to get input border class based on validation state
+  const getInputClass = (val: { isEmpty: boolean; isValid: boolean; isPartial?: boolean }, hasExternalError?: boolean) => {
+    if (hasExternalError) return "border-destructive ring-1 ring-destructive/30";
+    if (val.isEmpty) return "";
+    if (val.isValid) return "border-emerald-500/50 ring-1 ring-emerald-500/20";
+    if (val.isPartial) return "border-amber-500/50 ring-1 ring-amber-500/20";
+    return "border-destructive ring-1 ring-destructive/30";
+  };
 
   return (
     <div className="space-y-5">
@@ -154,17 +210,25 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             </div>
             <div className={`space-y-1.5 ${errors.phone_e164 ? "animate-shake" : ""}`} data-error={!!errors.phone_e164}>
               <Label className="text-sm font-medium">Telefone principal *</Label>
-              <Input
-                value={data.phone_e164}
-                onChange={(e) => updateField("phone_e164", formatPhoneInput(e.target.value))}
-                placeholder="+5511999999999"
-                maxLength={16}
-                className={`h-9 ${errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : ""}`}
-              />
+              <div className="relative">
+                <Input
+                  value={data.phone_e164}
+                  onChange={(e) => updateField("phone_e164", formatPhoneInput(e.target.value))}
+                  placeholder="+5511999999999"
+                  maxLength={16}
+                  className={`h-9 pr-9 ${errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : getInputClass(validation.phone)}`}
+                />
+                <ValidationIndicator isValid={validation.phone.isValid} isEmpty={validation.phone.isEmpty} />
+              </div>
               {errors.phone_e164 && (
                 <p className="text-[11px] text-destructive flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.phone_e164}
+                </p>
+              )}
+              {!errors.phone_e164 && validation.phone.isPartial && (
+                <p className="text-[11px] text-amber-600 flex items-center gap-1">
+                  Digitando...
                 </p>
               )}
             </div>
@@ -195,16 +259,19 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           </div>
         )}
         <div className="flex gap-2">
-          <Input
-            value={newEmail}
-            onChange={(e) => {
-              setNewEmail(e.target.value);
-              setEmailError("");
-            }}
-            placeholder="email@exemplo.com"
-            className={`flex-1 h-9 ${emailError ? "border-destructive" : ""}`}
-            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
-          />
+          <div className="relative flex-1">
+            <Input
+              value={newEmail}
+              onChange={(e) => {
+                setNewEmail(e.target.value);
+                setEmailError("");
+              }}
+              placeholder="email@exemplo.com"
+              className={`h-9 pr-9 ${emailError ? "border-destructive" : getInputClass(validation.newEmail)}`}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
+            />
+            <ValidationIndicator isValid={validation.newEmail.isValid} isEmpty={validation.newEmail.isEmpty} />
+          </div>
           <Button type="button" variant="outline" size="sm" className="h-9 px-3" onClick={handleAddEmail}>
             <Plus className="h-4 w-4" />
           </Button>
@@ -264,34 +331,46 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">CPF</Label>
-            <Input
-              value={data.cpf}
-              onChange={(e) => handleCPFChange(e.target.value)}
-              placeholder="000.000.000-00"
-              maxLength={14}
-              className={`h-9 ${!cpfValid ? "border-destructive" : ""}`}
-            />
-            {!cpfValid && (
+            <div className="relative">
+              <Input
+                value={data.cpf}
+                onChange={(e) => handleCPFChange(e.target.value)}
+                placeholder="000.000.000-00"
+                maxLength={14}
+                className={`h-9 pr-9 ${getInputClass(validation.cpf)}`}
+              />
+              <ValidationIndicator isValid={validation.cpf.isValid} isEmpty={validation.cpf.isEmpty} />
+            </div>
+            {!validation.cpf.isEmpty && !validation.cpf.isValid && !validation.cpf.isPartial && (
               <p className="text-[11px] text-destructive flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 CPF inválido
               </p>
             )}
+            {validation.cpf.isPartial && (
+              <p className="text-[11px] text-amber-600">Digitando...</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">CNPJ</Label>
-            <Input
-              value={data.cnpj}
-              onChange={(e) => handleCNPJChange(e.target.value)}
-              placeholder="00.000.000/0000-00"
-              maxLength={18}
-              className={`h-9 ${!cnpjValid ? "border-destructive" : ""}`}
-            />
-            {!cnpjValid && (
+            <div className="relative">
+              <Input
+                value={data.cnpj}
+                onChange={(e) => handleCNPJChange(e.target.value)}
+                placeholder="00.000.000/0000-00"
+                maxLength={18}
+                className={`h-9 pr-9 ${getInputClass(validation.cnpj)}`}
+              />
+              <ValidationIndicator isValid={validation.cnpj.isValid} isEmpty={validation.cnpj.isEmpty} />
+            </div>
+            {!validation.cnpj.isEmpty && !validation.cnpj.isValid && !validation.cnpj.isPartial && (
               <p className="text-[11px] text-destructive flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 CNPJ inválido
               </p>
+            )}
+            {validation.cnpj.isPartial && (
+              <p className="text-[11px] text-amber-600">Digitando...</p>
             )}
           </div>
         </div>
@@ -414,13 +493,19 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">CEP</Label>
-            <Input
-              value={data.zip_code}
-              onChange={(e) => handleCEPChange(e.target.value)}
-              placeholder="00000-000"
-              maxLength={9}
-              className="h-9"
-            />
+            <div className="relative">
+              <Input
+                value={data.zip_code}
+                onChange={(e) => handleCEPChange(e.target.value)}
+                placeholder="00000-000"
+                maxLength={9}
+                className={`h-9 pr-9 ${getInputClass(validation.cep)}`}
+              />
+              <ValidationIndicator isValid={validation.cep.isValid} isEmpty={validation.cep.isEmpty} />
+            </div>
+            {validation.cep.isPartial && (
+              <p className="text-[11px] text-amber-600">Digitando...</p>
+            )}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label className="text-sm font-medium">Rua</Label>
