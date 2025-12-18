@@ -14,7 +14,8 @@ import {
   Sparkles,
   CheckCircle2,
   ArrowRight,
-  Play
+  Play,
+  Code2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -225,7 +226,7 @@ export default function Presentation() {
             <p className="text-muted-foreground">Conecte suas ferramentas favoritas</p>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             {["Zoom", "Google Meet", "Omie", "Pipedrive", "Clínica Ryka"].map((integration) => (
               <Card key={integration} className="text-center py-4">
                 <CardContent className="p-0">
@@ -234,6 +235,18 @@ export default function Presentation() {
               </Card>
             ))}
           </div>
+
+          {/* API Documentation Link */}
+          <Card className="bg-muted/50 border-dashed cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/api-docs")}>
+            <CardContent className="py-6 flex items-center justify-center gap-3">
+              <Code2 className="h-5 w-5 text-primary" />
+              <div className="text-center">
+                <p className="font-medium">Documentação da API</p>
+                <p className="text-sm text-muted-foreground">Para desenvolvedores da extensão Chrome</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
         </div>
       </section>
 
