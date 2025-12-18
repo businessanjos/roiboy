@@ -86,6 +86,86 @@ export function formatCEP(value: string): string {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
 
+// Format date: DD/MM/AAAA
+export function formatDateBR(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+// Parse DD/MM/AAAA to YYYY-MM-DD (ISO format)
+export function parseDateBRToISO(dateBR: string): string | null {
+  const digits = dateBR.replace(/\D/g, '');
+  if (digits.length !== 8) return null;
+  
+  const day = parseInt(digits.slice(0, 2), 10);
+  const month = parseInt(digits.slice(2, 4), 10);
+  const year = parseInt(digits.slice(4, 8), 10);
+  
+  // Basic validation
+  if (month < 1 || month > 12) return null;
+  if (day < 1 || day > 31) return null;
+  if (year < 1900 || year > new Date().getFullYear()) return null;
+  
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// Parse YYYY-MM-DD to DD/MM/AAAA
+export function parseISOToDateBR(isoDate: string): string {
+  if (!isoDate) return '';
+  const [year, month, day] = isoDate.split('-');
+  if (!year || !month || !day) return '';
+  return `${day}/${month}/${year}`;
+}
+
+// Validate birth date and calculate age
+export function validateBirthDate(dateBR: string): { isValid: boolean; age: number | null; error?: string } {
+  const digits = dateBR.replace(/\D/g, '');
+  if (digits.length === 0) return { isValid: true, age: null };
+  if (digits.length < 8) return { isValid: false, age: null, error: 'incomplete' };
+  
+  const day = parseInt(digits.slice(0, 2), 10);
+  const month = parseInt(digits.slice(2, 4), 10);
+  const year = parseInt(digits.slice(4, 8), 10);
+  
+  // Validate month
+  if (month < 1 || month > 12) {
+    return { isValid: false, age: null, error: 'Mês inválido' };
+  }
+  
+  // Validate day based on month
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (day < 1 || day > daysInMonth) {
+    return { isValid: false, age: null, error: 'Dia inválido' };
+  }
+  
+  // Create date object
+  const birthDate = new Date(year, month - 1, day);
+  const today = new Date();
+  
+  // Check if date is in the future
+  if (birthDate > today) {
+    return { isValid: false, age: null, error: 'Data no futuro' };
+  }
+  
+  // Check if too old (> 120 years)
+  const maxAge = 120;
+  const minYear = today.getFullYear() - maxAge;
+  if (year < minYear) {
+    return { isValid: false, age: null, error: 'Data muito antiga' };
+  }
+  
+  // Calculate age
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return { isValid: true, age };
+}
+
 // Validate email
 export function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

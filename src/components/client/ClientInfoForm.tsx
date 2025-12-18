@@ -16,7 +16,11 @@ import {
   formatCEP,
   validateEmail,
   validateBrazilianPhone,
-  formatBrazilianPhone
+  formatBrazilianPhone,
+  formatDateBR,
+  parseDateBRToISO,
+  parseISOToDateBR,
+  validateBirthDate
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
 
@@ -495,12 +499,54 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Data de Nascimento</Label>
-            <Input
-              type="date"
-              value={data.birth_date}
-              onChange={(e) => updateField("birth_date", e.target.value)}
-              className="h-9"
-            />
+            <div className="relative">
+              <Input
+                value={parseISOToDateBR(data.birth_date)}
+                onChange={(e) => {
+                  const formatted = formatDateBR(e.target.value);
+                  const isoDate = parseDateBRToISO(formatted);
+                  updateField("birth_date", isoDate || "");
+                }}
+                placeholder="DD/MM/AAAA"
+                maxLength={10}
+                className={`h-9 pr-9 ${
+                  data.birth_date && !validateBirthDate(parseISOToDateBR(data.birth_date)).isValid 
+                    ? "border-destructive ring-1 ring-destructive/30" 
+                    : data.birth_date && validateBirthDate(parseISOToDateBR(data.birth_date)).isValid
+                      ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                      : ""
+                }`}
+              />
+              {data.birth_date && (
+                <ValidationIndicator 
+                  isValid={validateBirthDate(parseISOToDateBR(data.birth_date)).isValid} 
+                  isEmpty={false} 
+                />
+              )}
+            </div>
+            {(() => {
+              const birthValidation = validateBirthDate(parseISOToDateBR(data.birth_date));
+              if (!data.birth_date) return null;
+              if (birthValidation.error === 'incomplete') {
+                return <p className="text-[11px] text-amber-600">Digitando...</p>;
+              }
+              if (!birthValidation.isValid && birthValidation.error) {
+                return (
+                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {birthValidation.error}
+                  </p>
+                );
+              }
+              if (birthValidation.isValid && birthValidation.age !== null) {
+                return (
+                  <p className="text-[11px] text-emerald-600 font-medium">
+                    {birthValidation.age} {birthValidation.age === 1 ? 'ano' : 'anos'}
+                  </p>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       </div>
