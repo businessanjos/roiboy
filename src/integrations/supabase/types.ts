@@ -226,33 +226,36 @@ export type Database = {
           client_id: string
           created_at: string
           duration_sec: number | null
+          event_id: string | null
           id: string
           join_delay_sec: number | null
           join_time: string
           leave_time: string | null
-          live_session_id: string
+          live_session_id: string | null
         }
         Insert: {
           account_id: string
           client_id: string
           created_at?: string
           duration_sec?: number | null
+          event_id?: string | null
           id?: string
           join_delay_sec?: number | null
           join_time: string
           leave_time?: string | null
-          live_session_id: string
+          live_session_id?: string | null
         }
         Update: {
           account_id?: string
           client_id?: string
           created_at?: string
           duration_sec?: number | null
+          event_id?: string | null
           id?: string
           join_delay_sec?: number | null
           join_time?: string
           leave_time?: string | null
-          live_session_id?: string
+          live_session_id?: string | null
         }
         Relationships: [
           {
@@ -267,6 +270,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
           {
@@ -1026,6 +1036,7 @@ export type Database = {
         Row: {
           account_id: string
           address: string | null
+          checkin_code: string | null
           created_at: string
           description: string | null
           duration_minutes: number | null
@@ -1042,6 +1053,7 @@ export type Database = {
         Insert: {
           account_id: string
           address?: string | null
+          checkin_code?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
@@ -1058,6 +1070,7 @@ export type Database = {
         Update: {
           account_id?: string
           address?: string | null
+          checkin_code?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
@@ -2104,6 +2117,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_checkin_code: { Args: never; Returns: string }
       get_user_account_id: { Args: never; Returns: string }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
     }
