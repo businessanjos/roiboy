@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { 
   validateCPF, 
   validateCNPJ, 
@@ -87,6 +90,36 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   const [phoneError, setPhoneError] = useState("");
   const [cepLoading, setCepLoading] = useState(false);
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [cities, setCities] = useState<string[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
+
+  // Fetch cities when state changes
+  useEffect(() => {
+    const fetchCities = async () => {
+      if (!data.state) {
+        setCities([]);
+        return;
+      }
+      
+      setCitiesLoading(true);
+      try {
+        const response = await fetch(
+          `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${data.state}/municipios?orderBy=nome`
+        );
+        if (response.ok) {
+          const citiesData = await response.json();
+          setCities(citiesData.map((city: { nome: string }) => city.nome));
+        }
+      } catch (error) {
+        console.error("Erro ao buscar cidades:", error);
+      } finally {
+        setCitiesLoading(false);
+      }
+    };
+    
+    fetchCities();
+  }, [data.state]);
 
   // Real-time validation states
   const validation = useMemo(() => {
@@ -700,18 +733,79 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Cidade</Label>
-            <Input
-              value={data.city}
-              onChange={(e) => updateField("city", e.target.value)}
-              placeholder="São Paulo"
-              className="h-9"
-            />
+            {data.state && cities.length > 0 ? (
+              <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={cityOpen}
+                    className="h-9 w-full justify-between font-normal"
+                    disabled={citiesLoading}
+                  >
+                    {citiesLoading ? (
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Carregando...
+                      </span>
+                    ) : data.city ? (
+                      data.city
+                    ) : (
+                      <span className="text-muted-foreground">Selecione...</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar cidade..." className="h-9" />
+                    <CommandList>
+                      <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                      <CommandGroup className="max-h-[200px] overflow-auto">
+                        {cities.map((city) => (
+                          <CommandItem
+                            key={city}
+                            value={city}
+                            onSelect={() => {
+                              updateField("city", city);
+                              setCityOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                data.city === city ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {city}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <Input
+                value={data.city}
+                onChange={(e) => updateField("city", e.target.value)}
+                placeholder={data.state ? "Carregando..." : "Selecione o estado"}
+                className="h-9"
+                disabled={!data.state || citiesLoading}
+              />
+            )}
+            {citiesLoading && (
+              <p className="text-[11px] text-primary">Carregando cidades...</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Estado</Label>
             <Select
               value={data.state}
-              onValueChange={(value) => updateField("state", value)}
+              onValueChange={(value) => {
+                // Clear city when state changes
+                onChange({ ...data, state: value, city: "" });
+              }}
             >
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="UF" />
