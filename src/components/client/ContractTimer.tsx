@@ -98,11 +98,39 @@ export function ContractTimer({ startDate, endDate, className, variant = "compac
               <span>{remainingText}</span>
             </div>
           </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            <div className="space-y-1">
-              <p><strong>Início:</strong> {format(start, "dd/MM/yyyy", { locale: ptBR })}</p>
-              <p><strong>Fim:</strong> {format(end, "dd/MM/yyyy", { locale: ptBR })}</p>
-              <p><strong>Progresso:</strong> {Math.round(progress)}%</p>
+          <TooltipContent side="bottom" className="p-3 w-56">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Início</span>
+                <span className="font-medium">{format(start, "dd/MM/yyyy", { locale: ptBR })}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Fim</span>
+                <span className="font-medium">{format(end, "dd/MM/yyyy", { locale: ptBR })}</span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Progresso</span>
+                  <span className="font-medium">{Math.round(progress)}%</span>
+                </div>
+                <Progress 
+                  value={progress} 
+                  className={cn(
+                    "h-1.5",
+                    isExpired && "[&>div]:bg-destructive",
+                    isNearEnd && !isExpired && "[&>div]:bg-amber-500",
+                    isActive && !isNearEnd && "[&>div]:bg-green-500"
+                  )}
+                />
+              </div>
+              <div className={cn(
+                "text-xs font-medium text-center pt-1 border-t",
+                isExpired && "text-destructive",
+                isNearEnd && !isExpired && "text-amber-600 dark:text-amber-400",
+                isActive && !isNearEnd && "text-green-600 dark:text-green-400"
+              )}>
+                {isExpired ? "Contrato expirado" : isNearEnd ? "Próximo do vencimento" : "Contrato ativo"}
+              </div>
             </div>
           </TooltipContent>
         </Tooltip>
