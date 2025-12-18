@@ -33,7 +33,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const features = [
   {
@@ -103,6 +105,7 @@ const workflow = [
 
 export default function Presentation() {
   const navigate = useNavigate();
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -474,9 +477,164 @@ export default function Presentation() {
               Extensão Chrome
             </Badge>
             <h2 className="text-2xl sm:text-3xl font-bold mb-2">Extensão para WhatsApp Web</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
               Capture automaticamente mensagens e áudios do WhatsApp Web para análise em tempo real
             </p>
+            
+            {/* Download Button with Modal */}
+            <Dialog open={isExtensionModalOpen} onOpenChange={setIsExtensionModalOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700">
+                  <Download className="h-4 w-4" />
+                  Baixar Extensão
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-xl">
+                    <Chrome className="h-5 w-5 text-blue-600" />
+                    Instruções de Instalação da Extensão
+                  </DialogTitle>
+                  <DialogDescription>
+                    Siga o passo a passo completo para instalar e configurar a extensão do ROY para WhatsApp Web
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-6 mt-4">
+                  {/* Requirements */}
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-amber-600" />
+                      Requisitos
+                    </h4>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Google Chrome versão 88 ou superior</li>
+                      <li>• Conta ativa no ROY</li>
+                      <li>• WhatsApp conectado ao celular</li>
+                    </ul>
+                  </div>
+
+                  {/* Step 1 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">1</div>
+                      <h4 className="font-semibold">Baixar o arquivo da extensão</h4>
+                    </div>
+                    <div className="ml-11 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Clique no botão abaixo para baixar o arquivo .zip da extensão. Se o download não iniciar automaticamente, 
+                        entre em contato com o administrador do sistema.
+                      </p>
+                      <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                        // In a real implementation, this would download the extension file
+                        window.open('/extension/roy-extension.zip', '_blank');
+                      }}>
+                        <Download className="h-3 w-3" />
+                        Baixar roy-extension.zip
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">2</div>
+                      <h4 className="font-semibold">Extrair os arquivos</h4>
+                    </div>
+                    <div className="ml-11">
+                      <p className="text-sm text-muted-foreground">
+                        Localize o arquivo <code className="bg-muted px-1 py-0.5 rounded text-xs">roy-extension.zip</code> na pasta de downloads 
+                        e extraia-o em uma pasta de fácil acesso. Não delete essa pasta depois — o Chrome precisa dela para rodar a extensão.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">3</div>
+                      <h4 className="font-semibold">Acessar as extensões do Chrome</h4>
+                    </div>
+                    <div className="ml-11 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Digite na barra de endereço do Chrome:
+                      </p>
+                      <code className="block bg-muted px-3 py-2 rounded text-sm font-mono">chrome://extensions</code>
+                      <p className="text-sm text-muted-foreground">
+                        Ative o <strong>"Modo desenvolvedor"</strong> no canto superior direito da página.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 4 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">4</div>
+                      <h4 className="font-semibold">Carregar a extensão</h4>
+                    </div>
+                    <div className="ml-11">
+                      <p className="text-sm text-muted-foreground">
+                        Clique em <strong>"Carregar sem compactação"</strong> e selecione a pasta onde você extraiu os arquivos da extensão.
+                        A extensão aparecerá na lista e um ícone será adicionado à barra de ferramentas do Chrome.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 5 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">5</div>
+                      <h4 className="font-semibold">Fazer login na extensão</h4>
+                    </div>
+                    <div className="ml-11">
+                      <p className="text-sm text-muted-foreground">
+                        Clique no ícone da extensão ROY na barra de ferramentas do Chrome e faça login com suas credenciais do sistema.
+                        A extensão se conectará automaticamente à sua conta.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 6 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">6</div>
+                      <h4 className="font-semibold">Começar a usar</h4>
+                    </div>
+                    <div className="ml-11">
+                      <p className="text-sm text-muted-foreground">
+                        Acesse <strong>web.whatsapp.com</strong> e escaneie o QR code com seu celular. 
+                        A extensão começará a capturar automaticamente as mensagens das conversas com clientes cadastrados no ROY.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Troubleshooting */}
+                  <div className="p-4 bg-muted/50 border rounded-lg mt-6">
+                    <h4 className="font-semibold text-sm mb-2">Problemas comuns</h4>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      <li><strong>Extensão não aparece:</strong> Verifique se o modo desenvolvedor está ativo</li>
+                      <li><strong>Erro ao carregar:</strong> Certifique-se de selecionar a pasta correta (deve conter o manifest.json)</li>
+                      <li><strong>Login não funciona:</strong> Verifique suas credenciais e conexão com a internet</li>
+                      <li><strong>Mensagens não sincronizam:</strong> O cliente precisa estar cadastrado no ROY pelo telefone</li>
+                    </ul>
+                  </div>
+
+                  {/* Privacy Note */}
+                  <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      Privacidade e Segurança
+                    </h4>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      <li>• Apenas conversas de clientes cadastrados são capturadas</li>
+                      <li>• Áudios são transcritos e imediatamente deletados</li>
+                      <li>• Todos os dados são criptografados em trânsito e repouso</li>
+                      <li>• A extensão não tem acesso a conversas pessoais</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Installation Steps */}
