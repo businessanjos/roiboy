@@ -49,6 +49,7 @@ import type { DateRange } from "react-day-picker";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
+import { ROIEventsFeed } from "@/components/dashboard/ROIEventsFeed";
 
 interface ContractData {
   id: string;
@@ -832,6 +833,9 @@ export default function Dashboard() {
             {/* AI Usage Stats */}
             <AIUsageStats />
           </div>
+
+          {/* ROI Events Feed */}
+          <ROIEventsFeed />
         </TabsContent>
 
         {/* CX Tab */}
