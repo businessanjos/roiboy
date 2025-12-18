@@ -172,6 +172,133 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
+// International country codes mapping (most common)
+const COUNTRY_CODES: { code: string; name: string; flag: string; minLength: number; maxLength: number }[] = [
+  { code: '55', name: 'Brasil', flag: '🇧🇷', minLength: 12, maxLength: 13 },
+  { code: '1', name: 'EUA/Canadá', flag: '🇺🇸', minLength: 11, maxLength: 11 },
+  { code: '44', name: 'Reino Unido', flag: '🇬🇧', minLength: 12, maxLength: 13 },
+  { code: '49', name: 'Alemanha', flag: '🇩🇪', minLength: 12, maxLength: 14 },
+  { code: '33', name: 'França', flag: '🇫🇷', minLength: 11, maxLength: 12 },
+  { code: '39', name: 'Itália', flag: '🇮🇹', minLength: 12, maxLength: 13 },
+  { code: '34', name: 'Espanha', flag: '🇪🇸', minLength: 11, maxLength: 12 },
+  { code: '351', name: 'Portugal', flag: '🇵🇹', minLength: 12, maxLength: 12 },
+  { code: '54', name: 'Argentina', flag: '🇦🇷', minLength: 12, maxLength: 13 },
+  { code: '56', name: 'Chile', flag: '🇨🇱', minLength: 11, maxLength: 12 },
+  { code: '57', name: 'Colômbia', flag: '🇨🇴', minLength: 12, maxLength: 12 },
+  { code: '52', name: 'México', flag: '🇲🇽', minLength: 12, maxLength: 13 },
+  { code: '51', name: 'Peru', flag: '🇵🇪', minLength: 11, maxLength: 12 },
+  { code: '598', name: 'Uruguai', flag: '🇺🇾', minLength: 11, maxLength: 12 },
+  { code: '595', name: 'Paraguai', flag: '🇵🇾', minLength: 12, maxLength: 12 },
+  { code: '591', name: 'Bolívia', flag: '🇧🇴', minLength: 11, maxLength: 12 },
+  { code: '81', name: 'Japão', flag: '🇯🇵', minLength: 12, maxLength: 13 },
+  { code: '86', name: 'China', flag: '🇨🇳', minLength: 13, maxLength: 14 },
+  { code: '91', name: 'Índia', flag: '🇮🇳', minLength: 12, maxLength: 13 },
+  { code: '82', name: 'Coreia do Sul', flag: '🇰🇷', minLength: 12, maxLength: 13 },
+  { code: '61', name: 'Austrália', flag: '🇦🇺', minLength: 11, maxLength: 12 },
+  { code: '971', name: 'Emirados Árabes', flag: '🇦🇪', minLength: 12, maxLength: 13 },
+  { code: '972', name: 'Israel', flag: '🇮🇱', minLength: 12, maxLength: 12 },
+  { code: '7', name: 'Rússia', flag: '🇷🇺', minLength: 11, maxLength: 12 },
+  { code: '27', name: 'África do Sul', flag: '🇿🇦', minLength: 11, maxLength: 12 },
+  { code: '20', name: 'Egito', flag: '🇪🇬', minLength: 12, maxLength: 12 },
+  { code: '31', name: 'Holanda', flag: '🇳🇱', minLength: 11, maxLength: 12 },
+  { code: '32', name: 'Bélgica', flag: '🇧🇪', minLength: 11, maxLength: 12 },
+  { code: '41', name: 'Suíça', flag: '🇨🇭', minLength: 11, maxLength: 12 },
+  { code: '43', name: 'Áustria', flag: '🇦🇹', minLength: 12, maxLength: 14 },
+  { code: '45', name: 'Dinamarca', flag: '🇩🇰', minLength: 10, maxLength: 10 },
+  { code: '46', name: 'Suécia', flag: '🇸🇪', minLength: 11, maxLength: 13 },
+  { code: '47', name: 'Noruega', flag: '🇳🇴', minLength: 10, maxLength: 12 },
+  { code: '48', name: 'Polônia', flag: '🇵🇱', minLength: 11, maxLength: 11 },
+  { code: '90', name: 'Turquia', flag: '🇹🇷', minLength: 12, maxLength: 12 },
+  { code: '353', name: 'Irlanda', flag: '🇮🇪', minLength: 12, maxLength: 12 },
+  { code: '358', name: 'Finlândia', flag: '🇫🇮', minLength: 12, maxLength: 13 },
+  { code: '30', name: 'Grécia', flag: '🇬🇷', minLength: 12, maxLength: 12 },
+  { code: '380', name: 'Ucrânia', flag: '🇺🇦', minLength: 12, maxLength: 12 },
+];
+
+// Detect country from phone number
+export function detectCountryFromPhone(phone: string): { code: string; name: string; flag: string; isValid: boolean } | null {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 2) return null;
+  
+  // Sort by code length descending to match longer codes first (e.g., 351 before 35)
+  const sortedCodes = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+  
+  for (const country of sortedCodes) {
+    if (digits.startsWith(country.code)) {
+      const isValid = digits.length >= country.minLength && digits.length <= country.maxLength;
+      return {
+        code: country.code,
+        name: country.name,
+        flag: country.flag,
+        isValid
+      };
+    }
+  }
+  
+  return null;
+}
+
+// Format international phone with visual mask
+export function formatInternationalPhone(value: string): string {
+  let digits = value.replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  
+  // Detect country
+  const country = detectCountryFromPhone(digits);
+  
+  // If Brazil, use Brazilian format
+  if (country?.code === '55') {
+    return formatBrazilianPhone(value);
+  }
+  
+  // Generic international format: +XX XXX XXX XXXX
+  if (digits.length <= 2) return `+${digits}`;
+  if (digits.length <= 5) return `+${digits.slice(0, 2)} ${digits.slice(2)}`;
+  if (digits.length <= 8) return `+${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
+  if (digits.length <= 12) return `+${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+  return `+${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 12)}`;
+}
+
+// Validate international phone
+export function validateInternationalPhone(phone: string): { isValid: boolean; country: { code: string; name: string; flag: string } | null; error?: string } {
+  const digits = phone.replace(/\D/g, '');
+  
+  if (digits.length === 0) {
+    return { isValid: false, country: null };
+  }
+  
+  if (digits.length < 8) {
+    return { isValid: false, country: detectCountryFromPhone(digits), error: 'incomplete' };
+  }
+  
+  const country = detectCountryFromPhone(digits);
+  
+  if (!country) {
+    // Unknown country code - accept if reasonable length
+    return { 
+      isValid: digits.length >= 10 && digits.length <= 15, 
+      country: null,
+      error: digits.length < 10 ? 'Número muito curto' : undefined
+    };
+  }
+  
+  // For Brazil, use specific validation
+  if (country.code === '55') {
+    const brValidation = validateBrazilianPhone(phone);
+    return {
+      isValid: brValidation.isValid,
+      country,
+      error: !brValidation.dddValid ? 'DDD inválido' : !brValidation.isValid ? 'Número inválido' : undefined
+    };
+  }
+  
+  return {
+    isValid: country.isValid,
+    country,
+    error: !country.isValid ? 'Número inválido para ' + country.name : undefined
+  };
+}
+
 // Valid Brazilian DDDs
 const VALID_DDDS = [
   // São Paulo
