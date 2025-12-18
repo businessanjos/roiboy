@@ -28,14 +28,16 @@ import {
   LogIn,
   RefreshCw,
   Eye,
-  Mic
+  Mic,
+  LogInIcon
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const features = [
   {
@@ -105,10 +107,42 @@ const workflow = [
 
 export default function Presentation() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
+  
+  // Check if we're on the public route
+  const isPublicRoute = location.pathname === "/sobre";
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Public Header */}
+      {isPublicRoute && (
+        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-14 max-w-screen-2xl items-center justify-between px-4">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
+                <TrendingUp className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-lg">ROY</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {user ? (
+                <Button onClick={() => navigate("/dashboard")} className="gap-2">
+                  <Play className="h-4 w-4" />
+                  Ir para Dashboard
+                </Button>
+              ) : (
+                <Button onClick={() => navigate("/auth")} className="gap-2">
+                  <LogInIcon className="h-4 w-4" />
+                  Entrar
+                </Button>
+              )}
+            </div>
+          </div>
+        </header>
+      )}
+
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
@@ -130,14 +164,38 @@ export default function Presentation() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" onClick={() => navigate("/dashboard")} className="gap-2">
-                <Play className="h-4 w-4" />
-                Ir para Dashboard
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate("/clients")} className="gap-2">
-                Ver Clientes
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+              {isPublicRoute ? (
+                <>
+                  {user ? (
+                    <Button size="lg" onClick={() => navigate("/dashboard")} className="gap-2">
+                      <Play className="h-4 w-4" />
+                      Ir para Dashboard
+                    </Button>
+                  ) : (
+                    <>
+                      <Button size="lg" onClick={() => navigate("/auth")} className="gap-2">
+                        <LogInIcon className="h-4 w-4" />
+                        Começar Agora
+                      </Button>
+                      <Button size="lg" variant="outline" onClick={() => navigate("/auth")} className="gap-2">
+                        Criar Conta Grátis
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Button size="lg" onClick={() => navigate("/dashboard")} className="gap-2">
+                    <Play className="h-4 w-4" />
+                    Ir para Dashboard
+                  </Button>
+                  <Button size="lg" variant="outline" onClick={() => navigate("/clients")} className="gap-2">
+                    Ver Clientes
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -835,14 +893,44 @@ export default function Presentation() {
                 Comece a medir o encantamento dos seus clientes agora mesmo.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button onClick={() => navigate("/clients")} className="gap-2">
-                  <Users className="h-4 w-4" />
-                  Ver Clientes
-                </Button>
-                <Button variant="outline" onClick={() => navigate("/integrations")} className="gap-2">
-                  <Link2 className="h-4 w-4" />
-                  Configurar Integrações
-                </Button>
+                {isPublicRoute ? (
+                  <>
+                    {user ? (
+                      <>
+                        <Button onClick={() => navigate("/clients")} className="gap-2">
+                          <Users className="h-4 w-4" />
+                          Ver Clientes
+                        </Button>
+                        <Button variant="outline" onClick={() => navigate("/dashboard")} className="gap-2">
+                          <Play className="h-4 w-4" />
+                          Ir para Dashboard
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button onClick={() => navigate("/auth")} className="gap-2">
+                          <LogInIcon className="h-4 w-4" />
+                          Criar Conta Grátis
+                        </Button>
+                        <Button variant="outline" onClick={() => navigate("/auth")} className="gap-2">
+                          Fazer Login
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Button onClick={() => navigate("/clients")} className="gap-2">
+                      <Users className="h-4 w-4" />
+                      Ver Clientes
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate("/integrations")} className="gap-2">
+                      <Link2 className="h-4 w-4" />
+                      Configurar Integrações
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
