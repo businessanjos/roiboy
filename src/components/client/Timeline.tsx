@@ -23,6 +23,7 @@ import {
   StickyNote,
   Paperclip,
   Camera,
+  Users,
 } from "lucide-react";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,9 @@ export interface TimelineEvent {
     status?: string;
     roi_type?: string;
     image_url?: string;
+    // Message specific - group support
+    is_group?: boolean;
+    group_name?: string;
     // Comment specific
     user_id?: string;
     user_name?: string;
@@ -101,11 +105,12 @@ const getEventConfig = (event: TimelineEvent) => {
     case "message":
       const isClient = event.metadata?.direction === "client_to_team";
       const isAudio = event.metadata?.source === "whatsapp_audio_transcript";
+      const isGroup = event.metadata?.is_group === true;
       return {
-        icon: isAudio ? <Mic className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />,
-        bgColor: isClient ? "bg-blue-500" : "bg-slate-500",
-        textColor: isClient ? "text-blue-500" : "text-slate-500",
-        label: isClient ? "Cliente" : "Equipe",
+        icon: isGroup ? <Users className="h-4 w-4" /> : isAudio ? <Mic className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />,
+        bgColor: isGroup ? "bg-indigo-500" : isClient ? "bg-blue-500" : "bg-slate-500",
+        textColor: isGroup ? "text-indigo-500" : isClient ? "text-blue-500" : "text-slate-500",
+        label: isGroup ? event.metadata?.group_name || "Grupo" : isClient ? "Cliente" : "Equipe",
       };
     case "roi":
       const isTangible = event.metadata?.roi_type === "tangible";
@@ -396,6 +401,7 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
 }
 
 type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup" | "form_response" | "sales";
+type MessageSourceFilter = "direct" | "group";
 
 const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   comment: { label: "Comentários", color: "bg-primary" },
@@ -410,6 +416,11 @@ const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   sales: { label: "Vendas", color: "bg-green-500" },
 };
 
+const messageSourceFilterConfig: Record<MessageSourceFilter, { label: string; color: string }> = {
+  direct: { label: "Diretas", color: "bg-blue-600" },
+  group: { label: "Grupos", color: "bg-indigo-500" },
+};
+
 export function Timeline({ events, className, clientId, onCommentAdded }: TimelineProps) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -417,6 +428,7 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
   const [showOlder, setShowOlder] = useState(false);
   const [clientName, setClientName] = useState<string>("");
   const [activeFilters, setActiveFilters] = useState<Set<EventFilter>>(new Set());
+  const [messageSourceFilter, setMessageSourceFilter] = useState<MessageSourceFilter | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [highlightState, setHighlightState] = useState<"glow" | "fading" | null>(null);
   const location = useLocation();
@@ -572,13 +584,29 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
     });
   };
 
+  const toggleMessageSourceFilter = (filter: MessageSourceFilter) => {
+    setMessageSourceFilter((prev) => prev === filter ? null : filter);
+  };
+
   // Filter events based on active filters
-  const filteredEvents = activeFilters.size === 0 
-    ? events 
-    : events.filter((e) => {
-        if (e.type === "field_change" || e.type === "session") return true; // Always show these
-        return activeFilters.has(e.type as EventFilter);
-      });
+  const filteredEvents = events.filter((e) => {
+    // Always show field_change and session
+    if (e.type === "field_change" || e.type === "session") return true;
+    
+    // Check type filters
+    if (activeFilters.size > 0 && !activeFilters.has(e.type as EventFilter)) {
+      return false;
+    }
+    
+    // Check message source filter (only applies to messages)
+    if (e.type === "message" && messageSourceFilter) {
+      const isGroup = e.metadata?.is_group === true;
+      if (messageSourceFilter === "group" && !isGroup) return false;
+      if (messageSourceFilter === "direct" && isGroup) return false;
+    }
+    
+    return true;
+  });
 
   if (filteredEvents.length === 0 && events.length === 0) {
     return (
@@ -597,6 +625,23 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
               )}
             >
               <div className={cn("w-2 h-2 rounded-full", activeFilters.has(key) ? "bg-white" : config.color)} />
+              {config.label}
+            </button>
+          ))}
+          {/* Message Source Filters */}
+          <div className="w-px h-5 bg-border mx-1 self-center" />
+          {(Object.entries(messageSourceFilterConfig) as [MessageSourceFilter, { label: string; color: string }][]).map(([key, config]) => (
+            <button
+              key={key}
+              onClick={() => toggleMessageSourceFilter(key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+                messageSourceFilter === key
+                  ? `${config.color} text-white`
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              <div className={cn("w-2 h-2 rounded-full", messageSourceFilter === key ? "bg-white" : config.color)} />
               {config.label}
             </button>
           ))}
@@ -692,9 +737,29 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
             {config.label}
           </button>
         ))}
-        {activeFilters.size > 0 && (
+        {/* Message Source Filters */}
+        <div className="w-px h-5 bg-border mx-1 self-center" />
+        {(Object.entries(messageSourceFilterConfig) as [MessageSourceFilter, { label: string; color: string }][]).map(([key, config]) => (
           <button
-            onClick={() => setActiveFilters(new Set())}
+            key={key}
+            onClick={() => toggleMessageSourceFilter(key)}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+              messageSourceFilter === key
+                ? `${config.color} text-white`
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+          >
+            <div className={cn("w-2 h-2 rounded-full", messageSourceFilter === key ? "bg-white" : config.color)} />
+            {config.label}
+          </button>
+        ))}
+        {(activeFilters.size > 0 || messageSourceFilter) && (
+          <button
+            onClick={() => {
+              setActiveFilters(new Set());
+              setMessageSourceFilter(null);
+            }}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Limpar filtros

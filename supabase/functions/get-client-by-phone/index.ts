@@ -78,7 +78,7 @@ serve(async (req) => {
     // Get recent timeline
     const { data: recentEvents } = await supabase
       .from("message_events")
-      .select("id, source, direction, content_text, sent_at")
+      .select("id, source, direction, content_text, sent_at, is_group, group_name")
       .eq("client_id", client.id)
       .order("sent_at", { ascending: false })
       .limit(15);
@@ -115,6 +115,8 @@ serve(async (req) => {
           direction: e.direction,
           preview: e.content_text?.substring(0, 100) || "",
           timestamp: e.sent_at,
+          is_group: e.is_group || false,
+          group_name: e.group_name || null,
         })),
         recommendations: recommendations || [],
       }),

@@ -1422,7 +1422,9 @@ export type Database = {
           conversation_id: string | null
           created_at: string
           direction: Database["public"]["Enums"]["message_direction"]
+          group_name: string | null
           id: string
+          is_group: boolean | null
           sent_at: string
           source: Database["public"]["Enums"]["message_source"]
         }
@@ -1434,7 +1436,9 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           direction: Database["public"]["Enums"]["message_direction"]
+          group_name?: string | null
           id?: string
+          is_group?: boolean | null
           sent_at: string
           source: Database["public"]["Enums"]["message_source"]
         }
@@ -1446,7 +1450,9 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           direction?: Database["public"]["Enums"]["message_direction"]
+          group_name?: string | null
           id?: string
+          is_group?: boolean | null
           sent_at?: string
           source?: Database["public"]["Enums"]["message_source"]
         }

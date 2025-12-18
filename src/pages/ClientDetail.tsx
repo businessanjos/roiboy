@@ -579,14 +579,22 @@ export default function ClientDetail() {
         .order("sent_at", { ascending: false })
         .limit(20);
 
-      (messagesData || []).forEach((msg) => {
+      (messagesData || []).forEach((msg: any) => {
+        const isGroup = msg.is_group === true;
         timelineItems.push({
           id: msg.id,
           type: "message",
-          title: msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
+          title: isGroup 
+            ? `Mensagem no grupo ${msg.group_name || ""}` 
+            : msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
           description: msg.content_text || "(Áudio transcrito)",
           timestamp: msg.sent_at,
-          metadata: { source: msg.source, direction: msg.direction },
+          metadata: { 
+            source: msg.source, 
+            direction: msg.direction,
+            is_group: msg.is_group,
+            group_name: msg.group_name,
+          },
         });
       });
 
@@ -778,14 +786,22 @@ export default function ClientDetail() {
         (payload) => {
           console.log('New message:', payload);
           const msg = payload.new as any;
+          const isGroup = msg.is_group === true;
           setTimeline((prev) => {
             const newEvent: TimelineEvent = {
               id: msg.id,
               type: "message",
-              title: msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
+              title: isGroup 
+                ? `Mensagem no grupo ${msg.group_name || ""}` 
+                : msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
               description: msg.content_text || "(Áudio transcrito)",
               timestamp: msg.sent_at,
-              metadata: { source: msg.source, direction: msg.direction },
+              metadata: { 
+                source: msg.source, 
+                direction: msg.direction,
+                is_group: msg.is_group,
+                group_name: msg.group_name,
+              },
             };
             const updated = [newEvent, ...prev.filter(e => e.id !== msg.id)];
             updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
