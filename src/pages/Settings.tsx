@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain, Download } from "lucide-react";
+import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain, Download, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -1033,12 +1033,12 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Exportar Configurações</CardTitle>
+              <CardTitle>Backup de Configurações</CardTitle>
               <CardDescription>
-                Baixe as configurações de IA para backup ou compartilhamento.
+                Exporte ou importe configurações de IA para backup ou compartilhamento.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-wrap gap-3">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1074,6 +1074,55 @@ export default function Settings() {
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar JSON
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = ".json";
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      try {
+                        const data = JSON.parse(event.target?.result as string);
+                        if (data.aiSettings) {
+                          setAiSettings({
+                            model: data.aiSettings.model || defaultAI.model,
+                            system_prompt: data.aiSettings.system_prompt || defaultAI.system_prompt,
+                            roi_prompt: data.aiSettings.roi_prompt || defaultAI.roi_prompt,
+                            risk_prompt: data.aiSettings.risk_prompt || defaultAI.risk_prompt,
+                            life_events_prompt: data.aiSettings.life_events_prompt || defaultAI.life_events_prompt,
+                            analysis_frequency: data.aiSettings.analysis_frequency || defaultAI.analysis_frequency,
+                            min_message_length: data.aiSettings.min_message_length ?? defaultAI.min_message_length,
+                            confidence_threshold: data.aiSettings.confidence_threshold ?? defaultAI.confidence_threshold,
+                            auto_analysis_enabled: data.aiSettings.auto_analysis_enabled ?? defaultAI.auto_analysis_enabled,
+                          });
+                          setHasChanges(true);
+                          toast({
+                            title: "Configurações importadas",
+                            description: "Clique em Salvar para aplicar as mudanças.",
+                          });
+                        } else {
+                          throw new Error("Formato inválido");
+                        }
+                      } catch (err) {
+                        toast({
+                          title: "Erro ao importar",
+                          description: "Arquivo JSON inválido ou formato incorreto.",
+                          variant: "destructive",
+                        });
+                      }
+                    };
+                    reader.readAsText(file);
+                  };
+                  input.click();
+                }}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar JSON
               </Button>
             </CardContent>
           </Card>
