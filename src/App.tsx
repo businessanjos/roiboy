@@ -40,6 +40,7 @@ const App = () => (
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/f/:formId" element={<PublicForm />} />
+                <Route path="/sobre" element={<Presentation />} />
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/clients" element={<Clients />} />

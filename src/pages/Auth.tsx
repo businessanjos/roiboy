@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, Loader2, AlertCircle } from "lucide-react";
+import { TrendingUp, Loader2, AlertCircle, Info } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Auth() {
@@ -213,6 +213,14 @@ export default function Auth() {
         <p className="text-center text-sm text-muted-foreground mt-6">
           Encante seus clientes e meça o impacto em tempo real.
         </p>
+        
+        <Link 
+          to="/sobre" 
+          className="flex items-center justify-center gap-2 text-sm text-primary hover:underline mt-4"
+        >
+          <Info className="h-4 w-4" />
+          Conheça mais sobre o ROY
+        </Link>
       </div>
     </div>
   );
