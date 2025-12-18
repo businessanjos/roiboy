@@ -53,6 +53,9 @@ serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const accountIdFromQuery = url.searchParams.get("account_id");
+    
     const body = await req.text();
     let payload: GoogleMeetEvent;
 
@@ -70,31 +73,38 @@ serve(async (req) => {
       payload = JSON.parse(body);
     }
 
-    console.log("Google Meet webhook received:", payload.eventType);
+    console.log("Google Meet webhook received:", payload.eventType, "account_id:", accountIdFromQuery);
 
     // Create Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find account with Google integration
-    const { data: integration } = await supabase
-      .from("integrations")
-      .select("account_id")
-      .eq("type", "google")
-      .eq("status", "connected")
-      .limit(1)
-      .maybeSingle();
+    // Get account_id from query param or find by integration
+    let accountId = accountIdFromQuery;
+    
+    if (!accountId) {
+      // Fallback: Find account with Google integration (legacy support)
+      const { data: integration } = await supabase
+        .from("integrations")
+        .select("account_id")
+        .eq("type", "google")
+        .eq("status", "connected")
+        .limit(1)
+        .maybeSingle();
 
-    if (!integration) {
-      console.log("No connected Google integration found");
-      return new Response(
-        JSON.stringify({ success: false, error: "No integration found" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (integration) {
+        accountId = integration.account_id;
+      }
     }
 
-    const accountId = integration.account_id;
+    if (!accountId) {
+      console.log("No account_id provided and no connected Google integration found");
+      return new Response(
+        JSON.stringify({ error: "Account not found" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Handle different event types
     switch (payload.eventType) {

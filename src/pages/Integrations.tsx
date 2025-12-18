@@ -37,6 +37,10 @@ export default function Integrations() {
   const [clientCount, setClientCount] = useState(0);
   const [newIntegrationOpen, setNewIntegrationOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("zoom");
+  
+  // Integration config state
+  const [zoomSecretToken, setZoomSecretToken] = useState("");
+  const [savingZoomConfig, setSavingZoomConfig] = useState(false);
 
   const availableIntegrations = [
     { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video, category: "Videoconferência" },
@@ -51,11 +55,19 @@ export default function Integrations() {
   ];
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const zoomWebhookUrl = `${supabaseUrl}/functions/v1/zoom-webhook`;
-  const googleMeetWebhookUrl = `${supabaseUrl}/functions/v1/google-meet-webhook`;
+  
+  // Webhook URLs with account_id for multi-tenant support
+  const zoomWebhookUrl = accountId 
+    ? `${supabaseUrl}/functions/v1/zoom-webhook?account_id=${accountId}` 
+    : `${supabaseUrl}/functions/v1/zoom-webhook`;
+  const googleMeetWebhookUrl = accountId 
+    ? `${supabaseUrl}/functions/v1/google-meet-webhook?account_id=${accountId}` 
+    : `${supabaseUrl}/functions/v1/google-meet-webhook`;
   const whatsappMessageUrl = `${supabaseUrl}/functions/v1/ingest-whatsapp-message`;
   const whatsappAudioUrl = `${supabaseUrl}/functions/v1/ingest-whatsapp-audio`;
-  const rykaWebhookUrl = `${supabaseUrl}/functions/v1/ryka-webhook`;
+  const rykaWebhookUrl = accountId 
+    ? `${supabaseUrl}/functions/v1/ryka-webhook?account_id=${accountId}` 
+    : `${supabaseUrl}/functions/v1/ryka-webhook`;
   const pipedriveWebhookUrl = `${supabaseUrl}/functions/v1/pipedrive-webhook`;
   const pipedriveFullUrl = accountId 
     ? `${pipedriveWebhookUrl}?account_id=${accountId}` 
@@ -170,8 +182,53 @@ export default function Integrations() {
       console.error("Error fetching integrations:", error);
     } else {
       setIntegrations(data || []);
+      // Load Zoom config if exists
+      const zoomInt = data?.find(i => i.type === "zoom");
+      if (zoomInt?.config && typeof zoomInt.config === 'object') {
+        const config = zoomInt.config as Record<string, string>;
+        setZoomSecretToken(config.secret_token || "");
+      }
     }
     setLoading(false);
+  };
+
+  const saveZoomConfig = async () => {
+    const zoomInt = getIntegration("zoom");
+    if (!zoomInt) {
+      toast({
+        title: "Erro",
+        description: "Conecte a integração do Zoom primeiro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingZoomConfig(true);
+    const { error } = await supabase
+      .from("integrations")
+      .update({ 
+        config: { 
+          ...((zoomInt.config as Record<string, unknown>) || {}),
+          secret_token: zoomSecretToken 
+        } 
+      })
+      .eq("id", zoomInt.id);
+
+    setSavingZoomConfig(false);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a configuração.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Salvo!",
+        description: "Configuração do Zoom atualizada com sucesso.",
+      });
+      fetchIntegrations();
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -415,9 +472,38 @@ export default function Integrations() {
                     <li>Crie um app do tipo "Webhook Only"</li>
                     <li>Adicione os eventos listados acima</li>
                     <li>Cole a Webhook URL acima no campo "Event notification endpoint URL"</li>
-                    <li>Copie o "Secret Token" e configure nas secrets do projeto</li>
+                    <li>Copie o "Secret Token" gerado pelo Zoom e cole no campo abaixo</li>
                   </ol>
                 </div>
+
+                {zoomIntegration?.status === "connected" && (
+                  <div className="space-y-2 p-4 border rounded-lg">
+                    <Label htmlFor="zoom-secret">Secret Token do Zoom</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="zoom-secret"
+                        type="password"
+                        placeholder="Cole aqui o Secret Token do seu app Zoom"
+                        value={zoomSecretToken}
+                        onChange={(e) => setZoomSecretToken(e.target.value)}
+                        className="font-mono text-sm"
+                      />
+                      <Button 
+                        onClick={saveZoomConfig}
+                        disabled={savingZoomConfig}
+                      >
+                        {savingZoomConfig ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Salvar"
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      O Secret Token é usado para validar as requisições do Zoom. Encontre-o em Feature → Event Subscriptions no painel do Zoom.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">
