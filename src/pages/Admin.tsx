@@ -204,48 +204,50 @@ export default function Admin() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="h-8 w-8 text-primary" />
+    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="flex items-center gap-4">
+        <div className="p-3 rounded-xl bg-primary/10">
+          <Shield className="h-6 w-6 text-primary" />
+        </div>
         <div>
-          <h1 className="text-2xl font-bold">Administração</h1>
-          <p className="text-muted-foreground">Gerencie contas, planos e usuários da plataforma</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Administração</h1>
+          <p className="text-sm text-muted-foreground">Gerencie contas, planos e usuários da plataforma</p>
         </div>
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="dashboard" className="gap-2">
+      <Tabs defaultValue="dashboard" className="space-y-6">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
           </TabsTrigger>
-          <TabsTrigger value="plans" className="gap-2">
+          <TabsTrigger value="plans" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Package className="h-4 w-4" />
             Planos
           </TabsTrigger>
-          <TabsTrigger value="accounts" className="gap-2">
+          <TabsTrigger value="accounts" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Building2 className="h-4 w-4" />
             Contas
           </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
+          <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />
             Usuários
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard">
+        <TabsContent value="dashboard" className="mt-0">
           <DashboardTab accounts={accounts} users={allUsers} plans={plans} />
         </TabsContent>
 
-        <TabsContent value="plans">
+        <TabsContent value="plans" className="mt-0">
           <PlansTab plans={plans} isLoading={loadingPlans} />
         </TabsContent>
 
-        <TabsContent value="accounts">
+        <TabsContent value="accounts" className="mt-0">
           <AccountsTab accounts={accounts} plans={plans} isLoading={loadingAccounts} />
         </TabsContent>
 
-        <TabsContent value="users">
+        <TabsContent value="users" className="mt-0">
           <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />
         </TabsContent>
       </Tabs>
@@ -268,7 +270,6 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
     const plan = plans.find(p => p.id === account.plan_id);
     if (!plan || account.subscription_status !== 'active') return sum;
     
-    // Normalize to monthly
     const monthlyPrice = plan.billing_period === 'annual' ? plan.price / 12 :
                          plan.billing_period === 'semiannual' ? plan.price / 6 :
                          plan.billing_period === 'quarterly' ? plan.price / 3 :
@@ -276,109 +277,67 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
     return sum + monthlyPrice;
   }, 0);
 
-  const stats = [
-    { label: 'Total de Contas', value: accounts.length, icon: Building2, color: 'text-blue-500' },
-    { label: 'Contas Ativas', value: activeAccounts, icon: UserCheck, color: 'text-green-500' },
-    { label: 'Em Trial', value: trialAccounts, icon: Activity, color: 'text-amber-500' },
-    { label: 'Total de Usuários', value: users.length, icon: Users, color: 'text-purple-500' },
-    { label: 'Total de Clientes', value: totalClients, icon: Users, color: 'text-indigo-500' },
-    { label: 'Planos Ativos', value: activePlans, icon: Package, color: 'text-primary' },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat, i) => (
-          <Card key={i}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
-                </div>
-                <stat.icon className={`h-10 w-10 ${stat.color} opacity-80`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* MRR Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-500" />
-            MRR (Receita Mensal Recorrente)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-4xl font-bold text-green-600">
-            R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Baseado em {activeAccounts} contas ativas com plano
-          </p>
+      {/* MRR Highlight */}
+      <Card className="border-0 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Receita Mensal Recorrente (MRR)</p>
+              <p className="text-4xl font-semibold tracking-tight mt-1">
+                R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Baseado em {activeAccounts} {activeAccounts === 1 ? 'conta ativa' : 'contas ativas'}
+              </p>
+            </div>
+            <div className="p-4 rounded-full bg-primary/10">
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Status Distribution */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribuição por Status</CardTitle>
+      {/* Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard icon={Building2} label="Total de Contas" value={accounts.length} />
+        <StatCard icon={UserCheck} label="Contas Ativas" value={activeAccounts} variant="success" />
+        <StatCard icon={Activity} label="Em Trial" value={trialAccounts} variant="warning" />
+        <StatCard icon={Users} label="Usuários" value={users.length} />
+        <StatCard icon={Users} label="Clientes" value={totalClients} />
+        <StatCard icon={Package} label="Planos Ativos" value={activePlans} />
+      </div>
+
+      {/* Distribution Cards */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-medium">Distribuição por Status</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span>Ativas</span>
-                </div>
-                <span className="font-semibold">{activeAccounts}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span>Trial</span>
-                </div>
-                <span className="font-semibold">{trialAccounts}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span>Suspensas</span>
-                </div>
-                <span className="font-semibold">{suspendedAccounts}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-gray-400" />
-                  <span>Canceladas</span>
-                </div>
-                <span className="font-semibold">{cancelledAccounts}</span>
-              </div>
-            </div>
+          <CardContent className="space-y-4">
+            <StatusBar label="Ativas" value={activeAccounts} total={accounts.length} color="bg-emerald-500" />
+            <StatusBar label="Trial" value={trialAccounts} total={accounts.length} color="bg-amber-500" />
+            <StatusBar label="Suspensas" value={suspendedAccounts} total={accounts.length} color="bg-red-500" />
+            <StatusBar label="Canceladas" value={cancelledAccounts} total={accounts.length} color="bg-muted-foreground/50" />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Planos Mais Usados</CardTitle>
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-medium">Planos</CardTitle>
           </CardHeader>
           <CardContent>
             {plans.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Nenhum plano cadastrado</p>
+              <p className="text-sm text-muted-foreground">Nenhum plano cadastrado</p>
             ) : (
               <div className="space-y-3">
                 {plans.filter(p => p.is_active).map(plan => {
                   const count = accounts.filter(a => a.plan_id === plan.id).length;
                   return (
-                    <div key={plan.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{plan.name}</Badge>
-                      </div>
-                      <span className="font-semibold">{count} contas</span>
+                    <div key={plan.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                      <span className="text-sm font-medium">{plan.name}</span>
+                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'conta' : 'contas'}</span>
                     </div>
                   );
                 })}
@@ -386,6 +345,53 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
             )}
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+// Stat Card Component
+function StatCard({ icon: Icon, label, value, variant }: { 
+  icon: React.ElementType; 
+  label: string; 
+  value: number;
+  variant?: 'success' | 'warning' | 'danger';
+}) {
+  const colorClass = variant === 'success' ? 'text-emerald-600' : 
+                     variant === 'warning' ? 'text-amber-600' : 
+                     variant === 'danger' ? 'text-red-600' : 'text-foreground';
+  const bgClass = variant === 'success' ? 'bg-emerald-500/10' : 
+                  variant === 'warning' ? 'bg-amber-500/10' : 
+                  variant === 'danger' ? 'bg-red-500/10' : 'bg-muted';
+
+  return (
+    <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center gap-4">
+          <div className={`p-2.5 rounded-lg ${bgClass}`}>
+            <Icon className={`h-5 w-5 ${variant ? colorClass : 'text-muted-foreground'}`} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+            <p className={`text-2xl font-semibold ${colorClass}`}>{value}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Status Bar Component
+function StatusBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const percentage = total > 0 ? (value / total) * 100 : 0;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium">{value}</span>
+      </div>
+      <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${percentage}%` }} />
       </div>
     </div>
   );
@@ -507,15 +513,15 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle>Planos de Assinatura</CardTitle>
-          <CardDescription>Gerencie os planos disponíveis na plataforma</CardDescription>
+          <CardTitle className="text-base font-medium">Planos de Assinatura</CardTitle>
+          <CardDescription className="text-sm">Gerencie os planos disponíveis</CardDescription>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
               Novo Plano
             </Button>
@@ -527,34 +533,38 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Nome</Label>
+                <Label className="text-sm">Nome</Label>
                 <Input 
                   value={formData.name} 
                   onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} 
                   placeholder="Ex: Plano Pro"
+                  className="h-9"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Descrição</Label>
+                <Label className="text-sm">Descrição</Label>
                 <Textarea 
                   value={formData.description} 
                   onChange={e => setFormData(f => ({ ...f, description: e.target.value }))} 
                   placeholder="Descrição do plano..."
+                  className="resize-none"
+                  rows={2}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Preço (R$)</Label>
+                  <Label className="text-sm">Preço (R$)</Label>
                   <Input 
                     type="number" 
                     value={formData.price} 
                     onChange={e => setFormData(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))} 
+                    className="h-9"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Período</Label>
+                  <Label className="text-sm">Período</Label>
                   <Select value={formData.billing_period} onValueChange={v => setFormData(f => ({ ...f, billing_period: v }))}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -569,47 +579,52 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Dias de Trial</Label>
+                  <Label className="text-sm">Dias de Trial</Label>
                   <Input 
                     type="number" 
                     value={formData.trial_days} 
                     onChange={e => setFormData(f => ({ ...f, trial_days: parseInt(e.target.value) || 0 }))} 
+                    className="h-9"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Máx. Clientes</Label>
+                  <Label className="text-sm">Máx. Clientes</Label>
                   <Input 
                     type="number" 
                     value={formData.max_clients} 
                     onChange={e => setFormData(f => ({ ...f, max_clients: parseInt(e.target.value) || 0 }))} 
+                    className="h-9"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Máx. Usuários</Label>
+                  <Label className="text-sm">Máx. Usuários</Label>
                   <Input 
                     type="number" 
                     value={formData.max_users} 
                     onChange={e => setFormData(f => ({ ...f, max_users: parseInt(e.target.value) || 0 }))} 
+                    className="h-9"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Máx. Análises AI</Label>
+                  <Label className="text-sm">Máx. Análises AI</Label>
                   <Input 
                     type="number" 
                     value={formData.max_ai_analyses} 
                     onChange={e => setFormData(f => ({ ...f, max_ai_analyses: parseInt(e.target.value) || 0 }))} 
+                    className="h-9"
                   />
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label>Features (uma por linha)</Label>
+                <Label className="text-sm">Features (uma por linha)</Label>
                 <Textarea 
                   value={formData.features} 
                   onChange={e => setFormData(f => ({ ...f, features: e.target.value }))} 
                   placeholder="Acesso completo&#10;Suporte prioritário&#10;API integrada"
-                  rows={4}
+                  rows={3}
+                  className="resize-none"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -617,11 +632,11 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
                   checked={formData.is_active} 
                   onCheckedChange={v => setFormData(f => ({ ...f, is_active: v }))} 
                 />
-                <Label>Plano ativo</Label>
+                <Label className="text-sm">Plano ativo</Label>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => { setIsDialogOpen(false); resetForm(); }}>Cancelar</Button>
               <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                 {saveMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Salvar
@@ -632,62 +647,74 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : plans.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Nenhum plano cadastrado
+          <div className="text-center py-12">
+            <Package className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">Nenhum plano cadastrado</p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {plans.map(plan => (
-              <Card key={plan.id} className={!plan.is_active ? 'opacity-60' : ''}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{plan.name}</CardTitle>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(plan)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => {
-                          if (confirm('Excluir este plano?')) deleteMutation.mutate(plan.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                  <CardDescription>{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold">R$ {plan.price.toLocaleString('pt-BR')}</span>
-                    <span className="text-muted-foreground text-sm">/{billingPeriodLabels[plan.billing_period]?.toLowerCase() || plan.billing_period}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {!plan.is_active && <Badge variant="secondary">Inativo</Badge>}
-                    {plan.trial_days && plan.trial_days > 0 && (
-                      <Badge variant="outline">{plan.trial_days} dias trial</Badge>
+              <div 
+                key={plan.id} 
+                className={`group relative p-5 rounded-xl border bg-card hover:shadow-md transition-all ${!plan.is_active ? 'opacity-50' : ''}`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-medium">{plan.name}</h3>
+                    {plan.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</p>
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    {plan.max_clients && <div>• Até {plan.max_clients} clientes</div>}
-                    {plan.max_users && <div>• Até {plan.max_users} usuários</div>}
-                    {plan.max_ai_analyses && <div>• {plan.max_ai_analyses} análises AI/mês</div>}
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(plan)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (confirm('Excluir este plano?')) deleteMutation.mutate(plan.id);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  {plan.features && plan.features.length > 0 && (
-                    <div className="border-t pt-3 text-sm space-y-1">
-                      {plan.features.map((f, i) => (
-                        <div key={i} className="text-muted-foreground">✓ {f}</div>
-                      ))}
-                    </div>
+                </div>
+                
+                <div className="flex items-baseline gap-1 mb-3">
+                  <span className="text-2xl font-semibold">R$ {plan.price.toLocaleString('pt-BR')}</span>
+                  <span className="text-xs text-muted-foreground">/{billingPeriodLabels[plan.billing_period]?.toLowerCase() || plan.billing_period}</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {!plan.is_active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
+                  {plan.trial_days && plan.trial_days > 0 && (
+                    <Badge variant="outline" className="text-xs">{plan.trial_days}d trial</Badge>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  {plan.max_clients && <div>• Até {plan.max_clients} clientes</div>}
+                  {plan.max_users && <div>• Até {plan.max_users} usuários</div>}
+                  {plan.max_ai_analyses && <div>• {plan.max_ai_analyses} análises AI/mês</div>}
+                </div>
+
+                {plan.features && plan.features.length > 0 && (
+                  <div className="border-t mt-3 pt-3 text-xs space-y-0.5">
+                    {plan.features.slice(0, 3).map((f, i) => (
+                      <div key={i} className="text-muted-foreground">✓ {f}</div>
+                    ))}
+                    {plan.features.length > 3 && (
+                      <div className="text-muted-foreground/60">+{plan.features.length - 3} mais</div>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -746,61 +773,73 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Contas</CardTitle>
-        <CardDescription>Todas as contas da plataforma</CardDescription>
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base font-medium">Contas</CardTitle>
+        <CardDescription className="text-sm">Todas as contas da plataforma</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : accounts.length === 0 ? (
+          <div className="text-center py-12">
+            <Building2 className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Plano</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-center">Usuários</TableHead>
-                <TableHead className="text-center">Clientes</TableHead>
-                <TableHead>Criada em</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {accounts.map(account => {
-                const plan = plans.find(p => p.id === account.plan_id);
-                const status = statusLabels[account.subscription_status || 'trial'] || statusLabels.trial;
-                return (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.name}</TableCell>
-                    <TableCell>
-                      {plan ? (
-                        <Badge variant="outline">{plan.name}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Sem plano</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={status.variant}>{status.label}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">{account.user_count}</TableCell>
-                    <TableCell className="text-center">{account.client_count}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(account.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(account)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="font-medium">Nome</TableHead>
+                  <TableHead className="font-medium">Plano</TableHead>
+                  <TableHead className="font-medium">Status</TableHead>
+                  <TableHead className="font-medium text-center">Usuários</TableHead>
+                  <TableHead className="font-medium text-center">Clientes</TableHead>
+                  <TableHead className="font-medium">Criada em</TableHead>
+                  <TableHead className="w-10"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {accounts.map(account => {
+                  const plan = plans.find(p => p.id === account.plan_id);
+                  const status = statusLabels[account.subscription_status || 'trial'] || statusLabels.trial;
+                  return (
+                    <TableRow key={account.id} className="group">
+                      <TableCell className="font-medium">{account.name}</TableCell>
+                      <TableCell>
+                        {plan ? (
+                          <Badge variant="outline" className="text-xs">{plan.name}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-sm">{account.user_count}</TableCell>
+                      <TableCell className="text-center text-sm">{account.client_count}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(account.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => openEdit(account)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
 
         <Dialog open={!!editingAccount} onOpenChange={(open) => !open && setEditingAccount(null)}>
@@ -811,16 +850,17 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Nome</Label>
+                <Label className="text-sm">Nome</Label>
                 <Input 
                   value={formData.name} 
                   onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} 
+                  className="h-9"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Plano</Label>
+                <Label className="text-sm">Plano</Label>
                 <Select value={formData.plan_id} onValueChange={v => setFormData(f => ({ ...f, plan_id: v }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Selecione um plano" />
                   </SelectTrigger>
                   <SelectContent>
@@ -832,9 +872,9 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Status</Label>
+                <Label className="text-sm">Status</Label>
                 <Select value={formData.subscription_status} onValueChange={v => setFormData(f => ({ ...f, subscription_status: v }))}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -847,7 +887,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingAccount(null)}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => setEditingAccount(null)}>Cancelar</Button>
               <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
                 {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Salvar
@@ -882,55 +922,64 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle>Usuários</CardTitle>
-            <CardDescription>Todos os usuários da plataforma</CardDescription>
+            <CardTitle className="text-base font-medium">Usuários</CardTitle>
+            <CardDescription className="text-sm">Todos os usuários da plataforma</CardDescription>
           </div>
           <Input 
             placeholder="Buscar usuários..." 
             value={search} 
             onChange={e => setSearch(e.target.value)}
-            className="w-64"
+            className="h-9 w-full sm:w-64"
           />
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">
+              {search ? 'Nenhum usuário encontrado' : 'Nenhum usuário cadastrado'}
+            </p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Conta</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Criado em</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map(user => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{user.account_name}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{roleLabels[user.role] || user.role}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                  </TableCell>
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="font-medium">Nome</TableHead>
+                  <TableHead className="font-medium">Email</TableHead>
+                  <TableHead className="font-medium">Conta</TableHead>
+                  <TableHead className="font-medium">Role</TableHead>
+                  <TableHead className="font-medium">Criado em</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map(user => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">{user.account_name}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs">{roleLabels[user.role] || user.role}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>
