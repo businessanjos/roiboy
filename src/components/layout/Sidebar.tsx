@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const navItems = [
+  { to: "/presentation", icon: Presentation, label: "Apresentação" },
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/clients", icon: Users, label: "Clientes" },
   { to: "/team", icon: UserCircle, label: "Equipe" },
@@ -74,7 +75,6 @@ const navItems = [
   { to: "/events", icon: CalendarDays, label: "Eventos" },
   { to: "/forms", icon: FileText, label: "Formulários" },
   { to: "/integrations", icon: Link2, label: "Integrações" },
-  { to: "/presentation", icon: Presentation, label: "Apresentação" },
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
