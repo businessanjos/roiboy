@@ -12,6 +12,10 @@ interface MessageItem {
   content_text: string;
   sent_at: string;
   external_thread_id?: string;
+  // Group message support
+  is_group?: boolean;
+  group_name?: string;
+  sender_phone_e164?: string; // Phone of actual sender in group
 }
 
 interface BulkPayload {
@@ -49,15 +53,23 @@ serve(async (req) => {
       );
     }
 
-    // Get all unique phone numbers
-    const phoneNumbers = [...new Set(payload.messages.map(m => m.phone_e164))];
+    // Get all unique phone numbers (including sender phones for group messages)
+    const phoneNumbers = new Set<string>();
+    for (const msg of payload.messages) {
+      // For group messages with sender_phone, use that for client lookup
+      if (msg.is_group && msg.sender_phone_e164) {
+        phoneNumbers.add(msg.sender_phone_e164);
+      } else {
+        phoneNumbers.add(msg.phone_e164);
+      }
+    }
     
     // Fetch all clients for these phones in one query
     const { data: clients, error: clientsError } = await supabase
       .from("clients")
       .select("id, phone_e164, account_id")
       .eq("account_id", payload.account_id)
-      .in("phone_e164", phoneNumbers);
+      .in("phone_e164", [...phoneNumbers]);
 
     if (clientsError) {
       console.error("Error fetching clients:", clientsError);
@@ -75,12 +87,13 @@ serve(async (req) => {
       total: payload.messages.length,
       inserted: 0,
       skipped: 0,
+      skipped_unregistered: 0,
       errors: [] as string[],
       unknown_phones: [] as string[],
     };
 
     // Find unknown phones
-    const unknownPhones = phoneNumbers.filter(p => !clientMap.has(p));
+    const unknownPhones = [...phoneNumbers].filter(p => !clientMap.has(p));
     results.unknown_phones = unknownPhones;
 
     // Prepare messages for insertion
@@ -100,16 +113,26 @@ serve(async (req) => {
         continue;
       }
 
+      // Determine which phone to use for client lookup
+      const clientPhone = msg.is_group && msg.sender_phone_e164 
+        ? msg.sender_phone_e164 
+        : msg.phone_e164;
+
       // Validate phone format
-      if (!msg.phone_e164.match(/^\+[1-9]\d{6,14}$/)) {
+      if (!clientPhone.match(/^\+[1-9]\d{6,14}$/)) {
         results.skipped++;
-        results.errors.push(`Invalid phone format: ${msg.phone_e164}`);
+        results.errors.push(`Invalid phone format: ${clientPhone}`);
         continue;
       }
 
-      const client = clientMap.get(msg.phone_e164);
+      const client = clientMap.get(clientPhone);
       if (!client) {
-        results.skipped++;
+        // For group messages, silently skip unregistered senders
+        if (msg.is_group) {
+          results.skipped_unregistered++;
+        } else {
+          results.skipped++;
+        }
         continue;
       }
 
@@ -138,7 +161,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Bulk ingest complete: ${results.inserted} inserted, ${results.skipped} skipped`);
+    console.log(`Bulk ingest complete: ${results.inserted} inserted, ${results.skipped} skipped, ${results.skipped_unregistered} unregistered group senders skipped`);
 
     // If not skipping analysis and we have client messages, trigger recalculation
     if (!payload.skip_analysis && results.inserted > 0) {

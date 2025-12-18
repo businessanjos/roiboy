@@ -228,7 +228,7 @@ x-session-token: eyJhbGciOiJIUzI1NiIs...`,
     name: "Ingerir Mensagem de Texto",
     method: "POST",
     path: "/ingest-whatsapp-message",
-    description: "Envia uma mensagem de texto capturada do WhatsApp Web. Dispara análise de IA automaticamente para mensagens do cliente.",
+    description: "Envia uma mensagem de texto capturada do WhatsApp Web. Suporta conversas diretas e grupos. Dispara análise de IA automaticamente para mensagens do cliente.",
     icon: <MessageSquare className="h-5 w-5" />,
     category: "messages",
     headers: [
@@ -236,33 +236,57 @@ x-session-token: eyJhbGciOiJIUzI1NiIs...`,
     ],
     bodyParams: [
       { name: "api_key", type: "string", required: true, description: "API key obtida na autenticação" },
-      { name: "phone_e164", type: "string", required: true, description: "Telefone do cliente no formato E.164" },
+      { name: "phone_e164", type: "string", required: true, description: "Telefone do cliente (direto) ou ID do grupo no formato E.164" },
       { name: "direction", type: "string", required: true, description: "'client_to_team' ou 'team_to_client'" },
-      { name: "content", type: "string", required: true, description: "Conteúdo da mensagem" },
-      { name: "timestamp", type: "string (ISO 8601)", required: true, description: "Data/hora da mensagem" },
-      { name: "external_thread_id", type: "string", required: false, description: "ID da conversa no WhatsApp (opcional)" }
+      { name: "content_text", type: "string", required: true, description: "Conteúdo da mensagem" },
+      { name: "sent_at", type: "string (ISO 8601)", required: true, description: "Data/hora da mensagem" },
+      { name: "external_thread_id", type: "string", required: false, description: "ID da conversa no WhatsApp (opcional)" },
+      { name: "is_group", type: "boolean", required: false, description: "Se a mensagem é de um grupo" },
+      { name: "group_name", type: "string", required: false, description: "Nome do grupo (para referência)" },
+      { name: "sender_phone_e164", type: "string", required: false, description: "Telefone do remetente no grupo (obrigatório se is_group=true e direction='client_to_team')" }
     ],
-    requestExample: `{
+    requestExample: `// Mensagem direta
+{
   "api_key": "a1b2c3d4e5f6...",
   "phone_e164": "+5511999998888",
   "direction": "client_to_team",
-  "content": "Bom dia! Estou muito satisfeito com os resultados...",
-  "timestamp": "2024-01-20T09:00:00Z",
-  "external_thread_id": "whatsapp-thread-123"
+  "content_text": "Bom dia! Estou muito satisfeito...",
+  "sent_at": "2024-01-20T09:00:00Z"
+}
+
+// Mensagem de grupo
+{
+  "api_key": "a1b2c3d4e5f6...",
+  "phone_e164": "+5511888887777",
+  "direction": "client_to_team",
+  "content_text": "Excelente resultado esse mês!",
+  "sent_at": "2024-01-20T09:00:00Z",
+  "is_group": true,
+  "group_name": "Mentoria Gold 2024",
+  "sender_phone_e164": "+5511999998888"
 }`,
     responseExample: `{
   "success": true,
   "message_id": "uuid-da-mensagem",
   "client_id": "uuid-do-cliente",
-  "conversation_id": "uuid-da-conversa",
-  "ai_analysis_triggered": true
+  "client_name": "João Silva",
+  "is_group": true,
+  "group_name": "Mentoria Gold 2024"
+}
+
+// Se remetente do grupo não está cadastrado:
+{
+  "success": true,
+  "skipped": true,
+  "message": "Sender not registered as client",
+  "phone": "+5511777776666"
 }`,
     errorCodes: [
       { code: 400, message: "Missing required fields", description: "Campos obrigatórios não fornecidos" },
       { code: 400, message: "Invalid phone format", description: "Formato de telefone inválido" },
-      { code: 400, message: "Invalid direction", description: "Direção deve ser 'client_to_team' ou 'team_to_client'" },
+      { code: 400, message: "sender_phone_e164 required for groups", description: "Para grupos, sender_phone_e164 é obrigatório" },
       { code: 401, message: "Invalid API key", description: "API key inválida" },
-      { code: 404, message: "Client not found", description: "Cliente não encontrado para este telefone" },
+      { code: 404, message: "Client not found", description: "Cliente não encontrado (apenas para mensagens diretas)" },
       { code: 500, message: "Internal server error", description: "Erro interno do servidor" }
     ]
   },
@@ -313,44 +337,57 @@ x-session-token: eyJhbGciOiJIUzI1NiIs...`,
     name: "Importação em Lote",
     method: "POST",
     path: "/bulk-ingest-messages",
-    description: "Importa múltiplas mensagens históricas de uma vez. Máximo de 500 mensagens por requisição.",
+    description: "Importa múltiplas mensagens históricas de uma vez. Suporta mensagens diretas e de grupos. Máximo de 500 mensagens por requisição.",
     icon: <FileText className="h-5 w-5" />,
     category: "messages",
     headers: [
       { name: "Content-Type", value: "application/json", description: "Tipo de conteúdo da requisição" }
     ],
     bodyParams: [
-      { name: "api_key", type: "string", required: true, description: "API key obtida na autenticação" },
-      { name: "phone_e164", type: "string", required: true, description: "Telefone do cliente no formato E.164" },
-      { name: "messages", type: "array", required: true, description: "Array de mensagens (máx 500)" }
+      { name: "account_id", type: "string (uuid)", required: true, description: "ID da conta" },
+      { name: "messages", type: "array", required: true, description: "Array de mensagens (máx 500)" },
+      { name: "messages[].phone_e164", type: "string", required: true, description: "Telefone do cliente ou ID do grupo" },
+      { name: "messages[].direction", type: "string", required: true, description: "'client_to_team' ou 'team_to_client'" },
+      { name: "messages[].content_text", type: "string", required: true, description: "Conteúdo da mensagem" },
+      { name: "messages[].sent_at", type: "string", required: true, description: "Data/hora da mensagem" },
+      { name: "messages[].is_group", type: "boolean", required: false, description: "Se é mensagem de grupo" },
+      { name: "messages[].sender_phone_e164", type: "string", required: false, description: "Telefone do remetente (para grupos)" },
+      { name: "skip_analysis", type: "boolean", required: false, description: "Pular análise de IA (recomendado para histórico)" }
     ],
     requestExample: `{
-  "api_key": "a1b2c3d4e5f6...",
-  "phone_e164": "+5511999998888",
+  "account_id": "uuid-da-conta",
+  "skip_analysis": true,
   "messages": [
     {
+      "phone_e164": "+5511999998888",
       "direction": "client_to_team",
-      "content": "Primeira mensagem",
-      "timestamp": "2024-01-01T10:00:00Z"
+      "content_text": "Mensagem direta",
+      "sent_at": "2024-01-01T10:00:00Z"
     },
     {
-      "direction": "team_to_client",
-      "content": "Resposta da equipe",
-      "timestamp": "2024-01-01T10:05:00Z"
+      "phone_e164": "+5511888887777",
+      "direction": "client_to_team",
+      "content_text": "Mensagem do grupo",
+      "sent_at": "2024-01-01T10:05:00Z",
+      "is_group": true,
+      "sender_phone_e164": "+5511999998888"
     }
   ]
 }`,
     responseExample: `{
   "success": true,
-  "client_id": "uuid-do-cliente",
-  "imported_count": 2,
-  "failed_count": 0,
-  "errors": []
+  "results": {
+    "total": 2,
+    "inserted": 2,
+    "skipped": 0,
+    "skipped_unregistered": 0,
+    "errors": [],
+    "unknown_phones": []
+  }
 }`,
     errorCodes: [
       { code: 400, message: "Too many messages", description: "Máximo de 500 mensagens por requisição" },
-      { code: 401, message: "Invalid API key", description: "API key inválida" },
-      { code: 404, message: "Client not found", description: "Cliente não encontrado" },
+      { code: 400, message: "Missing required fields", description: "Campos obrigatórios não fornecidos" },
       { code: 500, message: "Internal server error", description: "Erro interno do servidor" }
     ]
   },
