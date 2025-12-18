@@ -1010,47 +1010,46 @@ export default function Clients() {
                         </div>
                       )}
                     </DialogHeader>
-                    <ScrollArea className="max-h-[55vh] sm:max-h-[60vh] pr-2 sm:pr-4">
-                      <div className="space-y-6">
-                  {/* Avatar Upload */}
-                  <div className="flex flex-col items-center gap-2 sm:gap-3 pb-3 sm:pb-4 border-b">
-                    <div className="relative group">
-                      {newClientAvatarPreview ? (
-                        <div className="relative">
-                          <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-2 ring-primary/20">
-                            <AvatarImage src={newClientAvatarPreview} alt="Preview" />
-                            <AvatarFallback className="bg-primary/10 text-primary text-lg sm:text-xl">
-                              {newClientData.full_name ? newClientData.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <button
-                            type="button"
-                            onClick={clearNewClientAvatar}
-                            className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm hover:bg-destructive/90"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                    <ScrollArea className="max-h-[55vh] sm:max-h-[60vh] pr-3">
+                      <div className="space-y-5 pb-2">
+                        {/* Avatar Upload */}
+                        <div className="flex flex-col items-center gap-2 pb-4 border-b border-border/50">
+                          <div className="relative group">
+                            {newClientAvatarPreview ? (
+                              <div className="relative">
+                                <Avatar className="h-16 w-16 sm:h-18 sm:w-18 ring-2 ring-primary/20 shadow-sm">
+                                  <AvatarImage src={newClientAvatarPreview} alt="Preview" />
+                                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                                    {newClientData.full_name ? newClientData.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <button
+                                  type="button"
+                                  onClick={clearNewClientAvatar}
+                                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm hover:bg-destructive/90 transition-colors"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => avatarInputRef.current?.click()}
+                                className="h-16 w-16 sm:h-18 sm:w-18 rounded-full border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center gap-0.5 hover:border-primary/40 hover:bg-muted/30 transition-all"
+                              >
+                                <Camera className="h-5 w-5 text-muted-foreground/60" />
+                                <span className="text-[9px] text-muted-foreground/60">Foto</span>
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarSelect}
+                            className="hidden"
+                          />
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => avatarInputRef.current?.click()}
-                          className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-0.5 sm:gap-1 hover:border-primary/50 hover:bg-muted/50 transition-colors"
-                        >
-                          <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground">Foto</span>
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarSelect}
-                      className="hidden"
-                    />
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">Toque para adicionar foto</p>
-                  </div>
 
                   <ClientInfoForm 
                     data={newClientData} 
@@ -1059,59 +1058,60 @@ export default function Clients() {
                     showBasicFields={true}
                   />
                   
-                  {/* Product Selection */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm">
-                      <Package className="h-4 w-4" />
-                      Produtos
-                    </Label>
-                    {products.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-2">
-                        Nenhum produto cadastrado. <Link to="/products" className="text-primary underline">Criar produtos</Link>
-                      </p>
-                    ) : (
-                      <div className="border rounded-lg p-2 sm:p-3 space-y-1 sm:space-y-2 max-h-32 sm:max-h-40 overflow-y-auto">
-                        {products.map((product) => (
-                          <label
-                            key={product.id}
-                            className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded hover:bg-muted/50 cursor-pointer"
-                          >
-                            <Checkbox
-                              checked={selectedProducts.includes(product.id)}
-                              onCheckedChange={() => toggleProduct(product.id)}
-                            />
-                            <span className="flex-1 text-xs sm:text-sm truncate">{product.name}</span>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        {/* Product Selection */}
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                            <Package className="h-3.5 w-3.5" />
+                            Produtos
+                          </Label>
+                          {products.length === 0 ? (
+                            <p className="text-sm text-muted-foreground py-2">
+                              Nenhum produto cadastrado. <Link to="/products" className="text-primary hover:underline">Criar produtos</Link>
+                            </p>
+                          ) : (
+                            <div className="border rounded-lg p-2 space-y-0.5 max-h-28 overflow-y-auto bg-muted/20">
+                              {products.map((product) => (
+                                <label
+                                  key={product.id}
+                                  className="flex items-center gap-2.5 p-2 rounded-md hover:bg-background cursor-pointer transition-colors"
+                                >
+                                  <Checkbox
+                                    checked={selectedProducts.includes(product.id)}
+                                    onCheckedChange={() => toggleProduct(product.id)}
+                                    className="h-4 w-4"
+                                  />
+                                  <span className="flex-1 text-sm truncate">{product.name}</span>
+                                  <span className="text-xs text-muted-foreground font-medium">
+                                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
-                  {/* Required Custom Fields */}
-                  {requiredFields.length > 0 && (
-                    <div className="space-y-2 sm:space-y-3">
-                      <Label className="flex items-center gap-2 text-sm">
-                        <Layers className="h-4 w-4" />
-                        Campos Obrigatórios
-                      </Label>
-                      <div className={`border rounded-lg p-2 sm:p-3 space-y-3 sm:space-y-4 transition-colors ${
-                        Object.keys(formErrors).some(k => k.startsWith('field_')) 
-                          ? "border-destructive/50 bg-destructive/5" 
-                          : ""
-                      }`}>
-                        {requiredFields.map((field) => {
-                          const value = newClientFieldValues[field.id];
-                          const hasError = formErrors[`field_${field.id}`];
-                          
-                          return (
-                            <div key={field.id} data-error={!!hasError} className={`space-y-1 sm:space-y-1.5 ${hasError ? "animate-shake" : ""}`}>
-                              <Label className={`text-sm flex items-center gap-1.5 ${hasError ? "text-destructive" : ""}`}>
-                                {hasError && <AlertCircle className="h-3 w-3" />}
-                                {field.name} *
-                              </Label>
+                        {/* Required Custom Fields */}
+                        {requiredFields.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                              <Layers className="h-3.5 w-3.5" />
+                              Campos Obrigatórios
+                            </Label>
+                            <div className={`border rounded-lg p-3 space-y-3 transition-colors bg-muted/20 ${
+                              Object.keys(formErrors).some(k => k.startsWith('field_')) 
+                                ? "border-destructive/50 bg-destructive/5" 
+                                : ""
+                            }`}>
+                              {requiredFields.map((field) => {
+                                const value = newClientFieldValues[field.id];
+                                const hasError = formErrors[`field_${field.id}`];
+                                
+                                return (
+                                  <div key={field.id} data-error={!!hasError} className={`space-y-1.5 ${hasError ? "animate-shake" : ""}`}>
+                                    <Label className={`text-sm font-medium flex items-center gap-1.5 ${hasError ? "text-destructive" : ""}`}>
+                                      {hasError && <AlertCircle className="h-3 w-3" />}
+                                      {field.name} *
+                                    </Label>
                               
                               {/* Boolean */}
                               {field.field_type === "boolean" && (
@@ -1257,24 +1257,38 @@ export default function Clients() {
                               {hasError && (
                                 <p className="text-xs text-destructive">{hasError}</p>
                               )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                          </div>
+                        )}
                       </div>
                     </ScrollArea>
-                    <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-                      <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={savingClient} className="w-full sm:w-auto">Cancelar</Button>
-                      <Button onClick={handleAddClient} disabled={savingClient} className="w-full sm:w-auto">
+                    <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4 border-t border-border/50">
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setDialogOpen(false)} 
+                        disabled={savingClient} 
+                        className="w-full sm:w-auto h-9"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        onClick={handleAddClient} 
+                        disabled={savingClient} 
+                        className="w-full sm:w-auto h-9 min-w-[100px]"
+                      >
                         {savingClient ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Salvando...
                           </>
                         ) : (
-                          "Salvar"
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Salvar
+                          </>
                         )}
                       </Button>
                     </DialogFooter>
