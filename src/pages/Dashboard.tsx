@@ -41,6 +41,7 @@ import {
   BarChart3,
   DollarSign,
   Filter,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, subDays, parseISO } from "date-fns";
@@ -50,6 +51,7 @@ import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 import { ROIEventsFeed } from "@/components/dashboard/ROIEventsFeed";
+import { LiveParticipationReport } from "@/components/dashboard/LiveParticipationReport";
 
 interface ContractData {
   id: string;
@@ -974,6 +976,15 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+          </div>
+
+          {/* Live Participation Report */}
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Video className="h-5 w-5 text-primary" />
+              Participação em Lives
+            </h3>
+            <LiveParticipationReport />
           </div>
 
           {/* Group Engagement Report */}
