@@ -88,9 +88,9 @@ export default function ExtensionPreview() {
   };
 
   const mockTimeline = [
-    { type: "roi", icon: TrendingUp, text: "ROI: Aumento de faturamento +15%", time: "09:35", color: "green" },
-    { type: "message", icon: MessageSquare, text: "5 mensagens trocadas hoje", time: "09:38", color: "blue" },
-    { type: "task", icon: ListTodo, text: "Tarefa concluída: Enviar proposta", time: "Ontem", color: "purple" },
+    { type: "roi", icon: TrendingUp, text: "ROI: Aumento de faturamento +15%", time: "09:35", color: "success" },
+    { type: "message", icon: MessageSquare, text: "5 mensagens trocadas hoje", time: "09:38", color: "accent" },
+    { type: "task", icon: ListTodo, text: "Tarefa concluída: Enviar proposta", time: "Ontem", color: "primary" },
   ];
 
   const mockRecommendations = [
@@ -99,8 +99,8 @@ export default function ExtensionPreview() {
   ];
 
   const mockFields = [
-    { name: "Segmento", type: "select", value: "Varejo", color: "blue" },
-    { name: "Potencial", type: "select", value: "Alto", color: "green" },
+    { name: "Segmento", type: "select", value: "Varejo", color: "accent" },
+    { name: "Potencial", type: "select", value: "Alto", color: "success" },
     { name: "Ativo no grupo", type: "boolean", value: true },
     { name: "Faturamento mensal", type: "currency", value: "R$ 150.000" },
     { name: "Responsável", type: "user", value: "Maria Santos" },
@@ -359,7 +359,7 @@ export default function ExtensionPreview() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-sm truncate">{mockClient.name}</h3>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-[9px]">Ativo</Badge>
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-[9px]">Ativo</Badge>
                         {mockClient.isMls && (
                           <Badge className={`${getMlsBadgeClasses(mockClient.mlsLevel)} text-[8px] gap-0.5`}>
                             <Award className="h-2.5 w-2.5" />
@@ -379,16 +379,16 @@ export default function ExtensionPreview() {
                 {/* Scores - Compact */}
                 <div className="p-2 border-b">
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="text-center p-1.5 rounded bg-green-500/10 hover:bg-green-500/20 transition-colors cursor-pointer">
-                      <div className="text-sm font-bold text-green-600">{animatedVnps.toFixed(1)}</div>
+                    <div className="text-center p-1.5 rounded bg-success/10 hover:bg-success/20 transition-colors cursor-pointer">
+                      <div className="text-sm font-bold text-success">{animatedVnps.toFixed(1)}</div>
                       <div className="text-[9px] text-muted-foreground">V-NPS</div>
                     </div>
-                    <div className="text-center p-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 transition-colors cursor-pointer">
-                      <div className="text-sm font-bold text-blue-600">{animatedEscore}</div>
+                    <div className="text-center p-1.5 rounded bg-accent/10 hover:bg-accent/20 transition-colors cursor-pointer">
+                      <div className="text-sm font-bold text-accent">{animatedEscore}</div>
                       <div className="text-[9px] text-muted-foreground">E-Score</div>
                     </div>
-                    <div className="text-center p-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer">
-                      <div className="text-sm font-bold text-amber-600">{animatedRoi}</div>
+                    <div className="text-center p-1.5 rounded bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer">
+                      <div className="text-sm font-bold text-primary">{animatedRoi}</div>
                       <div className="text-[9px] text-muted-foreground">ROIzometer</div>
                     </div>
                   </div>
@@ -433,15 +433,15 @@ export default function ExtensionPreview() {
                       )}
 
                       <div className="flex gap-1.5">
-                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/30">
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-success/10 hover:text-success hover:border-success/30">
                           <Plus className="h-2.5 w-2.5 mr-1" />
                           ROI
                         </Button>
-                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-primary/10 hover:text-primary hover:border-primary/30">
                           <AlertTriangle className="h-2.5 w-2.5 mr-1" />
                           Risco
                         </Button>
-                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/30">
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-accent/10 hover:text-accent hover:border-accent/30">
                           <MessageSquare className="h-2.5 w-2.5 mr-1" />
                           Nota
                         </Button>
@@ -455,13 +455,20 @@ export default function ExtensionPreview() {
                             <span className="font-medium">IA: Expansão detectada!</span>
                           </div>
                         )}
-                        {mockTimeline.map((event, i) => (
-                          <div key={i} className={`flex items-center gap-2 p-1.5 rounded bg-${event.color}-500/10 text-[10px] hover:bg-${event.color}-500/20 cursor-pointer transition-colors`}>
-                            <event.icon className={`h-3 w-3 text-${event.color}-500`} />
-                            <span className="flex-1 truncate">{event.text}</span>
-                            <span className="text-[9px] text-muted-foreground">{event.time}</span>
-                          </div>
-                        ))}
+                        {mockTimeline.map((event, i) => {
+                          const colorClasses = {
+                            success: "bg-success/10 hover:bg-success/20 text-success",
+                            accent: "bg-accent/10 hover:bg-accent/20 text-accent",
+                            primary: "bg-primary/10 hover:bg-primary/20 text-primary",
+                          }[event.color] || "bg-muted hover:bg-muted/80 text-muted-foreground";
+                          return (
+                            <div key={i} className={`flex items-center gap-2 p-1.5 rounded text-[10px] cursor-pointer transition-colors ${colorClasses.split(' ').slice(0, 2).join(' ')}`}>
+                              <event.icon className={`h-3 w-3 ${colorClasses.split(' ').slice(2).join(' ')}`} />
+                              <span className="flex-1 truncate">{event.text}</span>
+                              <span className="text-[9px] text-muted-foreground">{event.time}</span>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {/* Recommendations */}
@@ -471,15 +478,15 @@ export default function ExtensionPreview() {
                           Recomendações IA
                         </p>
                         {mockRecommendations.map((rec, i) => (
-                          <div key={i} className="flex items-center gap-2 p-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer transition-colors group">
-                            <Lightbulb className="h-3 w-3 text-amber-500" />
+                          <div key={i} className="flex items-center gap-2 p-1.5 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer transition-colors group">
+                            <Lightbulb className="h-3 w-3 text-primary" />
                             <div className="flex-1 min-w-0">
                               <span className="text-[10px] truncate block">{rec.title}</span>
                               <span className="text-[9px] text-muted-foreground">{rec.action}</span>
                             </div>
                             <Badge 
                               variant="outline" 
-                              className={`text-[8px] h-4 ${rec.priority === 'high' ? 'border-red-500/30 text-red-500' : 'border-amber-500/30 text-amber-500'}`}
+                              className={`text-[8px] h-4 ${rec.priority === 'high' ? 'border-destructive/30 text-destructive' : 'border-primary/30 text-primary'}`}
                             >
                               {rec.priority === 'high' ? 'Alta' : 'Média'}
                             </Badge>
@@ -495,29 +502,36 @@ export default function ExtensionPreview() {
                         <Badge variant="outline" className="text-[9px]">4/5 preenchidos</Badge>
                       </div>
                       <div className="space-y-2">
-                        {mockFields.map((field, i) => (
-                          <div key={i} className="flex items-center justify-between p-2 rounded bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
-                            <div className="flex items-center gap-2">
-                              {field.type === "select" && <Tag className="h-3 w-3 text-muted-foreground" />}
-                              {field.type === "boolean" && <ToggleLeft className="h-3 w-3 text-muted-foreground" />}
-                              {field.type === "currency" && <DollarSign className="h-3 w-3 text-muted-foreground" />}
-                              {field.type === "user" && <User className="h-3 w-3 text-muted-foreground" />}
-                              <span className="text-[10px]">{field.name}</span>
+                        {mockFields.map((field, i) => {
+                          const colorClasses = field.color === "accent" 
+                            ? "bg-accent/10 text-accent-foreground" 
+                            : field.color === "success" 
+                              ? "bg-success/10 text-success" 
+                              : "bg-primary/10 text-primary";
+                          return (
+                            <div key={i} className="flex items-center justify-between p-2 rounded bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
+                              <div className="flex items-center gap-2">
+                                {field.type === "select" && <Tag className="h-3 w-3 text-muted-foreground" />}
+                                {field.type === "boolean" && <ToggleLeft className="h-3 w-3 text-muted-foreground" />}
+                                {field.type === "currency" && <DollarSign className="h-3 w-3 text-muted-foreground" />}
+                                {field.type === "user" && <User className="h-3 w-3 text-muted-foreground" />}
+                                <span className="text-[10px]">{field.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {field.type === "boolean" ? (
+                                  <Checkbox checked={field.value as boolean} className="h-3.5 w-3.5" />
+                                ) : field.type === "select" ? (
+                                  <Badge variant="secondary" className={`text-[9px] ${colorClasses}`}>
+                                    {field.value}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-[10px] font-medium">{field.value}</span>
+                                )}
+                                <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              {field.type === "boolean" ? (
-                                <Checkbox checked={field.value as boolean} className="h-3.5 w-3.5" />
-                              ) : field.type === "select" ? (
-                                <Badge variant="secondary" className={`text-[9px] bg-${field.color}-500/10 text-${field.color}-600`}>
-                                  {field.value}
-                                </Badge>
-                              ) : (
-                                <span className="text-[10px] font-medium">{field.value}</span>
-                              )}
-                              <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                       <Button size="sm" variant="outline" className="w-full text-[10px] h-7 mt-2">
                         <Plus className="h-3 w-3 mr-1" />
@@ -533,7 +547,7 @@ export default function ExtensionPreview() {
                             <FileText className="h-4 w-4 text-primary" />
                             <span className="text-[11px] font-medium">{mockContract.type}</span>
                           </div>
-                          <Badge className="bg-green-500 text-[9px]">Ativo</Badge>
+                          <Badge className="bg-success text-success-foreground text-[9px]">Ativo</Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-[10px]">
                           <div>
@@ -542,7 +556,7 @@ export default function ExtensionPreview() {
                           </div>
                           <div>
                             <p className="text-muted-foreground">Restante</p>
-                            <p className="font-semibold text-green-600">{mockContract.daysRemaining} dias</p>
+                            <p className="font-semibold text-success">{mockContract.daysRemaining} dias</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">Início</p>
@@ -554,7 +568,7 @@ export default function ExtensionPreview() {
                           </div>
                         </div>
                         <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full bg-green-500 rounded-full" style={{ width: "5%" }} />
+                          <div className="h-full bg-success rounded-full" style={{ width: "5%" }} />
                         </div>
                       </div>
                       <Button size="sm" variant="outline" className="w-full text-[10px] h-7">
@@ -641,9 +655,9 @@ export default function ExtensionPreview() {
                                 <Badge 
                                   variant="outline" 
                                   className={`text-[8px] h-4 ${
-                                    task.priority === 'high' ? 'border-red-500/30 text-red-500' :
-                                    task.priority === 'medium' ? 'border-amber-500/30 text-amber-500' :
-                                    'border-gray-500/30 text-gray-500'
+                                    task.priority === 'high' ? 'border-destructive/30 text-destructive' :
+                                    task.priority === 'medium' ? 'border-primary/30 text-primary' :
+                                    'border-muted-foreground/30 text-muted-foreground'
                                   }`}
                                 >
                                   {task.priority === 'high' ? 'Urgente' : task.priority === 'medium' ? 'Média' : 'Baixa'}
@@ -676,7 +690,7 @@ export default function ExtensionPreview() {
                       {isRefreshing ? (
                         <><Loader2 className="h-3 w-3 animate-spin" /> Sincronizando...</>
                       ) : (
-                        <><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Sincronizado</>
+                        <><span className="w-1.5 h-1.5 rounded-full bg-success" /> Sincronizado</>
                       )}
                     </span>
                     <Button variant="link" size="sm" className="h-auto p-0 text-[10px] text-primary">
