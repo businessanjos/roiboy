@@ -47,6 +47,7 @@ import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, 
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
+import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 
 interface ContractData {
   id: string;
@@ -776,7 +777,7 @@ export default function Dashboard() {
           </div>
 
           {/* ROI Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="text-base">Categorias de ROI (30 dias)</CardTitle>
@@ -826,6 +827,9 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* AI Usage Stats */}
+            <AIUsageStats />
           </div>
         </TabsContent>
 

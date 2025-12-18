@@ -136,6 +136,73 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_logs: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          created_at: string
+          id: string
+          input_tokens: number
+          life_events_created: number
+          message_id: string | null
+          model: string
+          output_tokens: number
+          recommendations_created: number
+          risk_events_created: number
+          roi_events_created: number
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          life_events_created?: number
+          message_id?: string | null
+          model: string
+          output_tokens?: number
+          recommendations_created?: number
+          risk_events_created?: number
+          roi_events_created?: number
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          input_tokens?: number
+          life_events_created?: number
+          message_id?: string | null
+          model?: string
+          output_tokens?: number
+          recommendations_created?: number
+          risk_events_created?: number
+          roi_events_created?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "message_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance: {
         Row: {
           account_id: string

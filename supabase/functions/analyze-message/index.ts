@@ -358,10 +358,30 @@ Analise e retorne os eventos identificados.`;
     const aiResponse = await response.json();
     console.log("AI Response:", JSON.stringify(aiResponse, null, 2));
 
+    // Extract token usage from response
+    const inputTokens = aiResponse.usage?.prompt_tokens || 0;
+    const outputTokens = aiResponse.usage?.completion_tokens || 0;
+    console.log(`Tokens used - Input: ${inputTokens}, Output: ${outputTokens}`);
+
     // Extract tool call result
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall || toolCall.function.name !== "classify_message") {
       console.log("No classification returned");
+      
+      // Log AI usage even when no classification
+      await supabase.from("ai_usage_logs").insert({
+        account_id,
+        model: aiSettings.model,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        message_id: message_event_id || null,
+        client_id,
+        roi_events_created: 0,
+        risk_events_created: 0,
+        life_events_created: 0,
+        recommendations_created: 0,
+      });
+      
       return new Response(
         JSON.stringify({ success: true, message: "No events identified" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -485,6 +505,23 @@ Analise e retorne os eventos identificados.`;
 
     console.log(`Analysis complete using ${aiSettings.model}. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life Events, ${results.recommendations} Recommendations. Filtered by confidence: ${results.filtered_by_confidence}`);
 
+    // Log AI usage
+    const { error: logError } = await supabase.from("ai_usage_logs").insert({
+      account_id,
+      model: aiSettings.model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      message_id: message_event_id || null,
+      client_id,
+      roi_events_created: results.roi_events,
+      risk_events_created: results.risk_events,
+      life_events_created: results.life_events,
+      recommendations_created: results.recommendations,
+    });
+    if (logError) {
+      console.error("Error logging AI usage:", logError);
+    }
+
     // Trigger score recalculation for this client in background
     if (results.roi_events > 0 || results.risk_events > 0) {
       console.log(`Triggering score recalculation for client ${client_id}`);
@@ -517,6 +554,10 @@ Analise e retorne os eventos identificados.`;
           model: aiSettings.model,
           min_message_length: aiSettings.min_message_length,
           confidence_threshold: aiSettings.confidence_threshold,
+        },
+        tokens_used: {
+          input: inputTokens,
+          output: outputTokens,
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
