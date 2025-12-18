@@ -11,6 +11,7 @@ import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, P
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { AIPromptTest } from "@/components/settings/AIPromptTest";
 
 interface ScoreWeights {
   whatsapp_text: number;
@@ -1029,6 +1030,9 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Prompt Test */}
+          <AIPromptTest aiSettings={aiSettings} />
         </TabsContent>
 
         <TabsContent value="taxonomy" className="space-y-4">

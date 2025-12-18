@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.submit-form-response]
 verify_jwt = false
+
+[functions.test-ai-prompt]
+verify_jwt = false
