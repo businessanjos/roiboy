@@ -123,18 +123,35 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          plan_id: string | null
+          subscription_status: string | null
+          trial_ends_at: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          plan_id?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          plan_id?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_usage_logs: {
         Row: {
@@ -1912,6 +1929,72 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          billing_period: string
+          created_at: string
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean
+          max_ai_analyses: number | null
+          max_clients: number | null
+          max_users: number | null
+          name: string
+          price: number
+          trial_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          billing_period?: string
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          max_ai_analyses?: number | null
+          max_clients?: number | null
+          max_users?: number | null
+          name: string
+          price?: number
+          trial_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          billing_period?: string
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          max_ai_analyses?: number | null
+          max_clients?: number | null
+          max_users?: number | null
+          name?: string
+          price?: number
+          trial_days?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      super_admins: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           account_id: string
@@ -2022,6 +2105,7 @@ export type Database = {
     }
     Functions: {
       get_user_account_id: { Args: never; Returns: string }
+      is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
     }
     Enums: {
       billing_period:

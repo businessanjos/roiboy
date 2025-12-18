@@ -22,16 +22,18 @@ import {
   Sun,
   ClipboardList,
   Presentation,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { useTheme } from "next-themes";
@@ -80,9 +82,21 @@ const navItems = [
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
+  const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const { pendingCount: pendingTasksCount, overdueCount } = usePendingTasksCount();
   const { setTheme, theme } = useTheme();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  // Check if current user is super admin
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      if (!user) return;
+      const { data } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+      setIsSuperAdmin(data === true);
+    };
+    checkSuperAdmin();
+  }, [user]);
 
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
@@ -217,6 +231,23 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             )}
           </Tooltip>
         </TooltipProvider>
+
+        {/* Admin link - only for super admins */}
+        {isSuperAdmin && (
+          <NavLink
+            to="/admin"
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+              location.pathname === "/admin"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Shield className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && <span>Administração</span>}
+          </NavLink>
+        )}
       </nav>
 
       {/* User Menu */}
