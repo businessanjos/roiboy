@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check } from "lucide-react";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2 } from "lucide-react";
 import { 
   validateCPF, 
   validateCNPJ, 
@@ -76,6 +76,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   const [newPhone, setNewPhone] = useState("");
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [cepLoading, setCepLoading] = useState(false);
 
   // Real-time validation states
   const validation = useMemo(() => {
@@ -171,8 +172,35 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
     updateField("cnpj", formatCNPJ(value));
   };
 
-  const handleCEPChange = (value: string) => {
-    updateField("zip_code", formatCEP(value));
+  const handleCEPChange = async (value: string) => {
+    const formatted = formatCEP(value);
+    updateField("zip_code", formatted);
+    
+    // Check if CEP is complete (8 digits)
+    const digits = formatted.replace(/\D/g, "");
+    if (digits.length === 8) {
+      setCepLoading(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+        const cepData = await response.json();
+        
+        if (!cepData.erro) {
+          // Auto-fill address fields
+          onChange({
+            ...data,
+            zip_code: formatted,
+            street: cepData.logradouro || data.street,
+            neighborhood: cepData.bairro || data.neighborhood,
+            city: cepData.localidade || data.city,
+            state: cepData.uf || data.state,
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+      } finally {
+        setCepLoading(false);
+      }
+    }
   };
 
   // Helper to get input border class based on validation state
@@ -499,11 +527,21 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                 onChange={(e) => handleCEPChange(e.target.value)}
                 placeholder="00000-000"
                 maxLength={9}
+                disabled={cepLoading}
                 className={`h-9 pr-9 ${getInputClass(validation.cep)}`}
               />
-              <ValidationIndicator isValid={validation.cep.isValid} isEmpty={validation.cep.isEmpty} />
+              {cepLoading ? (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : (
+                <ValidationIndicator isValid={validation.cep.isValid} isEmpty={validation.cep.isEmpty} />
+              )}
             </div>
-            {validation.cep.isPartial && (
+            {cepLoading && (
+              <p className="text-[11px] text-primary">Buscando endereço...</p>
+            )}
+            {!cepLoading && validation.cep.isPartial && (
               <p className="text-[11px] text-amber-600">Digitando...</p>
             )}
           </div>
