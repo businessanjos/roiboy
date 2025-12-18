@@ -22,7 +22,13 @@ import {
   Brain,
   ArrowDown,
   ArrowLeftRight,
-  Monitor
+  Monitor,
+  Download,
+  Settings,
+  LogIn,
+  RefreshCw,
+  Eye,
+  Mic
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -456,6 +462,175 @@ export default function Presentation() {
               </CardContent>
             </Card>
           </div>
+        </div>
+      </section>
+
+      {/* Chrome Extension Section */}
+      <section className="p-4 sm:p-6 lg:p-8 border-t border-border bg-gradient-to-br from-blue-500/5 via-transparent to-blue-500/10">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <Badge variant="secondary" className="mb-4 bg-blue-500/10 text-blue-600 border-blue-500/30">
+              <Chrome className="h-3 w-3 mr-1" />
+              Extensão Chrome
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Extensão para WhatsApp Web</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Capture automaticamente mensagens e áudios do WhatsApp Web para análise em tempo real
+            </p>
+          </div>
+
+          {/* Installation Steps */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+            {/* Installation Card */}
+            <Card className="border-2 border-blue-500/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Download className="h-5 w-5 text-blue-600" />
+                  Instalação
+                </CardTitle>
+                <CardDescription>Como instalar a extensão no Chrome</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">1</div>
+                  <div>
+                    <p className="font-medium text-sm">Baixe a extensão</p>
+                    <p className="text-xs text-muted-foreground">Solicite o arquivo .zip da extensão ao administrador do sistema</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">2</div>
+                  <div>
+                    <p className="font-medium text-sm">Extraia os arquivos</p>
+                    <p className="text-xs text-muted-foreground">Descompacte o .zip em uma pasta de fácil acesso</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">3</div>
+                  <div>
+                    <p className="font-medium text-sm">Acesse chrome://extensions</p>
+                    <p className="text-xs text-muted-foreground">Digite esse endereço na barra do Chrome e ative o "Modo desenvolvedor"</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">4</div>
+                  <div>
+                    <p className="font-medium text-sm">Carregue a extensão</p>
+                    <p className="text-xs text-muted-foreground">Clique em "Carregar sem compactação" e selecione a pasta extraída</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Usage Card */}
+            <Card className="border-2 border-green-500/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Play className="h-5 w-5 text-green-600" />
+                  Como Usar
+                </CardTitle>
+                <CardDescription>Passo a passo para começar a capturar</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">1</div>
+                  <div>
+                    <p className="font-medium text-sm">Faça login na extensão</p>
+                    <p className="text-xs text-muted-foreground">Clique no ícone da extensão e entre com suas credenciais do ROY</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">2</div>
+                  <div>
+                    <p className="font-medium text-sm">Abra o WhatsApp Web</p>
+                    <p className="text-xs text-muted-foreground">Acesse web.whatsapp.com e escaneie o QR code com seu celular</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">3</div>
+                  <div>
+                    <p className="font-medium text-sm">Selecione uma conversa</p>
+                    <p className="text-xs text-muted-foreground">Clique em qualquer conversa para ativar a captura automática</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">4</div>
+                  <div>
+                    <p className="font-medium text-sm">Aguarde a sincronização</p>
+                    <p className="text-xs text-muted-foreground">Mensagens são enviadas automaticamente para análise pela IA</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <Card className="text-center hover:shadow-md transition-shadow">
+              <CardContent className="pt-4 pb-4">
+                <div className="p-2 rounded-lg bg-blue-500/10 w-fit mx-auto mb-2">
+                  <MessageSquare className="h-5 w-5 text-blue-600" />
+                </div>
+                <p className="font-medium text-sm">Captura de Textos</p>
+                <p className="text-xs text-muted-foreground">Mensagens em tempo real</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center hover:shadow-md transition-shadow">
+              <CardContent className="pt-4 pb-4">
+                <div className="p-2 rounded-lg bg-purple-500/10 w-fit mx-auto mb-2">
+                  <Mic className="h-5 w-5 text-purple-600" />
+                </div>
+                <p className="font-medium text-sm">Transcrição de Áudios</p>
+                <p className="text-xs text-muted-foreground">Convertido automaticamente</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center hover:shadow-md transition-shadow">
+              <CardContent className="pt-4 pb-4">
+                <div className="p-2 rounded-lg bg-amber-500/10 w-fit mx-auto mb-2">
+                  <Users className="h-5 w-5 text-amber-600" />
+                </div>
+                <p className="font-medium text-sm">Identificação Automática</p>
+                <p className="text-xs text-muted-foreground">Clientes reconhecidos por telefone</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center hover:shadow-md transition-shadow">
+              <CardContent className="pt-4 pb-4">
+                <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
+                  <RefreshCw className="h-5 w-5 text-green-600" />
+                </div>
+                <p className="font-medium text-sm">Sync Histórico</p>
+                <p className="text-xs text-muted-foreground">Importe mensagens antigas</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Important Notes */}
+          <Card className="bg-amber-500/5 border-amber-500/20">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20 flex-shrink-0">
+                  <Shield className="h-4 w-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm mb-1">Importante sobre Privacidade</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                      Áudios são transcritos e imediatamente deletados — não são armazenados
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                      Apenas conversas de clientes cadastrados são capturadas
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                      Dados são criptografados em trânsito e em repouso
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
