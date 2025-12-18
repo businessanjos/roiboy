@@ -13,6 +13,10 @@ interface MessagePayload {
   content_text: string;
   sent_at: string;
   external_thread_id?: string;
+  // Group message support
+  is_group?: boolean;
+  group_name?: string;
+  sender_phone_e164?: string; // Phone of the actual sender in group
 }
 
 serve(async (req) => {
@@ -23,7 +27,13 @@ serve(async (req) => {
 
   try {
     const payload: MessagePayload = await req.json();
-    console.log("Received message payload:", { ...payload, content_text: "[REDACTED]" });
+    console.log("Received message payload:", { 
+      ...payload, 
+      content_text: "[REDACTED]",
+      is_group: payload.is_group,
+      group_name: payload.group_name,
+      sender_phone: payload.sender_phone_e164 ? "[SET]" : "[NOT SET]"
+    });
 
     // Validate required fields
     if (!payload.phone_e164 || !payload.direction || !payload.content_text || !payload.sent_at) {
@@ -33,8 +43,22 @@ serve(async (req) => {
       );
     }
 
+    // For group messages, sender_phone_e164 is required
+    if (payload.is_group && payload.direction === "client_to_team" && !payload.sender_phone_e164) {
+      return new Response(
+        JSON.stringify({ error: "For group messages from client, sender_phone_e164 is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Determine which phone to use for client lookup
+    // For group messages, use sender_phone; for direct messages, use phone_e164
+    const clientPhone = payload.is_group && payload.sender_phone_e164 
+      ? payload.sender_phone_e164 
+      : payload.phone_e164;
+
     // Validate phone format
-    if (!payload.phone_e164.match(/^\+[1-9]\d{6,14}$/)) {
+    if (!clientPhone.match(/^\+[1-9]\d{6,14}$/)) {
       return new Response(
         JSON.stringify({ error: "Invalid phone format. Use E.164 format (e.g., +5511999999999)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -51,7 +75,7 @@ serve(async (req) => {
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id, account_id, full_name")
-      .eq("phone_e164", payload.phone_e164)
+      .eq("phone_e164", clientPhone)
       .maybeSingle();
 
     if (clientError) {
@@ -63,26 +87,45 @@ serve(async (req) => {
     }
 
     if (!client) {
+      // For group messages, skip silently if client not found (they might not be registered)
+      if (payload.is_group) {
+        console.log(`Group message from unregistered phone ${clientPhone}, skipping`);
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            skipped: true,
+            message: "Sender not registered as client",
+            phone: clientPhone 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ 
           error: "Client not found", 
           message: "No client found with this phone number. Create the client first.",
-          phone: payload.phone_e164 
+          phone: clientPhone 
         }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Found client:", client.full_name, client.id);
+    console.log("Found client:", client.full_name, client.id, payload.is_group ? `(from group: ${payload.group_name})` : "(direct)");
+
+    // For group messages, use group info as thread ID
+    const threadId = payload.is_group 
+      ? `group:${payload.phone_e164}` // Use group's phone/ID as thread identifier
+      : payload.external_thread_id;
 
     // Find or create conversation
     let conversationId: string | null = null;
-    if (payload.external_thread_id) {
+    if (threadId) {
       const { data: existingConv } = await supabase
         .from("conversations")
         .select("id")
         .eq("client_id", client.id)
-        .eq("external_thread_id", payload.external_thread_id)
+        .eq("external_thread_id", threadId)
         .maybeSingle();
 
       if (existingConv) {
@@ -94,7 +137,7 @@ serve(async (req) => {
             account_id: client.account_id,
             client_id: client.id,
             channel: "whatsapp",
-            external_thread_id: payload.external_thread_id,
+            external_thread_id: threadId,
           })
           .select("id")
           .single();
@@ -128,7 +171,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Message saved:", messageEvent.id);
+    console.log("Message saved:", messageEvent.id, payload.is_group ? "(group)" : "(direct)");
 
     // Trigger AI analysis in background (only for client messages)
     if (payload.direction === "client_to_team" && payload.content_text.length > 10) {
@@ -161,7 +204,9 @@ serve(async (req) => {
         success: true, 
         message_id: messageEvent.id,
         client_id: client.id,
-        client_name: client.full_name
+        client_name: client.full_name,
+        is_group: payload.is_group || false,
+        group_name: payload.group_name || null
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
