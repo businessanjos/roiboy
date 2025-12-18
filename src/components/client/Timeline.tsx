@@ -24,6 +24,7 @@ import {
   Paperclip,
   Camera,
   Users,
+  MapPin,
 } from "lucide-react";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,7 @@ import {
 
 export interface TimelineEvent {
   id: string;
-  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup" | "form_response" | "sales";
+  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup" | "form_response" | "sales" | "attendance";
   title: string;
   description?: string;
   timestamp: string;
@@ -79,6 +80,9 @@ export interface TimelineEvent {
     // Form response specific
     form_title?: string;
     form_responses?: Record<string, any>;
+    // Attendance specific
+    event_title?: string;
+    event_address?: string;
   };
 }
 
@@ -183,6 +187,13 @@ const getEventConfig = (event: TimelineEvent) => {
         bgColor: "bg-green-500",
         textColor: "text-green-500",
         label: "Vendas",
+      };
+    case "attendance":
+      return {
+        icon: <MapPin className="h-4 w-4" />,
+        bgColor: "bg-sky-500",
+        textColor: "text-sky-500",
+        label: "Presença",
       };
     default:
       return {
@@ -400,7 +411,7 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
   );
 }
 
-type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup" | "form_response" | "sales";
+type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup" | "form_response" | "sales" | "attendance";
 type MessageSourceFilter = "direct" | "group";
 
 const filterConfig: Record<EventFilter, { label: string; color: string }> = {
@@ -414,6 +425,7 @@ const filterConfig: Record<EventFilter, { label: string; color: string }> = {
   followup: { label: "Acompanhamento", color: "bg-cyan-500" },
   form_response: { label: "Formulários", color: "bg-purple-500" },
   sales: { label: "Vendas", color: "bg-green-500" },
+  attendance: { label: "Presenças", color: "bg-sky-500" },
 };
 
 const messageSourceFilterConfig: Record<MessageSourceFilter, { label: string; color: string }> = {

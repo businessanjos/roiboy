@@ -729,6 +729,32 @@ export default function ClientDetail() {
         });
       });
 
+      // Add attendance records (event check-ins)
+      const { data: attendanceData } = await supabase
+        .from("attendance")
+        .select(`
+          *,
+          events (title, address, scheduled_at)
+        `)
+        .eq("client_id", id)
+        .not("event_id", "is", null)
+        .order("join_time", { ascending: false })
+        .limit(20);
+
+      (attendanceData || []).forEach((att: any) => {
+        timelineItems.push({
+          id: att.id,
+          type: "attendance",
+          title: `Presença confirmada: ${att.events?.title || "Evento"}`,
+          description: att.events?.address || undefined,
+          timestamp: att.join_time,
+          metadata: {
+            event_title: att.events?.title,
+            event_address: att.events?.address,
+          },
+        });
+      });
+
       // Add financial events (subscriptions)
       const { data: subscriptionsData } = await supabase
         .from("client_subscriptions")
