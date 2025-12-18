@@ -23,10 +23,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, GripVertical, Check
+  Shield, Trash2, Settings, Check, Mail
 } from "lucide-react";
 
 interface TeamRole {
@@ -70,6 +71,16 @@ const PERMISSION_LABELS: Record<string, { label: string; category: string }> = {
 
 const PERMISSION_CATEGORIES = ["Clientes", "Equipe", "Relatórios", "Eventos", "Formulários", "Produtos", "Configurações"];
 
+// Default role colors using design system tokens
+const DEFAULT_ROLE_COLORS = [
+  "hsl(0, 72%, 51%)",      // destructive/red
+  "hsl(39, 55%, 63%)",     // primary/gold
+  "hsl(180, 13%, 36%)",    // accent/teal
+  "hsl(152, 69%, 31%)",    // success/green
+  "hsl(262, 52%, 47%)",    // purple
+  "hsl(199, 89%, 48%)",    // blue
+];
+
 export default function Team() {
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [roles, setRoles] = useState<TeamRole[]>([]);
@@ -97,7 +108,7 @@ export default function Team() {
   // Role form state
   const [roleFormName, setRoleFormName] = useState("");
   const [roleFormDescription, setRoleFormDescription] = useState("");
-  const [roleFormColor, setRoleFormColor] = useState("#6366f1");
+  const [roleFormColor, setRoleFormColor] = useState("hsl(39, 55%, 63%)");
   const [roleFormPermissions, setRoleFormPermissions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -303,7 +314,7 @@ export default function Team() {
       setSelectedRole(null);
       setRoleFormName("");
       setRoleFormDescription("");
-      setRoleFormColor("#6366f1");
+      setRoleFormColor(DEFAULT_ROLE_COLORS[roles.length % DEFAULT_ROLE_COLORS.length]);
       setRoleFormPermissions([]);
     }
     setIsRoleDialogOpen(true);
@@ -442,7 +453,7 @@ export default function Team() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -454,36 +465,36 @@ export default function Team() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="members" className="gap-2">
+        <TabsList className="bg-card border border-border">
+          <TabsTrigger value="members" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Users className="h-4 w-4" />
             Membros
           </TabsTrigger>
-          <TabsTrigger value="roles" className="gap-2">
+          <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Shield className="h-4 w-4" />
             Funções
           </TabsTrigger>
         </TabsList>
 
         {/* Members Tab */}
-        <TabsContent value="members" className="space-y-6">
+        <TabsContent value="members" className="space-y-6 mt-6">
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <Card className="shadow-card">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-primary/20">
+                  <div className="p-2.5 rounded-xl bg-primary/10">
                     <Users className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{users.length}</p>
-                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold text-foreground">{users.length}</p>
+                    <p className="text-xs text-muted-foreground">Total de membros</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            {roles.slice(0, 3).map((role) => (
-              <Card key={role.id} className="border-border/50">
+            {roles.slice(0, 3).map((role, index) => (
+              <Card key={role.id} className="shadow-card">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div 
@@ -493,7 +504,7 @@ export default function Team() {
                       <User className="h-5 w-5" style={{ color: role.color }} />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-bold text-foreground">
                         {users.filter((u) => u.team_role_id === role.id).length}
                       </p>
                       <p className="text-xs text-muted-foreground">{role.name}</p>
@@ -512,7 +523,7 @@ export default function Team() {
                 placeholder="Buscar por nome, e-mail ou função..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-card"
               />
             </div>
             <Button onClick={() => { resetMemberForm(); setIsAddDialogOpen(true); }}>
@@ -524,29 +535,24 @@ export default function Team() {
           {/* Members Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredUsers.length === 0 ? (
-              <Card className="col-span-full">
+              <Card className="col-span-full shadow-card">
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  Nenhum membro encontrado
+                  <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>Nenhum membro encontrado</p>
                 </CardContent>
               </Card>
             ) : (
               filteredUsers.map((user) => (
                 <Card 
                   key={user.id} 
-                  className="group hover:shadow-md transition-all duration-200 cursor-pointer border-border/50 hover:border-primary/30"
+                  className="group hover:shadow-elevated transition-all duration-200 cursor-pointer shadow-card"
                   onClick={() => openEditMemberDialog(user)}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-5">
                     <div className="flex items-start gap-4">
                       <Avatar className="h-12 w-12 ring-2 ring-background shadow-sm">
                         <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
-                        <AvatarFallback 
-                          className="text-sm font-medium"
-                          style={{ 
-                            backgroundColor: user.team_role?.color ? `${user.team_role.color}20` : undefined,
-                            color: user.team_role?.color 
-                          }}
-                        >
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
                           {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>
@@ -554,17 +560,18 @@ export default function Team() {
                         <h3 className="font-semibold text-foreground truncate">
                           {user.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className="text-sm text-muted-foreground truncate flex items-center gap-1.5">
+                          <Mail className="h-3 w-3" />
                           {user.email}
                         </p>
                         {user.team_role && (
                           <Badge 
-                            variant="outline" 
-                            className="mt-2 text-xs"
+                            variant="secondary" 
+                            className="mt-2 text-xs font-medium"
                             style={{ 
-                              borderColor: user.team_role.color,
+                              backgroundColor: `${user.team_role.color}15`,
                               color: user.team_role.color,
-                              backgroundColor: `${user.team_role.color}10`
+                              borderColor: `${user.team_role.color}30`
                             }}
                           >
                             {user.team_role.name}
@@ -574,7 +581,7 @@ export default function Team() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
                           openEditMemberDialog(user);
@@ -591,8 +598,8 @@ export default function Team() {
         </TabsContent>
 
         {/* Roles Tab */}
-        <TabsContent value="roles" className="space-y-6">
-          <div className="flex justify-between items-center">
+        <TabsContent value="roles" className="space-y-6 mt-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <p className="text-muted-foreground">
               Configure funções e permissões para sua equipe
             </p>
@@ -606,26 +613,26 @@ export default function Team() {
             {roles.map((role) => (
               <Card 
                 key={role.id} 
-                className="group hover:shadow-md transition-all duration-200 border-border/50"
+                className="group hover:shadow-elevated transition-all duration-200 shadow-card"
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div 
-                        className="w-3 h-10 rounded-full"
+                        className="w-1 h-12 rounded-full"
                         style={{ backgroundColor: role.color }}
                       />
                       <div>
-                        <CardTitle className="text-lg flex items-center gap-2">
+                        <CardTitle className="text-base flex items-center gap-2">
                           {role.name}
                           {role.is_system && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5">
+                            <Badge variant="secondary" className="text-[10px] px-1.5 font-normal">
                               Sistema
                             </Badge>
                           )}
                         </CardTitle>
                         {role.description && (
-                          <CardDescription className="mt-0.5">
+                          <CardDescription className="mt-0.5 text-xs">
                             {role.description}
                           </CardDescription>
                         )}
@@ -635,7 +642,7 @@ export default function Team() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => openRoleDialog(role)}
                       >
                         <Settings className="h-4 w-4" />
@@ -644,7 +651,7 @@ export default function Team() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-8 w-8 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleDeleteRole(role)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -654,28 +661,30 @@ export default function Team() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" />
                       {users.filter(u => u.team_role_id === role.id).length} membros
                     </span>
-                    <span className="text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5" />
                       {role.permissions?.length || 0} permissões
                     </span>
                   </div>
                   {/* Permission preview */}
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {(role.permissions || []).slice(0, 4).map(p => (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {(role.permissions || []).slice(0, 3).map(p => (
                       <Badge 
                         key={p} 
-                        variant="secondary" 
-                        className="text-[10px] px-1.5 py-0"
+                        variant="outline" 
+                        className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground"
                       >
                         {PERMISSION_LABELS[p]?.label || p}
                       </Badge>
                     ))}
-                    {(role.permissions?.length || 0) > 4 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        +{(role.permissions?.length || 0) - 4}
+                    {(role.permissions?.length || 0) > 3 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground">
+                        +{(role.permissions?.length || 0) - 3}
                       </Badge>
                     )}
                   </div>
@@ -688,7 +697,7 @@ export default function Team() {
 
       {/* Add Member Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Adicionar Membro</DialogTitle>
             <DialogDescription>
@@ -703,6 +712,7 @@ export default function Team() {
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Nome completo"
+                className="bg-card"
               />
             </div>
             <div className="space-y-2">
@@ -713,12 +723,13 @@ export default function Team() {
                 value={formEmail}
                 onChange={(e) => setFormEmail(e.target.value)}
                 placeholder="email@exemplo.com"
+                className="bg-card"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Função</Label>
               <Select value={formRoleId} onValueChange={setFormRoleId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-card">
                   <SelectValue placeholder="Selecione uma função" />
                 </SelectTrigger>
                 <SelectContent>
@@ -726,7 +737,7 @@ export default function Team() {
                     <SelectItem key={role.id} value={role.id}>
                       <div className="flex items-center gap-2">
                         <div 
-                          className="w-2 h-2 rounded-full"
+                          className="w-2.5 h-2.5 rounded-full"
                           style={{ backgroundColor: role.color }}
                         />
                         {role.name}
@@ -748,7 +759,7 @@ export default function Team() {
 
       {/* Edit Member Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Membro</DialogTitle>
           </DialogHeader>
@@ -756,7 +767,7 @@ export default function Team() {
             {/* Avatar Upload */}
             <div className="flex justify-center">
               <div className="relative group">
-                <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
+                <Avatar className="h-20 w-20 ring-4 ring-card shadow-lg">
                   <AvatarImage src={formAvatarUrl || undefined} alt={formName} />
                   <AvatarFallback className="text-xl bg-primary/10 text-primary">
                     {getInitials(formName || "U")}
@@ -793,6 +804,7 @@ export default function Team() {
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Nome completo"
+                className="bg-card"
               />
             </div>
             <div className="space-y-2">
@@ -803,12 +815,13 @@ export default function Team() {
                 value={formEmail}
                 onChange={(e) => setFormEmail(e.target.value)}
                 placeholder="email@exemplo.com"
+                className="bg-card"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-role">Função</Label>
               <Select value={formRoleId} onValueChange={setFormRoleId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-card">
                   <SelectValue placeholder="Selecione uma função" />
                 </SelectTrigger>
                 <SelectContent>
@@ -816,7 +829,7 @@ export default function Team() {
                     <SelectItem key={role.id} value={role.id}>
                       <div className="flex items-center gap-2">
                         <div 
-                          className="w-2 h-2 rounded-full"
+                          className="w-2.5 h-2.5 rounded-full"
                           style={{ backgroundColor: role.color }}
                         />
                         {role.name}
@@ -838,7 +851,7 @@ export default function Team() {
 
       {/* Role Dialog */}
       <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {selectedRole ? "Editar Função" : "Nova Função"}
@@ -847,93 +860,104 @@ export default function Team() {
               Configure nome, cor e permissões da função
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role-name">Nome *</Label>
+                  <Input
+                    id="role-name"
+                    value={roleFormName}
+                    onChange={(e) => setRoleFormName(e.target.value)}
+                    placeholder="Ex: Suporte"
+                    disabled={selectedRole?.is_system}
+                    className="bg-card"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role-color">Cor</Label>
+                  <div className="flex gap-2">
+                    <div className="flex gap-1">
+                      {DEFAULT_ROLE_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          className={`w-8 h-8 rounded-md border-2 transition-all ${
+                            roleFormColor === color 
+                              ? 'border-foreground scale-110' 
+                              : 'border-transparent hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => setRoleFormColor(color)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="role-name">Nome *</Label>
+                <Label htmlFor="role-description">Descrição</Label>
                 <Input
-                  id="role-name"
-                  value={roleFormName}
-                  onChange={(e) => setRoleFormName(e.target.value)}
-                  placeholder="Ex: Suporte"
-                  disabled={selectedRole?.is_system}
+                  id="role-description"
+                  value={roleFormDescription}
+                  onChange={(e) => setRoleFormDescription(e.target.value)}
+                  placeholder="Descrição da função"
+                  className="bg-card"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="role-color">Cor</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="role-color"
-                    type="color"
-                    value={roleFormColor}
-                    onChange={(e) => setRoleFormColor(e.target.value)}
-                    className="w-14 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={roleFormColor}
-                    onChange={(e) => setRoleFormColor(e.target.value)}
-                    placeholder="#6366f1"
-                    className="flex-1"
-                  />
+
+              {/* Permissions */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Permissões</Label>
+                <div className="space-y-3">
+                  {PERMISSION_CATEGORIES.map(category => {
+                    const categoryPerms = Object.entries(PERMISSION_LABELS)
+                      .filter(([_, v]) => v.category === category);
+                    
+                    if (categoryPerms.length === 0) return null;
+                    
+                    return (
+                      <Card key={category} className="shadow-card overflow-hidden">
+                        <CardHeader className="py-2.5 px-4 bg-muted/30">
+                          <CardTitle className="text-sm font-medium text-foreground">{category}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="py-2 px-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                            {categoryPerms.map(([perm, { label }]) => (
+                              <div 
+                                key={perm}
+                                className={`flex items-center space-x-2.5 p-2 rounded-md cursor-pointer transition-colors ${
+                                  roleFormPermissions.includes(perm) 
+                                    ? 'bg-primary/10' 
+                                    : 'hover:bg-muted/50'
+                                }`}
+                                onClick={() => togglePermission(perm)}
+                              >
+                                <Checkbox
+                                  id={perm}
+                                  checked={roleFormPermissions.includes(perm)}
+                                  onCheckedChange={() => togglePermission(perm)}
+                                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                />
+                                <label
+                                  htmlFor={perm}
+                                  className="text-sm cursor-pointer flex-1 text-foreground"
+                                >
+                                  {label}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="role-description">Descrição</Label>
-              <Input
-                id="role-description"
-                value={roleFormDescription}
-                onChange={(e) => setRoleFormDescription(e.target.value)}
-                placeholder="Descrição da função"
-              />
-            </div>
-
-            {/* Permissions */}
-            <div className="space-y-4">
-              <Label className="text-base font-semibold">Permissões</Label>
-              <div className="space-y-4">
-                {PERMISSION_CATEGORIES.map(category => {
-                  const categoryPerms = Object.entries(PERMISSION_LABELS)
-                    .filter(([_, v]) => v.category === category);
-                  
-                  if (categoryPerms.length === 0) return null;
-                  
-                  return (
-                    <Card key={category} className="border-border/50">
-                      <CardHeader className="py-3 px-4">
-                        <CardTitle className="text-sm font-medium">{category}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="py-2 px-4">
-                        <div className="grid grid-cols-2 gap-2">
-                          {categoryPerms.map(([perm, { label }]) => (
-                            <div 
-                              key={perm}
-                              className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                              onClick={() => togglePermission(perm)}
-                            >
-                              <Checkbox
-                                id={perm}
-                                checked={roleFormPermissions.includes(perm)}
-                                onCheckedChange={() => togglePermission(perm)}
-                              />
-                              <label
-                                htmlFor={perm}
-                                className="text-sm cursor-pointer flex-1"
-                              >
-                                {label}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
+          </ScrollArea>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
               Cancelar
             </Button>
