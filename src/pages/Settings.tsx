@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain } from "lucide-react";
+import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain, Download } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -1028,6 +1028,53 @@ export default function Settings() {
                   Lovable AI já inclui o billing no seu plano.
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Exportar Configurações</CardTitle>
+              <CardDescription>
+                Baixe as configurações de IA para backup ou compartilhamento.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const exportData = {
+                    version: "1.0",
+                    exportedAt: new Date().toISOString(),
+                    aiSettings: {
+                      model: aiSettings.model,
+                      system_prompt: aiSettings.system_prompt,
+                      roi_prompt: aiSettings.roi_prompt,
+                      risk_prompt: aiSettings.risk_prompt,
+                      life_events_prompt: aiSettings.life_events_prompt,
+                      analysis_frequency: aiSettings.analysis_frequency,
+                      min_message_length: aiSettings.min_message_length,
+                      confidence_threshold: aiSettings.confidence_threshold,
+                      auto_analysis_enabled: aiSettings.auto_analysis_enabled,
+                    },
+                  };
+                  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `roiboy-ai-config-${new Date().toISOString().split("T")[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  toast({
+                    title: "Configurações exportadas",
+                    description: "Arquivo JSON baixado com sucesso.",
+                  });
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar JSON
+              </Button>
             </CardContent>
           </Card>
 
