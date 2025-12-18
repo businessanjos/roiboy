@@ -88,6 +88,7 @@ export default function Team() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("members");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [rolesViewMode, setRolesViewMode] = useState<"grid" | "list">("grid");
   
   // Member dialogs
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -693,36 +694,179 @@ export default function Team() {
                     </p>
                   </div>
                 </div>
-                <Button onClick={() => openRoleDialog()} className="shrink-0">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Função
-                </Button>
+                <div className="flex gap-2">
+                  <div className="flex border border-border rounded-md">
+                    <Button
+                      variant={rolesViewMode === "grid" ? "secondary" : "ghost"}
+                      size="icon"
+                      onClick={() => setRolesViewMode("grid")}
+                      className="rounded-r-none"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={rolesViewMode === "list" ? "secondary" : "ghost"}
+                      size="icon"
+                      onClick={() => setRolesViewMode("list")}
+                      className="rounded-l-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button onClick={() => openRoleDialog()} className="shrink-0">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nova Função
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Roles Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {roles.map((role) => {
-              const memberCount = users.filter(u => u.team_role_id === role.id).length;
-              const permissionCount = role.permissions?.length || 0;
-              
-              return (
-                <Card 
-                  key={role.id} 
-                  className="group hover:shadow-elevated transition-all duration-300 shadow-card overflow-hidden"
-                >
-                  {/* Color accent bar */}
-                  <div 
-                    className="h-1.5 w-full"
-                    style={{ backgroundColor: role.color }}
-                  />
-                  
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
+          {/* Roles Grid/List */}
+          {rolesViewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {roles.map((role) => {
+                const memberCount = users.filter(u => u.team_role_id === role.id).length;
+                const permissionCount = role.permissions?.length || 0;
+                
+                return (
+                  <Card 
+                    key={role.id} 
+                    className="group hover:shadow-elevated transition-all duration-300 shadow-card overflow-hidden"
+                  >
+                    {/* Color accent bar */}
+                    <div 
+                      className="h-1.5 w-full"
+                      style={{ backgroundColor: role.color }}
+                    />
+                    
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="p-2.5 rounded-xl"
+                            style={{ backgroundColor: `${role.color}15` }}
+                          >
+                            <Shield 
+                              className="h-5 w-5" 
+                              style={{ color: role.color }}
+                            />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base flex items-center gap-2">
+                              {role.name}
+                              {role.is_system && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-[10px] px-1.5 font-normal bg-muted/50"
+                                >
+                                  Sistema
+                                </Badge>
+                              )}
+                            </CardTitle>
+                            {role.description && (
+                              <CardDescription className="mt-1 text-xs line-clamp-1">
+                                {role.description}
+                              </CardDescription>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => openRoleDialog(role)}
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          {!role.is_system && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeleteRole(role)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="pt-0 space-y-4">
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">{memberCount}</p>
+                            <p className="text-[10px] text-muted-foreground">membros</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
+                          <Check className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">{permissionCount}</p>
+                            <p className="text-[10px] text-muted-foreground">permissões</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Permission preview */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                          Permissões
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {permissionCount === 0 ? (
+                            <span className="text-xs text-muted-foreground italic">
+                              Nenhuma permissão
+                            </span>
+                          ) : (
+                            <>
+                              {(role.permissions || []).slice(0, 4).map(p => (
+                                <Badge 
+                                  key={p} 
+                                  variant="outline" 
+                                  className="text-[10px] px-2 py-0.5 font-normal border-border/50"
+                                >
+                                  {PERMISSION_LABELS[p]?.label || p}
+                                </Badge>
+                              ))}
+                              {permissionCount > 4 && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-[10px] px-2 py-0.5 font-normal"
+                                >
+                                  +{permissionCount - 4}
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="shadow-card">
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {roles.map((role) => {
+                    const memberCount = users.filter(u => u.team_role_id === role.id).length;
+                    const permissionCount = role.permissions?.length || 0;
+                    
+                    return (
+                      <div
+                        key={role.id}
+                        className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors group"
+                      >
                         <div 
-                          className="p-2.5 rounded-xl"
+                          className="p-2.5 rounded-xl shrink-0"
                           style={{ backgroundColor: `${role.color}15` }}
                         >
                           <Shield 
@@ -730,9 +874,11 @@ export default function Team() {
                             style={{ color: role.color }}
                           />
                         </div>
-                        <div>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            {role.name}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-foreground truncate">
+                              {role.name}
+                            </h3>
                             {role.is_system && (
                               <Badge 
                                 variant="secondary" 
@@ -741,95 +887,50 @@ export default function Team() {
                                 Sistema
                               </Badge>
                             )}
-                          </CardTitle>
+                          </div>
                           {role.description && (
-                            <CardDescription className="mt-1 text-xs line-clamp-1">
+                            <p className="text-sm text-muted-foreground truncate">
                               {role.description}
-                            </CardDescription>
+                            </p>
                           )}
                         </div>
-                      </div>
-                      
-                      <div className="flex gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => openRoleDialog(role)}
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                        {!role.is_system && (
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground hidden sm:flex">
+                          <div className="flex items-center gap-1.5">
+                            <Users className="h-4 w-4" />
+                            <span>{memberCount}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Check className="h-4 w-4" />
+                            <span>{permissionCount}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-0.5">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleDeleteRole(role)}
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => openRoleDialog(role)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Settings className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="pt-0 space-y-4">
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">{memberCount}</p>
-                          <p className="text-[10px] text-muted-foreground">membros</p>
+                          {!role.is_system && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDeleteRole(role)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
-                        <Check className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">{permissionCount}</p>
-                          <p className="text-[10px] text-muted-foreground">permissões</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Permission preview */}
-                    <div className="space-y-2">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-                        Permissões
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {permissionCount === 0 ? (
-                          <span className="text-xs text-muted-foreground italic">
-                            Nenhuma permissão
-                          </span>
-                        ) : (
-                          <>
-                            {(role.permissions || []).slice(0, 4).map(p => (
-                              <Badge 
-                                key={p} 
-                                variant="outline" 
-                                className="text-[10px] px-2 py-0.5 font-normal border-border/50"
-                              >
-                                {PERMISSION_LABELS[p]?.label || p}
-                              </Badge>
-                            ))}
-                            {permissionCount > 4 && (
-                              <Badge 
-                                variant="secondary" 
-                                className="text-[10px] px-2 py-0.5 font-normal"
-                              >
-                                +{permissionCount - 4}
-                              </Badge>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
