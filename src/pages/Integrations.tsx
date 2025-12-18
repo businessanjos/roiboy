@@ -52,6 +52,7 @@ export default function Integrations() {
     { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar, category: "Videoconferência" },
     { id: "whatsapp", name: "WhatsApp Web", description: "Captura de mensagens via Chrome Extension", icon: MessageSquare, category: "Comunicação" },
     { id: "pipedrive", name: "Pipedrive", description: "Cadastre clientes ao fechar vendas", icon: Users, category: "CRM" },
+    { id: "liberty", name: "Liberty", description: "Receba mensagens WhatsApp e dados de CRM", icon: Webhook, category: "CRM" },
     { id: "ryka", name: "Clínica Ryka", description: "Receba metas e vendas automaticamente", icon: TrendingUp, category: "Vendas" },
     { id: "omie", name: "Omie", description: "Sincronize dados financeiros e pagamentos", icon: DollarSign, category: "Financeiro" },
     { id: "stripe", name: "Stripe", description: "Pagamentos e assinaturas recorrentes", icon: CreditCard, category: "Pagamentos", soon: true },
@@ -77,6 +78,9 @@ export default function Integrations() {
   const pipedriveFullUrl = accountId 
     ? `${pipedriveWebhookUrl}?account_id=${accountId}` 
     : pipedriveWebhookUrl;
+  const libertyWebhookUrl = accountId 
+    ? `${supabaseUrl}/functions/v1/liberty-webhook?account_id=${accountId}` 
+    : `${supabaseUrl}/functions/v1/liberty-webhook`;
 
   useEffect(() => {
     if (user) {
@@ -426,6 +430,10 @@ export default function Integrations() {
               <TabsTrigger value="pipedrive" className="gap-2">
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Pipedrive</span>
+              </TabsTrigger>
+              <TabsTrigger value="liberty" className="gap-2">
+                <Webhook className="h-4 w-4" />
+                <span className="hidden sm:inline">Liberty</span>
               </TabsTrigger>
               <TabsTrigger value="ryka" className="gap-2">
                 <TrendingUp className="h-4 w-4" />
@@ -990,6 +998,111 @@ Headers: x-ryka-secret: [seu_secret]
                   <li>• Metas são atualizadas automaticamente se enviadas novamente</li>
                   <li>• Duplicatas são ignoradas via external_id</li>
                   <li>• Clientes identificados por CPF ou CNPJ</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="liberty" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Webhook className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Liberty</CardTitle>
+                  <CardDescription>
+                    Receba mensagens WhatsApp e dados de CRM via webhook
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Webhook URL</Label>
+                  <div className="flex gap-2">
+                    <Input value={libertyWebhookUrl} readOnly className="font-mono text-sm" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(libertyWebhookUrl, "Liberty Webhook URL")}
+                    >
+                      {copied === "Liberty Webhook URL" ? (
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Configure este URL no Liberty para receber eventos automaticamente.
+                  </p>
+                </div>
+
+                {accountId && (
+                  <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                      <strong>Seu Account ID:</strong> <code className="bg-emerald-500/20 px-1 rounded">{accountId}</code>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Eventos suportados:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <code className="text-xs bg-muted px-1 rounded">message</code> - Mensagens de texto do WhatsApp</li>
+                  <li>• <code className="text-xs bg-muted px-1 rounded">audio</code> - Mensagens de áudio (transcritas automaticamente)</li>
+                  <li>• <code className="text-xs bg-muted px-1 rounded">contact</code> - Novos contatos cadastrados</li>
+                  <li>• <code className="text-xs bg-muted px-1 rounded">deal</code> - Vendas/negócios fechados</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Payload de mensagem:</h4>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+{`POST ${libertyWebhookUrl}
+Content-Type: application/json
+
+{
+  "type": "message",
+  "phone": "+5511999999999",
+  "content": "Texto da mensagem",
+  "direction": "incoming",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "is_group": false,
+  "group_name": null
+}`}
+                </pre>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Payload de áudio:</h4>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+{`POST ${libertyWebhookUrl}
+Content-Type: application/json
+
+{
+  "type": "audio",
+  "phone": "+5511999999999",
+  "audio_url": "https://...",
+  "duration_sec": 45,
+  "direction": "incoming",
+  "timestamp": "2024-01-15T10:30:00Z"
+}`}
+                </pre>
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                <h4 className="font-medium">Funcionalidades:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Mensagens são analisadas por IA automaticamente</li>
+                  <li>• Áudios transcritos e armazenados apenas como texto</li>
+                  <li>• Clientes identificados por telefone (E.164)</li>
+                  <li>• Suporte a mensagens de grupos</li>
                 </ul>
               </div>
             </CardContent>
