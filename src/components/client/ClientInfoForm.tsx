@@ -14,7 +14,9 @@ import {
   formatCPF, 
   formatCNPJ, 
   formatCEP,
-  validateEmail 
+  validateEmail,
+  validateBrazilianPhone,
+  formatBrazilianPhone
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
 
@@ -85,11 +87,18 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
     const cnpjDigits = data.cnpj.replace(/\D/g, "");
     const cepDigits = data.zip_code.replace(/\D/g, "");
     
+    // Brazilian phone validation
+    const phoneValidation = validateBrazilianPhone(data.phone_e164);
+    const phoneLocalDigits = phoneDigits.startsWith('55') ? phoneDigits.slice(2) : phoneDigits;
+    
     return {
       phone: {
         isEmpty: !data.phone_e164 || phoneDigits.length === 0,
-        isValid: /^\+[1-9]\d{10,14}$/.test(data.phone_e164),
-        isPartial: phoneDigits.length > 0 && phoneDigits.length < 11
+        isValid: phoneValidation.isValid,
+        isPartial: phoneLocalDigits.length > 0 && phoneLocalDigits.length < 10,
+        dddValid: phoneValidation.dddValid,
+        lengthValid: phoneValidation.lengthValid,
+        hasDDD: phoneLocalDigits.length >= 2
       },
       cpf: {
         isEmpty: cpfDigits.length === 0,
@@ -138,16 +147,21 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
   const handleAddPhone = () => {
     if (!newPhone.trim()) return;
-    const formatted = formatPhoneInput(newPhone);
-    if (!/^\+[1-9]\d{1,14}$/.test(formatted)) {
-      setPhoneError("Formato inválido. Ex: +5511999999999");
+    const phoneValidation = validateBrazilianPhone(newPhone);
+    if (!phoneValidation.isValid) {
+      if (!phoneValidation.dddValid) {
+        setPhoneError("DDD inválido");
+      } else {
+        setPhoneError("Formato inválido. Ex: +55 11 99999-9999");
+      }
       return;
     }
-    if (data.additional_phones.includes(formatted) || formatted === data.phone_e164) {
+    const e164 = formatPhoneToE164(newPhone);
+    if (data.additional_phones.includes(e164) || e164 === formatPhoneToE164(data.phone_e164)) {
       setPhoneError("Telefone já adicionado");
       return;
     }
-    updateField("additional_phones", [...data.additional_phones, formatted]);
+    updateField("additional_phones", [...data.additional_phones, e164]);
     setNewPhone("");
     setPhoneError("");
   };
@@ -156,12 +170,15 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
     updateField("additional_phones", data.additional_phones.filter(p => p !== phone));
   };
 
-  const formatPhoneInput = (value: string): string => {
-    let digits = value.replace(/[^\d+]/g, "");
-    if (!digits.startsWith("+")) {
-      digits = "+" + digits.replace(/\+/g, "");
-    }
-    return ("+" + digits.slice(1).replace(/\+/g, "")).slice(0, 16);
+  const handlePhoneChange = (value: string) => {
+    const formatted = formatBrazilianPhone(value);
+    updateField("phone_e164", formatted);
+  };
+  
+  // For additional phones, convert formatted to E.164 on add
+  const formatPhoneToE164 = (formatted: string): string => {
+    const digits = formatted.replace(/\D/g, "");
+    return digits.length > 0 ? `+${digits}` : "";
   };
 
   const handleCPFChange = (value: string) => {
@@ -241,9 +258,9 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               <div className="relative">
                 <Input
                   value={data.phone_e164}
-                  onChange={(e) => updateField("phone_e164", formatPhoneInput(e.target.value))}
-                  placeholder="+5511999999999"
-                  maxLength={16}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  placeholder="+55 11 99999-9999"
+                  maxLength={19}
                   className={`h-9 pr-9 ${errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : getInputClass(validation.phone)}`}
                 />
                 <ValidationIndicator isValid={validation.phone.isValid} isEmpty={validation.phone.isEmpty} />
@@ -257,6 +274,18 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               {!errors.phone_e164 && validation.phone.isPartial && (
                 <p className="text-[11px] text-amber-600 flex items-center gap-1">
                   Digitando...
+                </p>
+              )}
+              {!errors.phone_e164 && !validation.phone.isEmpty && !validation.phone.isPartial && validation.phone.hasDDD && !validation.phone.dddValid && (
+                <p className="text-[11px] text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  DDD inválido
+                </p>
+              )}
+              {!errors.phone_e164 && !validation.phone.isEmpty && !validation.phone.isPartial && validation.phone.dddValid && !validation.phone.isValid && (
+                <p className="text-[11px] text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Número inválido
                 </p>
               )}
             </div>
@@ -333,11 +362,11 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           <Input
             value={newPhone}
             onChange={(e) => {
-              setNewPhone(formatPhoneInput(e.target.value));
+              setNewPhone(formatBrazilianPhone(e.target.value));
               setPhoneError("");
             }}
-            placeholder="+5511999999999"
-            maxLength={16}
+            placeholder="+55 11 99999-9999"
+            maxLength={19}
             className={`flex-1 h-9 ${phoneError ? "border-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddPhone())}
           />
