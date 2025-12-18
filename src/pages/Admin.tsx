@@ -27,7 +27,11 @@ import {
   Shield, 
   Loader2,
   ShieldAlert,
-  Package
+  Package,
+  LayoutDashboard,
+  TrendingUp,
+  UserCheck,
+  Activity
 } from "lucide-react";
 
 interface SubscriptionPlan {
@@ -209,8 +213,12 @@ export default function Admin() {
         </div>
       </div>
 
-      <Tabs defaultValue="plans" className="space-y-4">
+      <Tabs defaultValue="dashboard" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="dashboard" className="gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
           <TabsTrigger value="plans" className="gap-2">
             <Package className="h-4 w-4" />
             Planos
@@ -225,6 +233,10 @@ export default function Admin() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dashboard">
+          <DashboardTab accounts={accounts} users={allUsers} plans={plans} />
+        </TabsContent>
+
         <TabsContent value="plans">
           <PlansTab plans={plans} isLoading={loadingPlans} />
         </TabsContent>
@@ -237,6 +249,144 @@ export default function Admin() {
           <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Dashboard Tab Component
+function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: User[]; plans: SubscriptionPlan[] }) {
+  const activeAccounts = accounts.filter(a => a.subscription_status === 'active').length;
+  const trialAccounts = accounts.filter(a => a.subscription_status === 'trial').length;
+  const suspendedAccounts = accounts.filter(a => a.subscription_status === 'suspended').length;
+  const cancelledAccounts = accounts.filter(a => a.subscription_status === 'cancelled').length;
+  
+  const totalClients = accounts.reduce((sum, a) => sum + (a.client_count || 0), 0);
+  const activePlans = plans.filter(p => p.is_active).length;
+  
+  // Calculate MRR (Monthly Recurring Revenue)
+  const mrr = accounts.reduce((sum, account) => {
+    const plan = plans.find(p => p.id === account.plan_id);
+    if (!plan || account.subscription_status !== 'active') return sum;
+    
+    // Normalize to monthly
+    const monthlyPrice = plan.billing_period === 'annual' ? plan.price / 12 :
+                         plan.billing_period === 'semiannual' ? plan.price / 6 :
+                         plan.billing_period === 'quarterly' ? plan.price / 3 :
+                         plan.price;
+    return sum + monthlyPrice;
+  }, 0);
+
+  const stats = [
+    { label: 'Total de Contas', value: accounts.length, icon: Building2, color: 'text-blue-500' },
+    { label: 'Contas Ativas', value: activeAccounts, icon: UserCheck, color: 'text-green-500' },
+    { label: 'Em Trial', value: trialAccounts, icon: Activity, color: 'text-amber-500' },
+    { label: 'Total de Usuários', value: users.length, icon: Users, color: 'text-purple-500' },
+    { label: 'Total de Clientes', value: totalClients, icon: Users, color: 'text-indigo-500' },
+    { label: 'Planos Ativos', value: activePlans, icon: Package, color: 'text-primary' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {stats.map((stat, i) => (
+          <Card key={i}>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="text-3xl font-bold">{stat.value}</p>
+                </div>
+                <stat.icon className={`h-10 w-10 ${stat.color} opacity-80`} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* MRR Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-500" />
+            MRR (Receita Mensal Recorrente)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-4xl font-bold text-green-600">
+            R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Baseado em {activeAccounts} contas ativas com plano
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Status Distribution */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribuição por Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <span>Ativas</span>
+                </div>
+                <span className="font-semibold">{activeAccounts}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <span>Trial</span>
+                </div>
+                <span className="font-semibold">{trialAccounts}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <span>Suspensas</span>
+                </div>
+                <span className="font-semibold">{suspendedAccounts}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-gray-400" />
+                  <span>Canceladas</span>
+                </div>
+                <span className="font-semibold">{cancelledAccounts}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Planos Mais Usados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {plans.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Nenhum plano cadastrado</p>
+            ) : (
+              <div className="space-y-3">
+                {plans.filter(p => p.is_active).map(plan => {
+                  const count = accounts.filter(a => a.plan_id === plan.id).length;
+                  return (
+                    <div key={plan.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{plan.name}</Badge>
+                      </div>
+                      <span className="font-semibold">{count} contas</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
