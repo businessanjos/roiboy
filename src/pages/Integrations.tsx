@@ -189,6 +189,15 @@ export default function Integrations() {
   };
 
   const toggleIntegration = async (type: "zoom" | "google") => {
+    if (!accountId) {
+      toast({
+        title: "Erro",
+        description: "Conta não encontrada. Recarregue a página.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const existing = getIntegration(type);
     
     if (existing) {
@@ -218,7 +227,7 @@ export default function Integrations() {
           type,
           status: "connected",
           config: {},
-          account_id: user?.user_metadata?.account_id,
+          account_id: accountId,
         });
       
       if (error) {
