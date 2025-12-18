@@ -94,8 +94,8 @@ export default function Auth() {
             <TrendingUp className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">ROIBOY</h1>
-            <p className="text-sm text-muted-foreground">Métricas de percepção de valor</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY</h1>
+            <p className="text-sm text-muted-foreground">Sua plataforma de encantamento</p>
           </div>
         </div>
 
@@ -211,7 +211,7 @@ export default function Auth() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Meça o ROI percebido pelos seus clientes em tempo real.
+          Encante seus clientes e meça o impacto em tempo real.
         </p>
       </div>
     </div>

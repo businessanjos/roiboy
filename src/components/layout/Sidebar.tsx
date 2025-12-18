@@ -324,7 +324,7 @@ export function MobileHeader() {
           <TrendingUp className="h-4 w-4 text-primary-foreground" />
         </div>
         <span className="font-semibold text-lg tracking-tight text-foreground">
-          ROIBOY
+          ROY
         </span>
       </NavLink>
       
@@ -343,7 +343,7 @@ export function MobileHeader() {
                   <TrendingUp className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <span className="font-semibold text-lg tracking-tight text-foreground">
-                  ROIBOY
+                  ROY
                 </span>
               </NavLink>
               <SheetClose asChild>
@@ -383,7 +383,7 @@ export function Sidebar() {
           </div>
           {!collapsed && (
             <span className="font-semibold text-lg tracking-tight text-foreground">
-              ROIBOY
+              ROY
             </span>
           )}
         </NavLink>

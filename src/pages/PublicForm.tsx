@@ -492,7 +492,7 @@ export default function PublicForm() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground">
-          Powered by ROIBOY
+          Powered by ROY
         </p>
       </div>
     </div>
