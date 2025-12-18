@@ -8,7 +8,8 @@ const corsHeaders = {
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const systemPrompt = `Você é o ROIBOY Analyzer, um especialista em identificar percepção de ROI, sinais de risco e momentos importantes da vida do cliente em conversas entre mentores/consultores e seus clientes.
+// Default prompts (fallback if not configured)
+const DEFAULT_SYSTEM_PROMPT = `Você é o ROIBOY Analyzer, um especialista em identificar percepção de ROI, sinais de risco e momentos importantes da vida do cliente em conversas entre mentores/consultores e seus clientes.
 
 TAXONOMIA DE ROI:
 - TANGÍVEL: revenue (aumento de receita), cost (redução de custos), time (economia de tempo), process (melhoria de processos)
@@ -51,6 +52,60 @@ REGRAS:
 6. Se insuficiente, retorne arrays vazios
 7. Nunca invente - seja conservador na classificação`;
 
+const DEFAULT_ROI_PROMPT = "Identifique menções a ganhos tangíveis (receita, economia, tempo) ou intangíveis (confiança, clareza, tranquilidade) que o cliente obteve.";
+const DEFAULT_RISK_PROMPT = "Detecte sinais de frustração, insatisfação, comparação com concorrentes, hesitação em continuar, ou mudanças de tom negativas.";
+const DEFAULT_LIFE_EVENTS_PROMPT = "Identifique menções a eventos de vida significativos como aniversários, casamentos, gravidez, mudança de emprego, viagens importantes.";
+
+interface AISettings {
+  model: string;
+  system_prompt: string;
+  roi_prompt: string;
+  risk_prompt: string;
+  life_events_prompt: string;
+  min_message_length: number;
+  confidence_threshold: number;
+  auto_analysis_enabled: boolean;
+}
+
+async function getAISettings(supabase: any, accountId: string): Promise<AISettings> {
+  const { data, error } = await supabase
+    .from("account_settings")
+    .select("ai_model, ai_system_prompt, ai_roi_prompt, ai_risk_prompt, ai_life_events_prompt, ai_min_message_length, ai_confidence_threshold, ai_auto_analysis_enabled")
+    .eq("account_id", accountId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching AI settings:", error);
+  }
+
+  return {
+    model: data?.ai_model || "google/gemini-2.5-flash",
+    system_prompt: data?.ai_system_prompt || DEFAULT_SYSTEM_PROMPT,
+    roi_prompt: data?.ai_roi_prompt || DEFAULT_ROI_PROMPT,
+    risk_prompt: data?.ai_risk_prompt || DEFAULT_RISK_PROMPT,
+    life_events_prompt: data?.ai_life_events_prompt || DEFAULT_LIFE_EVENTS_PROMPT,
+    min_message_length: data?.ai_min_message_length ?? 20,
+    confidence_threshold: data?.ai_confidence_threshold ?? 0.7,
+    auto_analysis_enabled: data?.ai_auto_analysis_enabled ?? true,
+  };
+}
+
+function buildSystemPrompt(settings: AISettings): string {
+  // If custom system prompt is set, use it; otherwise build from components
+  if (settings.system_prompt !== DEFAULT_SYSTEM_PROMPT) {
+    return `${settings.system_prompt}
+
+INSTRUÇÕES ADICIONAIS:
+
+ROI: ${settings.roi_prompt}
+
+RISCOS: ${settings.risk_prompt}
+
+MOMENTOS CX: ${settings.life_events_prompt}`;
+  }
+  return settings.system_prompt;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -75,7 +130,33 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Analyzing message for client ${client_id}:`, content_text.substring(0, 100));
+    // Fetch AI settings for this account
+    const aiSettings = await getAISettings(supabase, account_id);
+    console.log(`AI Settings loaded for account ${account_id}:`, {
+      model: aiSettings.model,
+      min_message_length: aiSettings.min_message_length,
+      auto_analysis_enabled: aiSettings.auto_analysis_enabled,
+    });
+
+    // Check if auto analysis is enabled
+    if (!aiSettings.auto_analysis_enabled) {
+      console.log(`Auto analysis disabled for account ${account_id}, skipping`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Auto analysis disabled", skipped: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check minimum message length
+    if (content_text.length < aiSettings.min_message_length) {
+      console.log(`Message too short (${content_text.length} < ${aiSettings.min_message_length}), skipping analysis`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Message too short for analysis", skipped: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Analyzing message for client ${client_id} using model ${aiSettings.model}:`, content_text.substring(0, 100));
 
     // Get recent context from this client
     const { data: recentMessages } = await supabase
@@ -90,9 +171,9 @@ serve(async (req) => {
     ).join("\n") || "";
 
     const userPrompt = `Analise a seguinte mensagem do cliente e identifique:
-1. Evidências de ROI percebido (tangível ou intangível)
-2. Sinais de risco
-3. Momentos CX (eventos importantes da vida do cliente)
+1. Evidências de ROI percebido (tangível ou intangível) - ${aiSettings.roi_prompt}
+2. Sinais de risco - ${aiSettings.risk_prompt}
+3. Momentos CX (eventos importantes da vida do cliente) - ${aiSettings.life_events_prompt}
 4. Recomendações de ação
 
 CONTEXTO RECENTE:
@@ -103,6 +184,8 @@ MENSAGEM ATUAL (fonte: ${source}):
 
 Analise e retorne os eventos identificados.`;
 
+    const systemPrompt = buildSystemPrompt(aiSettings);
+
     const response = await fetch(LOVABLE_AI_URL, {
       method: "POST",
       headers: {
@@ -110,7 +193,7 @@ Analise e retorne os eventos identificados.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: aiSettings.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -148,6 +231,10 @@ Analise e retorne os eventos identificados.`;
                         evidence_snippet: { 
                           type: "string",
                           description: "Trecho da mensagem que evidencia o ROI"
+                        },
+                        confidence: {
+                          type: "number",
+                          description: "Nível de confiança da classificação (0-1)"
                         }
                       },
                       required: ["roi_type", "category", "impact", "evidence_snippet"]
@@ -171,6 +258,10 @@ Analise e retorne os eventos identificados.`;
                         evidence_snippet: { 
                           type: "string",
                           description: "Trecho que evidencia o risco"
+                        },
+                        confidence: {
+                          type: "number",
+                          description: "Nível de confiança da classificação (0-1)"
                         }
                       },
                       required: ["risk_level", "reason", "evidence_snippet"]
@@ -202,6 +293,10 @@ Analise e retorne os eventos identificados.`;
                         is_recurring: { 
                           type: "boolean",
                           description: "Se é um evento recorrente anual (ex: aniversário)"
+                        },
+                        confidence: {
+                          type: "number",
+                          description: "Nível de confiança da classificação (0-1)"
                         }
                       },
                       required: ["event_type", "title"]
@@ -277,11 +372,19 @@ Analise e retorne os eventos identificados.`;
     console.log("Classification:", JSON.stringify(classification, null, 2));
 
     const now = new Date().toISOString();
-    const results = { roi_events: 0, risk_events: 0, life_events: 0, recommendations: 0 };
+    const results = { roi_events: 0, risk_events: 0, life_events: 0, recommendations: 0, filtered_by_confidence: 0 };
+    const confidenceThreshold = aiSettings.confidence_threshold;
 
-    // Insert ROI events
+    // Insert ROI events (filtered by confidence)
     if (classification.roi_events?.length > 0) {
       for (const roiEvent of classification.roi_events) {
+        // Check confidence threshold
+        if (roiEvent.confidence !== undefined && roiEvent.confidence < confidenceThreshold) {
+          console.log(`ROI event filtered: confidence ${roiEvent.confidence} < threshold ${confidenceThreshold}`);
+          results.filtered_by_confidence++;
+          continue;
+        }
+
         const { error } = await supabase.from("roi_events").insert({
           account_id,
           client_id,
@@ -300,9 +403,16 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
-    // Insert Risk events
+    // Insert Risk events (filtered by confidence)
     if (classification.risk_events?.length > 0) {
       for (const riskEvent of classification.risk_events) {
+        // Check confidence threshold
+        if (riskEvent.confidence !== undefined && riskEvent.confidence < confidenceThreshold) {
+          console.log(`Risk event filtered: confidence ${riskEvent.confidence} < threshold ${confidenceThreshold}`);
+          results.filtered_by_confidence++;
+          continue;
+        }
+
         const { error } = await supabase.from("risk_events").insert({
           account_id,
           client_id,
@@ -320,9 +430,16 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
-    // Insert Life Events (Momentos CX)
+    // Insert Life Events (Momentos CX) - filtered by confidence
     if (classification.life_events?.length > 0) {
       for (const lifeEvent of classification.life_events) {
+        // Check confidence threshold
+        if (lifeEvent.confidence !== undefined && lifeEvent.confidence < confidenceThreshold) {
+          console.log(`Life event filtered: confidence ${lifeEvent.confidence} < threshold ${confidenceThreshold}`);
+          results.filtered_by_confidence++;
+          continue;
+        }
+
         // Determine if event is recurring based on type
         const recurringTypes = ["birthday", "anniversary"];
         const isRecurring = lifeEvent.is_recurring ?? recurringTypes.includes(lifeEvent.event_type);
@@ -366,7 +483,7 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
-    console.log(`Analysis complete. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life Events, ${results.recommendations} Recommendations`);
+    console.log(`Analysis complete using ${aiSettings.model}. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life Events, ${results.recommendations} Recommendations. Filtered by confidence: ${results.filtered_by_confidence}`);
 
     // Trigger score recalculation for this client in background
     if (results.roi_events > 0 || results.risk_events > 0) {
@@ -392,7 +509,16 @@ Analise e retorne os eventos identificados.`;
     }
 
     return new Response(
-      JSON.stringify({ success: true, results, classification }),
+      JSON.stringify({ 
+        success: true, 
+        results, 
+        classification,
+        settings_used: {
+          model: aiSettings.model,
+          min_message_length: aiSettings.min_message_length,
+          confidence_threshold: aiSettings.confidence_threshold,
+        }
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
