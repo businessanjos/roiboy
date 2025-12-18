@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -56,11 +57,13 @@ import {
   Copy,
   Check,
   Users,
-  Download
+  Download,
+  BarChart3
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import AttendanceReport from "@/components/events/AttendanceReport";
 
 interface Attendance {
   id: string;
@@ -416,6 +419,21 @@ export default function Events() {
             Gerencie entregáveis, lives e materiais dos seus produtos.
           </p>
         </div>
+      </div>
+
+      <Tabs defaultValue="eventos" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="eventos" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Eventos
+          </TabsTrigger>
+          <TabsTrigger value="relatorio" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Relatório de Presença
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="eventos" className="space-y-6">
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
@@ -616,8 +634,6 @@ export default function Events() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -941,6 +957,12 @@ export default function Events() {
           </div>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="relatorio">
+          <AttendanceReport accountId={accountId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
