@@ -22,6 +22,7 @@ import Notifications from "./pages/Notifications";
 import Forms from "./pages/Forms";
 import PublicForm from "./pages/PublicForm";
 import Presentation from "./pages/Presentation";
+import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/presentation" element={<Presentation />} />
+                  <Route path="/api-docs" element={<ApiDocs />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
