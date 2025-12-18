@@ -26,9 +26,23 @@ export default function EventCheckin() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ message: string; clientName: string } | null>(null);
 
+  const isPreview = code?.toUpperCase() === 'DEMO' || code?.toUpperCase() === 'PREVIEW';
+
   useEffect(() => {
     if (code) {
-      fetchEvent();
+      if (isPreview) {
+        // Show mock data for preview
+        setEvent({
+          id: 'preview-id',
+          title: 'Workshop de Liderança',
+          description: 'Evento presencial para desenvolvimento de habilidades de liderança e gestão de equipes.',
+          scheduled_at: new Date().toISOString(),
+          address: 'Av. Paulista, 1000 - Bela Vista, São Paulo - SP'
+        });
+        setIsLoading(false);
+      } else {
+        fetchEvent();
+      }
     }
   }, [code]);
 
@@ -37,13 +51,6 @@ export default function EventCheckin() {
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase.functions.invoke('event-checkin', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        body: null
-      });
-
-      // Use fetch directly for GET with query params
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/event-checkin?code=${code}`,
         {
@@ -76,6 +83,18 @@ export default function EventCheckin() {
 
     setIsSubmitting(true);
     setError(null);
+
+    // Preview mode - simulate success
+    if (isPreview) {
+      setTimeout(() => {
+        setSuccess({
+          message: 'Check-in realizado com sucesso!',
+          clientName: 'João Silva (Preview)'
+        });
+        setIsSubmitting(false);
+      }, 1000);
+      return;
+    }
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('event-checkin', {
