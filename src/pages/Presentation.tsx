@@ -539,14 +539,15 @@ export default function Presentation() {
               Capture automaticamente mensagens e áudios do WhatsApp Web para análise em tempo real
             </p>
             
-            {/* Download Button with Modal */}
-            <Dialog open={isExtensionModalOpen} onOpenChange={setIsExtensionModalOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700">
-                  <Download className="h-4 w-4" />
-                  Baixar Extensão
-                </Button>
-              </DialogTrigger>
+            {/* Download Button and Preview Link */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Dialog open={isExtensionModalOpen} onOpenChange={setIsExtensionModalOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700">
+                    <Download className="h-4 w-4" />
+                    Baixar Extensão
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-xl">
@@ -693,6 +694,17 @@ export default function Presentation() {
                 </div>
               </DialogContent>
             </Dialog>
+              
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="gap-2 border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
+                onClick={() => navigate("/extension-preview")}
+              >
+                <Eye className="h-4 w-4" />
+                Ver Preview
+              </Button>
+            </div>
           </div>
 
           {/* Installation Steps */}

@@ -22,6 +22,7 @@ import Notifications from "./pages/Notifications";
 import Forms from "./pages/Forms";
 import PublicForm from "./pages/PublicForm";
 import Presentation from "./pages/Presentation";
+import ExtensionPreview from "./pages/ExtensionPreview";
 import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/f/:formId" element={<PublicForm />} />
                 <Route path="/sobre" element={<Presentation />} />
+                <Route path="/extension-preview" element={<ExtensionPreview />} />
                 <Route element={<AppLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/clients" element={<Clients />} />
