@@ -48,6 +48,7 @@ import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
+import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 
 interface ContractData {
   id: string;
@@ -969,6 +970,15 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+          </div>
+
+          {/* Group Engagement Report */}
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Engajamento em Grupos
+            </h3>
+            <GroupEngagementReport />
           </div>
         </TabsContent>
 
