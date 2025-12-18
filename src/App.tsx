@@ -24,6 +24,7 @@ import PublicForm from "./pages/PublicForm";
 import Presentation from "./pages/Presentation";
 import ExtensionPreview from "./pages/ExtensionPreview";
 import ApiDocs from "./pages/ApiDocs";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
                   <Route path="/presentation" element={<Presentation />} />
                   <Route path="/api-docs" element={<ApiDocs />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/admin" element={<Admin />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
