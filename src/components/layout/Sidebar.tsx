@@ -21,6 +21,7 @@ import {
   Moon,
   Sun,
   ClipboardList,
+  Presentation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ const navItems = [
   { to: "/events", icon: CalendarDays, label: "Eventos" },
   { to: "/forms", icon: FileText, label: "Formulários" },
   { to: "/integrations", icon: Link2, label: "Integrações" },
+  { to: "/presentation", icon: Presentation, label: "Apresentação" },
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
