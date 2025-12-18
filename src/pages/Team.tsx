@@ -27,7 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List
 } from "lucide-react";
 
 interface TeamRole {
@@ -87,6 +87,7 @@ export default function Team() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("members");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   
   // Member dialogs
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -531,23 +532,43 @@ export default function Team() {
                 className="pl-10 bg-card"
               />
             </div>
-            <Button onClick={() => { resetMemberForm(); setIsAddDialogOpen(true); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Membro
-            </Button>
+            <div className="flex gap-2">
+              <div className="flex border border-border rounded-md">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-r-none"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-l-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button onClick={() => { resetMemberForm(); setIsAddDialogOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Membro
+              </Button>
+            </div>
           </div>
 
-          {/* Members Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredUsers.length === 0 ? (
-              <Card className="col-span-full shadow-card">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>Nenhum membro encontrado</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredUsers.map((user) => (
+          {/* Members Grid/List */}
+          {filteredUsers.length === 0 ? (
+            <Card className="shadow-card">
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>Nenhum membro encontrado</p>
+              </CardContent>
+            </Card>
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredUsers.map((user) => (
                 <Card 
                   key={user.id} 
                   className="group hover:shadow-elevated transition-all duration-200 cursor-pointer shadow-card"
@@ -597,9 +618,62 @@ export default function Team() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <Card className="shadow-card">
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {filteredUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                      onClick={() => openEditMemberDialog(user)}
+                    >
+                      <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
+                        <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                          {getInitials(user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-foreground truncate">
+                          {user.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {user.email}
+                        </p>
+                      </div>
+                      {user.team_role && (
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs font-medium hidden sm:inline-flex"
+                          style={{ 
+                            backgroundColor: `${user.team_role.color}15`,
+                            color: user.team_role.color,
+                            borderColor: `${user.team_role.color}30`
+                          }}
+                        >
+                          {user.team_role.name}
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditMemberDialog(user);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Roles Tab */}
