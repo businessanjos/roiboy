@@ -46,33 +46,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
     
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: { name },
+        data: { 
+          name,
+          full_name: name 
+        },
       },
     });
 
-    if (!error && data.user) {
-      // Create account and user record
-      const { data: account, error: accountError } = await supabase
-        .from("accounts")
-        .insert({ name: `${name}'s Organization` })
-        .select()
-        .single();
-
-      if (!accountError && account) {
-        await supabase.from("users").insert({
-          account_id: account.id,
-          auth_user_id: data.user.id,
-          name,
-          email,
-          role: "admin",
-        });
-      }
-    }
+    // Note: account and user records are created automatically by the 
+    // handle_new_user trigger in the database
 
     return { error: error as Error | null };
   };
