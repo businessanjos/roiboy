@@ -61,8 +61,8 @@ const features = [
   {
     icon: CalendarDays,
     title: "Eventos e Agenda",
-    description: "Gerencie lives, materiais e entregas com rastreamento automático de presença.",
-    highlights: ["Lives online/presencial", "Webhook Zoom/Meet", "Confirmação automática", "Materiais e entregas"]
+    description: "Gerencie lives, materiais e entregas com check-in por QR Code e relatórios de presença.",
+    highlights: ["Check-in por QR Code", "Relatório de presença", "Webhook Zoom/Meet", "Taxa de participação"]
   },
   {
     icon: FileText,
