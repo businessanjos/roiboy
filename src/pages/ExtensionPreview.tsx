@@ -46,6 +46,7 @@ import {
   Lightbulb
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getMlsBadgeClasses, getMlsLevelLabel } from "@/lib/mls-utils";
 
 export default function ExtensionPreview() {
   const [activeTab, setActiveTab] = useState("timeline");
@@ -360,9 +361,9 @@ export default function ExtensionPreview() {
                         <h3 className="font-semibold text-sm truncate">{mockClient.name}</h3>
                         <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-[9px]">Ativo</Badge>
                         {mockClient.isMls && (
-                          <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-[8px] gap-0.5">
+                          <Badge className={`${getMlsBadgeClasses(mockClient.mlsLevel)} text-[8px] gap-0.5`}>
                             <Award className="h-2.5 w-2.5" />
-                            MLS {mockClient.mlsLevel}
+                            MLS {getMlsLevelLabel(mockClient.mlsLevel)}
                           </Badge>
                         )}
                       </div>
