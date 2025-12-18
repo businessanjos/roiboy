@@ -91,3 +91,82 @@ export function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
+
+// Valid Brazilian DDDs
+const VALID_DDDS = [
+  // São Paulo
+  '11', '12', '13', '14', '15', '16', '17', '18', '19',
+  // Rio de Janeiro / Espírito Santo
+  '21', '22', '24', '27', '28',
+  // Minas Gerais
+  '31', '32', '33', '34', '35', '37', '38',
+  // Paraná / Santa Catarina
+  '41', '42', '43', '44', '45', '46', '47', '48', '49',
+  // Rio Grande do Sul
+  '51', '53', '54', '55',
+  // Centro-Oeste (DF, GO, TO, MT, MS, RO, AC)
+  '61', '62', '63', '64', '65', '66', '67', '68', '69',
+  // Bahia / Sergipe
+  '71', '73', '74', '75', '77', '79',
+  // Nordeste (PE, AL, PB, RN, CE, PI, MA)
+  '81', '82', '83', '84', '85', '86', '87', '88', '89',
+  // Norte (PA, AP, AM, RR)
+  '91', '92', '93', '94', '95', '96', '97', '98', '99'
+];
+
+// Validate Brazilian DDD
+export function validateBrazilianDDD(ddd: string): boolean {
+  return VALID_DDDS.includes(ddd);
+}
+
+// Validate Brazilian phone number (expects E.164 format or digits only)
+export function validateBrazilianPhone(phone: string): { isValid: boolean; dddValid: boolean; lengthValid: boolean } {
+  const digits = phone.replace(/\D/g, '');
+  
+  // Remove country code if present
+  const localDigits = digits.startsWith('55') ? digits.slice(2) : digits;
+  
+  // Brazilian phones: DDD (2 digits) + number (8 or 9 digits)
+  const lengthValid = localDigits.length === 10 || localDigits.length === 11;
+  const ddd = localDigits.slice(0, 2);
+  const dddValid = validateBrazilianDDD(ddd);
+  
+  // Mobile numbers (9 digits) should start with 9
+  const number = localDigits.slice(2);
+  const numberValid = number.length === 8 || (number.length === 9 && number.startsWith('9'));
+  
+  return {
+    isValid: lengthValid && dddValid && numberValid,
+    dddValid,
+    lengthValid
+  };
+}
+
+// Format Brazilian phone: +55 11 99999-9999
+export function formatBrazilianPhone(value: string): string {
+  let digits = value.replace(/\D/g, '');
+  
+  // Add country code if not present and has enough digits
+  if (digits.length > 0 && !digits.startsWith('55') && digits.length <= 11) {
+    digits = '55' + digits;
+  }
+  
+  // Limit to max length (55 + 11 digits = 13)
+  digits = digits.slice(0, 13);
+  
+  if (digits.length <= 2) return digits.length > 0 ? `+${digits}` : '';
+  if (digits.length <= 4) return `+${digits.slice(0, 2)} ${digits.slice(2)}`;
+  if (digits.length <= 9) return `+${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4)}`;
+  if (digits.length <= 13) {
+    const ddd = digits.slice(2, 4);
+    const number = digits.slice(4);
+    if (number.length <= 4) {
+      return `+${digits.slice(0, 2)} ${ddd} ${number}`;
+    } else if (number.length <= 8) {
+      return `+${digits.slice(0, 2)} ${ddd} ${number.slice(0, 4)}-${number.slice(4)}`;
+    } else {
+      return `+${digits.slice(0, 2)} ${ddd} ${number.slice(0, 5)}-${number.slice(5)}`;
+    }
+  }
+  return value;
+}
