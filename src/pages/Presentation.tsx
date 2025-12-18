@@ -239,7 +239,7 @@ export default function Presentation() {
             <div className="hidden lg:block">
               <div className="flex items-start justify-between gap-4">
                 {/* Chrome Extension */}
-                <Card className="w-64 border-2 border-blue-500/30 bg-blue-500/5">
+                <Card className="w-64 border-2 border-blue-500/30 bg-blue-500/5 animate-fade-in opacity-0" style={{ animationDelay: "0ms", animationFillMode: "forwards" }}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
                       <div className="p-2 rounded-lg bg-blue-500/20">
@@ -265,7 +265,7 @@ export default function Presentation() {
                 </Card>
 
                 {/* Arrow */}
-                <div className="flex-1 flex items-center justify-center pt-12">
+                <div className="flex-1 flex items-center justify-center pt-12 animate-fade-in opacity-0" style={{ animationDelay: "150ms", animationFillMode: "forwards" }}>
                   <div className="flex flex-col items-center gap-1">
                     <div className="h-0.5 w-full bg-gradient-to-r from-blue-500/50 to-amber-500/50" />
                     <span className="text-xs text-muted-foreground">HTTP/REST</span>
@@ -273,7 +273,7 @@ export default function Presentation() {
                 </div>
 
                 {/* API Layer */}
-                <Card className="w-72 border-2 border-amber-500/30 bg-amber-500/5">
+                <Card className="w-72 border-2 border-amber-500/30 bg-amber-500/5 animate-fade-in opacity-0" style={{ animationDelay: "300ms", animationFillMode: "forwards" }}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
                       <div className="p-2 rounded-lg bg-amber-500/20">
@@ -294,7 +294,7 @@ export default function Presentation() {
                 </Card>
 
                 {/* Arrow */}
-                <div className="flex-1 flex items-center justify-center pt-12">
+                <div className="flex-1 flex items-center justify-center pt-12 animate-fade-in opacity-0" style={{ animationDelay: "450ms", animationFillMode: "forwards" }}>
                   <div className="flex flex-col items-center gap-1">
                     <div className="h-0.5 w-full bg-gradient-to-r from-amber-500/50 to-green-500/50" />
                     <span className="text-xs text-muted-foreground">Realtime</span>
@@ -302,7 +302,7 @@ export default function Presentation() {
                 </div>
 
                 {/* Dashboard */}
-                <Card className="w-64 border-2 border-green-500/30 bg-green-500/5">
+                <Card className="w-64 border-2 border-green-500/30 bg-green-500/5 animate-fade-in opacity-0" style={{ animationDelay: "600ms", animationFillMode: "forwards" }}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
                       <div className="p-2 rounded-lg bg-green-500/20">
@@ -329,14 +329,14 @@ export default function Presentation() {
               </div>
 
               {/* Database and AI Row */}
-              <div className="mt-4 flex justify-center gap-4">
+              <div className="mt-4 flex justify-center gap-4 animate-fade-in opacity-0" style={{ animationDelay: "750ms", animationFillMode: "forwards" }}>
                 <div className="flex items-center gap-2">
                   <ArrowDown className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
               
               <div className="mt-2 flex justify-center gap-6">
-                <Card className="w-52 border-2 border-purple-500/30 bg-purple-500/5">
+                <Card className="w-52 border-2 border-purple-500/30 bg-purple-500/5 animate-fade-in opacity-0" style={{ animationDelay: "900ms", animationFillMode: "forwards" }}>
                   <CardContent className="py-4 flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-purple-500/20">
                       <Database className="h-5 w-5 text-purple-600" />
@@ -348,7 +348,7 @@ export default function Presentation() {
                   </CardContent>
                 </Card>
 
-                <Card className="w-52 border-2 border-pink-500/30 bg-pink-500/5">
+                <Card className="w-52 border-2 border-pink-500/30 bg-pink-500/5 animate-fade-in opacity-0" style={{ animationDelay: "1050ms", animationFillMode: "forwards" }}>
                   <CardContent className="py-4 flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-pink-500/20">
                       <Brain className="h-5 w-5 text-pink-600" />
@@ -364,7 +364,7 @@ export default function Presentation() {
 
             {/* Mobile View */}
             <div className="lg:hidden space-y-4">
-              <Card className="border-2 border-blue-500/30 bg-blue-500/5">
+              <Card className="border-2 border-blue-500/30 bg-blue-500/5 animate-fade-in opacity-0" style={{ animationDelay: "0ms", animationFillMode: "forwards" }}>
                 <CardContent className="py-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-500/20">
                     <Chrome className="h-5 w-5 text-blue-600" />
@@ -376,11 +376,11 @@ export default function Presentation() {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-center">
+              <div className="flex justify-center animate-fade-in opacity-0" style={{ animationDelay: "100ms", animationFillMode: "forwards" }}>
                 <ArrowDown className="h-5 w-5 text-muted-foreground" />
               </div>
 
-              <Card className="border-2 border-amber-500/30 bg-amber-500/5">
+              <Card className="border-2 border-amber-500/30 bg-amber-500/5 animate-fade-in opacity-0" style={{ animationDelay: "200ms", animationFillMode: "forwards" }}>
                 <CardContent className="py-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-amber-500/20">
                     <Server className="h-5 w-5 text-amber-600" />
@@ -392,18 +392,18 @@ export default function Presentation() {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-center">
+              <div className="flex justify-center animate-fade-in opacity-0" style={{ animationDelay: "300ms", animationFillMode: "forwards" }}>
                 <ArrowDown className="h-5 w-5 text-muted-foreground" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Card className="border-2 border-purple-500/30 bg-purple-500/5">
+                <Card className="border-2 border-purple-500/30 bg-purple-500/5 animate-fade-in opacity-0" style={{ animationDelay: "400ms", animationFillMode: "forwards" }}>
                   <CardContent className="py-3 flex flex-col items-center gap-2">
                     <Database className="h-5 w-5 text-purple-600" />
                     <p className="text-xs font-medium">Database</p>
                   </CardContent>
                 </Card>
-                <Card className="border-2 border-pink-500/30 bg-pink-500/5">
+                <Card className="border-2 border-pink-500/30 bg-pink-500/5 animate-fade-in opacity-0" style={{ animationDelay: "500ms", animationFillMode: "forwards" }}>
                   <CardContent className="py-3 flex flex-col items-center gap-2">
                     <Brain className="h-5 w-5 text-pink-600" />
                     <p className="text-xs font-medium">IA</p>
@@ -411,11 +411,11 @@ export default function Presentation() {
                 </Card>
               </div>
 
-              <div className="flex justify-center">
+              <div className="flex justify-center animate-fade-in opacity-0" style={{ animationDelay: "600ms", animationFillMode: "forwards" }}>
                 <ArrowDown className="h-5 w-5 text-muted-foreground" />
               </div>
 
-              <Card className="border-2 border-green-500/30 bg-green-500/5">
+              <Card className="border-2 border-green-500/30 bg-green-500/5 animate-fade-in opacity-0" style={{ animationDelay: "700ms", animationFillMode: "forwards" }}>
                 <CardContent className="py-4 flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-green-500/20">
                     <Monitor className="h-5 w-5 text-green-600" />
@@ -431,7 +431,7 @@ export default function Presentation() {
 
           {/* Data Flow Description */}
           <div className="mt-8 grid sm:grid-cols-3 gap-4">
-            <Card>
+            <Card className="animate-fade-in opacity-0" style={{ animationDelay: "1200ms", animationFillMode: "forwards" }}>
               <CardContent className="pt-4">
                 <Badge className="mb-2 bg-blue-500">1. Captura</Badge>
                 <p className="text-sm text-muted-foreground">
@@ -439,7 +439,7 @@ export default function Presentation() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="animate-fade-in opacity-0" style={{ animationDelay: "1350ms", animationFillMode: "forwards" }}>
               <CardContent className="pt-4">
                 <Badge className="mb-2 bg-amber-500">2. Processamento</Badge>
                 <p className="text-sm text-muted-foreground">
@@ -447,7 +447,7 @@ export default function Presentation() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="animate-fade-in opacity-0" style={{ animationDelay: "1500ms", animationFillMode: "forwards" }}>
               <CardContent className="pt-4">
                 <Badge className="mb-2 bg-green-500">3. Visualização</Badge>
                 <p className="text-sm text-muted-foreground">
