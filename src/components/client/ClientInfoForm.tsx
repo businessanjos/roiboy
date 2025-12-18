@@ -16,6 +16,7 @@ import {
   formatCEP,
   validateEmail 
 } from "@/lib/validators";
+import { MLS_LEVELS } from "@/lib/mls-utils";
 
 export interface ClientFormData {
   full_name: string;
@@ -53,13 +54,7 @@ const BRAZILIAN_STATES = [
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
-const MLS_LEVELS = [
-  { value: "bronze", label: "Bronze", color: "bg-amber-700" },
-  { value: "prata", label: "Prata", color: "bg-gray-400" },
-  { value: "ouro", label: "Ouro", color: "bg-yellow-500" },
-  { value: "diamond", label: "Diamond", color: "bg-cyan-400" },
-  { value: "platinum", label: "Platinum", color: "bg-slate-300" },
-];
+// Using shared MLS_LEVELS from mls-utils
 
 export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true }: ClientInfoFormProps) {
   const [newEmail, setNewEmail] = useState("");
@@ -391,7 +386,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   {MLS_LEVELS.map((level) => (
                     <SelectItem key={level.value} value={level.value}>
                       <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${level.color}`} />
+                        <div className={`w-3 h-3 rounded-full ${level.dotColor}`} />
                         {level.label}
                       </div>
                     </SelectItem>

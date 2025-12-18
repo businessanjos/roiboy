@@ -15,9 +15,11 @@ import {
   Edit2, 
   Trash2,
   Loader2,
-  DollarSign
+  DollarSign,
+  Award
 } from "lucide-react";
 import { toast } from "sonner";
+import { getMlsBadgeClasses, getMlsLevelLabel, MLS_LEVELS } from "@/lib/mls-utils";
 
 interface Product {
   id: string;
@@ -31,13 +33,7 @@ interface Product {
   created_at: string;
 }
 
-const mlsLevelLabels: Record<string, string> = {
-  bronze: "Bronze",
-  prata: "Prata",
-  ouro: "Ouro",
-  diamond: "Diamond",
-  platinum: "Platinum",
-};
+// Using shared MLS_LEVELS from mls-utils
 
 const billingPeriodLabels = {
   monthly: "Mensal",
@@ -301,11 +297,14 @@ export default function Products() {
                         <SelectValue placeholder="Selecione o nível" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bronze">Bronze</SelectItem>
-                        <SelectItem value="prata">Prata</SelectItem>
-                        <SelectItem value="ouro">Ouro</SelectItem>
-                        <SelectItem value="diamond">Diamond</SelectItem>
-                        <SelectItem value="platinum">Platinum</SelectItem>
+                        {MLS_LEVELS.map((level) => (
+                          <SelectItem key={level.value} value={level.value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${level.dotColor}`} />
+                              {level.label}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -378,8 +377,9 @@ export default function Products() {
                     {billingPeriodLabels[product.billing_period]}
                   </Badge>
                   {product.is_mls && (
-                    <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
-                      MLS {product.mls_level ? `- ${mlsLevelLabels[product.mls_level]}` : ""}
+                    <Badge className={`${getMlsBadgeClasses(product.mls_level)} gap-1`}>
+                      <Award className="h-3 w-3" />
+                      MLS {product.mls_level ? `- ${getMlsLevelLabel(product.mls_level)}` : ""}
                     </Badge>
                   )}
                   {!product.is_active && (
