@@ -17,6 +17,15 @@ export type Database = {
       account_settings: {
         Row: {
           account_id: string
+          ai_analysis_frequency: string | null
+          ai_auto_analysis_enabled: boolean | null
+          ai_confidence_threshold: number | null
+          ai_life_events_prompt: string | null
+          ai_min_message_length: number | null
+          ai_model: string | null
+          ai_risk_prompt: string | null
+          ai_roi_prompt: string | null
+          ai_system_prompt: string | null
           created_at: string
           escore_live_participation: number
           escore_live_presence: number
@@ -39,6 +48,15 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          ai_analysis_frequency?: string | null
+          ai_auto_analysis_enabled?: boolean | null
+          ai_confidence_threshold?: number | null
+          ai_life_events_prompt?: string | null
+          ai_min_message_length?: number | null
+          ai_model?: string | null
+          ai_risk_prompt?: string | null
+          ai_roi_prompt?: string | null
+          ai_system_prompt?: string | null
           created_at?: string
           escore_live_participation?: number
           escore_live_presence?: number
@@ -61,6 +79,15 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          ai_analysis_frequency?: string | null
+          ai_auto_analysis_enabled?: boolean | null
+          ai_confidence_threshold?: number | null
+          ai_life_events_prompt?: string | null
+          ai_min_message_length?: number | null
+          ai_model?: string | null
+          ai_risk_prompt?: string | null
+          ai_roi_prompt?: string | null
+          ai_system_prompt?: string | null
           created_at?: string
           escore_live_participation?: number
           escore_live_presence?: number
