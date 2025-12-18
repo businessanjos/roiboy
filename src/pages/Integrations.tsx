@@ -260,7 +260,7 @@ export default function Integrations() {
             <DialogHeader>
               <DialogTitle>Adicionar Integração</DialogTitle>
               <DialogDescription>
-                Selecione uma ferramenta para integrar ao ROIBOY
+                Selecione uma ferramenta para integrar ao ROY
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3 py-4">
@@ -606,7 +606,7 @@ export default function Integrations() {
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 <h4 className="font-medium">Chrome Extension</h4>
                 <p className="text-sm text-muted-foreground">
-                  A Chrome Extension do ROIBOY injeta uma sidebar no WhatsApp Web e envia
+                  A Chrome Extension do ROY injeta uma sidebar no WhatsApp Web e envia
                   automaticamente os eventos para estes endpoints. Configure a extensão com
                   os URLs acima e o token JWT do usuário.
                 </p>
@@ -656,7 +656,7 @@ export default function Integrations() {
                 <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
                   <p className="text-sm text-emerald-700 dark:text-emerald-400">
                     <strong>Identificação por CPF/CNPJ:</strong> O cliente deve ter o CPF ou CNPJ cadastrado
-                    no ROIBOY para que os dados sejam vinculados corretamente.
+                    no ROY para que os dados sejam vinculados corretamente.
                   </p>
                 </div>
               </div>

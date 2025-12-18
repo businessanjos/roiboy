@@ -44,7 +44,7 @@ const showBrowserNotification = (title: string, body: string, link?: string | nu
     body,
     icon: "/favicon.ico",
     badge: "/favicon.ico",
-    tag: `roiboy-${Date.now()}`, // Unique tag to allow multiple notifications
+    tag: `roy-${Date.now()}`, // Unique tag to allow multiple notifications
   });
 
   if (link) {
