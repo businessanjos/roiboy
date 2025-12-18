@@ -31,18 +31,19 @@ import {
   Calendar,
   User,
   Tag,
-  Hash,
   ToggleLeft,
   Gift,
   Baby,
   Briefcase,
-  Upload,
   Image,
   Send,
   MoreVertical,
   Edit,
   Trash2,
-  Check
+  RotateCcw,
+  ExternalLink,
+  Award,
+  Lightbulb
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -58,6 +59,7 @@ export default function ExtensionPreview() {
   const [animatedEscore, setAnimatedEscore] = useState(0);
   const [animatedRoi, setAnimatedRoi] = useState(0);
   const [noteText, setNoteText] = useState("");
+  const [demoKey, setDemoKey] = useState(0);
 
   const mockClient = {
     name: "João Silva",
@@ -65,6 +67,8 @@ export default function ExtensionPreview() {
     vnps: 8.5,
     escore: 75,
     roizometer: 68,
+    isMls: true,
+    mlsLevel: "ouro",
   };
 
   const mockMessages = [
@@ -86,6 +90,11 @@ export default function ExtensionPreview() {
     { type: "roi", icon: TrendingUp, text: "ROI: Aumento de faturamento +15%", time: "09:35", color: "green" },
     { type: "message", icon: MessageSquare, text: "5 mensagens trocadas hoje", time: "09:38", color: "blue" },
     { type: "task", icon: ListTodo, text: "Tarefa concluída: Enviar proposta", time: "Ontem", color: "purple" },
+  ];
+
+  const mockRecommendations = [
+    { title: "Agendar reunião de alinhamento", priority: "high", action: "Ligar para cliente" },
+    { title: "Enviar case de sucesso similar", priority: "medium", action: "Compartilhar material" },
   ];
 
   const mockFields = [
@@ -123,6 +132,15 @@ export default function ExtensionPreview() {
   ];
 
   useEffect(() => {
+    setVisibleMessages([]);
+    setShowTyping(false);
+    setShowNewMessage(false);
+    setShowAnalysis(false);
+    setShowEvent(false);
+    setAnimatedVnps(0);
+    setAnimatedEscore(0);
+    setAnimatedRoi(0);
+
     const timer = setTimeout(() => {
       mockMessages.forEach((_, index) => {
         setTimeout(() => {
@@ -131,7 +149,7 @@ export default function ExtensionPreview() {
       });
     }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [demoKey]);
 
   useEffect(() => {
     const duration = 1500;
@@ -150,7 +168,24 @@ export default function ExtensionPreview() {
     }, duration / steps);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [demoKey]);
+
+  useEffect(() => {
+    const typingTimer = setTimeout(() => setShowTyping(true), mockMessages.length * 400 + 2000);
+    const messageTimer = setTimeout(() => {
+      setShowTyping(false);
+      setShowNewMessage(true);
+    }, mockMessages.length * 400 + 4500);
+    const analysisTimer = setTimeout(() => setShowAnalysis(true), mockMessages.length * 400 + 5500);
+    const eventTimer = setTimeout(() => setShowEvent(true), mockMessages.length * 400 + 6500);
+
+    return () => {
+      clearTimeout(typingTimer);
+      clearTimeout(messageTimer);
+      clearTimeout(analysisTimer);
+      clearTimeout(eventTimer);
+    };
+  }, [demoKey]);
 
   useEffect(() => {
     const typingTimer = setTimeout(() => setShowTyping(true), mockMessages.length * 400 + 2000);
@@ -174,6 +209,10 @@ export default function ExtensionPreview() {
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
+  const handleResetDemo = () => {
+    setDemoKey(prev => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
@@ -183,7 +222,18 @@ export default function ExtensionPreview() {
             <span>Voltar</span>
           </Link>
           <h1 className="text-xl font-bold">Preview da Extensão Chrome</h1>
-          <div className="w-20" />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleResetDemo} className="gap-2">
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">Reiniciar Demo</span>
+            </Button>
+            <Link to="/api-docs">
+              <Button variant="outline" size="sm" className="gap-2">
+                <ExternalLink className="h-4 w-4" />
+                <span className="hidden sm:inline">API Docs</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -309,6 +359,12 @@ export default function ExtensionPreview() {
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-sm truncate">{mockClient.name}</h3>
                         <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-[9px]">Ativo</Badge>
+                        {mockClient.isMls && (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-[8px] gap-0.5">
+                            <Award className="h-2.5 w-2.5" />
+                            MLS {mockClient.mlsLevel}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                         <Phone className="h-2.5 w-2.5" />
@@ -403,6 +459,29 @@ export default function ExtensionPreview() {
                             <event.icon className={`h-3 w-3 text-${event.color}-500`} />
                             <span className="flex-1 truncate">{event.text}</span>
                             <span className="text-[9px] text-muted-foreground">{event.time}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Recommendations */}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                          <Lightbulb className="h-3 w-3" />
+                          Recomendações IA
+                        </p>
+                        {mockRecommendations.map((rec, i) => (
+                          <div key={i} className="flex items-center gap-2 p-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer transition-colors group">
+                            <Lightbulb className="h-3 w-3 text-amber-500" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[10px] truncate block">{rec.title}</span>
+                              <span className="text-[9px] text-muted-foreground">{rec.action}</span>
+                            </div>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[8px] h-4 ${rec.priority === 'high' ? 'border-red-500/30 text-red-500' : 'border-amber-500/30 text-amber-500'}`}
+                            >
+                              {rec.priority === 'high' ? 'Alta' : 'Média'}
+                            </Badge>
                           </div>
                         ))}
                       </div>
