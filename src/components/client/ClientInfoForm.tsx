@@ -79,6 +79,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [cepLoading, setCepLoading] = useState(false);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
 
   // Real-time validation states
   const validation = useMemo(() => {
@@ -185,8 +186,39 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
     updateField("cpf", formatCPF(value));
   };
 
-  const handleCNPJChange = (value: string) => {
-    updateField("cnpj", formatCNPJ(value));
+  const handleCNPJChange = async (value: string) => {
+    const formatted = formatCNPJ(value);
+    updateField("cnpj", formatted);
+    
+    // Check if CNPJ is complete (14 digits) and valid
+    const digits = formatted.replace(/\D/g, "");
+    if (digits.length === 14 && validateCNPJ(formatted)) {
+      setCnpjLoading(true);
+      try {
+        const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
+        if (response.ok) {
+          const cnpjData = await response.json();
+          
+          // Auto-fill company and address fields
+          onChange({
+            ...data,
+            cnpj: formatted,
+            company_name: cnpjData.razao_social || cnpjData.nome_fantasia || data.company_name,
+            street: cnpjData.logradouro || data.street,
+            street_number: cnpjData.numero || data.street_number,
+            complement: cnpjData.complemento || data.complement,
+            neighborhood: cnpjData.bairro || data.neighborhood,
+            city: cnpjData.municipio || data.city,
+            state: cnpjData.uf || data.state,
+            zip_code: cnpjData.cep ? formatCEP(cnpjData.cep) : data.zip_code,
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CNPJ:", error);
+      } finally {
+        setCnpjLoading(false);
+      }
+    }
   };
 
   const handleCEPChange = async (value: string) => {
@@ -416,17 +448,27 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                 onChange={(e) => handleCNPJChange(e.target.value)}
                 placeholder="00.000.000/0000-00"
                 maxLength={18}
+                disabled={cnpjLoading}
                 className={`h-9 pr-9 ${getInputClass(validation.cnpj)}`}
               />
-              <ValidationIndicator isValid={validation.cnpj.isValid} isEmpty={validation.cnpj.isEmpty} />
+              {cnpjLoading ? (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : (
+                <ValidationIndicator isValid={validation.cnpj.isValid} isEmpty={validation.cnpj.isEmpty} />
+              )}
             </div>
-            {!validation.cnpj.isEmpty && !validation.cnpj.isValid && !validation.cnpj.isPartial && (
+            {cnpjLoading && (
+              <p className="text-[11px] text-primary">Buscando dados da empresa...</p>
+            )}
+            {!cnpjLoading && !validation.cnpj.isEmpty && !validation.cnpj.isValid && !validation.cnpj.isPartial && (
               <p className="text-[11px] text-destructive flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 CNPJ inválido
               </p>
             )}
-            {validation.cnpj.isPartial && (
+            {!cnpjLoading && validation.cnpj.isPartial && (
               <p className="text-[11px] text-amber-600">Digitando...</p>
             )}
           </div>
