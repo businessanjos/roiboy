@@ -42,6 +42,8 @@ import {
   Plus,
   Pencil,
   Trash2,
+  MapPin,
+  QrCode,
 } from "lucide-react";
 import { ClientTasks } from "./ClientTasks";
 import { format, isPast, isFuture, isToday } from "date-fns";
@@ -54,6 +56,9 @@ interface Event {
   title: string;
   description: string | null;
   event_type: "live" | "material";
+  modality: "online" | "presencial";
+  address: string | null;
+  checkin_code: string | null;
   scheduled_at: string | null;
   duration_minutes: number | null;
   meeting_url: string | null;
@@ -78,6 +83,12 @@ interface ClientDelivery {
   notes: string | null;
 }
 
+interface ClientAttendance {
+  id: string;
+  event_id: string;
+  join_time: string;
+}
+
 interface ClientAgendaProps {
   clientId: string;
   clientProductIds: string[];
@@ -86,6 +97,7 @@ interface ClientAgendaProps {
 export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) {
   const [events, setEvents] = useState<EventWithProducts[]>([]);
   const [deliveries, setDeliveries] = useState<ClientDelivery[]>([]);
+  const [attendances, setAttendances] = useState<ClientAttendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -113,6 +125,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     if (accountId) {
       fetchEvents();
       fetchDeliveries();
+      fetchAttendances();
     }
   }, [accountId, clientProductIds]);
 
@@ -166,8 +179,24 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  const fetchAttendances = async () => {
+    const { data, error } = await supabase
+      .from("attendance")
+      .select("id, event_id, join_time")
+      .eq("client_id", clientId)
+      .not("event_id", "is", null);
+
+    if (!error) {
+      setAttendances((data || []) as ClientAttendance[]);
+    }
+  };
+
   const getDeliveryStatus = (eventId: string): ClientDelivery | undefined => {
     return deliveries.find((d) => d.event_id === eventId);
+  };
+
+  const getAttendanceStatus = (eventId: string): ClientAttendance | undefined => {
+    return attendances.find((a) => a.event_id === eventId);
   };
 
   const toggleDelivery = async (eventId: string, currentStatus?: string) => {
@@ -572,6 +601,9 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             {upcomingEvents.map((event) => {
               const delivery = getDeliveryStatus(event.id);
               const isDelivered = delivery?.status === "delivered";
+              const attendance = getAttendanceStatus(event.id);
+              const hasCheckedIn = !!attendance;
+              const isPresencial = event.modality === "presencial";
 
               return (
                 <div
@@ -587,16 +619,25 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                     <div className="flex items-start gap-3">
                       <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center",
-                        event.event_type === "live" ? "bg-indigo-500/10 text-indigo-500" : "bg-amber-500/10 text-amber-500"
+                        isPresencial ? "bg-sky-500/10 text-sky-500" : event.event_type === "live" ? "bg-indigo-500/10 text-indigo-500" : "bg-amber-500/10 text-amber-500"
                       )}>
-                        {event.event_type === "live" ? (
+                        {isPresencial ? (
+                          <MapPin className="h-5 w-5" />
+                        ) : event.event_type === "live" ? (
                           <Video className="h-5 w-5" />
                         ) : (
                           <FileText className="h-5 w-5" />
                         )}
                       </div>
                       <div>
-                        <p className="font-medium">{event.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{event.title}</p>
+                          {isPresencial && (
+                            <Badge variant="outline" className="text-sky-600 border-sky-500/30 bg-sky-500/10 text-xs">
+                              Presencial
+                            </Badge>
+                          )}
+                        </div>
                         {event.scheduled_at && (
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -604,9 +645,23 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                             {event.duration_minutes && ` • ${event.duration_minutes}min`}
                           </p>
                         )}
-                        {isToday(new Date(event.scheduled_at!)) && (
-                          <Badge variant="default" className="mt-1">Hoje</Badge>
+                        {isPresencial && event.address && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" />
+                            {event.address}
+                          </p>
                         )}
+                        <div className="flex items-center gap-2 mt-1">
+                          {isToday(new Date(event.scheduled_at!)) && (
+                            <Badge variant="default">Hoje</Badge>
+                          )}
+                          {hasCheckedIn && (
+                            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
+                              <QrCode className="h-3 w-3 mr-1" />
+                              Check-in feito
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -737,37 +792,49 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             {pastEvents.map((event) => {
               const delivery = getDeliveryStatus(event.id);
               const isDelivered = delivery?.status === "delivered";
+              const attendance = getAttendanceStatus(event.id);
+              const hasCheckedIn = !!attendance;
+              const participated = isDelivered || hasCheckedIn;
+              const isPresencial = event.modality === "presencial";
 
               return (
                 <div
                   key={event.id}
                   className={cn(
                     "border rounded-lg p-3 flex items-center justify-between",
-                    isDelivered ? "bg-emerald-500/5 border-emerald-500/20" : "bg-muted/30"
+                    participated ? "bg-emerald-500/5 border-emerald-500/20" : "bg-muted/30"
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <Checkbox
-                      checked={isDelivered}
+                      checked={participated}
                       onCheckedChange={() => toggleDelivery(event.id, delivery?.status)}
+                      disabled={hasCheckedIn && !isDelivered}
                     />
                     <div className={cn(
                       "w-8 h-8 rounded flex items-center justify-center",
-                      isDelivered ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
+                      participated ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
                     )}>
-                      {isDelivered ? (
-                        <Check className="h-4 w-4" />
+                      {participated ? (
+                        hasCheckedIn ? <QrCode className="h-4 w-4" /> : <Check className="h-4 w-4" />
                       ) : (
                         <X className="h-4 w-4" />
                       )}
                     </div>
                     <div>
-                      <p className={cn(
-                        "font-medium",
-                        !isDelivered && "text-muted-foreground"
-                      )}>
-                        {event.title}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={cn(
+                          "font-medium",
+                          !participated && "text-muted-foreground"
+                        )}>
+                          {event.title}
+                        </p>
+                        {isPresencial && (
+                          <Badge variant="outline" className="text-sky-600 border-sky-500/30 bg-sky-500/10 text-xs">
+                            Presencial
+                          </Badge>
+                        )}
+                      </div>
                       {event.scheduled_at && (
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(event.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
@@ -776,7 +843,12 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isDelivered ? (
+                    {hasCheckedIn ? (
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
+                        <QrCode className="h-3 w-3 mr-1" />
+                        Check-in
+                      </Badge>
+                    ) : isDelivered ? (
                       <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
                         Participou
                       </Badge>
