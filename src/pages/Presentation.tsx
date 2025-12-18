@@ -15,7 +15,14 @@ import {
   CheckCircle2,
   ArrowRight,
   Play,
-  Code2
+  Code2,
+  Chrome,
+  Server,
+  Database,
+  Brain,
+  ArrowDown,
+  ArrowLeftRight,
+  Monitor
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -214,6 +221,240 @@ export default function Presentation() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Architecture Diagram Section */}
+      <section className="p-4 sm:p-6 lg:p-8 border-t border-border">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Arquitetura do Sistema</h2>
+            <p className="text-muted-foreground">Fluxo de dados entre extensão, API e dashboard</p>
+          </div>
+          
+          {/* Architecture Diagram */}
+          <div className="relative">
+            {/* Desktop View */}
+            <div className="hidden lg:block">
+              <div className="flex items-start justify-between gap-4">
+                {/* Chrome Extension */}
+                <Card className="w-64 border-2 border-blue-500/30 bg-blue-500/5">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-blue-500/20">
+                        <Chrome className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <CardTitle className="text-base">Extensão Chrome</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      <span>Captura mensagens</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>Transcreve áudios</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-3.5 w-3.5" />
+                      <span>Identifica clientes</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Arrow */}
+                <div className="flex-1 flex items-center justify-center pt-12">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="h-0.5 w-full bg-gradient-to-r from-blue-500/50 to-amber-500/50" />
+                    <span className="text-xs text-muted-foreground">HTTP/REST</span>
+                  </div>
+                </div>
+
+                {/* API Layer */}
+                <Card className="w-72 border-2 border-amber-500/30 bg-amber-500/5">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-amber-500/20">
+                        <Server className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <CardTitle className="text-base">Edge Functions (API)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-1.5 text-xs">
+                    <Badge variant="outline" className="text-xs">extension-auth</Badge>
+                    <Badge variant="outline" className="text-xs">get-client-by-phone</Badge>
+                    <Badge variant="outline" className="text-xs">create-client</Badge>
+                    <Badge variant="outline" className="text-xs">ingest-whatsapp-message</Badge>
+                    <Badge variant="outline" className="text-xs">ingest-whatsapp-audio</Badge>
+                    <Badge variant="outline" className="text-xs">bulk-ingest-messages</Badge>
+                    <Badge variant="outline" className="text-xs">analyze-message (IA)</Badge>
+                  </CardContent>
+                </Card>
+
+                {/* Arrow */}
+                <div className="flex-1 flex items-center justify-center pt-12">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="h-0.5 w-full bg-gradient-to-r from-amber-500/50 to-green-500/50" />
+                    <span className="text-xs text-muted-foreground">Realtime</span>
+                  </div>
+                </div>
+
+                {/* Dashboard */}
+                <Card className="w-64 border-2 border-green-500/30 bg-green-500/5">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-green-500/20">
+                        <Monitor className="h-5 w-5 text-green-600" />
+                      </div>
+                      <CardTitle className="text-base">Dashboard Web</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      <span>Métricas em tempo real</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Bell className="h-3.5 w-3.5" />
+                      <span>Alertas e notificações</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Target className="h-3.5 w-3.5" />
+                      <span>Recomendações de ação</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Database and AI Row */}
+              <div className="mt-4 flex justify-center gap-4">
+                <div className="flex items-center gap-2">
+                  <ArrowDown className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+              
+              <div className="mt-2 flex justify-center gap-6">
+                <Card className="w-52 border-2 border-purple-500/30 bg-purple-500/5">
+                  <CardContent className="py-4 flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-purple-500/20">
+                      <Database className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Supabase</p>
+                      <p className="text-xs text-muted-foreground">PostgreSQL + Realtime</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="w-52 border-2 border-pink-500/30 bg-pink-500/5">
+                  <CardContent className="py-4 flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-pink-500/20">
+                      <Brain className="h-5 w-5 text-pink-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Lovable AI</p>
+                      <p className="text-xs text-muted-foreground">Análise + Transcrição</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Mobile View */}
+            <div className="lg:hidden space-y-4">
+              <Card className="border-2 border-blue-500/30 bg-blue-500/5">
+                <CardContent className="py-4 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/20">
+                    <Chrome className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Extensão Chrome</p>
+                    <p className="text-xs text-muted-foreground">Captura mensagens do WhatsApp</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-center">
+                <ArrowDown className="h-5 w-5 text-muted-foreground" />
+              </div>
+
+              <Card className="border-2 border-amber-500/30 bg-amber-500/5">
+                <CardContent className="py-4 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/20">
+                    <Server className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">API (Edge Functions)</p>
+                    <p className="text-xs text-muted-foreground">Processa e armazena dados</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-center">
+                <ArrowDown className="h-5 w-5 text-muted-foreground" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Card className="border-2 border-purple-500/30 bg-purple-500/5">
+                  <CardContent className="py-3 flex flex-col items-center gap-2">
+                    <Database className="h-5 w-5 text-purple-600" />
+                    <p className="text-xs font-medium">Database</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-pink-500/30 bg-pink-500/5">
+                  <CardContent className="py-3 flex flex-col items-center gap-2">
+                    <Brain className="h-5 w-5 text-pink-600" />
+                    <p className="text-xs font-medium">IA</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="flex justify-center">
+                <ArrowDown className="h-5 w-5 text-muted-foreground" />
+              </div>
+
+              <Card className="border-2 border-green-500/30 bg-green-500/5">
+                <CardContent className="py-4 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/20">
+                    <Monitor className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Dashboard Web</p>
+                    <p className="text-xs text-muted-foreground">Visualização em tempo real</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Data Flow Description */}
+          <div className="mt-8 grid sm:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-4">
+                <Badge className="mb-2 bg-blue-500">1. Captura</Badge>
+                <p className="text-sm text-muted-foreground">
+                  Extensão Chrome monitora WhatsApp Web e captura mensagens de texto e áudio em tempo real.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <Badge className="mb-2 bg-amber-500">2. Processamento</Badge>
+                <p className="text-sm text-muted-foreground">
+                  API recebe dados, IA analisa sentimento, detecta eventos de ROI/risco e gera recomendações.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <Badge className="mb-2 bg-green-500">3. Visualização</Badge>
+                <p className="text-sm text-muted-foreground">
+                  Dashboard atualiza em tempo real com métricas, alertas e timeline do cliente.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
