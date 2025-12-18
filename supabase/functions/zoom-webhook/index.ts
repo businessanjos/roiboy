@@ -69,16 +69,43 @@ serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const accountIdFromQuery = url.searchParams.get("account_id");
+    
     const body = await req.text();
     const payload = JSON.parse(body);
     
-    console.log("Zoom webhook received:", payload.event);
+    console.log("Zoom webhook received:", payload.event, "account_id:", accountIdFromQuery);
+
+    // Create Supabase client with service role (needed for both validation and events)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get secret token from integration config or fallback to env
+    let secretToken = Deno.env.get("ZOOM_WEBHOOK_SECRET") || "";
+    
+    if (accountIdFromQuery) {
+      const { data: integration } = await supabase
+        .from("integrations")
+        .select("config")
+        .eq("account_id", accountIdFromQuery)
+        .eq("type", "zoom")
+        .eq("status", "connected")
+        .maybeSingle();
+      
+      if (integration?.config && typeof integration.config === 'object') {
+        const config = integration.config as Record<string, string>;
+        if (config.secret_token) {
+          secretToken = config.secret_token;
+        }
+      }
+    }
 
     // Handle URL validation challenge from Zoom
     if (payload.event === "endpoint.url_validation") {
       const challenge = payload as ZoomChallenge;
       const plainToken = challenge.payload.plainToken;
-      const secretToken = Deno.env.get("ZOOM_WEBHOOK_SECRET") || "";
       
       const encryptedToken = await createHmacSha256(secretToken, plainToken);
       
@@ -93,38 +120,45 @@ serve(async (req) => {
       );
     }
 
-    // Create Supabase client with service role
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     const webhookPayload = payload as ZoomWebhookPayload;
     const { event, payload: eventPayload } = webhookPayload;
+
+    // Get account_id from query param or find by integration
+    let accountId = accountIdFromQuery;
+    
+    if (!accountId) {
+      // Fallback: Find account by Zoom integration config (legacy support)
+      const { data: integration } = await supabase
+        .from("integrations")
+        .select("account_id")
+        .eq("type", "zoom")
+        .eq("status", "connected")
+        .limit(1)
+        .maybeSingle();
+      
+      if (integration) {
+        accountId = integration.account_id;
+      }
+    }
+
+    if (!accountId) {
+      console.log("No account_id provided and no connected Zoom integration found");
+      return new Response(
+        JSON.stringify({ error: "Account not found" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Handle different webhook events
     switch (event) {
       case "meeting.started": {
         console.log("Meeting started:", eventPayload.object.topic);
-        
-        // Find account by Zoom integration config
-        const { data: integration } = await supabase
-          .from("integrations")
-          .select("account_id")
-          .eq("type", "zoom")
-          .eq("status", "connected")
-          .limit(1)
-          .maybeSingle();
-
-        if (!integration) {
-          console.log("No connected Zoom integration found");
-          break;
-        }
 
         // Create live session
         const { data: session, error: sessionError } = await supabase
           .from("live_sessions")
           .insert({
-            account_id: integration.account_id,
+            account_id: accountId,
             platform: "zoom",
             title: eventPayload.object.topic || "Untitled Meeting",
             start_time: eventPayload.object.start_time || new Date().toISOString(),
