@@ -117,10 +117,15 @@ export default function Team() {
 
   const fetchData = async () => {
     try {
+      // Get current auth user
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
       // Get current user's account_id
       const { data: currentUser, error: currentUserError } = await supabase
         .from("users")
         .select("account_id")
+        .eq("auth_user_id", authUser.id)
         .single();
 
       if (currentUserError) throw currentUserError;
