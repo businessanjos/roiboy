@@ -20,7 +20,10 @@ import {
   formatDateBR,
   parseDateBRToISO,
   parseISOToDateBR,
-  validateBirthDate
+  validateBirthDate,
+  validateInternationalPhone,
+  formatInternationalPhone,
+  detectCountryFromPhone
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
 
@@ -92,18 +95,16 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
     const cnpjDigits = data.cnpj.replace(/\D/g, "");
     const cepDigits = data.zip_code.replace(/\D/g, "");
     
-    // Brazilian phone validation
-    const phoneValidation = validateBrazilianPhone(data.phone_e164);
-    const phoneLocalDigits = phoneDigits.startsWith('55') ? phoneDigits.slice(2) : phoneDigits;
+    // International phone validation
+    const phoneValidation = validateInternationalPhone(data.phone_e164);
     
     return {
       phone: {
         isEmpty: !data.phone_e164 || phoneDigits.length === 0,
         isValid: phoneValidation.isValid,
-        isPartial: phoneLocalDigits.length > 0 && phoneLocalDigits.length < 10,
-        dddValid: phoneValidation.dddValid,
-        lengthValid: phoneValidation.lengthValid,
-        hasDDD: phoneLocalDigits.length >= 2
+        isPartial: phoneValidation.error === 'incomplete',
+        country: phoneValidation.country,
+        error: phoneValidation.error
       },
       cpf: {
         isEmpty: cpfDigits.length === 0,
@@ -152,13 +153,9 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
   const handleAddPhone = () => {
     if (!newPhone.trim()) return;
-    const phoneValidation = validateBrazilianPhone(newPhone);
+    const phoneValidation = validateInternationalPhone(newPhone);
     if (!phoneValidation.isValid) {
-      if (!phoneValidation.dddValid) {
-        setPhoneError("DDD inválido");
-      } else {
-        setPhoneError("Formato inválido. Ex: +55 11 99999-9999");
-      }
+      setPhoneError(phoneValidation.error || "Formato inválido");
       return;
     }
     const e164 = formatPhoneToE164(newPhone);
@@ -176,7 +173,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   };
 
   const handlePhoneChange = (value: string) => {
-    const formatted = formatBrazilianPhone(value);
+    const formatted = formatInternationalPhone(value);
     updateField("phone_e164", formatted);
   };
   
@@ -296,7 +293,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   value={data.phone_e164}
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="+55 11 99999-9999"
-                  maxLength={19}
+                  maxLength={20}
                   className={`h-9 pr-9 ${errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : getInputClass(validation.phone)}`}
                 />
                 <ValidationIndicator isValid={validation.phone.isValid} isEmpty={validation.phone.isEmpty} />
@@ -312,16 +309,15 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   Digitando...
                 </p>
               )}
-              {!errors.phone_e164 && !validation.phone.isEmpty && !validation.phone.isPartial && validation.phone.hasDDD && !validation.phone.dddValid && (
+              {!errors.phone_e164 && !validation.phone.isEmpty && !validation.phone.isPartial && validation.phone.error && (
                 <p className="text-[11px] text-destructive flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
-                  DDD inválido
+                  {validation.phone.error}
                 </p>
               )}
-              {!errors.phone_e164 && !validation.phone.isEmpty && !validation.phone.isPartial && validation.phone.dddValid && !validation.phone.isValid && (
-                <p className="text-[11px] text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Número inválido
+              {!errors.phone_e164 && !validation.phone.isEmpty && validation.phone.country && !validation.phone.error && (
+                <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                  {validation.phone.country.flag} {validation.phone.country.name}
                 </p>
               )}
             </div>
@@ -398,11 +394,11 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           <Input
             value={newPhone}
             onChange={(e) => {
-              setNewPhone(formatBrazilianPhone(e.target.value));
+              setNewPhone(formatInternationalPhone(e.target.value));
               setPhoneError("");
             }}
             placeholder="+55 11 99999-9999"
-            maxLength={19}
+            maxLength={20}
             className={`flex-1 h-9 ${phoneError ? "border-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddPhone())}
           />
