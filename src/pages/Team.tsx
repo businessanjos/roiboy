@@ -89,9 +89,23 @@ export default function Team() {
 
   const fetchUsers = async () => {
     try {
+      // First get current user's account_id
+      const { data: currentUser, error: currentUserError } = await supabase
+        .from("users")
+        .select("account_id")
+        .single();
+
+      if (currentUserError) throw currentUserError;
+      if (!currentUser) {
+        setUsers([]);
+        return;
+      }
+
+      // Then fetch only users from the same account
       const { data, error } = await supabase
         .from("users")
         .select("*")
+        .eq("account_id", currentUser.account_id)
         .order("name");
 
       if (error) throw error;
