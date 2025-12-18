@@ -407,6 +407,7 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
     description: '',
     price: 0,
     billing_period: 'monthly',
+    has_trial: true,
     trial_days: 7,
     max_clients: 100,
     max_users: 5,
@@ -421,6 +422,7 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
       description: '',
       price: 0,
       billing_period: 'monthly',
+      has_trial: true,
       trial_days: 7,
       max_clients: 100,
       max_users: 5,
@@ -433,12 +435,14 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
 
   const openEdit = (plan: SubscriptionPlan) => {
     setEditingPlan(plan);
+    const hasTrial = (plan.trial_days || 0) > 0;
     setFormData({
       name: plan.name,
       description: plan.description || '',
       price: plan.price,
       billing_period: plan.billing_period,
-      trial_days: plan.trial_days || 0,
+      has_trial: hasTrial,
+      trial_days: plan.trial_days || 7,
       max_clients: plan.max_clients || 0,
       max_users: plan.max_users || 0,
       max_ai_analyses: plan.max_ai_analyses || 0,
@@ -455,7 +459,7 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
         description: formData.description || null,
         price: formData.price,
         billing_period: formData.billing_period,
-        trial_days: formData.trial_days,
+        trial_days: formData.has_trial ? formData.trial_days : null,
         max_clients: formData.max_clients || null,
         max_users: formData.max_users || null,
         max_ai_analyses: formData.max_ai_analyses || null,
@@ -579,13 +583,22 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label className="text-sm">Dias de Trial</Label>
-                  <Input 
-                    type="number" 
-                    value={formData.trial_days} 
-                    onChange={e => setFormData(f => ({ ...f, trial_days: parseInt(e.target.value) || 0 }))} 
-                    className="h-9"
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Oferece Trial</Label>
+                    <Switch 
+                      checked={formData.has_trial} 
+                      onCheckedChange={v => setFormData(f => ({ ...f, has_trial: v }))} 
+                    />
+                  </div>
+                  {formData.has_trial && (
+                    <Input 
+                      type="number" 
+                      value={formData.trial_days} 
+                      onChange={e => setFormData(f => ({ ...f, trial_days: parseInt(e.target.value) || 0 }))} 
+                      placeholder="Dias de trial"
+                      className="h-9"
+                    />
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-sm">Máx. Clientes</Label>
