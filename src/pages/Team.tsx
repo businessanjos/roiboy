@@ -453,7 +453,7 @@ export default function Team() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
