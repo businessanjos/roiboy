@@ -25,6 +25,7 @@ import Presentation from "./pages/Presentation";
 import ExtensionPreview from "./pages/ExtensionPreview";
 import ApiDocs from "./pages/ApiDocs";
 import Admin from "./pages/Admin";
+import EventCheckin from "./pages/EventCheckin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/f/:formId" element={<PublicForm />} />
+                <Route path="/checkin/:code" element={<EventCheckin />} />
                 <Route path="/sobre" element={<Presentation />} />
                 <Route path="/extension-preview" element={<ExtensionPreview />} />
                 <Route element={<AppLayout />}>

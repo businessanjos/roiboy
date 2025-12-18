@@ -39,6 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { QRCodeSVG } from "qrcode.react";
 import { 
   Plus, 
   Calendar, 
@@ -50,7 +51,10 @@ import {
   Link as LinkIcon,
   Package,
   Monitor,
-  MapPin
+  MapPin,
+  QrCode,
+  Copy,
+  Check
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -67,6 +71,7 @@ interface Event {
   meeting_url: string | null;
   material_url: string | null;
   is_recurring: boolean;
+  checkin_code: string | null;
   created_at: string;
 }
 
@@ -93,6 +98,9 @@ export default function Events() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [selectedEventForQr, setSelectedEventForQr] = useState<EventWithProducts | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -210,7 +218,17 @@ export default function Events() {
       return;
     }
 
-    const eventData = {
+    // Generate checkin code for presencial events
+    const generateCheckinCode = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    };
+
+    const eventData: any = {
       title: title.trim(),
       description: description.trim() || null,
       event_type: eventType,
@@ -223,6 +241,11 @@ export default function Events() {
       is_recurring: isRecurring,
       account_id: accountId,
     };
+
+    // Add checkin_code for new presencial events
+    if (!editingEvent && modality === "presencial") {
+      eventData.checkin_code = generateCheckinCode();
+    }
 
     let eventId: string;
 
@@ -630,7 +653,28 @@ export default function Events() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
+                          {event.modality === "presencial" && event.checkin_code && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedEventForQr(event);
+                                      setQrDialogOpen(true);
+                                    }}
+                                  >
+                                    <QrCode className="h-4 w-4 text-primary" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>QR Code para check-in</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           {(event.meeting_url || event.material_url) && (
                             <Button
                               variant="ghost"
@@ -670,6 +714,72 @@ export default function Events() {
           )}
         </CardContent>
       </Card>
+
+      {/* QR Code Dialog */}
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              QR Code para Check-in
+            </DialogTitle>
+            <DialogDescription>
+              {selectedEventForQr?.title}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedEventForQr?.checkin_code && (
+            <div className="flex flex-col items-center space-y-4 py-4">
+              <div className="bg-white p-4 rounded-lg">
+                <QRCodeSVG 
+                  value={`${window.location.origin}/checkin/${selectedEventForQr.checkin_code}`}
+                  size={200}
+                  level="H"
+                />
+              </div>
+              
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">Código do evento</p>
+                <p className="text-2xl font-mono font-bold tracking-wider">
+                  {selectedEventForQr.checkin_code}
+                </p>
+              </div>
+
+              <div className="w-full space-y-2">
+                <Label className="text-sm text-muted-foreground">Link de check-in</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={`${window.location.origin}/checkin/${selectedEventForQr.checkin_code}`}
+                    readOnly
+                    className="text-xs"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/checkin/${selectedEventForQr.checkin_code}`
+                      );
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                      toast({
+                        title: "Link copiado!",
+                        description: "O link de check-in foi copiado para a área de transferência.",
+                      });
+                    }}
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center">
+                Imprima ou exiba este QR Code no evento para que os participantes confirmem presença
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
