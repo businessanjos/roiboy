@@ -1,35 +1,53 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   MessageSquare, 
   Search, 
-  User, 
   TrendingUp, 
-  TrendingDown,
   AlertTriangle,
   CheckCircle2,
   ArrowLeft,
   Settings,
-  LogOut,
   RefreshCw,
-  Send,
   Mic,
   Plus,
   ChevronRight,
   Sparkles,
   Clock,
   Phone,
-  Loader2
+  Loader2,
+  FileText,
+  Heart,
+  ListTodo,
+  DollarSign,
+  ClipboardList,
+  Calendar,
+  User,
+  Tag,
+  Hash,
+  ToggleLeft,
+  Gift,
+  Baby,
+  Briefcase,
+  Upload,
+  Image,
+  Send,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Check
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function ExtensionPreview() {
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState("timeline");
   const [visibleMessages, setVisibleMessages] = useState<number[]>([]);
   const [showTyping, setShowTyping] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
@@ -39,12 +57,11 @@ export default function ExtensionPreview() {
   const [animatedVnps, setAnimatedVnps] = useState(0);
   const [animatedEscore, setAnimatedEscore] = useState(0);
   const [animatedRoi, setAnimatedRoi] = useState(0);
+  const [noteText, setNoteText] = useState("");
 
-  // Mock data for demonstration
   const mockClient = {
     name: "João Silva",
     phone: "+55 11 99999-8888",
-    avatar: null,
     vnps: 8.5,
     escore: 75,
     roizometer: 68,
@@ -65,7 +82,46 @@ export default function ExtensionPreview() {
     time: "09:40"
   };
 
-  // Animate messages appearing one by one
+  const mockTimeline = [
+    { type: "roi", icon: TrendingUp, text: "ROI: Aumento de faturamento +15%", time: "09:35", color: "green" },
+    { type: "message", icon: MessageSquare, text: "5 mensagens trocadas hoje", time: "09:38", color: "blue" },
+    { type: "task", icon: ListTodo, text: "Tarefa concluída: Enviar proposta", time: "Ontem", color: "purple" },
+  ];
+
+  const mockFields = [
+    { name: "Segmento", type: "select", value: "Varejo", color: "blue" },
+    { name: "Potencial", type: "select", value: "Alto", color: "green" },
+    { name: "Ativo no grupo", type: "boolean", value: true },
+    { name: "Faturamento mensal", type: "currency", value: "R$ 150.000" },
+    { name: "Responsável", type: "user", value: "Maria Santos" },
+  ];
+
+  const mockContract = {
+    type: "Contrato de compra",
+    status: "active",
+    value: "R$ 24.000",
+    startDate: "01/01/2025",
+    endDate: "31/12/2025",
+    daysRemaining: 348,
+  };
+
+  const mockFollowups = [
+    { user: "Maria Santos", text: "Cliente muito satisfeito com os resultados do último mês.", time: "Há 2 dias" },
+    { user: "Pedro Lima", text: "Agendada reunião de follow-up para próxima semana.", time: "Há 5 dias" },
+  ];
+
+  const mockLifeEvents = [
+    { type: "birthday", icon: Gift, title: "Aniversário", date: "15/03", recurring: true },
+    { type: "baby", icon: Baby, title: "Nascimento do filho", date: "20/06/2024", recurring: false },
+    { type: "job", icon: Briefcase, title: "Promoção no trabalho", date: "10/01/2025", recurring: false },
+  ];
+
+  const mockTasks = [
+    { title: "Enviar relatório mensal", status: "pending", dueDate: "Hoje", priority: "high" },
+    { title: "Agendar reunião de alinhamento", status: "pending", dueDate: "Amanhã", priority: "medium" },
+    { title: "Revisar contrato", status: "done", dueDate: "Ontem", priority: "low" },
+  ];
+
   useEffect(() => {
     const timer = setTimeout(() => {
       mockMessages.forEach((_, index) => {
@@ -74,11 +130,9 @@ export default function ExtensionPreview() {
         }, index * 400);
       });
     }, 500);
-
     return () => clearTimeout(timer);
   }, []);
 
-  // Animate scores counting up
   useEffect(() => {
     const duration = 1500;
     const steps = 30;
@@ -92,33 +146,20 @@ export default function ExtensionPreview() {
       setAnimatedVnps(Math.min(vnpsStep * currentStep, mockClient.vnps));
       setAnimatedEscore(Math.min(Math.round(escoreStep * currentStep), mockClient.escore));
       setAnimatedRoi(Math.min(Math.round(roiStep * currentStep), mockClient.roizometer));
-
-      if (currentStep >= steps) {
-        clearInterval(interval);
-      }
+      if (currentStep >= steps) clearInterval(interval);
     }, duration / steps);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Show typing indicator and new message after initial messages
   useEffect(() => {
-    const typingTimer = setTimeout(() => {
-      setShowTyping(true);
-    }, mockMessages.length * 400 + 2000);
-
+    const typingTimer = setTimeout(() => setShowTyping(true), mockMessages.length * 400 + 2000);
     const messageTimer = setTimeout(() => {
       setShowTyping(false);
       setShowNewMessage(true);
     }, mockMessages.length * 400 + 4500);
-
-    const analysisTimer = setTimeout(() => {
-      setShowAnalysis(true);
-    }, mockMessages.length * 400 + 5500);
-
-    const eventTimer = setTimeout(() => {
-      setShowEvent(true);
-    }, mockMessages.length * 400 + 6500);
+    const analysisTimer = setTimeout(() => setShowAnalysis(true), mockMessages.length * 400 + 5500);
+    const eventTimer = setTimeout(() => setShowEvent(true), mockMessages.length * 400 + 6500);
 
     return () => {
       clearTimeout(typingTimer);
@@ -135,7 +176,6 @@ export default function ExtensionPreview() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/presentation" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -149,26 +189,24 @@ export default function ExtensionPreview() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          {/* Info Banner */}
           <Card className="mb-8 border-primary/20 bg-primary/5 animate-fade-in">
             <CardContent className="p-4 flex items-center gap-4">
               <Sparkles className="h-6 w-6 text-primary animate-pulse" />
               <div>
-                <p className="font-medium">Esta é uma demonstração interativa da extensão ROY</p>
+                <p className="font-medium">Extensão completa com todas as funcionalidades do cliente</p>
                 <p className="text-sm text-muted-foreground">
-                  Observe as mensagens aparecendo e a análise em tempo real no painel lateral.
+                  Navegue pelas abas para ver Timeline, Campos, Financeiro, Acompanhamento, Momentos CX e Tarefas.
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Main Preview Area */}
-          <div className="grid lg:grid-cols-[1fr,380px] gap-6">
+          <div className="grid lg:grid-cols-[1fr,420px] gap-6">
             {/* WhatsApp Mock */}
             <Card className="overflow-hidden animate-fade-in" style={{ animationDelay: "200ms" }}>
               <CardHeader className="bg-[#075E54] text-white p-3">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 ring-2 ring-white/20 transition-all hover:ring-white/40">
+                  <Avatar className="h-10 w-10 ring-2 ring-white/20">
                     <AvatarFallback className="bg-white/20 text-white">JS</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -181,13 +219,11 @@ export default function ExtensionPreview() {
                   <Search className="h-5 w-5 text-white/70 cursor-pointer hover:text-white transition-colors" />
                 </div>
               </CardHeader>
-              <CardContent className="p-0 bg-[#ECE5DD] min-h-[500px] relative">
-                {/* Chat Background Pattern */}
+              <CardContent className="p-0 bg-[#ECE5DD] min-h-[600px] relative">
                 <div className="absolute inset-0 opacity-5" style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
                 }} />
                 
-                {/* Messages */}
                 <div className="relative p-4 space-y-2 pb-16">
                   {mockMessages.map((msg, index) => (
                     <div 
@@ -198,9 +234,7 @@ export default function ExtensionPreview() {
                     >
                       <div 
                         className={`max-w-[70%] rounded-lg px-3 py-2 shadow-sm transition-transform hover:scale-[1.02] cursor-pointer ${
-                          msg.type === "sent" 
-                            ? "bg-[#DCF8C6] rounded-tr-none" 
-                            : "bg-white rounded-tl-none"
+                          msg.type === "sent" ? "bg-[#DCF8C6] rounded-tr-none" : "bg-white rounded-tl-none"
                         }`}
                       >
                         <p className="text-sm text-gray-800">{msg.text}</p>
@@ -209,7 +243,6 @@ export default function ExtensionPreview() {
                     </div>
                   ))}
 
-                  {/* Typing Indicator */}
                   {showTyping && (
                     <div className="flex justify-start animate-fade-in">
                       <div className="bg-white rounded-lg rounded-tl-none px-4 py-3 shadow-sm">
@@ -222,10 +255,9 @@ export default function ExtensionPreview() {
                     </div>
                   )}
 
-                  {/* New Message */}
                   {showNewMessage && (
                     <div className="flex justify-start animate-fade-in">
-                      <div className="max-w-[70%] rounded-lg rounded-tl-none px-3 py-2 shadow-sm bg-white transition-transform hover:scale-[1.02] cursor-pointer ring-2 ring-primary/30">
+                      <div className="max-w-[70%] rounded-lg rounded-tl-none px-3 py-2 shadow-sm bg-white ring-2 ring-primary/30">
                         <p className="text-sm text-gray-800">{newMessage.text}</p>
                         <p className="text-[10px] text-gray-500 text-right mt-1">{newMessage.time}</p>
                       </div>
@@ -233,44 +265,34 @@ export default function ExtensionPreview() {
                   )}
                 </div>
 
-                {/* Input Area */}
                 <div className="absolute bottom-0 left-0 right-0 bg-[#F0F0F0] p-2 flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors">
+                  <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700">
                     <Plus className="h-5 w-5" />
                   </Button>
-                  <Input 
-                    placeholder="Digite uma mensagem" 
-                    className="flex-1 bg-white border-0 rounded-full focus:ring-2 focus:ring-[#075E54]/30"
-                  />
-                  <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors">
+                  <Input placeholder="Digite uma mensagem" className="flex-1 bg-white border-0 rounded-full" />
+                  <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700">
                     <Mic className="h-5 w-5" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Extension Panel Mock */}
+            {/* Extension Panel - Full Featured */}
             <Card className="overflow-hidden border-2 border-primary/30 shadow-xl animate-fade-in" style={{ animationDelay: "400ms" }}>
-              {/* Extension Header */}
               <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors cursor-pointer">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                       <span className="font-bold text-sm">ROY</span>
                     </div>
                     <span className="font-semibold">ROY Extension</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/10"
-                      onClick={handleRefresh}
-                    >
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/10" onClick={handleRefresh}>
                       <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/10">
-                      <Settings className="h-4 w-4 hover:rotate-90 transition-transform duration-300" />
+                      <Settings className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -278,218 +300,306 @@ export default function ExtensionPreview() {
 
               <CardContent className="p-0">
                 {/* Client Info */}
-                <div className="p-4 border-b bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group">
+                <div className="p-3 border-b bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group">
                   <div className="flex items-start gap-3">
-                    <Avatar className="h-12 w-12 ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">JS</AvatarFallback>
+                    <Avatar className="h-10 w-10 ring-2 ring-transparent group-hover:ring-primary/30">
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">JS</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold truncate">{mockClient.name}</h3>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">
-                          Ativo
-                        </Badge>
+                        <h3 className="font-semibold text-sm truncate">{mockClient.name}</h3>
+                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-[9px]">Ativo</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-2.5 w-2.5" />
                         {mockClient.phone}
                       </p>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-primary text-xs group-hover:translate-x-1 transition-transform">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
 
-                {/* Scores */}
-                <div className="p-4 border-b">
-                  <div className="grid grid-cols-3 gap-3">
-                    {/* V-NPS */}
-                    <div className="text-center p-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 transition-colors cursor-pointer group">
-                      <div className="text-lg font-bold text-green-600 transition-transform group-hover:scale-110">
-                        {animatedVnps.toFixed(1)}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">V-NPS</div>
-                      <Badge className="mt-1 text-[9px] bg-green-500 hover:bg-green-600 transition-colors">
-                        Promotor
-                      </Badge>
+                {/* Scores - Compact */}
+                <div className="p-2 border-b">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center p-1.5 rounded bg-green-500/10 hover:bg-green-500/20 transition-colors cursor-pointer">
+                      <div className="text-sm font-bold text-green-600">{animatedVnps.toFixed(1)}</div>
+                      <div className="text-[9px] text-muted-foreground">V-NPS</div>
                     </div>
-                    {/* E-Score */}
-                    <div className="text-center p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors cursor-pointer group">
-                      <div className="text-lg font-bold text-blue-600 transition-transform group-hover:scale-110">
-                        {animatedEscore}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">E-Score</div>
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <TrendingUp className="h-3 w-3 text-green-500" />
-                        <span className="text-[9px] text-green-500">+5%</span>
-                      </div>
+                    <div className="text-center p-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 transition-colors cursor-pointer">
+                      <div className="text-sm font-bold text-blue-600">{animatedEscore}</div>
+                      <div className="text-[9px] text-muted-foreground">E-Score</div>
                     </div>
-                    {/* ROIzometer */}
-                    <div className="text-center p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer group">
-                      <div className="text-lg font-bold text-amber-600 transition-transform group-hover:scale-110">
-                        {animatedRoi}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">ROIzometer</div>
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <TrendingUp className="h-3 w-3 text-green-500" />
-                        <span className="text-[9px] text-green-500">+3%</span>
-                      </div>
+                    <div className="text-center p-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer">
+                      <div className="text-sm font-bold text-amber-600">{animatedRoi}</div>
+                      <div className="text-[9px] text-muted-foreground">ROIzometer</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Tabs */}
+                {/* Full Tabs */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="w-full rounded-none border-b bg-transparent h-auto p-0">
-                    <TabsTrigger 
-                      value="chat" 
-                      className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 text-xs transition-all hover:bg-muted/50"
-                    >
-                      <MessageSquare className="h-3 w-3 mr-1" />
-                      Chat
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="insights" 
-                      className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 text-xs transition-all hover:bg-muted/50"
-                    >
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      Insights
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="history" 
-                      className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 text-xs transition-all hover:bg-muted/50"
-                    >
-                      <Clock className="h-3 w-3 mr-1" />
-                      Histórico
-                    </TabsTrigger>
+                  <TabsList className="w-full rounded-none border-b bg-transparent h-auto p-0 grid grid-cols-6">
+                    {[
+                      { value: "timeline", icon: Clock, label: "Timeline" },
+                      { value: "campos", icon: Tag, label: "Campos" },
+                      { value: "financeiro", icon: DollarSign, label: "Financeiro" },
+                      { value: "acompanhamento", icon: ClipboardList, label: "Acompanhar" },
+                      { value: "cx", icon: Heart, label: "CX" },
+                      { value: "tarefas", icon: ListTodo, label: "Tarefas" },
+                    ].map((tab) => (
+                      <TabsTrigger 
+                        key={tab.value}
+                        value={tab.value} 
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-1.5 px-1 text-[9px] flex flex-col gap-0.5 h-auto"
+                      >
+                        <tab.icon className="h-3 w-3" />
+                        <span className="hidden sm:inline">{tab.label}</span>
+                      </TabsTrigger>
+                    ))}
                   </TabsList>
 
-                  <TabsContent value="chat" className="p-4 space-y-3 mt-0">
-                    {/* AI Analysis - Animated */}
-                    <div className={`p-3 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 transition-all duration-500 ${
-                      showAnalysis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-                    }`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                        <span className="text-xs font-medium">Análise da Conversa</span>
-                        {showNewMessage && (
-                          <Badge variant="secondary" className="text-[9px] bg-primary/20 text-primary animate-pulse">
-                            Atualizado
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {showNewMessage 
-                          ? "🎯 Cliente planeja expansão para 2 cidades - sinal forte de ROI! Menciona aumento de 15% no faturamento."
-                          : "Cliente demonstra satisfação com resultados. Mencionou aumento de 15% no faturamento - classificado como ROI tangível."
-                        }
-                      </p>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div>
-                      <p className="text-xs font-medium mb-2">Ações Rápidas</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="text-xs h-7 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/30 transition-colors"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Registrar ROI
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="text-xs h-7 hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30 transition-colors"
-                        >
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Sinalizar Risco
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Recent Events - Animated */}
-                    <div>
-                      <p className="text-xs font-medium mb-2">Eventos Recentes</p>
-                      <div className="space-y-2">
-                        {/* New Event */}
-                        {showEvent && (
-                          <div className="flex items-center gap-2 p-2 rounded bg-primary/10 text-xs animate-fade-in ring-2 ring-primary/30">
+                  <ScrollArea className="h-[340px]">
+                    {/* Timeline Tab */}
+                    <TabsContent value="timeline" className="p-3 space-y-2 mt-0">
+                      {showAnalysis && (
+                        <div className="p-2 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 animate-fade-in">
+                          <div className="flex items-center gap-1.5 mb-1">
                             <Sparkles className="h-3 w-3 text-primary animate-pulse" />
-                            <span className="font-medium">IA: Plano de expansão detectado!</span>
+                            <span className="text-[10px] font-medium">Análise IA</span>
+                            <Badge variant="secondary" className="text-[8px] bg-primary/20 text-primary h-4">Novo</Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            🎯 Plano de expansão detectado! Cliente menciona aumento de 15% no faturamento.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/30">
+                          <Plus className="h-2.5 w-2.5 mr-1" />
+                          ROI
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                          <AlertTriangle className="h-2.5 w-2.5 mr-1" />
+                          Risco
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-[10px] h-6 hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/30">
+                          <MessageSquare className="h-2.5 w-2.5 mr-1" />
+                          Nota
+                        </Button>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-medium text-muted-foreground">Eventos Recentes</p>
+                        {showEvent && (
+                          <div className="flex items-center gap-2 p-1.5 rounded bg-primary/10 text-[10px] animate-fade-in ring-1 ring-primary/30">
+                            <Sparkles className="h-3 w-3 text-primary" />
+                            <span className="font-medium">IA: Expansão detectada!</span>
                           </div>
                         )}
-                        <div className={`flex items-center gap-2 p-2 rounded bg-green-500/10 text-xs transition-all hover:bg-green-500/20 cursor-pointer ${
-                          showEvent ? "" : "animate-fade-in"
-                        }`} style={{ animationDelay: "600ms" }}>
-                          <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          <span>ROI: Aumento de faturamento +15%</span>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 rounded bg-blue-500/10 text-xs transition-all hover:bg-blue-500/20 cursor-pointer animate-fade-in" style={{ animationDelay: "800ms" }}>
-                          <MessageSquare className="h-3 w-3 text-blue-500" />
-                          <span>Engajamento alto no WhatsApp</span>
-                        </div>
+                        {mockTimeline.map((event, i) => (
+                          <div key={i} className={`flex items-center gap-2 p-1.5 rounded bg-${event.color}-500/10 text-[10px] hover:bg-${event.color}-500/20 cursor-pointer transition-colors`}>
+                            <event.icon className={`h-3 w-3 text-${event.color}-500`} />
+                            <span className="flex-1 truncate">{event.text}</span>
+                            <span className="text-[9px] text-muted-foreground">{event.time}</span>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  </TabsContent>
+                    </TabsContent>
 
-                  <TabsContent value="insights" className="p-4 space-y-3 mt-0">
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg bg-gradient-to-r from-green-500/5 to-green-500/10 border border-green-500/20">
-                        <p className="text-xs font-medium text-green-600 mb-1">💡 Oportunidade Detectada</p>
-                        <p className="text-xs text-muted-foreground">
-                          Cliente em fase de expansão. Momento ideal para oferecer produtos complementares.
-                        </p>
+                    {/* Campos Tab */}
+                    <TabsContent value="campos" className="p-3 space-y-2 mt-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-medium">Campos Personalizados</p>
+                        <Badge variant="outline" className="text-[9px]">4/5 preenchidos</Badge>
                       </div>
-                      <div className="p-3 rounded-lg bg-gradient-to-r from-blue-500/5 to-blue-500/10 border border-blue-500/20">
-                        <p className="text-xs font-medium text-blue-600 mb-1">📊 Padrão de Comportamento</p>
-                        <p className="text-xs text-muted-foreground">
-                          Engajamento consistente nos últimos 30 dias. Responde em média em 2h.
-                        </p>
+                      <div className="space-y-2">
+                        {mockFields.map((field, i) => (
+                          <div key={i} className="flex items-center justify-between p-2 rounded bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
+                            <div className="flex items-center gap-2">
+                              {field.type === "select" && <Tag className="h-3 w-3 text-muted-foreground" />}
+                              {field.type === "boolean" && <ToggleLeft className="h-3 w-3 text-muted-foreground" />}
+                              {field.type === "currency" && <DollarSign className="h-3 w-3 text-muted-foreground" />}
+                              {field.type === "user" && <User className="h-3 w-3 text-muted-foreground" />}
+                              <span className="text-[10px]">{field.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {field.type === "boolean" ? (
+                                <Checkbox checked={field.value as boolean} className="h-3.5 w-3.5" />
+                              ) : field.type === "select" ? (
+                                <Badge variant="secondary" className={`text-[9px] bg-${field.color}-500/10 text-${field.color}-600`}>
+                                  {field.value}
+                                </Badge>
+                              ) : (
+                                <span className="text-[10px] font-medium">{field.value}</span>
+                              )}
+                              <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  </TabsContent>
+                      <Button size="sm" variant="outline" className="w-full text-[10px] h-7 mt-2">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Editar Campos
+                      </Button>
+                    </TabsContent>
 
-                  <TabsContent value="history" className="p-4 space-y-3 mt-0">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 p-2 rounded bg-muted/50 text-xs">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-muted-foreground">09:40</span>
-                        <span>Mensagem recebida</span>
+                    {/* Financeiro Tab */}
+                    <TabsContent value="financeiro" className="p-3 space-y-3 mt-0">
+                      <div className="p-3 rounded-lg border bg-card">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            <span className="text-[11px] font-medium">{mockContract.type}</span>
+                          </div>
+                          <Badge className="bg-green-500 text-[9px]">Ativo</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div>
+                            <p className="text-muted-foreground">Valor</p>
+                            <p className="font-semibold">{mockContract.value}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Restante</p>
+                            <p className="font-semibold text-green-600">{mockContract.daysRemaining} dias</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Início</p>
+                            <p>{mockContract.startDate}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Término</p>
+                            <p>{mockContract.endDate}</p>
+                          </div>
+                        </div>
+                        <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: "5%" }} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 p-2 rounded bg-muted/50 text-xs">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-muted-foreground">09:35</span>
-                        <span>ROI tangível detectado</span>
+                      <Button size="sm" variant="outline" className="w-full text-[10px] h-7">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Novo Contrato
+                      </Button>
+                    </TabsContent>
+
+                    {/* Acompanhamento Tab */}
+                    <TabsContent value="acompanhamento" className="p-3 space-y-2 mt-0">
+                      <div className="space-y-2">
+                        {mockFollowups.map((followup, i) => (
+                          <div key={i} className="p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors group">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-1.5">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarFallback className="text-[8px] bg-primary/10">{followup.user.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-[10px] font-medium">{followup.user}</span>
+                              </div>
+                              <span className="text-[9px] text-muted-foreground">{followup.time}</span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">{followup.text}</p>
+                            <div className="flex gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[9px]">👍</Button>
+                              <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[9px]">❤️</Button>
+                              <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[9px]">Responder</Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2 p-2 rounded bg-muted/50 text-xs">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        <span className="text-muted-foreground">09:30</span>
-                        <span>Conversa iniciada</span>
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Input 
+                          placeholder="Adicionar nota..." 
+                          className="flex-1 h-7 text-[10px]"
+                          value={noteText}
+                          onChange={(e) => setNoteText(e.target.value)}
+                        />
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                          <Image className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" className="h-7 px-2">
+                          <Send className="h-3 w-3" />
+                        </Button>
                       </div>
-                    </div>
-                  </TabsContent>
+                    </TabsContent>
+
+                    {/* Momentos CX Tab */}
+                    <TabsContent value="cx" className="p-3 space-y-2 mt-0">
+                      <div className="space-y-2">
+                        {mockLifeEvents.map((event, i) => (
+                          <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer group">
+                            <div className="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center">
+                              <event.icon className="h-4 w-4 text-pink-500" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[11px] font-medium">{event.title}</p>
+                              <p className="text-[9px] text-muted-foreground flex items-center gap-1">
+                                <Calendar className="h-2.5 w-2.5" />
+                                {event.date}
+                                {event.recurring && <Badge variant="outline" className="text-[8px] h-4 ml-1">Anual</Badge>}
+                              </p>
+                            </div>
+                            <MoreVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                          </div>
+                        ))}
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full text-[10px] h-7 mt-2">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Adicionar Momento
+                      </Button>
+                    </TabsContent>
+
+                    {/* Tarefas Tab */}
+                    <TabsContent value="tarefas" className="p-3 space-y-2 mt-0">
+                      <div className="space-y-2">
+                        {mockTasks.map((task, i) => (
+                          <div key={i} className={`flex items-center gap-2 p-2 rounded-lg border ${task.status === 'done' ? 'bg-muted/30 opacity-60' : 'bg-card'} hover:shadow-sm transition-all cursor-pointer group`}>
+                            <Checkbox checked={task.status === 'done'} className="h-4 w-4" />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[11px] ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{task.title}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-muted-foreground">{task.dueDate}</span>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[8px] h-4 ${
+                                    task.priority === 'high' ? 'border-red-500/30 text-red-500' :
+                                    task.priority === 'medium' ? 'border-amber-500/30 text-amber-500' :
+                                    'border-gray-500/30 text-gray-500'
+                                  }`}
+                                >
+                                  {task.priority === 'high' ? 'Urgente' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full text-[10px] h-7 mt-2">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Nova Tarefa
+                      </Button>
+                    </TabsContent>
+                  </ScrollArea>
                 </Tabs>
 
                 {/* Footer */}
-                <div className="p-3 border-t bg-muted/30">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="p-2 border-t bg-muted/30">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                     <span className="flex items-center gap-1">
                       {isRefreshing ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Sincronizando...
-                        </>
+                        <><Loader2 className="h-3 w-3 animate-spin" /> Sincronizando...</>
                       ) : (
-                        <>
-                          <span className="w-2 h-2 rounded-full bg-green-500" />
-                          Sincronizado agora
-                        </>
+                        <><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Sincronizado</>
                       )}
                     </span>
-                    <Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary hover:text-primary/80 transition-colors">
+                    <Button variant="link" size="sm" className="h-auto p-0 text-[10px] text-primary">
                       Abrir no ROY
                     </Button>
                   </div>
@@ -498,43 +608,23 @@ export default function ExtensionPreview() {
             </Card>
           </div>
 
-          {/* Features Description */}
+          {/* Features Grid */}
           <div className="mt-8 grid md:grid-cols-3 gap-4">
-            <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer group animate-fade-in" style={{ animationDelay: "600ms" }}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
-                  <TrendingUp className="h-5 w-5 text-green-500 group-hover:scale-110 transition-transform" />
+            {[
+              { icon: Clock, title: "Timeline Completa", desc: "Veja todo o histórico de interações, ROI e riscos em tempo real.", color: "blue" },
+              { icon: Tag, title: "Campos Personalizados", desc: "Edite campos customizados diretamente da extensão.", color: "purple" },
+              { icon: ListTodo, title: "Gestão de Tarefas", desc: "Crie e gerencie tarefas sem sair do WhatsApp.", color: "green" },
+            ].map((feature, i) => (
+              <Card key={i} className="p-4 hover:shadow-lg transition-shadow cursor-pointer group animate-fade-in" style={{ animationDelay: `${600 + i * 200}ms` }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-lg bg-${feature.color}-500/10 flex items-center justify-center group-hover:bg-${feature.color}-500/20 transition-colors`}>
+                    <feature.icon className={`h-5 w-5 text-${feature.color}-500 group-hover:scale-110 transition-transform`} />
+                  </div>
+                  <h3 className="font-medium">{feature.title}</h3>
                 </div>
-                <h3 className="font-medium">Métricas em Tempo Real</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                V-NPS, E-Score e ROIzometer atualizados automaticamente enquanto você conversa.
-              </p>
-            </Card>
-            
-            <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer group animate-fade-in" style={{ animationDelay: "800ms" }}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Sparkles className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                </div>
-                <h3 className="font-medium">Análise por IA</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Detecção automática de ROI, riscos e oportunidades nas conversas.
-              </p>
-            </Card>
-            
-            <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer group animate-fade-in" style={{ animationDelay: "1000ms" }}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                  <MessageSquare className="h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform" />
-                </div>
-                <h3 className="font-medium">Ações Rápidas</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Registre eventos de ROI e riscos com um clique, sem sair do WhatsApp.
-              </p>
-            </Card>
+                <p className="text-sm text-muted-foreground">{feature.desc}</p>
+              </Card>
+            ))}
           </div>
         </div>
       </main>
