@@ -21,6 +21,7 @@ import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import Forms from "./pages/Forms";
 import PublicForm from "./pages/PublicForm";
+import Presentation from "./pages/Presentation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
                   <Route path="/team" element={<Team />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/presentation" element={<Presentation />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
