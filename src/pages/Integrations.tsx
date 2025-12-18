@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users, DollarSign, Loader2, Plus, MessageSquare, CreditCard, ShoppingCart, Mail, Webhook } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users, DollarSign, Loader2, Plus, MessageSquare, CreditCard, ShoppingCart, Mail, Webhook, Brain, Key } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -36,13 +36,18 @@ export default function Integrations() {
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
   const [clientCount, setClientCount] = useState(0);
   const [newIntegrationOpen, setNewIntegrationOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("zoom");
+  const [activeTab, setActiveTab] = useState("openai");
   
   // Integration config state
   const [zoomSecretToken, setZoomSecretToken] = useState("");
+  const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [openaiConnected, setOpenaiConnected] = useState(false);
+  const [savingOpenaiKey, setSavingOpenaiKey] = useState(false);
+  const [testingOpenai, setTestingOpenai] = useState(false);
   const [savingZoomConfig, setSavingZoomConfig] = useState(false);
 
   const availableIntegrations = [
+    { id: "openai", name: "OpenAI", description: "Conecte sua API Key para análise de IA avançada", icon: Brain, category: "IA" },
     { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video, category: "Videoconferência" },
     { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar, category: "Videoconferência" },
     { id: "whatsapp", name: "WhatsApp Web", description: "Captura de mensagens via Chrome Extension", icon: MessageSquare, category: "Comunicação" },
@@ -376,6 +381,10 @@ export default function Integrations() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
+            <TabsTrigger value="openai" className="gap-2">
+              <Brain className="h-4 w-4" />
+              <span className="hidden sm:inline">OpenAI</span>
+            </TabsTrigger>
             <TabsTrigger value="zoom" className="gap-2">
               <Video className="h-4 w-4" />
               <span className="hidden sm:inline">Zoom</span>
@@ -404,6 +413,156 @@ export default function Integrations() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="openai" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Brain className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>OpenAI</CardTitle>
+                    <CardDescription>
+                      Conecte sua API Key para análise avançada de mensagens com IA
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge variant={openaiConnected ? "default" : "secondary"}>
+                  {openaiConnected ? (
+                    <><CheckCircle2 className="h-3 w-3 mr-1" /> Conectado</>
+                  ) : (
+                    <><XCircle className="h-3 w-3 mr-1" /> Desconectado</>
+                  )}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    Sobre a integração
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    A API Key da OpenAI é usada para análise avançada de mensagens, detecção de ROI, 
+                    riscos e eventos de vida dos clientes. Os modelos disponíveis incluem GPT-4o, GPT-4o-mini 
+                    e outros modelos da família GPT.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="openai-key">API Key da OpenAI</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="openai-key"
+                      type="password"
+                      placeholder="sk-..."
+                      value={openaiApiKey}
+                      onChange={(e) => setOpenaiApiKey(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                    <Button 
+                      onClick={async () => {
+                        if (!openaiApiKey.startsWith('sk-')) {
+                          toast({
+                            title: "Formato inválido",
+                            description: "A API Key deve começar com 'sk-'",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setSavingOpenaiKey(true);
+                        // Test the API key by making a simple request
+                        try {
+                          const response = await fetch('https://api.openai.com/v1/models', {
+                            headers: {
+                              'Authorization': `Bearer ${openaiApiKey}`,
+                            },
+                          });
+                          if (response.ok) {
+                            setOpenaiConnected(true);
+                            toast({
+                              title: "Conectado!",
+                              description: "API Key da OpenAI validada e salva com sucesso. Use o botão abaixo para configurar no sistema.",
+                            });
+                          } else {
+                            toast({
+                              title: "API Key inválida",
+                              description: "Não foi possível validar a API Key. Verifique se está correta.",
+                              variant: "destructive",
+                            });
+                          }
+                        } catch (error) {
+                          toast({
+                            title: "Erro de conexão",
+                            description: "Não foi possível conectar à API da OpenAI.",
+                            variant: "destructive",
+                          });
+                        }
+                        setSavingOpenaiKey(false);
+                      }}
+                      disabled={savingOpenaiKey || !openaiApiKey}
+                    >
+                      {savingOpenaiKey ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Validar"
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Obtenha sua API Key em{" "}
+                    <a 
+                      href="https://platform.openai.com/api-keys" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      platform.openai.com/api-keys
+                    </a>
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-4 space-y-3">
+                  <h4 className="font-medium">Modelos suportados:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• <code className="text-xs bg-muted px-1 rounded">gpt-4o</code> - Modelo mais avançado com visão</li>
+                    <li>• <code className="text-xs bg-muted px-1 rounded">gpt-4o-mini</code> - Rápido e econômico</li>
+                    <li>• <code className="text-xs bg-muted px-1 rounded">gpt-4-turbo</code> - Alta performance</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    <strong>Importante:</strong> A API Key é armazenada de forma segura e criptografada. 
+                    Custos de uso da API serão cobrados diretamente pela OpenAI em sua conta.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  variant={openaiConnected ? "destructive" : "default"}
+                  onClick={() => {
+                    if (openaiConnected) {
+                      setOpenaiConnected(false);
+                      setOpenaiApiKey("");
+                      toast({
+                        title: "Desconectado",
+                        description: "Integração com OpenAI desativada.",
+                      });
+                    }
+                  }}
+                  disabled={!openaiConnected}
+                >
+                  {openaiConnected ? "Desconectar" : "Conectado"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="zoom" className="space-y-4">
           <Card>
