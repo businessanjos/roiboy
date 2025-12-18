@@ -1786,6 +1786,35 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "team_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_goals: {
         Row: {
           account_id: string
@@ -2008,6 +2037,50 @@ export type Database = {
         }
         Relationships: []
       }
+      team_roles: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_system: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_system?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_roles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           account_id: string
@@ -2018,6 +2091,7 @@ export type Database = {
           id: string
           name: string
           role: Database["public"]["Enums"]["user_role"]
+          team_role_id: string | null
         }
         Insert: {
           account_id: string
@@ -2028,6 +2102,7 @@ export type Database = {
           id?: string
           name: string
           role?: Database["public"]["Enums"]["user_role"]
+          team_role_id?: string | null
         }
         Update: {
           account_id?: string
@@ -2038,6 +2113,7 @@ export type Database = {
           id?: string
           name?: string
           role?: Database["public"]["Enums"]["user_role"]
+          team_role_id?: string | null
         }
         Relationships: [
           {
@@ -2045,6 +2121,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_team_role_id_fkey"
+            columns: ["team_role_id"]
+            isOneToOne: false
+            referencedRelation: "team_roles"
             referencedColumns: ["id"]
           },
         ]
