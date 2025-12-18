@@ -54,10 +54,25 @@ import {
   MapPin,
   QrCode,
   Copy,
-  Check
+  Check,
+  Users,
+  Download
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+interface Attendance {
+  id: string;
+  client_id: string;
+  join_time: string;
+  clients: {
+    id: string;
+    full_name: string;
+    phone_e164: string;
+    avatar_url: string | null;
+  };
+}
 
 interface Event {
   id: string;
@@ -101,6 +116,10 @@ export default function Events() {
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [selectedEventForQr, setSelectedEventForQr] = useState<EventWithProducts | null>(null);
   const [copied, setCopied] = useState(false);
+  const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
+  const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<EventWithProducts | null>(null);
+  const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -181,6 +200,59 @@ export default function Events() {
     setIsRecurring(false);
     setSelectedProducts([]);
     setEditingEvent(null);
+  };
+
+  const fetchAttendance = async (eventId: string) => {
+    setLoadingAttendance(true);
+    const { data, error } = await supabase
+      .from("attendance")
+      .select(`
+        id,
+        client_id,
+        join_time,
+        clients (id, full_name, phone_e164, avatar_url)
+      `)
+      .eq("event_id", eventId)
+      .order("join_time", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching attendance:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar a lista de presenças",
+        variant: "destructive",
+      });
+    } else {
+      setAttendance((data as Attendance[]) || []);
+    }
+    setLoadingAttendance(false);
+  };
+
+  const openAttendanceDialog = (event: EventWithProducts) => {
+    setSelectedEventForAttendance(event);
+    setAttendanceDialogOpen(true);
+    fetchAttendance(event.id);
+  };
+
+  const exportAttendanceCSV = () => {
+    if (!selectedEventForAttendance || attendance.length === 0) return;
+
+    const headers = ["Nome", "Telefone", "Hora do Check-in"];
+    const rows = attendance.map((a) => [
+      a.clients.full_name,
+      a.clients.phone_e164,
+      format(new Date(a.join_time), "dd/MM/yyyy HH:mm", { locale: ptBR })
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `presencas-${selectedEventForAttendance.title.replace(/\s+/g, "-")}.csv`;
+    link.click();
   };
 
   const openEditDialog = (event: EventWithProducts) => {
@@ -655,25 +727,43 @@ export default function Events() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {event.modality === "presencial" && event.checkin_code && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      setSelectedEventForQr(event);
-                                      setQrDialogOpen(true);
-                                    }}
-                                  >
-                                    <QrCode className="h-4 w-4 text-primary" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>QR Code para check-in</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        setSelectedEventForQr(event);
+                                        setQrDialogOpen(true);
+                                      }}
+                                    >
+                                      <QrCode className="h-4 w-4 text-primary" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>QR Code para check-in</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openAttendanceDialog(event)}
+                                    >
+                                      <Users className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Lista de presenças</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </>
                           )}
                           {(event.meeting_url || event.material_url) && (
                             <Button
@@ -778,6 +868,77 @@ export default function Events() {
               </p>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Attendance Dialog */}
+      <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Lista de Presenças
+            </DialogTitle>
+            <DialogDescription>
+              {selectedEventForAttendance?.title}
+              {selectedEventForAttendance?.scheduled_at && (
+                <span className="block text-xs mt-1">
+                  {format(new Date(selectedEventForAttendance.scheduled_at), "EEEE, d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {loadingAttendance ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando presenças...
+              </div>
+            ) : attendance.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">Nenhum check-in registrado ainda</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Compartilhe o QR Code do evento para os participantes confirmarem presença
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary" className="text-sm">
+                    {attendance.length} {attendance.length === 1 ? 'participante' : 'participantes'}
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={exportAttendanceCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar CSV
+                  </Button>
+                </div>
+                
+                <div className="divide-y max-h-[300px] overflow-y-auto">
+                  {attendance.map((a) => (
+                    <div key={a.id} className="flex items-center gap-3 py-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={a.clients.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {a.clients.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{a.clients.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{a.clients.phone_e164}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Check-in</p>
+                        <p className="text-xs font-medium">
+                          {format(new Date(a.join_time), "HH:mm", { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
