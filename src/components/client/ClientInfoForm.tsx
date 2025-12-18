@@ -129,40 +129,40 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   const cnpjValid = !data.cnpj || validateCNPJ(data.cnpj);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {showBasicFields && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <User className="h-4 w-4" />
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+            <User className="h-3.5 w-3.5" />
             Dados Básicos
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className={`space-y-2 ${errors.full_name ? "animate-shake" : ""}`} data-error={!!errors.full_name}>
-              <Label>Nome completo *</Label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className={`space-y-1.5 ${errors.full_name ? "animate-shake" : ""}`} data-error={!!errors.full_name}>
+              <Label className="text-sm font-medium">Nome completo *</Label>
               <Input
                 value={data.full_name}
                 onChange={(e) => updateField("full_name", e.target.value)}
                 placeholder="João Silva"
-                className={errors.full_name ? "border-destructive ring-1 ring-destructive/30" : ""}
+                className={`h-9 ${errors.full_name ? "border-destructive ring-1 ring-destructive/30" : ""}`}
               />
               {errors.full_name && (
-                <p className="text-xs text-destructive flex items-center gap-1">
+                <p className="text-[11px] text-destructive flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.full_name}
                 </p>
               )}
             </div>
-            <div className={`space-y-2 ${errors.phone_e164 ? "animate-shake" : ""}`} data-error={!!errors.phone_e164}>
-              <Label>Telefone principal (E.164) *</Label>
+            <div className={`space-y-1.5 ${errors.phone_e164 ? "animate-shake" : ""}`} data-error={!!errors.phone_e164}>
+              <Label className="text-sm font-medium">Telefone principal *</Label>
               <Input
                 value={data.phone_e164}
                 onChange={(e) => updateField("phone_e164", formatPhoneInput(e.target.value))}
                 placeholder="+5511999999999"
                 maxLength={16}
-                className={errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : ""}
+                className={`h-9 ${errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : ""}`}
               />
               {errors.phone_e164 && (
-                <p className="text-xs text-destructive flex items-center gap-1">
+                <p className="text-[11px] text-destructive flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.phone_e164}
                 </p>
@@ -173,25 +173,27 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
       )}
 
       {/* Additional Emails */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Mail className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <Mail className="h-3.5 w-3.5" />
           E-mails
         </div>
-        <div className="flex flex-wrap gap-2">
-          {data.emails.map((email) => (
-            <Badge key={email} variant="secondary" className="gap-1 pr-1">
-              {email}
-              <button
-                type="button"
-                onClick={() => handleRemoveEmail(email)}
-                className="ml-1 hover:bg-background/50 rounded p-0.5"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
+        {data.emails.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {data.emails.map((email) => (
+              <Badge key={email} variant="secondary" className="gap-1 pr-1 text-xs h-6">
+                {email}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveEmail(email)}
+                  className="ml-0.5 hover:bg-background/50 rounded p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={newEmail}
@@ -200,36 +202,38 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               setEmailError("");
             }}
             placeholder="email@exemplo.com"
-            className={`flex-1 ${emailError ? "border-destructive" : ""}`}
+            className={`flex-1 h-9 ${emailError ? "border-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
           />
-          <Button type="button" variant="outline" size="icon" onClick={handleAddEmail}>
+          <Button type="button" variant="outline" size="sm" className="h-9 px-3" onClick={handleAddEmail}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-        {emailError && <p className="text-xs text-destructive">{emailError}</p>}
+        {emailError && <p className="text-[11px] text-destructive">{emailError}</p>}
       </div>
 
       {/* Additional Phones */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Phone className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <Phone className="h-3.5 w-3.5" />
           Telefones Adicionais
         </div>
-        <div className="flex flex-wrap gap-2">
-          {data.additional_phones.map((phone) => (
-            <Badge key={phone} variant="secondary" className="gap-1 pr-1">
-              {phone}
-              <button
-                type="button"
-                onClick={() => handleRemovePhone(phone)}
-                className="ml-1 hover:bg-background/50 rounded p-0.5"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
+        {data.additional_phones.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {data.additional_phones.map((phone) => (
+              <Badge key={phone} variant="secondary" className="gap-1 pr-1 text-xs h-6">
+                {phone}
+                <button
+                  type="button"
+                  onClick={() => handleRemovePhone(phone)}
+                  className="ml-0.5 hover:bg-background/50 rounded p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={newPhone}
@@ -239,52 +243,52 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             }}
             placeholder="+5511999999999"
             maxLength={16}
-            className={`flex-1 ${phoneError ? "border-destructive" : ""}`}
+            className={`flex-1 h-9 ${phoneError ? "border-destructive" : ""}`}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddPhone())}
           />
-          <Button type="button" variant="outline" size="icon" onClick={handleAddPhone}>
+          <Button type="button" variant="outline" size="sm" className="h-9 px-3" onClick={handleAddPhone}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-        {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
+        {phoneError && <p className="text-[11px] text-destructive">{phoneError}</p>}
       </div>
 
-      <Separator />
+      <div className="h-px bg-border/50" />
 
       {/* Documents */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <FileText className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <FileText className="h-3.5 w-3.5" />
           Documentos
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>CPF</Label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">CPF</Label>
             <Input
               value={data.cpf}
               onChange={(e) => handleCPFChange(e.target.value)}
               placeholder="000.000.000-00"
               maxLength={14}
-              className={!cpfValid ? "border-destructive" : ""}
+              className={`h-9 ${!cpfValid ? "border-destructive" : ""}`}
             />
             {!cpfValid && (
-              <p className="text-xs text-destructive flex items-center gap-1">
+              <p className="text-[11px] text-destructive flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 CPF inválido
               </p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label>CNPJ</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">CNPJ</Label>
             <Input
               value={data.cnpj}
               onChange={(e) => handleCNPJChange(e.target.value)}
               placeholder="00.000.000/0000-00"
               maxLength={18}
-              className={!cnpjValid ? "border-destructive" : ""}
+              className={`h-9 ${!cnpjValid ? "border-destructive" : ""}`}
             />
             {!cnpjValid && (
-              <p className="text-xs text-destructive flex items-center gap-1">
+              <p className="text-[11px] text-destructive flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 CNPJ inválido
               </p>
@@ -293,76 +297,77 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border/50" />
 
       {/* Company Info */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Building2 className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <Building2 className="h-3.5 w-3.5" />
           Empresa
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Razão Social / Empresa</Label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Razão Social / Empresa</Label>
             <Input
               value={data.company_name}
               onChange={(e) => updateField("company_name", e.target.value)}
               placeholder="Empresa Ltda"
+              className="h-9"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Calendar className="h-3 w-3" />
-              Data de Nascimento
-            </Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Data de Nascimento</Label>
             <Input
               type="date"
               value={data.birth_date}
               onChange={(e) => updateField("birth_date", e.target.value)}
+              className="h-9"
             />
           </div>
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border/50" />
 
       {/* Contract Dates */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Calendar className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <Calendar className="h-3.5 w-3.5" />
           Contrato
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Data de Início</Label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Data de Início</Label>
             <Input
               type="date"
               value={data.contract_start_date}
               onChange={(e) => updateField("contract_start_date", e.target.value)}
+              className="h-9"
             />
           </div>
-          <div className="space-y-2">
-            <Label>Data de Fim</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Data de Fim</Label>
             <Input
               type="date"
               value={data.contract_end_date}
               onChange={(e) => updateField("contract_end_date", e.target.value)}
+              className="h-9"
             />
           </div>
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border/50" />
 
       {/* MLS */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Award className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <Award className="h-3.5 w-3.5" />
           MLS
         </div>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="is_mls">Cliente MLS</Label>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between py-1">
+            <Label htmlFor="is_mls" className="text-sm font-medium cursor-pointer">Cliente MLS</Label>
             <Switch
               id="is_mls"
               checked={data.is_mls}
@@ -373,20 +378,20 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             />
           </div>
           {data.is_mls && (
-            <div className="space-y-2">
-              <Label>Nível MLS</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Nível MLS</Label>
               <Select
                 value={data.mls_level}
                 onValueChange={(value) => updateField("mls_level", value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Selecione o nível" />
                 </SelectTrigger>
                 <SelectContent>
                   {MLS_LEVELS.map((level) => (
                     <SelectItem key={level.value} value={level.value}>
                       <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${level.dotColor}`} />
+                        <div className={`w-2.5 h-2.5 rounded-full ${level.dotColor}`} />
                         {level.label}
                       </div>
                     </SelectItem>
@@ -398,94 +403,104 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border/50" />
 
       {/* Address */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <MapPin className="h-4 w-4" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <MapPin className="h-3.5 w-3.5" />
           Endereço
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label>CEP</Label>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">CEP</Label>
             <Input
               value={data.zip_code}
               onChange={(e) => handleCEPChange(e.target.value)}
               placeholder="00000-000"
               maxLength={9}
+              className="h-9"
             />
           </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Rua</Label>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-sm font-medium">Rua</Label>
             <Input
               value={data.street}
               onChange={(e) => updateField("street", e.target.value)}
               placeholder="Av. Paulista"
+              className="h-9"
             />
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-4">
-          <div className="space-y-2">
-            <Label>Número</Label>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Número</Label>
             <Input
               value={data.street_number}
               onChange={(e) => updateField("street_number", e.target.value)}
               placeholder="1000"
+              className="h-9"
             />
           </div>
-          <div className="space-y-2 sm:col-span-3">
-            <Label>Complemento</Label>
+          <div className="space-y-1.5 sm:col-span-3">
+            <Label className="text-sm font-medium">Complemento</Label>
             <Input
               value={data.complement}
               onChange={(e) => updateField("complement", e.target.value)}
               placeholder="Sala 101"
+              className="h-9"
             />
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Bairro</Label>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Bairro</Label>
             <Input
               value={data.neighborhood}
               onChange={(e) => updateField("neighborhood", e.target.value)}
               placeholder="Centro"
+              className="h-9"
             />
           </div>
-          <div className="space-y-2">
-            <Label>Cidade</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Cidade</Label>
             <Input
               value={data.city}
               onChange={(e) => updateField("city", e.target.value)}
               placeholder="São Paulo"
+              className="h-9"
             />
           </div>
-          <div className="space-y-2">
-            <Label>Estado</Label>
-            <select
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Estado</Label>
+            <Select
               value={data.state}
-              onChange={(e) => updateField("state", e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onValueChange={(value) => updateField("state", value)}
             >
-              <option value="">Selecione</option>
-              {BRAZILIAN_STATES.map((state) => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="UF" />
+              </SelectTrigger>
+              <SelectContent>
+                {BRAZILIAN_STATES.map((state) => (
+                  <SelectItem key={state} value={state}>{state}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
-      <Separator />
+      <div className="h-px bg-border/50" />
 
       {/* Notes */}
-      <div className="space-y-4">
-        <Label>Observações</Label>
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Observações</Label>
         <Textarea
           value={data.notes}
           onChange={(e) => updateField("notes", e.target.value)}
           placeholder="Anotações sobre o cliente..."
-          rows={3}
+          rows={2}
+          className="resize-none"
         />
       </div>
     </div>
