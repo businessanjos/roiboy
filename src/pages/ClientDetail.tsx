@@ -1769,7 +1769,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Scores Header */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <Card className="shadow-card">
           <CardContent className="p-5">
             <ScoreGauge
@@ -1837,29 +1837,25 @@ export default function ClientDetail() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Contract Timer */}
-      {(client.contract_start_date || client.contract_end_date) && (
+        {/* Contract Timer */}
         <Card className="shadow-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              Vigência do Contrato
-            </CardTitle>
-            <CardDescription>
-              Período e progresso do contrato atual
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ContractTimer 
-              startDate={client.contract_start_date}
-              endDate={client.contract_end_date}
-              variant="full"
-            />
+          <CardContent className="p-5">
+            <div className="flex flex-col items-center justify-center h-full gap-2">
+              <p className="text-sm font-medium text-muted-foreground">Vigência</p>
+              {(client.contract_start_date || client.contract_end_date) ? (
+                <ContractTimer 
+                  startDate={client.contract_start_date}
+                  endDate={client.contract_end_date}
+                  variant="compact"
+                />
+              ) : (
+                <span className="text-sm text-muted-foreground">Sem contrato</span>
+              )}
+            </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
       {/* Risk Alerts */}
       {riskEvents.length > 0 && (
