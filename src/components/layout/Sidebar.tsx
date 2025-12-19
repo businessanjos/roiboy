@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -36,6 +36,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
+import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions";
 import { useTheme } from "next-themes";
 import {
   Sheet,
@@ -67,17 +68,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const navItems = [
+interface NavItem {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  permission?: Permission | Permission[];
+}
+
+const navItems: NavItem[] = [
   { to: "/presentation", icon: Presentation, label: "Apresentação" },
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/clients", icon: Users, label: "Clientes" },
-  { to: "/team", icon: UserCircle, label: "Equipe" },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: PERMISSIONS.REPORTS_VIEW },
+  { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
+  { to: "/team", icon: UserCircle, label: "Equipe", permission: PERMISSIONS.TEAM_VIEW },
   { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
-  { to: "/products", icon: Package, label: "Produtos" },
-  { to: "/events", icon: CalendarDays, label: "Eventos" },
-  { to: "/forms", icon: FileText, label: "Formulários" },
-  { to: "/integrations", icon: Link2, label: "Integrações" },
-  { to: "/settings", icon: Settings, label: "Configurações" },
+  { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
+  { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
+  { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
+  { to: "/integrations", icon: Link2, label: "Integrações", permission: PERMISSIONS.SETTINGS_VIEW },
+  { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
 ];
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
@@ -85,6 +93,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const { pendingCount: pendingTasksCount, overdueCount } = usePendingTasksCount();
+  const { hasPermission, isAdmin } = usePermissions();
   const { setTheme, theme } = useTheme();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
@@ -97,6 +106,16 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     };
     checkSuperAdmin();
   }, [user]);
+
+  // Filter nav items based on permissions
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter((item) => {
+      // Items without permission requirement are always visible
+      if (!item.permission) return true;
+      // Check permission(s)
+      return hasPermission(item.permission);
+    });
+  }, [hasPermission]);
 
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
@@ -159,7 +178,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     <>
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.to);
           return (
             <NavLink
