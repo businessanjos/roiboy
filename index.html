@@ -2,24 +2,46 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="preconnect" href="https://mtzoavtbtqflufyccern.supabase.co" crossorigin />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ROY - Sua plataforma de encantamento</title>
     <meta name="description" content="ROY - Sua plataforma de encantamento. Meça o ROI percebido pelos seus clientes em tempo real." />
     <meta name="author" content="ROY" />
 
+    <!-- DNS Prefetch & Preconnect for critical origins -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://mtzoavtbtqflufyccern.supabase.co" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://mtzoavtbtqflufyccern.supabase.co" crossorigin />
+
+    <!-- Preload critical font with display=swap -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" /></noscript>
+
+    <!-- Open Graph -->
     <meta property="og:title" content="ROY - Sua plataforma de encantamento" />
     <meta property="og:description" content="Meça o ROI percebido pelos seus clientes em tempo real." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@ROY" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <!-- Critical CSS for initial render -->
+    <style>
+      body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:#efede6;color:#201c19}
+      #root{min-height:100vh;display:flex;align-items:center;justify-content:center}
+      .loader{width:2rem;height:2rem;border:2px solid #e7e4d8;border-top-color:#d2ae6d;border-radius:50%;animation:spin .6s linear infinite}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      @media(prefers-color-scheme:dark){body{background:#201c19;color:#efede6}.loader{border-color:#42423d;border-top-color:#d2ae6d}}
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="loader"></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
