@@ -89,10 +89,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const fetchNotifications = async () => {
     try {
+      // Get current auth user
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
       const { data: userData } = await supabase
         .from("users")
         .select("id")
-        .single();
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
 
       if (!userData) return;
       setCurrentUserId(userData.id);
