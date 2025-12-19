@@ -141,7 +141,11 @@ const MOCK_EVENTS: ROIEvent[] = [
   },
 ];
 
-export function ROIEventsFeed() {
+interface ROIEventsFeedProps {
+  className?: string;
+}
+
+export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
   const [events, setEvents] = useState<ROIEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [useMock, setUseMock] = useState(false);
@@ -214,7 +218,7 @@ export function ROIEventsFeed() {
 
   if (loading) {
     return (
-      <Card className="shadow-card">
+      <Card className={cn("shadow-card", className)}>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
@@ -239,7 +243,7 @@ export function ROIEventsFeed() {
   }
 
   return (
-    <Card className="shadow-card">
+    <Card className={cn("shadow-card", className)}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -274,7 +278,7 @@ export function ROIEventsFeed() {
             <p className="text-xs">Os eventos aparecerão aqui conforme forem detectados.</p>
           </div>
         ) : (
-          <ScrollArea className="h-[400px] pr-4">
+          <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-3">
               {events.map((event, index) => {
                 const categoryConfig = CATEGORY_CONFIG[event.category] || { 

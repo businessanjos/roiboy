@@ -780,63 +780,7 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* ROI Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="text-base">Categorias de ROI (30 dias)</CardTitle>
-                <CardDescription>Tipos de ROI mais identificados</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {roiStats?.recentCategories && roiStats.recentCategories.length > 0 ? (
-                  <div className="space-y-3">
-                    {roiStats.recentCategories.map((cat) => (
-                      <div key={cat.category} className="flex items-center justify-between">
-                        <span className="text-sm">{getCategoryLabel(cat.category)}</span>
-                        <Badge variant="secondary">{cat.count}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Nenhum evento de ROI nos últimos 30 dias</p>
-                )}
-                <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Tangível vs Intangível</span>
-                  <span className="font-medium">{roiStats?.tangibleCount || 0} / {roiStats?.intangibleCount || 0}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="text-base">Top 5 em Risco</CardTitle>
-                <CardDescription>Clientes que precisam de atenção</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {topRiskClients.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum cliente em risco</p>
-                ) : (
-                  <div className="space-y-2">
-                    {topRiskClients.map((client) => (
-                      <Link
-                        key={client.id}
-                        to={`/clients/${client.id}`}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <span className="text-sm font-medium">{client.full_name}</span>
-                        <ScoreBadge score={client.roizometer} size="sm" />
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* AI Usage Stats */}
-            <AIUsageStats />
-          </div>
-
-          {/* ROI Events Feed */}
+          {/* ROI Events Feed - Full Width */}
           <ROIEventsFeed />
         </TabsContent>
 
