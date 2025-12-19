@@ -895,35 +895,26 @@ export default function Team() {
                           )}
                         </div>
                         <div className="flex items-center gap-6 text-sm text-muted-foreground shrink-0">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 w-12">
                             <Users className="h-4 w-4" />
                             <span>{memberCount}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 w-12">
                             <Check className="h-4 w-4" />
                             <span>{permissionCount}</span>
                           </div>
                         </div>
-                        <div className="flex gap-1 shrink-0">
+                        <div className="flex gap-1 shrink-0 w-24 justify-end">
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => openRoleDialog(role)}
-                            title="Visualizar/Editar"
+                            title="Editar"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openRoleDialog(role)}
-                            title="Configurar"
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          {!role.is_system && (
+                          {!role.is_system ? (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -933,6 +924,8 @@ export default function Team() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
+                          ) : (
+                            <div className="w-8" /> 
                           )}
                         </div>
                       </div>
