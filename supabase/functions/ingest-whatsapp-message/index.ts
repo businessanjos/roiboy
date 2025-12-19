@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
 };
 
+// Security constants
+const MAX_CONTENT_LENGTH = 10000; // 10KB max for text content
+const MAX_PHONE_LENGTH = 16;
+
 interface MessagePayload {
   api_key: string;
   phone_e164: string;
@@ -13,32 +17,105 @@ interface MessagePayload {
   content_text: string;
   sent_at: string;
   external_thread_id?: string;
-  // Group message support
   is_group?: boolean;
   group_name?: string;
-  sender_phone_e164?: string; // Phone of the actual sender in group
+  sender_phone_e164?: string;
+}
+
+// Validate API key against integration config
+async function validateApiKey(supabase: any, apiKey: string): Promise<{ valid: boolean; accountId?: string }> {
+  if (!apiKey || apiKey.length < 16 || apiKey.length > 128) {
+    return { valid: false };
+  }
+
+  const { data: integration, error } = await supabase
+    .from("integrations")
+    .select("account_id, config")
+    .eq("type", "liberty")
+    .eq("status", "connected")
+    .maybeSingle();
+
+  if (error || !integration) {
+    // Also check for whatsapp type integration
+    const { data: whatsappIntegration } = await supabase
+      .from("integrations")
+      .select("account_id, config")
+      .eq("type", "whatsapp")
+      .eq("status", "connected")
+      .maybeSingle();
+
+    if (!whatsappIntegration) {
+      return { valid: false };
+    }
+
+    const config = whatsappIntegration.config as Record<string, string> | null;
+    if (config?.api_key && config.api_key === apiKey) {
+      return { valid: true, accountId: whatsappIntegration.account_id };
+    }
+    return { valid: false };
+  }
+
+  const config = integration.config as Record<string, string> | null;
+  if (config?.api_key && config.api_key === apiKey) {
+    return { valid: true, accountId: integration.account_id };
+  }
+
+  return { valid: false };
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Get API key from header
+    const apiKey = req.headers.get("x-api-key") || "";
+    
     const payload: MessagePayload = await req.json();
+    
+    // Use API key from payload if not in header
+    const effectiveApiKey = apiKey || payload.api_key || "";
+    
     console.log("Received message payload:", { 
-      ...payload, 
-      content_text: "[REDACTED]",
+      hasApiKey: !!effectiveApiKey,
       is_group: payload.is_group,
       group_name: payload.group_name,
-      sender_phone: payload.sender_phone_e164 ? "[SET]" : "[NOT SET]"
+      hasContent: !!payload.content_text
     });
 
-    // Validate required fields
+    // Input validation
     if (!payload.phone_e164 || !payload.direction || !payload.content_text || !payload.sent_at) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: phone_e164, direction, content_text, sent_at" }),
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate content length
+    if (payload.content_text.length > MAX_CONTENT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: "Content exceeds maximum length" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate phone format and length
+    const clientPhone = payload.is_group && payload.sender_phone_e164 
+      ? payload.sender_phone_e164 
+      : payload.phone_e164;
+
+    if (clientPhone.length > MAX_PHONE_LENGTH || !clientPhone.match(/^\+[1-9]\d{6,14}$/)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid phone format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate direction enum
+    if (!["client_to_team", "team_to_client"].includes(payload.direction)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid direction value" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -46,76 +123,59 @@ serve(async (req) => {
     // For group messages, sender_phone_e164 is required
     if (payload.is_group && payload.direction === "client_to_team" && !payload.sender_phone_e164) {
       return new Response(
-        JSON.stringify({ error: "For group messages from client, sender_phone_e164 is required" }),
+        JSON.stringify({ error: "Sender phone required for group messages" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Determine which phone to use for client lookup
-    // For group messages, use sender_phone; for direct messages, use phone_e164
-    const clientPhone = payload.is_group && payload.sender_phone_e164 
-      ? payload.sender_phone_e164 
-      : payload.phone_e164;
-
-    // Validate phone format
-    if (!clientPhone.match(/^\+[1-9]\d{6,14}$/)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid phone format. Use E.164 format (e.g., +5511999999999)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Create Supabase client with service role for database operations
+    // Create Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find client by phone - we need to get account_id from API key or find client
-    // For now, find the client by phone across all accounts
+    // Validate API key
+    const authResult = await validateApiKey(supabase, effectiveApiKey);
+    if (!authResult.valid) {
+      console.log("API key validation failed");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Find client by phone - now scoped to authenticated account
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id, account_id, full_name")
       .eq("phone_e164", clientPhone)
+      .eq("account_id", authResult.accountId)
       .maybeSingle();
 
     if (clientError) {
-      console.error("Error finding client:", clientError);
+      console.error("Database error:", clientError.code);
       return new Response(
-        JSON.stringify({ error: "Database error finding client" }),
+        JSON.stringify({ error: "Internal error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!client) {
-      // For group messages, skip silently if client not found (they might not be registered)
       if (payload.is_group) {
-        console.log(`Group message from unregistered phone ${clientPhone}, skipping`);
         return new Response(
-          JSON.stringify({ 
-            success: true,
-            skipped: true,
-            message: "Sender not registered as client",
-            phone: clientPhone 
-          }),
+          JSON.stringify({ success: true, skipped: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
       return new Response(
-        JSON.stringify({ 
-          error: "Client not found", 
-          message: "No client found with this phone number. Create the client first.",
-          phone: clientPhone 
-        }),
+        JSON.stringify({ error: "Client not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Found client:", client.full_name, client.id, payload.is_group ? `(from group: ${payload.group_name})` : "(direct)");
+    console.log("Processing message for client:", client.id);
 
-    // For group messages, use group info as thread ID
     const threadId = payload.is_group 
-      ? `group:${payload.phone_e164}` // Use group's phone/ID as thread identifier
+      ? `group:${payload.phone_e164}` 
       : payload.external_thread_id;
 
     // Find or create conversation
@@ -159,26 +219,26 @@ serve(async (req) => {
         direction: payload.direction,
         content_text: payload.content_text,
         sent_at: payload.sent_at,
+        is_group: payload.is_group || false,
+        group_name: payload.group_name || null,
       })
       .select("id")
       .single();
 
     if (messageError) {
-      console.error("Error inserting message:", messageError);
+      console.error("Message insert error:", messageError.code);
       return new Response(
         JSON.stringify({ error: "Failed to save message" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Message saved:", messageEvent.id, payload.is_group ? "(group)" : "(direct)");
+    console.log("Message saved:", messageEvent.id);
 
-    // Trigger AI analysis in background (only for client messages)
+    // Trigger AI analysis in background
     if (payload.direction === "client_to_team" && payload.content_text.length > 10) {
-      console.log("Triggering AI analysis...");
       const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-message`;
       
-      // Fire and forget - don't wait for analysis
       fetch(analyzeUrl, {
         method: "POST",
         headers: {
@@ -192,10 +252,8 @@ serve(async (req) => {
           account_id: client.account_id,
           source: "whatsapp_text",
         }),
-      }).then(res => {
-        console.log("AI analysis triggered, status:", res.status);
       }).catch(err => {
-        console.error("Error triggering AI analysis:", err);
+        console.error("AI trigger error");
       });
     }
 
@@ -204,17 +262,14 @@ serve(async (req) => {
         success: true, 
         message_id: messageEvent.id,
         client_id: client.id,
-        client_name: client.full_name,
-        is_group: payload.is_group || false,
-        group_name: payload.group_name || null
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
-    console.error("Error in ingest-whatsapp-message:", error);
+    console.error("Request processing error");
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "Request failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
