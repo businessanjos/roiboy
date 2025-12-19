@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown } from "lucide-react";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   validateCPF, 
@@ -655,7 +655,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           {/* Residential Address */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-              <MapPin className="h-3.5 w-3.5" />
+              <Home className="h-3.5 w-3.5" />
               Endereço Residencial
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -886,7 +886,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           {/* Business Address */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-              <MapPin className="h-3.5 w-3.5" />
+              <Building2 className="h-3.5 w-3.5" />
               Endereço Comercial
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
