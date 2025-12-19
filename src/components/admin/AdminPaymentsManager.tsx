@@ -87,7 +87,7 @@ export function AdminPaymentsManager() {
   const limit = 20;
 
   // Fetch accounts with asaas_customer_id mapping
-  const { data: accountsMap = {} } = useQuery({
+  const { data: accountsData } = useQuery({
     queryKey: ['admin-asaas-accounts-map'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -95,51 +95,79 @@ export function AdminPaymentsManager() {
         .select('id, name, asaas_customer_id');
       
       if (error) throw error;
-      
-      const map: Record<string, string> = {};
-      data?.forEach((acc) => {
-        if (acc.asaas_customer_id) {
-          map[acc.asaas_customer_id] = acc.name;
-        }
-      });
-      return map;
+      return data || [];
     }
   });
 
-  // Fetch payments from Asaas
-  const { data: paymentsData, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['admin-asaas-payments', statusFilter, billingTypeFilter, offset],
-    queryFn: async () => {
-      const params: Record<string, any> = {
-        offset,
-        limit,
-      };
+  const accountsMap: Record<string, string> = {};
+  const royCustomerIds: string[] = [];
+  
+  accountsData?.forEach((acc) => {
+    if (acc.asaas_customer_id) {
+      accountsMap[acc.asaas_customer_id] = acc.name;
+      royCustomerIds.push(acc.asaas_customer_id);
+    }
+  });
 
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
+  // Fetch payments from Asaas - only ROY customers
+  const { data: paymentsData, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['admin-asaas-payments', statusFilter, billingTypeFilter, offset, royCustomerIds],
+    queryFn: async () => {
+      // If no ROY customers exist yet, return empty
+      if (royCustomerIds.length === 0) {
+        return {
+          data: [],
+          hasMore: false,
+          totalCount: 0
+        } as AsaasPaymentsResponse;
       }
 
-      const { data, error } = await supabase.functions.invoke('asaas-api', {
-        body: {
-          action: 'listPayments',
-          ...params
-        }
-      });
-
-      if (error) throw error;
+      // Fetch payments for each ROY customer and combine
+      const allPayments: AsaasPayment[] = [];
       
-      // Enrich with account names
-      const enrichedPayments = (data.data || []).map((payment: AsaasPayment) => ({
-        ...payment,
-        accountName: accountsMap[payment.customer] || 'Cliente externo'
-      }));
+      for (const customerId of royCustomerIds) {
+        const params: Record<string, any> = {
+          customer: customerId,
+          limit: 100, // Fetch more per customer to ensure we get all
+        };
+
+        if (statusFilter !== 'all') {
+          params.status = statusFilter;
+        }
+
+        try {
+          const { data, error } = await supabase.functions.invoke('asaas-api', {
+            body: {
+              action: 'listPayments',
+              ...params
+            }
+          });
+
+          if (!error && data?.data) {
+            const enrichedPayments = data.data.map((payment: AsaasPayment) => ({
+              ...payment,
+              accountName: accountsMap[payment.customer] || 'Conta ROY'
+            }));
+            allPayments.push(...enrichedPayments);
+          }
+        } catch (err) {
+          console.error(`Error fetching payments for customer ${customerId}:`, err);
+        }
+      }
+
+      // Sort by due date descending
+      allPayments.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
+
+      // Apply pagination locally
+      const paginatedPayments = allPayments.slice(offset, offset + limit);
 
       return {
-        data: enrichedPayments,
-        hasMore: data.hasMore || false,
-        totalCount: data.totalCount || 0
+        data: paginatedPayments,
+        hasMore: offset + limit < allPayments.length,
+        totalCount: allPayments.length
       } as AsaasPaymentsResponse;
     },
+    enabled: !!accountsData,
     refetchInterval: 60000, // Refresh every minute
   });
 
