@@ -88,6 +88,11 @@ const navItems: NavItem[] = [
   { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
 ];
 
+// Simplified navigation for super admins - only admin-related items
+const superAdminNavItems: NavItem[] = [
+  { to: "/admin", icon: Shield, label: "Administração" },
+];
+
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { user } = useAuth();
@@ -107,8 +112,11 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     checkSuperAdmin();
   }, [user]);
 
-  // Filter nav items based on permissions
+  // Filter nav items based on permissions and super admin status
   const filteredNavItems = useMemo(() => {
+    // Super admins only see admin-related items
+    if (isSuperAdmin) return superAdminNavItems;
+    
     // While loading permissions, show all items to avoid flash
     if (permissionsLoading) return navItems;
     
@@ -118,7 +126,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       // Check permission(s)
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin]);
 
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
@@ -201,74 +209,59 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           );
         })}
 
-        {/* Notifications */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <NavLink
-                to="/notifications"
-                onClick={onNavigate}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
-                  location.pathname === "/notifications"
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <div className="relative">
-                  <Bell className="h-5 w-5 flex-shrink-0" />
-                  {totalBadgeCount > 0 && (
-                    <span className={cn(
-                      "absolute -top-1 -right-1 h-4 w-4 rounded-full text-[10px] font-medium flex items-center justify-center",
-                      overdueCount > 0 
-                        ? "bg-destructive text-destructive-foreground" 
-                        : "bg-primary text-primary-foreground"
-                    )}>
-                      {totalBadgeCount > 9 ? "9+" : totalBadgeCount}
-                    </span>
+        {/* Notifications - hide for super admins */}
+        {!isSuperAdmin && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <NavLink
+                  to="/notifications"
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
+                    location.pathname === "/notifications"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
-                </div>
-                {!collapsed && <span>Notificações</span>}
-                {!collapsed && totalBadgeCount > 0 && (
-                  <Badge 
-                    variant={overdueCount > 0 ? "destructive" : "default"} 
-                    className="ml-auto h-5 px-1.5 text-[10px]"
-                  >
-                    {totalBadgeCount}
-                  </Badge>
-                )}
-              </NavLink>
-            </TooltipTrigger>
-            {totalBadgeCount > 0 && (
-              <TooltipContent side="right" className="text-xs">
-                <div className="flex flex-col gap-0.5">
-                  {unreadCount > 0 && (
-                    <span>{unreadCount} {unreadCount === 1 ? "menção" : "menções"}</span>
+                >
+                  <div className="relative">
+                    <Bell className="h-5 w-5 flex-shrink-0" />
+                    {totalBadgeCount > 0 && (
+                      <span className={cn(
+                        "absolute -top-1 -right-1 h-4 w-4 rounded-full text-[10px] font-medium flex items-center justify-center",
+                        overdueCount > 0 
+                          ? "bg-destructive text-destructive-foreground" 
+                          : "bg-primary text-primary-foreground"
+                      )}>
+                        {totalBadgeCount > 9 ? "9+" : totalBadgeCount}
+                      </span>
+                    )}
+                  </div>
+                  {!collapsed && <span>Notificações</span>}
+                  {!collapsed && totalBadgeCount > 0 && (
+                    <Badge 
+                      variant={overdueCount > 0 ? "destructive" : "default"} 
+                      className="ml-auto h-5 px-1.5 text-[10px]"
+                    >
+                      {totalBadgeCount}
+                    </Badge>
                   )}
-                  {pendingTasksCount > 0 && (
-                    <span>{pendingTasksCount} {pendingTasksCount === 1 ? "tarefa" : "tarefas"}{overdueCount > 0 && ` (${overdueCount} atrasada${overdueCount > 1 ? "s" : ""})`}</span>
-                  )}
-                </div>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Admin link - only for super admins */}
-        {isSuperAdmin && (
-          <NavLink
-            to="/admin"
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-              location.pathname === "/admin"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <Shield className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && <span>Administração</span>}
-          </NavLink>
+                </NavLink>
+              </TooltipTrigger>
+              {totalBadgeCount > 0 && (
+                <TooltipContent side="right" className="text-xs">
+                  <div className="flex flex-col gap-0.5">
+                    {unreadCount > 0 && (
+                      <span>{unreadCount} {unreadCount === 1 ? "menção" : "menções"}</span>
+                    )}
+                    {pendingTasksCount > 0 && (
+                      <span>{pendingTasksCount} {pendingTasksCount === 1 ? "tarefa" : "tarefas"}{overdueCount > 0 && ` (${overdueCount} atrasada${overdueCount > 1 ? "s" : ""})`}</span>
+                    )}
+                  </div>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
       </nav>
 
