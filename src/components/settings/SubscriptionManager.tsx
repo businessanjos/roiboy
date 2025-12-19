@@ -594,6 +594,43 @@ export function SubscriptionManager() {
         )}
       </Card>
 
+      {/* Payment Methods Card - Always visible */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Métodos de Pagamento
+          </CardTitle>
+          <CardDescription>
+            Gerencie suas formas de pagamento
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium">Adicionar Cartão de Crédito</h4>
+                <p className="text-sm text-muted-foreground">
+                  Cadastre um cartão para pagamentos recorrentes
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                onClick={() => setIsCardDialogOpen(true)}
+              >
+                <CreditCard className="h-4 w-4" />
+                Adicionar Cartão
+              </Button>
+            </div>
+          </div>
+
+          <div className="text-xs text-muted-foreground">
+            <p>Também aceitamos PIX e Boleto. Escolha o método na hora do pagamento.</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Available Plans */}
       {availablePlans.length > 0 && (
         <Card>
@@ -740,11 +777,12 @@ export function SubscriptionManager() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Pagamento com Cartão de Crédito
+              {currentPlan ? "Pagamento com Cartão de Crédito" : "Adicionar Cartão de Crédito"}
             </DialogTitle>
             <DialogDescription>
-              Preencha os dados do cartão para processar o pagamento de{" "}
-              {currentPlan && new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(currentPlan.price)}
+              {currentPlan 
+                ? `Preencha os dados do cartão para processar o pagamento de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(currentPlan.price)}`
+                : "Cadastre os dados do seu cartão para pagamentos futuros"}
             </DialogDescription>
           </DialogHeader>
           
@@ -872,16 +910,21 @@ export function SubscriptionManager() {
             <Button variant="outline" onClick={() => setIsCardDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleCardPayment} disabled={generatingPayment}>
+            <Button onClick={handleCardPayment} disabled={generatingPayment || !currentPlan}>
               {generatingPayment ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Processando...
                 </>
+              ) : currentPlan ? (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pagar {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(currentPlan.price)}
+                </>
               ) : (
                 <>
                   <CreditCard className="h-4 w-4 mr-2" />
-                  Pagar {currentPlan && new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(currentPlan.price)}
+                  Salvar Cartão
                 </>
               )}
             </Button>
