@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -469,7 +470,8 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* Basic Fields - Always visible */}
       {showBasicFields && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -501,434 +503,451 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         </div>
       )}
 
-      {/* Additional Emails */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          <Mail className="h-3.5 w-3.5" />
-          E-mails
-        </div>
-        {data.emails.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {data.emails.map((email) => (
-              <Badge key={email} variant="secondary" className="gap-1 pr-1 text-xs h-6">
-                {email}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveEmail(email)}
-                  className="ml-0.5 hover:bg-background/50 rounded p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Input
-              value={newEmail}
-              onChange={(e) => {
-                setNewEmail(e.target.value);
-                setEmailError("");
-              }}
-              placeholder="email@exemplo.com"
-              className={`h-9 pr-9 ${emailError ? "border-destructive" : getInputClass(validation.newEmail)}`}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
-            />
-            <ValidationIndicator isValid={validation.newEmail.isValid} isEmpty={validation.newEmail.isEmpty} />
-          </div>
-          <Button type="button" variant="outline" size="sm" className="h-9 px-3" onClick={handleAddEmail}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        {emailError && <p className="text-[11px] text-destructive">{emailError}</p>}
-      </div>
+      {/* Tabs for Person/Company */}
+      <Tabs defaultValue="personal" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 h-9">
+          <TabsTrigger value="personal" className="text-sm gap-1.5">
+            <User className="h-3.5 w-3.5" />
+            Pessoa Física
+          </TabsTrigger>
+          <TabsTrigger value="company" className="text-sm gap-1.5">
+            <Building2 className="h-3.5 w-3.5" />
+            Pessoa Jurídica
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Additional Phones */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          <Phone className="h-3.5 w-3.5" />
-          Telefones Adicionais
-        </div>
-        {data.additional_phones.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {data.additional_phones.map((phone) => (
-              <Badge key={phone} variant="secondary" className="gap-1 pr-1 text-xs h-6">
-                {phone}
-                <button
-                  type="button"
-                  onClick={() => handleRemovePhone(phone)}
-                  className="ml-0.5 hover:bg-background/50 rounded p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Input
-            value={newPhone}
-            onChange={(e) => {
-              setNewPhone(formatInternationalPhone(e.target.value));
-              setPhoneError("");
-            }}
-            placeholder="+55 11 99999-9999"
-            maxLength={20}
-            className={`flex-1 h-9 ${phoneError ? "border-destructive" : ""}`}
-            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddPhone())}
-          />
-          <Button type="button" variant="outline" size="sm" className="h-9 px-3" onClick={handleAddPhone}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        {phoneError && <p className="text-[11px] text-destructive">{phoneError}</p>}
-      </div>
-
-      <div className="h-px bg-border/50" />
-
-      {/* Documents */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          <FileText className="h-3.5 w-3.5" />
-          Documentos
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">CPF</Label>
-            <div className="relative">
-              <Input
-                value={data.cpf}
-                onChange={(e) => handleCPFChange(e.target.value)}
-                placeholder="000.000.000-00"
-                maxLength={14}
-                className={`h-9 pr-9 ${getInputClass(validation.cpf)}`}
-              />
-              <ValidationIndicator isValid={validation.cpf.isValid} isEmpty={validation.cpf.isEmpty} />
+        {/* Personal Tab */}
+        <TabsContent value="personal" className="mt-4 space-y-5">
+          {/* E-mails */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Mail className="h-3.5 w-3.5" />
+              E-mails
             </div>
-            {!validation.cpf.isEmpty && !validation.cpf.isValid && !validation.cpf.isPartial && (
-              <p className="text-[11px] text-destructive flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                CPF inválido
-              </p>
-            )}
-            {validation.cpf.isPartial && (
-              <p className="text-[11px] text-amber-600">Digitando...</p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">CNPJ</Label>
-            <div className="relative">
-              <Input
-                value={data.cnpj}
-                onChange={(e) => handleCNPJChange(e.target.value)}
-                placeholder="00.000.000/0000-00"
-                maxLength={18}
-                disabled={cnpjLoading}
-                className={`h-9 pr-9 ${getInputClass(validation.cnpj)}`}
-              />
-              {cnpjLoading ? (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              ) : (
-                <ValidationIndicator isValid={validation.cnpj.isValid} isEmpty={validation.cnpj.isEmpty} />
-              )}
-            </div>
-            {cnpjLoading && (
-              <p className="text-[11px] text-primary">Buscando dados da empresa...</p>
-            )}
-            {!cnpjLoading && !validation.cnpj.isEmpty && !validation.cnpj.isValid && !validation.cnpj.isPartial && (
-              <p className="text-[11px] text-destructive flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                CNPJ inválido
-              </p>
-            )}
-            {!cnpjLoading && validation.cnpj.isPartial && (
-              <p className="text-[11px] text-amber-600">Digitando...</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="h-px bg-border/50" />
-
-      {/* Company Info */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          <Building2 className="h-3.5 w-3.5" />
-          Empresa
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Razão Social / Empresa</Label>
-            <Input
-              value={data.company_name}
-              onChange={(e) => updateField("company_name", e.target.value)}
-              placeholder="Empresa Ltda"
-              className="h-9"
-            />
-          </div>
-          <BirthDateField 
-            value={data.birth_date}
-            onChange={(value) => updateField("birth_date", value)}
-          />
-        </div>
-      </div>
-
-      <div className="h-px bg-border/50" />
-
-      {/* Contract Dates */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          <Calendar className="h-3.5 w-3.5" />
-          Contrato
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Data de Início</Label>
-            <Input
-              type="date"
-              value={data.contract_start_date}
-              onChange={(e) => updateField("contract_start_date", e.target.value)}
-              className="h-9"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Data de Fim</Label>
-            <Input
-              type="date"
-              value={data.contract_end_date}
-              onChange={(e) => updateField("contract_end_date", e.target.value)}
-              className="h-9"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="h-px bg-border/50" />
-
-      {/* MLS */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          <Award className="h-3.5 w-3.5" />
-          MLS
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between py-1">
-            <Label htmlFor="is_mls" className="text-sm font-medium cursor-pointer">Cliente MLS</Label>
-            <Switch
-              id="is_mls"
-              checked={data.is_mls}
-              onCheckedChange={(checked) => {
-                updateField("is_mls", checked);
-                if (!checked) updateField("mls_level", "");
-              }}
-            />
-          </div>
-          {data.is_mls && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Nível MLS</Label>
-              <Select
-                value={data.mls_level}
-                onValueChange={(value) => updateField("mls_level", value)}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Selecione o nível" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MLS_LEVELS.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${level.dotColor}`} />
-                        {level.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="h-px bg-border/50" />
-
-      {/* Address */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          <MapPin className="h-3.5 w-3.5" />
-          Endereço
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">CEP</Label>
-            <div className="relative">
-              <Input
-                value={data.zip_code}
-                onChange={(e) => handleCEPChange(e.target.value)}
-                placeholder="00000-000"
-                maxLength={9}
-                disabled={cepLoading}
-                className={`h-9 pr-9 ${getInputClass(validation.cep)}`}
-              />
-              {cepLoading ? (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              ) : (
-                <ValidationIndicator isValid={validation.cep.isValid} isEmpty={validation.cep.isEmpty} />
-              )}
-            </div>
-            {cepLoading && (
-              <p className="text-[11px] text-primary">Buscando endereço...</p>
-            )}
-            {!cepLoading && validation.cep.isPartial && (
-              <p className="text-[11px] text-amber-600">Digitando...</p>
-            )}
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label className="text-sm font-medium">Rua</Label>
-            <Input
-              value={data.street}
-              onChange={(e) => updateField("street", e.target.value)}
-              placeholder="Av. Paulista"
-              className="h-9"
-            />
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Número</Label>
-            <Input
-              value={data.street_number}
-              onChange={(e) => updateField("street_number", e.target.value)}
-              placeholder="1000"
-              className="h-9"
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-3">
-            <Label className="text-sm font-medium">Complemento</Label>
-            <Input
-              value={data.complement}
-              onChange={(e) => updateField("complement", e.target.value)}
-              placeholder="Sala 101"
-              className="h-9"
-            />
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Bairro</Label>
-            <Input
-              value={data.neighborhood}
-              onChange={(e) => updateField("neighborhood", e.target.value)}
-              placeholder="Centro"
-              className="h-9"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Cidade</Label>
-            {data.state && cities.length > 0 ? (
-              <Popover open={cityOpen} onOpenChange={setCityOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={cityOpen}
-                    className="h-9 w-full justify-between font-normal"
-                    disabled={citiesLoading}
-                  >
-                    {citiesLoading ? (
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Carregando...
-                      </span>
-                    ) : data.city ? (
-                      data.city
-                    ) : (
-                      <span className="text-muted-foreground">Selecione...</span>
-                    )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar cidade..." className="h-9" />
-                    <CommandList>
-                      <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
-                      <CommandGroup className="max-h-[200px] overflow-auto">
-                        {cities.map((city) => (
-                          <CommandItem
-                            key={city}
-                            value={city}
-                            onSelect={() => {
-                              updateField("city", city);
-                              setCityOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                data.city === city ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {city}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            ) : (
-              <Input
-                value={data.city}
-                onChange={(e) => updateField("city", e.target.value)}
-                placeholder={data.state ? "Carregando..." : "Selecione o estado"}
-                className="h-9"
-                disabled={!data.state || citiesLoading}
-              />
-            )}
-            {citiesLoading && (
-              <p className="text-[11px] text-primary">Carregando cidades...</p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Estado</Label>
-            <Select
-              value={data.state}
-              onValueChange={(value) => {
-                // Clear city when state changes
-                onChange({ ...data, state: value, city: "" });
-              }}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="UF" />
-              </SelectTrigger>
-              <SelectContent>
-                {BRAZILIAN_STATES.map((state) => (
-                  <SelectItem key={state} value={state}>{state}</SelectItem>
+            {data.emails.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {data.emails.map((email) => (
+                  <Badge key={email} variant="secondary" className="gap-1 pr-1 text-xs h-6">
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEmail(email)}
+                      className="ml-0.5 hover:bg-background/50 rounded p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  value={newEmail}
+                  onChange={(e) => {
+                    setNewEmail(e.target.value);
+                    setEmailError("");
+                  }}
+                  placeholder="email@exemplo.com"
+                  className={`h-9 pr-9 ${emailError ? "border-destructive" : getInputClass(validation.newEmail)}`}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
+                />
+                <ValidationIndicator isValid={validation.newEmail.isValid} isEmpty={validation.newEmail.isEmpty} />
+              </div>
+              <Button type="button" variant="outline" size="sm" className="h-9 px-3" onClick={handleAddEmail}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {emailError && <p className="text-[11px] text-destructive">{emailError}</p>}
           </div>
-        </div>
-      </div>
 
-      <div className="h-px bg-border/50" />
+          {/* Additional Phones */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Phone className="h-3.5 w-3.5" />
+              Telefones Adicionais
+            </div>
+            {data.additional_phones.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {data.additional_phones.map((phone) => (
+                  <Badge key={phone} variant="secondary" className="gap-1 pr-1 text-xs h-6">
+                    {phone}
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhone(phone)}
+                      className="ml-0.5 hover:bg-background/50 rounded p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                value={newPhone}
+                onChange={(e) => {
+                  setNewPhone(formatInternationalPhone(e.target.value));
+                  setPhoneError("");
+                }}
+                placeholder="+55 11 99999-9999"
+                maxLength={20}
+                className={`flex-1 h-9 ${phoneError ? "border-destructive" : ""}`}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddPhone())}
+              />
+              <Button type="button" variant="outline" size="sm" className="h-9 px-3" onClick={handleAddPhone}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {phoneError && <p className="text-[11px] text-destructive">{phoneError}</p>}
+          </div>
 
-      {/* Notes */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Observações</Label>
-        <Textarea
-          value={data.notes}
-          onChange={(e) => updateField("notes", e.target.value)}
-          placeholder="Anotações sobre o cliente..."
-          rows={2}
-          className="resize-none"
-        />
-      </div>
+          <div className="h-px bg-border/50" />
+
+          {/* CPF & Birth Date */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <FileText className="h-3.5 w-3.5" />
+              Documentos Pessoais
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">CPF</Label>
+                <div className="relative">
+                  <Input
+                    value={data.cpf}
+                    onChange={(e) => handleCPFChange(e.target.value)}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    className={`h-9 pr-9 ${getInputClass(validation.cpf)}`}
+                  />
+                  <ValidationIndicator isValid={validation.cpf.isValid} isEmpty={validation.cpf.isEmpty} />
+                </div>
+                {!validation.cpf.isEmpty && !validation.cpf.isValid && !validation.cpf.isPartial && (
+                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    CPF inválido
+                  </p>
+                )}
+                {validation.cpf.isPartial && (
+                  <p className="text-[11px] text-amber-600">Digitando...</p>
+                )}
+              </div>
+              <BirthDateField 
+                value={data.birth_date}
+                onChange={(value) => updateField("birth_date", value)}
+              />
+            </div>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
+          {/* Address */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <MapPin className="h-3.5 w-3.5" />
+              Endereço
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">CEP</Label>
+                <div className="relative">
+                  <Input
+                    value={data.zip_code}
+                    onChange={(e) => handleCEPChange(e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    disabled={cepLoading}
+                    className={`h-9 pr-9 ${getInputClass(validation.cep)}`}
+                  />
+                  {cepLoading ? (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  ) : (
+                    <ValidationIndicator isValid={validation.cep.isValid} isEmpty={validation.cep.isEmpty} />
+                  )}
+                </div>
+                {cepLoading && (
+                  <p className="text-[11px] text-primary">Buscando endereço...</p>
+                )}
+                {!cepLoading && validation.cep.isPartial && (
+                  <p className="text-[11px] text-amber-600">Digitando...</p>
+                )}
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium">Rua</Label>
+                <Input
+                  value={data.street}
+                  onChange={(e) => updateField("street", e.target.value)}
+                  placeholder="Av. Paulista"
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Número</Label>
+                <Input
+                  value={data.street_number}
+                  onChange={(e) => updateField("street_number", e.target.value)}
+                  placeholder="1000"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-3">
+                <Label className="text-sm font-medium">Complemento</Label>
+                <Input
+                  value={data.complement}
+                  onChange={(e) => updateField("complement", e.target.value)}
+                  placeholder="Sala 101"
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Bairro</Label>
+                <Input
+                  value={data.neighborhood}
+                  onChange={(e) => updateField("neighborhood", e.target.value)}
+                  placeholder="Centro"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Cidade</Label>
+                {data.state && cities.length > 0 ? (
+                  <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={cityOpen}
+                        className="h-9 w-full justify-between font-normal"
+                        disabled={citiesLoading}
+                      >
+                        {citiesLoading ? (
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Carregando...
+                          </span>
+                        ) : data.city ? (
+                          data.city
+                        ) : (
+                          <span className="text-muted-foreground">Selecione...</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar cidade..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                          <CommandGroup className="max-h-[200px] overflow-auto">
+                            {cities.map((city) => (
+                              <CommandItem
+                                key={city}
+                                value={city}
+                                onSelect={() => {
+                                  updateField("city", city);
+                                  setCityOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    data.city === city ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {city}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Input
+                    value={data.city}
+                    onChange={(e) => updateField("city", e.target.value)}
+                    placeholder={data.state ? "Carregando..." : "Selecione o estado"}
+                    className="h-9"
+                    disabled={!data.state || citiesLoading}
+                  />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Estado</Label>
+                <Select
+                  value={data.state}
+                  onValueChange={(value) => {
+                    onChange({ ...data, state: value, city: "" });
+                  }}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRAZILIAN_STATES.map((state) => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
+          {/* Notes */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Observações</Label>
+            <Textarea
+              value={data.notes}
+              onChange={(e) => updateField("notes", e.target.value)}
+              placeholder="Anotações sobre o cliente..."
+              rows={2}
+              className="resize-none"
+            />
+          </div>
+        </TabsContent>
+
+        {/* Company Tab */}
+        <TabsContent value="company" className="mt-4 space-y-5">
+          {/* CNPJ & Company Name */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Building2 className="h-3.5 w-3.5" />
+              Dados da Empresa
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">CNPJ</Label>
+                <div className="relative">
+                  <Input
+                    value={data.cnpj}
+                    onChange={(e) => handleCNPJChange(e.target.value)}
+                    placeholder="00.000.000/0000-00"
+                    maxLength={18}
+                    disabled={cnpjLoading}
+                    className={`h-9 pr-9 ${getInputClass(validation.cnpj)}`}
+                  />
+                  {cnpjLoading ? (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  ) : (
+                    <ValidationIndicator isValid={validation.cnpj.isValid} isEmpty={validation.cnpj.isEmpty} />
+                  )}
+                </div>
+                {cnpjLoading && (
+                  <p className="text-[11px] text-primary">Buscando dados da empresa...</p>
+                )}
+                {!cnpjLoading && !validation.cnpj.isEmpty && !validation.cnpj.isValid && !validation.cnpj.isPartial && (
+                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    CNPJ inválido
+                  </p>
+                )}
+                {!cnpjLoading && validation.cnpj.isPartial && (
+                  <p className="text-[11px] text-amber-600">Digitando...</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Razão Social / Empresa</Label>
+                <Input
+                  value={data.company_name}
+                  onChange={(e) => updateField("company_name", e.target.value)}
+                  placeholder="Empresa Ltda"
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              💡 Ao digitar o CNPJ, os dados da empresa e endereço serão preenchidos automaticamente.
+            </p>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
+          {/* Contract Dates */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Calendar className="h-3.5 w-3.5" />
+              Contrato
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Data de Início</Label>
+                <Input
+                  type="date"
+                  value={data.contract_start_date}
+                  onChange={(e) => updateField("contract_start_date", e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Data de Fim</Label>
+                <Input
+                  type="date"
+                  value={data.contract_end_date}
+                  onChange={(e) => updateField("contract_end_date", e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
+          {/* MLS */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Award className="h-3.5 w-3.5" />
+              MLS
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-1">
+                <Label htmlFor="is_mls" className="text-sm font-medium cursor-pointer">Cliente MLS</Label>
+                <Switch
+                  id="is_mls"
+                  checked={data.is_mls}
+                  onCheckedChange={(checked) => {
+                    updateField("is_mls", checked);
+                    if (!checked) updateField("mls_level", "");
+                  }}
+                />
+              </div>
+              {data.is_mls && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Nível MLS</Label>
+                  <Select
+                    value={data.mls_level}
+                    onValueChange={(value) => updateField("mls_level", value)}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione o nível" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MLS_LEVELS.map((level) => (
+                        <SelectItem key={level.value} value={level.value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2.5 h-2.5 rounded-full ${level.dotColor}`} />
+                            {level.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
