@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ const billingPeriodLabels = {
 };
 
 export default function Products() {
+  const { currentUser } = useCurrentUser();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,18 +113,13 @@ export default function Products() {
 
     setSaving(true);
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-
-      if (!userData) {
-        toast.error("Perfil não encontrado");
+      if (!currentUser?.account_id) {
+        toast.error("Sessão expirada. Faça login novamente.");
         return;
       }
 
       const productData = {
-        account_id: userData.account_id,
+        account_id: currentUser.account_id,
         name: name.trim(),
         description: description.trim() || null,
         price: parseFloat(price) || 0,

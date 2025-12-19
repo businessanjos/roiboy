@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,6 +115,7 @@ interface ClientFollowupProps {
 }
 
 export function ClientFollowup({ clientId }: ClientFollowupProps) {
+  const { currentUser } = useCurrentUser();
   const [followups, setFollowups] = useState<Followup[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -149,7 +151,6 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
 
   // Quick comment state
   const [quickComment, setQuickComment] = useState("");
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id: string } | null>(null);
 
   // Reply state
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -165,7 +166,6 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
 
   useEffect(() => {
     fetchFollowups();
-    fetchCurrentUser();
   }, [clientId, sortOrder]);
 
   const fetchFollowups = async (loadMore = false) => {
@@ -358,13 +358,6 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     return titleMatch || contentMatch || fileNameMatch;
   });
 
-  const fetchCurrentUser = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, name, avatar_url, account_id")
-      .single();
-    if (data) setCurrentUser(data);
-  };
 
   const handleQuickComment = async () => {
     if (!quickComment.trim() || !currentUser) return;
@@ -572,13 +565,8 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     setUploading(true);
     
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("id, account_id")
-        .single();
-
-      if (!userData) {
-        toast.error("Usuário não encontrado");
+      if (!currentUser?.account_id || !currentUser?.id) {
+        toast.error("Sessão expirada. Faça login novamente.");
         return;
       }
 
@@ -591,9 +579,9 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           const fileData = await uploadFile(file);
 
           await supabase.from("client_followups").insert({
-            account_id: userData.account_id,
+            account_id: currentUser.account_id,
             client_id: clientId,
-            user_id: userData.id,
+            user_id: currentUser.id,
             type: isImage ? "image" : "file",
             title: file.name,
             content: null,
@@ -678,13 +666,8 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
 
     setSaving(true);
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("id, account_id")
-        .single();
-
-      if (!userData) {
-        toast.error("Usuário não encontrado");
+      if (!currentUser?.account_id || !currentUser?.id) {
+        toast.error("Sessão expirada. Faça login novamente.");
         return;
       }
 
@@ -720,9 +703,9 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
         const { error } = await supabase
           .from("client_followups")
           .insert({
-            account_id: userData.account_id,
+            account_id: currentUser.account_id,
             client_id: clientId,
-            user_id: userData.id,
+            user_id: currentUser.id,
             type: formType,
             title: formTitle || null,
             content: formContent || null,

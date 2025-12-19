@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +70,7 @@ const STATUS_LABELS = {
 };
 
 export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, onSuccess }: TaskDialogProps) {
+  const { currentUser } = useCurrentUser();
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -142,12 +144,10 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
     setSubmitting(true);
 
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id, id")
-        .single();
-
-      if (!userData) throw new Error("Usuário não encontrado");
+      if (!currentUser?.account_id || !currentUser?.id) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
 
       if (task) {
         const updateData = {
@@ -170,7 +170,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
         toast.success("Tarefa atualizada!");
       } else {
         const insertData = {
-          account_id: userData.account_id,
+          account_id: currentUser.account_id,
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           status: formData.status,
@@ -178,7 +178,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           due_date: formData.due_date || null,
           client_id: formData.client_id || null,
           assigned_to: formData.assigned_to,
-          created_by: userData.id,
+          created_by: currentUser.id,
           completed_at: formData.status === "done" ? new Date().toISOString() : null,
         };
         const { error } = await supabase
