@@ -2122,6 +2122,7 @@ export type Database = {
           max_storage_mb: number | null
           max_users: number | null
           name: string
+          plan_type: string
           price: number
           trial_days: number | null
           updated_at: string
@@ -2141,6 +2142,7 @@ export type Database = {
           max_storage_mb?: number | null
           max_users?: number | null
           name: string
+          plan_type?: string
           price?: number
           trial_days?: number | null
           updated_at?: string
@@ -2160,6 +2162,7 @@ export type Database = {
           max_storage_mb?: number | null
           max_users?: number | null
           name?: string
+          plan_type?: string
           price?: number
           trial_days?: number | null
           updated_at?: string
