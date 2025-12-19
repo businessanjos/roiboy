@@ -391,6 +391,17 @@ export default function Clients() {
     if (!newClientData.phone_e164.trim() || !/^\+[1-9]\d{1,14}$/.test(newClientData.phone_e164)) {
       errors.phone_e164 = "Telefone inválido. Ex: +5511999999999";
     }
+    // Validate at least one email is provided
+    const validEmails = newClientData.emails.filter(e => e.trim());
+    if (validEmails.length === 0) {
+      errors.emails = "Pelo menos um email é obrigatório";
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const invalidEmail = validEmails.find(e => !emailRegex.test(e.trim()));
+      if (invalidEmail) {
+        errors.emails = "Email inválido: " + invalidEmail;
+      }
+    }
     if (newClientData.cpf && !validateCPF(newClientData.cpf)) errors.cpf = "CPF inválido";
     if (newClientData.cnpj && !validateCNPJ(newClientData.cnpj)) errors.cnpj = "CNPJ inválido";
     
