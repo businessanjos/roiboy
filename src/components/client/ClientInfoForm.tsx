@@ -529,10 +529,10 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         {/* Personal Tab */}
         <TabsContent value="personal" className="mt-4 space-y-5">
           {/* E-mails */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${errors.emails ? "animate-shake" : ""}`} data-error={!!errors.emails}>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
               <Mail className="h-3.5 w-3.5" />
-              E-mails
+              E-mails *
             </div>
             {data.emails.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -559,7 +559,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                     setEmailError("");
                   }}
                   placeholder="email@exemplo.com"
-                  className={`h-9 pr-9 ${emailError ? "border-destructive" : getInputClass(validation.newEmail)}`}
+                  className={`h-9 pr-9 ${emailError || errors.emails ? "border-destructive ring-1 ring-destructive/30" : getInputClass(validation.newEmail)}`}
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
                 />
                 <ValidationIndicator isValid={validation.newEmail.isValid} isEmpty={validation.newEmail.isEmpty} />
@@ -568,7 +568,12 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            {emailError && <p className="text-[11px] text-destructive">{emailError}</p>}
+            {(emailError || errors.emails) && (
+              <p className="text-[11px] text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {emailError || errors.emails}
+              </p>
+            )}
           </div>
 
           {/* Additional Phones */}
