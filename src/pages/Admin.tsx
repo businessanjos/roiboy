@@ -1001,7 +1001,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                         {format(new Date(account.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
                           <Button 
                             variant="ghost" 
                             size="icon" 
