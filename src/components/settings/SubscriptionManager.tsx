@@ -83,6 +83,7 @@ export function SubscriptionManager() {
   const [isCardDialogOpen, setIsCardDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
   const [generatingPayment, setGeneratingPayment] = useState(false);
+  const [selectingPlan, setSelectingPlan] = useState(false);
   const [pixData, setPixData] = useState<{ qrCode: string; payload: string } | null>(null);
   
   // Credit card form state
@@ -293,6 +294,46 @@ export function SubscriptionManager() {
         title: "Copiado!",
         description: "Código PIX copiado para a área de transferência",
       });
+    }
+  };
+
+  const handleSelectPlan = async (plan: SubscriptionPlan) => {
+    if (!account) return;
+    
+    setSelectingPlan(true);
+    try {
+      const { error } = await supabase
+        .from("accounts")
+        .update({ 
+          plan_id: plan.id,
+          subscription_status: account.subscription_status === "cancelled" ? "active" : account.subscription_status
+        })
+        .eq("id", account.id);
+
+      if (error) throw error;
+
+      setAccount(prev => prev ? { ...prev, plan_id: plan.id } : null);
+      setCurrentPlan(plan);
+      
+      toast({
+        title: "Plano selecionado!",
+        description: `Você selecionou o plano ${plan.name}. Agora escolha a forma de pagamento.`,
+      });
+    } catch (err) {
+      console.error("Error selecting plan:", err);
+      toast({
+        title: "Erro ao selecionar plano",
+        description: "Não foi possível selecionar o plano. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+    setSelectingPlan(false);
+  };
+
+  const scrollToPlans = () => {
+    const plansSection = document.getElementById('available-plans');
+    if (plansSection) {
+      plansSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -527,14 +568,14 @@ export function SubscriptionManager() {
               <p className="text-sm text-muted-foreground mb-4">
                 Escolha um plano para desbloquear todos os recursos
               </p>
-              <Button>Escolher um plano</Button>
+              <Button onClick={scrollToPlans}>Escolher um plano</Button>
             </div>
           )}
         </CardContent>
         
         {currentPlan && account?.subscription_status !== "cancelled" && (
           <CardFooter className="flex justify-between border-t pt-6">
-            <Button variant="outline">
+            <Button variant="outline" onClick={scrollToPlans}>
               Trocar de plano
             </Button>
             
@@ -633,7 +674,7 @@ export function SubscriptionManager() {
 
       {/* Available Plans */}
       {availablePlans.length > 0 && (
-        <Card>
+        <Card id="available-plans">
           <CardHeader>
             <CardTitle>Planos Disponíveis</CardTitle>
             <CardDescription>
@@ -698,8 +739,12 @@ export function SubscriptionManager() {
                     <Button 
                       className="w-full" 
                       variant={isCurrent ? "outline" : "default"}
-                      disabled={isCurrent}
+                      disabled={isCurrent || selectingPlan}
+                      onClick={() => handleSelectPlan(plan)}
                     >
+                      {selectingPlan ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
                       {isCurrent ? "Plano atual" : "Escolher plano"}
                     </Button>
                   </div>
