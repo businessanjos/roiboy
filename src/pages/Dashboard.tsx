@@ -705,20 +705,115 @@ export default function Dashboard() {
 
       {/* Tabs */}
       <Tabs defaultValue="roi" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="roi" className="gap-2">
-            <Target className="h-4 w-4" />
-            <span className="hidden sm:inline">ROI</span>
-          </TabsTrigger>
-          <TabsTrigger value="cx" className="gap-2">
-            <Heart className="h-4 w-4" />
-            <span className="hidden sm:inline">CX</span>
-          </TabsTrigger>
-          <TabsTrigger value="gestao" className="gap-2">
-            <Settings2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Gestão</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="roi" className="gap-2">
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">ROI</span>
+            </TabsTrigger>
+            <TabsTrigger value="cx" className="gap-2">
+              <Heart className="h-4 w-4" />
+              <span className="hidden sm:inline">CX</span>
+            </TabsTrigger>
+            <TabsTrigger value="gestao" className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Gestão</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Filters - aligned with tabs */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium hidden sm:inline">Filtros:</span>
+            </div>
+            <Select value={gestaoProductFilter} onValueChange={setGestaoProductFilter}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Todos os produtos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os produtos</SelectItem>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select 
+              value={gestaoPeriodFilter} 
+              onValueChange={(value) => {
+                setGestaoPeriodFilter(value);
+                if (value === "custom") {
+                  setGestaoDatePickerOpen(true);
+                }
+              }}
+            >
+              <SelectTrigger className="w-[150px] h-9">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="month">Este mês</SelectItem>
+                <SelectItem value="3">Últimos 3 meses</SelectItem>
+                <SelectItem value="6">Últimos 6 meses</SelectItem>
+                <SelectItem value="12">Últimos 12 meses</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            {gestaoPeriodFilter === "custom" && (
+              <Popover open={gestaoDatePickerOpen} onOpenChange={setGestaoDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 justify-start text-left font-normal"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {gestaoCustomDateRange?.from ? (
+                      gestaoCustomDateRange.to ? (
+                        <>
+                          {format(gestaoCustomDateRange.from, "dd/MM", { locale: ptBR })} -{" "}
+                          {format(gestaoCustomDateRange.to, "dd/MM", { locale: ptBR })}
+                        </>
+                      ) : (
+                        format(gestaoCustomDateRange.from, "dd/MM/yy", { locale: ptBR })
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">Período</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <CalendarComponent
+                    initialFocus
+                    mode="range"
+                    defaultMonth={gestaoCustomDateRange?.from}
+                    selected={gestaoCustomDateRange}
+                    onSelect={setGestaoCustomDateRange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+            {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "6" || gestaoCustomDateRange) && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setGestaoProductFilter("all");
+                  setGestaoPeriodFilter("6");
+                  setGestaoCustomDateRange(undefined);
+                }}
+                className="h-9 text-muted-foreground hover:text-foreground"
+              >
+                Limpar
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* ROI Tab */}
         <TabsContent value="roi" className="space-y-6">
@@ -912,104 +1007,6 @@ export default function Dashboard() {
 
         {/* Gestão Tab */}
         <TabsContent value="gestao" className="space-y-6">
-          {/* Filters */}
-          <Card className="shadow-card">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Filter className="h-4 w-4" />
-                  <span className="text-sm font-medium">Filtros:</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                  <Select value={gestaoProductFilter} onValueChange={setGestaoProductFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder="Todos os produtos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os produtos</SelectItem>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select 
-                    value={gestaoPeriodFilter} 
-                    onValueChange={(value) => {
-                      setGestaoPeriodFilter(value);
-                      if (value === "custom") {
-                        setGestaoDatePickerOpen(true);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Período" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="7">Últimos 7 dias</SelectItem>
-                      <SelectItem value="month">Este mês</SelectItem>
-                      <SelectItem value="3">Últimos 3 meses</SelectItem>
-                      <SelectItem value="6">Últimos 6 meses</SelectItem>
-                      <SelectItem value="12">Últimos 12 meses</SelectItem>
-                      <SelectItem value="custom">Período personalizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {gestaoPeriodFilter === "custom" && (
-                    <Popover open={gestaoDatePickerOpen} onOpenChange={setGestaoDatePickerOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full sm:w-auto justify-start text-left font-normal"
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {gestaoCustomDateRange?.from ? (
-                            gestaoCustomDateRange.to ? (
-                              <>
-                                {format(gestaoCustomDateRange.from, "dd/MM/yy", { locale: ptBR })} -{" "}
-                                {format(gestaoCustomDateRange.to, "dd/MM/yy", { locale: ptBR })}
-                              </>
-                            ) : (
-                              format(gestaoCustomDateRange.from, "dd/MM/yyyy", { locale: ptBR })
-                            )
-                          ) : (
-                            <span className="text-muted-foreground">Selecionar período</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          initialFocus
-                          mode="range"
-                          defaultMonth={gestaoCustomDateRange?.from}
-                          selected={gestaoCustomDateRange}
-                          onSelect={setGestaoCustomDateRange}
-                          numberOfMonths={2}
-                          locale={ptBR}
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-                {(gestaoProductFilter !== "all" || gestaoPeriodFilter !== "6" || gestaoCustomDateRange) && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      setGestaoProductFilter("all");
-                      setGestaoPeriodFilter("6");
-                      setGestaoCustomDateRange(undefined);
-                    }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    Limpar filtros
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Clients per Product */}
           <Card className="shadow-card">
             <CardHeader>
