@@ -49,6 +49,7 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void;
   task?: Task | null;
   clientId?: string;
+  initialStatus?: Task["status"];
   onSuccess: () => void;
 }
 
@@ -67,7 +68,7 @@ const STATUS_LABELS = {
   cancelled: "Cancelado",
 };
 
-export function TaskDialog({ open, onOpenChange, task, clientId, onSuccess }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, onSuccess }: TaskDialogProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -101,7 +102,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, onSuccess }: Ta
         setFormData({
           title: "",
           description: "",
-          status: "pending",
+          status: initialStatus || "pending",
           priority: "medium",
           due_date: "",
           client_id: clientId || "",
@@ -109,7 +110,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, onSuccess }: Ta
         });
       }
     }
-  }, [open, task, clientId]);
+  }, [open, task, clientId, initialStatus]);
 
   const fetchUsers = async () => {
     const { data } = await supabase

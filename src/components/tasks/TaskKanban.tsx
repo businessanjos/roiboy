@@ -44,6 +44,7 @@ import {
   Calendar,
   User2,
   GripVertical,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
@@ -81,6 +82,7 @@ interface TaskKanbanProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onStatusChange: (taskId: string, newStatus: TaskStatus) => Promise<void>;
+  onAddTask: (status: TaskStatus) => void;
 }
 
 const STATUS_CONFIG: Record<TaskStatus, { 
@@ -290,9 +292,10 @@ interface KanbanColumnProps {
   tasks: Task[];
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
+  onAddTask: (status: TaskStatus) => void;
 }
 
-function KanbanColumn({ status, tasks, onEditTask, onDeleteTask }: KanbanColumnProps) {
+function KanbanColumn({ status, tasks, onEditTask, onDeleteTask, onAddTask }: KanbanColumnProps) {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
 
@@ -304,9 +307,19 @@ function KanbanColumn({ status, tasks, onEditTask, onDeleteTask }: KanbanColumnP
             <Icon className="h-4 w-4" />
             {config.label}
           </div>
-          <Badge variant="outline" className="text-xs font-normal">
-            {tasks.length}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Badge variant="outline" className="text-xs font-normal">
+              {tasks.length}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => onAddTask(status)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto px-3 pb-3">
@@ -332,7 +345,7 @@ function KanbanColumn({ status, tasks, onEditTask, onDeleteTask }: KanbanColumnP
   );
 }
 
-export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange }: TaskKanbanProps) {
+export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, onAddTask }: TaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
@@ -394,6 +407,7 @@ export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange }: 
             tasks={tasksByStatus[status]}
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
+            onAddTask={onAddTask}
           />
         ))}
       </div>
