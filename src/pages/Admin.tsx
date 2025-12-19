@@ -52,10 +52,22 @@ interface SubscriptionPlan {
   max_clients: number | null;
   max_users: number | null;
   max_ai_analyses: number | null;
-  features: string[];
+  features: Record<string, boolean> | string[] | null;
   is_active: boolean;
   created_at: string;
 }
+
+// Helper to get features as array
+const getFeaturesArray = (features: Record<string, boolean> | string[] | null): string[] => {
+  if (!features) return [];
+  if (Array.isArray(features)) return features;
+  if (typeof features === 'object') {
+    return Object.entries(features)
+      .filter(([_, v]) => v === true)
+      .map(([k]) => k);
+  }
+  return [];
+};
 
 interface Account {
   id: string;
@@ -415,6 +427,21 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
   const openEdit = (plan: SubscriptionPlan) => {
     setEditingPlan(plan);
     const hasTrial = (plan.trial_days || 0) > 0;
+    
+    // Handle features - could be array, object, or null
+    let featuresText = '';
+    if (plan.features) {
+      if (Array.isArray(plan.features)) {
+        featuresText = plan.features.join('\n');
+      } else if (typeof plan.features === 'object') {
+        // If it's an object, extract values or keys
+        featuresText = Object.entries(plan.features)
+          .filter(([_, v]) => v === true)
+          .map(([k]) => k)
+          .join('\n');
+      }
+    }
+    
     setFormData({
       name: plan.name,
       description: plan.description || '',
@@ -425,7 +452,7 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
       max_clients: plan.max_clients || 0,
       max_users: plan.max_users || 0,
       max_ai_analyses: plan.max_ai_analyses || 0,
-      features: (plan.features || []).join('\n'),
+      features: featuresText,
       is_active: plan.is_active
     });
     setIsDialogOpen(true);
@@ -696,16 +723,19 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
                   {plan.max_ai_analyses && <div>• {plan.max_ai_analyses} análises AI/mês</div>}
                 </div>
 
-                {plan.features && plan.features.length > 0 && (
-                  <div className="border-t mt-3 pt-3 text-xs space-y-0.5">
-                    {plan.features.slice(0, 3).map((f, i) => (
-                      <div key={i} className="text-muted-foreground">✓ {f}</div>
-                    ))}
-                    {plan.features.length > 3 && (
-                      <div className="text-muted-foreground/60">+{plan.features.length - 3} mais</div>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const featuresArr = getFeaturesArray(plan.features);
+                  return featuresArr.length > 0 && (
+                    <div className="border-t mt-3 pt-3 text-xs space-y-0.5">
+                      {featuresArr.slice(0, 3).map((f, i) => (
+                        <div key={i} className="text-muted-foreground">✓ {f}</div>
+                      ))}
+                      {featuresArr.length > 3 && (
+                        <div className="text-muted-foreground/60">+{featuresArr.length - 3} mais</div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
