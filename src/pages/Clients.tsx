@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,7 @@ const parseCSV = (content: string): CsvRow[] => {
 };
 
 export default function Clients() {
+  const { currentUser } = useCurrentUser();
   const [clients, setClients] = useState<any[]>([]);
   const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
@@ -142,14 +144,9 @@ export default function Clients() {
   const requiredFields = customFields.filter(f => f.is_required);
 
   const fetchClients = async () => {
-    // Get account_id first
-    const { data: userData } = await supabase
-      .from("users")
-      .select("account_id")
-      .single();
-    
-    if (userData) {
-      setAccountId(userData.account_id);
+    // Use accountId from currentUser hook
+    if (currentUser?.account_id) {
+      setAccountId(currentUser.account_id);
     }
 
     const { data, error } = await supabase
@@ -418,19 +415,14 @@ export default function Clients() {
     setSavingClient(true);
 
     try {
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-      
-      if (userError || !userData) {
-        toast.error("Perfil não encontrado. Faça logout e login novamente.");
+      if (!currentUser?.account_id) {
+        toast.error("Sessão expirada. Faça login novamente.");
         return;
       }
 
       // Create client first
       const { data: newClient, error } = await supabase.from("clients").insert({
-        account_id: userData.account_id,
+        account_id: currentUser.account_id,
         full_name: newClientData.full_name.trim(),
         phone_e164: newClientData.phone_e164.trim(),
         emails: newClientData.emails,
@@ -491,7 +483,7 @@ export default function Clients() {
 
       if (selectedProducts.length > 0 && newClient) {
         const clientProducts = selectedProducts.map(productId => ({
-          account_id: userData.account_id,
+          account_id: currentUser.account_id,
           client_id: newClient.id,
           product_id: productId,
         }));
@@ -505,7 +497,7 @@ export default function Clients() {
           if (!field) return null;
           
           const valueData: any = {
-            account_id: userData.account_id,
+            account_id: currentUser.account_id,
             client_id: newClient.id,
             field_id: fieldId,
             value_text: null,
