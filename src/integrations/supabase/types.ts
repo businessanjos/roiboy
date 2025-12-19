@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_addons: {
+        Row: {
+          account_id: string
+          addon_plan_id: string
+          created_at: string
+          id: string
+          quantity: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          addon_plan_id: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          addon_plan_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_addons_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_addons_addon_plan_id_fkey"
+            columns: ["addon_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_settings: {
         Row: {
           account_id: string
