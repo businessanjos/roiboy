@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { StatusBar, StatCard } from "@/components/admin";
 import { 
   Building2, 
   Users, 
@@ -363,52 +364,6 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
   );
 }
 
-// Stat Card Component
-function StatCard({ icon: Icon, label, value, variant }: { 
-  icon: React.ElementType; 
-  label: string; 
-  value: number;
-  variant?: 'success' | 'warning' | 'danger';
-}) {
-  const colorClass = variant === 'success' ? 'text-emerald-600' : 
-                     variant === 'warning' ? 'text-amber-600' : 
-                     variant === 'danger' ? 'text-red-600' : 'text-foreground';
-  const bgClass = variant === 'success' ? 'bg-emerald-500/10' : 
-                  variant === 'warning' ? 'bg-amber-500/10' : 
-                  variant === 'danger' ? 'bg-red-500/10' : 'bg-muted';
-
-  return (
-    <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center gap-4">
-          <div className={`p-2.5 rounded-lg ${bgClass}`}>
-            <Icon className={`h-5 w-5 ${variant ? colorClass : 'text-muted-foreground'}`} />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-semibold ${colorClass}`}>{value}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Status Bar Component
-function StatusBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
-  const percentage = total > 0 ? (value / total) * 100 : 0;
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium">{value}</span>
-      </div>
-      <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${percentage}%` }} />
-      </div>
-    </div>
-  );
-}
 
 // Plans Tab Component
 function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: boolean }) {
