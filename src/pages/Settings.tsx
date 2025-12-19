@@ -7,11 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain, Download, Upload } from "lucide-react";
+import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain, Download, Upload, CreditCard } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { AIPromptTest } from "@/components/settings/AIPromptTest";
+import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 
 interface ScoreWeights {
   whatsapp_text: number;
@@ -369,6 +370,10 @@ export default function Settings() {
           <TabsTrigger value="jobs" className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Jobs
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Assinatura
           </TabsTrigger>
         </TabsList>
 
@@ -1327,6 +1332,10 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="subscription" className="space-y-4">
+          <SubscriptionManager />
         </TabsContent>
       </Tabs>
     </div>
