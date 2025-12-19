@@ -216,6 +216,39 @@ serve(async (req) => {
         break;
       }
 
+      // ================== CREDIT CARD ==================
+      case 'tokenizeCreditCard': {
+        const { customer, creditCard, creditCardHolderInfo } = params;
+        result = await asaasRequest('/creditCard/tokenize', 'POST', {
+          customer,
+          creditCard,
+          creditCardHolderInfo,
+        });
+        break;
+      }
+
+      case 'createPaymentWithCard': {
+        const { customer, value, dueDate, description, externalReference, creditCard, creditCardHolderInfo, creditCardToken } = params;
+        const paymentData: any = {
+          customer,
+          billingType: 'CREDIT_CARD',
+          value,
+          dueDate,
+          description,
+          externalReference,
+        };
+        
+        if (creditCardToken) {
+          paymentData.creditCardToken = creditCardToken;
+        } else if (creditCard && creditCardHolderInfo) {
+          paymentData.creditCard = creditCard;
+          paymentData.creditCardHolderInfo = creditCardHolderInfo;
+        }
+        
+        result = await asaasRequest('/payments', 'POST', paymentData);
+        break;
+      }
+
       // ================== INVOICES ==================
       case 'getInvoice': {
         const { paymentId } = params;

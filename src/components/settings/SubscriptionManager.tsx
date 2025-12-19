@@ -73,16 +73,31 @@ interface SubscriptionPlan {
 
 export function SubscriptionManager() {
   const { toast } = useToast();
-  const { createPayment, getPixQrCode, loading: asaasLoading } = useAsaas();
+  const { createPayment, getPixQrCode, createPaymentWithCard, loading: asaasLoading } = useAsaas();
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null);
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO'>('PIX');
+  const [isCardDialogOpen, setIsCardDialogOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [pixData, setPixData] = useState<{ qrCode: string; payload: string } | null>(null);
+  
+  // Credit card form state
+  const [cardForm, setCardForm] = useState({
+    holderName: "",
+    number: "",
+    expiryMonth: "",
+    expiryYear: "",
+    ccv: "",
+    cpfCnpj: "",
+    email: "",
+    phone: "",
+    postalCode: "",
+    addressNumber: "",
+  });
 
   useEffect(() => {
     loadAccountAndPlans();
@@ -131,6 +146,12 @@ export function SubscriptionManager() {
       return;
     }
 
+    // If credit card, open the card dialog
+    if (paymentMethod === 'CREDIT_CARD') {
+      setIsCardDialogOpen(true);
+      return;
+    }
+
     setGeneratingPayment(true);
     setPixData(null);
     
@@ -170,6 +191,94 @@ export function SubscriptionManager() {
       toast({
         title: "Erro ao gerar cobrança",
         description: error.message || "Não foi possível gerar a cobrança",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPayment(false);
+    }
+  };
+
+  const handleCardPayment = async () => {
+    if (!account || !currentPlan) return;
+
+    // Validate card form
+    if (!cardForm.holderName || !cardForm.number || !cardForm.expiryMonth || !cardForm.expiryYear || !cardForm.ccv) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os dados do cartão",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!cardForm.cpfCnpj || !cardForm.email || !cardForm.phone || !cardForm.postalCode || !cardForm.addressNumber) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os dados do titular",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingPayment(true);
+    
+    try {
+      const dueDate = format(new Date(), 'yyyy-MM-dd');
+      
+      const result = await createPaymentWithCard({
+        customer: account.id,
+        value: currentPlan.price,
+        dueDate,
+        description: `Assinatura ${currentPlan.name} - ${account.name}`,
+        externalReference: account.id,
+        creditCard: {
+          holderName: cardForm.holderName,
+          number: cardForm.number.replace(/\D/g, ''),
+          expiryMonth: cardForm.expiryMonth,
+          expiryYear: cardForm.expiryYear,
+          ccv: cardForm.ccv,
+        },
+        creditCardHolderInfo: {
+          name: cardForm.holderName,
+          email: cardForm.email,
+          cpfCnpj: cardForm.cpfCnpj.replace(/\D/g, ''),
+          postalCode: cardForm.postalCode.replace(/\D/g, ''),
+          addressNumber: cardForm.addressNumber,
+          phone: cardForm.phone.replace(/\D/g, ''),
+        },
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      toast({
+        title: "Pagamento realizado",
+        description: "O pagamento foi processado com sucesso!",
+      });
+      
+      setIsCardDialogOpen(false);
+      // Reset form
+      setCardForm({
+        holderName: "",
+        number: "",
+        expiryMonth: "",
+        expiryYear: "",
+        ccv: "",
+        cpfCnpj: "",
+        email: "",
+        phone: "",
+        postalCode: "",
+        addressNumber: "",
+      });
+      
+      // Refresh data
+      loadAccountAndPlans();
+    } catch (error: any) {
+      console.error("Error processing card payment:", error);
+      toast({
+        title: "Erro no pagamento",
+        description: error.message || "Não foi possível processar o pagamento",
         variant: "destructive",
       });
     } finally {
@@ -371,7 +480,7 @@ export function SubscriptionManager() {
               <div className="flex flex-col sm:flex-row gap-3 items-end">
                 <div className="flex-1">
                   <Label className="text-sm mb-2 block">Método de pagamento</Label>
-                  <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'PIX' | 'BOLETO')}>
+                  <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'PIX' | 'BOLETO' | 'CREDIT_CARD')}>
                     <SelectTrigger className="h-9">
                       <SelectValue />
                     </SelectTrigger>
@@ -388,6 +497,12 @@ export function SubscriptionManager() {
                           Boleto
                         </span>
                       </SelectItem>
+                      <SelectItem value="CREDIT_CARD">
+                        <span className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          Cartão de Crédito
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -401,7 +516,7 @@ export function SubscriptionManager() {
                   ) : (
                     <Receipt className="h-4 w-4" />
                   )}
-                  Gerar Cobrança
+                  {paymentMethod === 'CREDIT_CARD' ? 'Pagar com Cartão' : 'Gerar Cobrança'}
                 </Button>
               </div>
             </div>
@@ -614,6 +729,161 @@ export function SubscriptionManager() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
               Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit Card Dialog */}
+      <Dialog open={isCardDialogOpen} onOpenChange={setIsCardDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Pagamento com Cartão de Crédito
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados do cartão para processar o pagamento de{" "}
+              {currentPlan && new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(currentPlan.price)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Card Details */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Dados do Cartão</h4>
+              <div className="space-y-2">
+                <Label htmlFor="card-holder">Nome no Cartão</Label>
+                <Input
+                  id="card-holder"
+                  value={cardForm.holderName}
+                  onChange={(e) => setCardForm(prev => ({ ...prev, holderName: e.target.value.toUpperCase() }))}
+                  placeholder="NOME COMO ESTÁ NO CARTÃO"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="card-number">Número do Cartão</Label>
+                <Input
+                  id="card-number"
+                  value={cardForm.number}
+                  onChange={(e) => setCardForm(prev => ({ ...prev, number: e.target.value.replace(/\D/g, '').slice(0, 16) }))}
+                  placeholder="0000 0000 0000 0000"
+                  maxLength={16}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="card-month">Mês</Label>
+                  <Input
+                    id="card-month"
+                    value={cardForm.expiryMonth}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, expiryMonth: e.target.value.replace(/\D/g, '').slice(0, 2) }))}
+                    placeholder="MM"
+                    maxLength={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="card-year">Ano</Label>
+                  <Input
+                    id="card-year"
+                    value={cardForm.expiryYear}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, expiryYear: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                    placeholder="AAAA"
+                    maxLength={4}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="card-ccv">CVV</Label>
+                  <Input
+                    id="card-ccv"
+                    type="password"
+                    value={cardForm.ccv}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, ccv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                    placeholder="000"
+                    maxLength={4}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Holder Info */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Dados do Titular</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="holder-cpf">CPF/CNPJ</Label>
+                  <Input
+                    id="holder-cpf"
+                    value={cardForm.cpfCnpj}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, cpfCnpj: e.target.value }))}
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="holder-phone">Telefone</Label>
+                  <Input
+                    id="holder-phone"
+                    value={cardForm.phone}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="holder-email">E-mail</Label>
+                <Input
+                  id="holder-email"
+                  type="email"
+                  value={cardForm.email}
+                  onChange={(e) => setCardForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="holder-cep">CEP</Label>
+                  <Input
+                    id="holder-cep"
+                    value={cardForm.postalCode}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, postalCode: e.target.value }))}
+                    placeholder="00000-000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="holder-number">Número</Label>
+                  <Input
+                    id="holder-number"
+                    value={cardForm.addressNumber}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, addressNumber: e.target.value }))}
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsCardDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCardPayment} disabled={generatingPayment}>
+              {generatingPayment ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pagar {currentPlan && new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(currentPlan.price)}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

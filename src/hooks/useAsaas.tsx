@@ -37,6 +37,23 @@ export interface AsaasPayment {
   pixQrCodeUrl?: string;
 }
 
+export interface AsaasCreditCard {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+}
+
+export interface AsaasCreditCardHolderInfo {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  postalCode: string;
+  addressNumber: string;
+  phone: string;
+}
+
 export interface AsaasApiResponse<T = any> {
   data?: T;
   totalCount?: number;
@@ -178,6 +195,32 @@ export function useAsaas() {
     return callAsaasApi<string>('getInvoice', { paymentId });
   }, [callAsaasApi]);
 
+  // ================== CREDIT CARD ==================
+  const tokenizeCreditCard = useCallback(async (
+    customer: string,
+    creditCard: AsaasCreditCard,
+    creditCardHolderInfo: AsaasCreditCardHolderInfo
+  ) => {
+    return callAsaasApi<{ creditCardToken: string; creditCardNumber: string; creditCardBrand: string }>('tokenizeCreditCard', {
+      customer,
+      creditCard,
+      creditCardHolderInfo,
+    });
+  }, [callAsaasApi]);
+
+  const createPaymentWithCard = useCallback(async (payment: {
+    customer: string;
+    value: number;
+    dueDate: string;
+    description?: string;
+    externalReference?: string;
+    creditCard?: AsaasCreditCard;
+    creditCardHolderInfo?: AsaasCreditCardHolderInfo;
+    creditCardToken?: string;
+  }) => {
+    return callAsaasApi<AsaasPayment>('createPaymentWithCard', payment);
+  }, [callAsaasApi]);
+
   return {
     loading,
     error,
@@ -200,5 +243,8 @@ export function useAsaas() {
     getBoletoUrl,
     cancelPayment,
     getInvoice,
+    // Credit Card
+    tokenizeCreditCard,
+    createPaymentWithCard,
   };
 }
