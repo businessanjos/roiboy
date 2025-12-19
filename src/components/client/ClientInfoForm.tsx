@@ -41,6 +41,7 @@ export interface ClientFormData {
   birth_date: string;
   company_name: string;
   notes: string;
+  // Residential address
   street: string;
   street_number: string;
   complement: string;
@@ -48,6 +49,15 @@ export interface ClientFormData {
   city: string;
   state: string;
   zip_code: string;
+  // Business address
+  business_street: string;
+  business_street_number: string;
+  business_complement: string;
+  business_neighborhood: string;
+  business_city: string;
+  business_state: string;
+  business_zip_code: string;
+  // Contract
   contract_start_date: string;
   contract_end_date: string;
   is_mls: boolean;
@@ -407,18 +417,18 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         if (response.ok) {
           const cnpjData = await response.json();
           
-          // Auto-fill company and address fields
+          // Auto-fill company and BUSINESS address fields (not residential)
           onChange({
             ...data,
             cnpj: formatted,
             company_name: cnpjData.razao_social || cnpjData.nome_fantasia || data.company_name,
-            street: cnpjData.logradouro || data.street,
-            street_number: cnpjData.numero || data.street_number,
-            complement: cnpjData.complemento || data.complement,
-            neighborhood: cnpjData.bairro || data.neighborhood,
-            city: cnpjData.municipio || data.city,
-            state: cnpjData.uf || data.state,
-            zip_code: cnpjData.cep ? formatCEP(cnpjData.cep) : data.zip_code,
+            business_street: cnpjData.logradouro || data.business_street,
+            business_street_number: cnpjData.numero || data.business_street_number,
+            business_complement: cnpjData.complemento || data.business_complement,
+            business_neighborhood: cnpjData.bairro || data.business_neighborhood,
+            business_city: cnpjData.municipio || data.business_city,
+            business_state: cnpjData.uf || data.business_state,
+            business_zip_code: cnpjData.cep ? formatCEP(cnpjData.cep) : data.business_zip_code,
           });
         }
       } catch (error) {
@@ -867,8 +877,95 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              💡 Ao digitar o CNPJ, os dados da empresa e endereço serão preenchidos automaticamente.
+              💡 Ao digitar o CNPJ, os dados da empresa e endereço comercial serão preenchidos automaticamente.
             </p>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
+          {/* Business Address */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <MapPin className="h-3.5 w-3.5" />
+              Endereço Comercial
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">CEP</Label>
+                <Input
+                  value={data.business_zip_code}
+                  onChange={(e) => updateField("business_zip_code", formatCEP(e.target.value))}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium">Rua</Label>
+                <Input
+                  value={data.business_street}
+                  onChange={(e) => updateField("business_street", e.target.value)}
+                  placeholder="Av. Paulista"
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Número</Label>
+                <Input
+                  value={data.business_street_number}
+                  onChange={(e) => updateField("business_street_number", e.target.value)}
+                  placeholder="1000"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-3">
+                <Label className="text-sm font-medium">Complemento</Label>
+                <Input
+                  value={data.business_complement}
+                  onChange={(e) => updateField("business_complement", e.target.value)}
+                  placeholder="Sala 101"
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Bairro</Label>
+                <Input
+                  value={data.business_neighborhood}
+                  onChange={(e) => updateField("business_neighborhood", e.target.value)}
+                  placeholder="Centro"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Cidade</Label>
+                <Input
+                  value={data.business_city}
+                  onChange={(e) => updateField("business_city", e.target.value)}
+                  placeholder="São Paulo"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Estado</Label>
+                <Select
+                  value={data.business_state}
+                  onValueChange={(value) => updateField("business_state", value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRAZILIAN_STATES.map((state) => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           <div className="h-px bg-border/50" />
@@ -969,6 +1066,13 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   city: "",
   state: "",
   zip_code: "",
+  business_street: "",
+  business_street_number: "",
+  business_complement: "",
+  business_neighborhood: "",
+  business_city: "",
+  business_state: "",
+  business_zip_code: "",
   contract_start_date: "",
   contract_end_date: "",
   is_mls: false,

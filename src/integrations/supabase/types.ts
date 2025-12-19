@@ -805,6 +805,13 @@ export type Database = {
           additional_phones: Json | null
           avatar_url: string | null
           birth_date: string | null
+          business_city: string | null
+          business_complement: string | null
+          business_neighborhood: string | null
+          business_state: string | null
+          business_street: string | null
+          business_street_number: string | null
+          business_zip_code: string | null
           city: string | null
           cnpj: string | null
           company_name: string | null
@@ -833,6 +840,13 @@ export type Database = {
           additional_phones?: Json | null
           avatar_url?: string | null
           birth_date?: string | null
+          business_city?: string | null
+          business_complement?: string | null
+          business_neighborhood?: string | null
+          business_state?: string | null
+          business_street?: string | null
+          business_street_number?: string | null
+          business_zip_code?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
@@ -861,6 +875,13 @@ export type Database = {
           additional_phones?: Json | null
           avatar_url?: string | null
           birth_date?: string | null
+          business_city?: string | null
+          business_complement?: string | null
+          business_neighborhood?: string | null
+          business_state?: string | null
+          business_street?: string | null
+          business_street_number?: string | null
+          business_zip_code?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
