@@ -21,11 +21,11 @@ export function AppLayout() {
 
   return (
     <CurrentUserProvider>
-      <div className="flex flex-col min-h-screen bg-background">
+      <div className="flex flex-col min-h-screen w-full bg-background">
         <MobileHeader />
-        <div className="flex flex-1">
+        <div className="flex flex-1 w-full">
           <Sidebar />
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 min-w-0 overflow-auto">
             <Outlet />
           </main>
         </div>
