@@ -87,6 +87,13 @@ interface Client {
   city?: string;
   state?: string;
   zip_code?: string;
+  business_street?: string;
+  business_street_number?: string;
+  business_complement?: string;
+  business_neighborhood?: string;
+  business_city?: string;
+  business_state?: string;
+  business_zip_code?: string;
   avatar_url?: string | null;
   contract_start_date?: string | null;
   contract_end_date?: string | null;
@@ -372,6 +379,13 @@ export default function ClientDetail() {
       city: client.city || "",
       state: client.state || "",
       zip_code: client.zip_code || "",
+      business_street: client.business_street || "",
+      business_street_number: client.business_street_number || "",
+      business_complement: client.business_complement || "",
+      business_neighborhood: client.business_neighborhood || "",
+      business_city: client.business_city || "",
+      business_state: client.business_state || "",
+      business_zip_code: client.business_zip_code || "",
       contract_start_date: client.contract_start_date || "",
       contract_end_date: client.contract_end_date || "",
       is_mls: client.is_mls || false,
@@ -421,6 +435,13 @@ export default function ClientDetail() {
           city: editFormData.city || null,
           state: editFormData.state || null,
           zip_code: editFormData.zip_code?.replace(/\D/g, '') || null,
+          business_street: editFormData.business_street || null,
+          business_street_number: editFormData.business_street_number || null,
+          business_complement: editFormData.business_complement || null,
+          business_neighborhood: editFormData.business_neighborhood || null,
+          business_city: editFormData.business_city || null,
+          business_state: editFormData.business_state || null,
+          business_zip_code: editFormData.business_zip_code?.replace(/\D/g, '') || null,
           contract_start_date: editFormData.contract_start_date || null,
           contract_end_date: editFormData.contract_end_date || null,
           is_mls: editFormData.is_mls,
@@ -448,6 +469,13 @@ export default function ClientDetail() {
         city: editFormData.city,
         state: editFormData.state,
         zip_code: editFormData.zip_code,
+        business_street: editFormData.business_street,
+        business_street_number: editFormData.business_street_number,
+        business_complement: editFormData.business_complement,
+        business_neighborhood: editFormData.business_neighborhood,
+        business_city: editFormData.business_city,
+        business_state: editFormData.business_state,
+        business_zip_code: editFormData.business_zip_code,
         contract_start_date: editFormData.contract_start_date,
         contract_end_date: editFormData.contract_end_date,
         is_mls: editFormData.is_mls,
@@ -495,6 +523,13 @@ export default function ClientDetail() {
         city: clientData.city || "",
         state: clientData.state || "",
         zip_code: clientData.zip_code || "",
+        business_street: clientData.business_street || "",
+        business_street_number: clientData.business_street_number || "",
+        business_complement: clientData.business_complement || "",
+        business_neighborhood: clientData.business_neighborhood || "",
+        business_city: clientData.business_city || "",
+        business_state: clientData.business_state || "",
+        business_zip_code: clientData.business_zip_code || "",
         avatar_url: clientData.avatar_url || null,
         contract_start_date: clientData.contract_start_date || null,
         contract_end_date: clientData.contract_end_date || null,
