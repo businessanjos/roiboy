@@ -918,12 +918,12 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-sm">Plano</Label>
-                  <Select value={createFormData.plan_id} onValueChange={v => setCreateFormData(f => ({ ...f, plan_id: v }))}>
+                  <Select value={createFormData.plan_id || "none"} onValueChange={v => setCreateFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder="Selecione um plano" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sem plano (Trial)</SelectItem>
+                      <SelectItem value="none">Sem plano (Trial)</SelectItem>
                       {plans.filter(p => p.is_active).map(plan => (
                         <SelectItem key={plan.id} value={plan.id}>{plan.name} - R$ {plan.price.toLocaleString('pt-BR')}</SelectItem>
                       ))}
@@ -1062,12 +1062,12 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
               </div>
               <div className="grid gap-2">
                 <Label className="text-sm">Plano</Label>
-                <Select value={editFormData.plan_id} onValueChange={v => setEditFormData(f => ({ ...f, plan_id: v }))}>
+                <Select value={editFormData.plan_id || "none"} onValueChange={v => setEditFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Selecione um plano" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem plano</SelectItem>
+                    <SelectItem value="none">Sem plano</SelectItem>
                     {plans.filter(p => p.is_active).map(plan => (
                       <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
                     ))}
