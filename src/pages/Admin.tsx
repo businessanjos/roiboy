@@ -768,13 +768,17 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   };
 
   const openEdit = (account: Account) => {
-    setEditingAccount(account);
-    setFormData({
+    console.log('Opening edit for account:', account);
+    const newFormData = {
       name: account.name,
       plan_id: account.plan_id || '',
       subscription_status: account.subscription_status || 'trial',
       trial_ends_at: account.trial_ends_at ? account.trial_ends_at.split('T')[0] : ''
-    });
+    };
+    console.log('Setting form data:', newFormData);
+    setFormData(newFormData);
+    setEditingAccount(account);
+    console.log('editingAccount set to:', account.id);
   };
 
   const createMutation = useMutation({
