@@ -904,7 +904,7 @@ export default function Team() {
                             <span>{permissionCount}</span>
                           </div>
                         </div>
-                        <div className="flex gap-1 shrink-0 w-24 justify-end">
+                        <div className="flex gap-1 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -914,19 +914,16 @@ export default function Team() {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          {!role.is_system ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteRole(role)}
-                              title="Excluir"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <div className="w-8" /> 
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${role.is_system ? 'invisible' : 'text-destructive hover:text-destructive hover:bg-destructive/10'}`}
+                            onClick={() => !role.is_system && handleDeleteRole(role)}
+                            title="Excluir"
+                            disabled={role.is_system}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     );
