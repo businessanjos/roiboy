@@ -37,8 +37,10 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
-  Settings
+  Settings,
+  FileText
 } from "lucide-react";
+import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 
 interface SubscriptionPlan {
   id: string;
@@ -243,6 +245,10 @@ export default function Admin() {
             <Wallet className="h-4 w-4" />
             Pagamentos
           </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <FileText className="h-4 w-4" />
+            Auditoria
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -263,6 +269,10 @@ export default function Admin() {
 
         <TabsContent value="payments" className="mt-0">
           <PaymentsTab />
+        </TabsContent>
+
+        <TabsContent value="audit" className="mt-0">
+          <AuditLogViewer />
         </TabsContent>
       </Tabs>
     </div>
