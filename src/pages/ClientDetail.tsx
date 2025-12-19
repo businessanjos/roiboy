@@ -496,6 +496,10 @@ export default function ClientDetail() {
         state: clientData.state || "",
         zip_code: clientData.zip_code || "",
         avatar_url: clientData.avatar_url || null,
+        contract_start_date: clientData.contract_start_date || null,
+        contract_end_date: clientData.contract_end_date || null,
+        is_mls: clientData.is_mls || false,
+        mls_level: clientData.mls_level || null,
       });
 
       // Fetch client products
