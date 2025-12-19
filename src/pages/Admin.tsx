@@ -41,6 +41,7 @@ import {
   FileText
 } from "lucide-react";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
+import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
 
 interface SubscriptionPlan {
   id: string;
@@ -294,7 +295,7 @@ export default function Admin() {
         </TabsContent>
 
         <TabsContent value="payments" className="mt-0">
-          <PaymentsTab />
+          <AdminPaymentsManager />
         </TabsContent>
 
         <TabsContent value="audit" className="mt-0">
