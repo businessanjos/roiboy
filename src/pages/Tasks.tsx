@@ -58,9 +58,12 @@ import {
   ArrowRight,
   XCircle,
   User2,
+  List,
+  LayoutGrid,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
+import { TaskKanban } from "@/components/tasks/TaskKanban";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
@@ -115,6 +118,8 @@ const STATUS_CONFIG = {
   cancelled: { label: "Cancelado", icon: XCircle, className: "bg-muted text-muted-foreground" },
 };
 
+type ViewMode = "list" | "kanban";
+
 export default function Tasks() {
   const { currentUser } = useCurrentUser();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -124,6 +129,7 @@ export default function Tasks() {
   const [filterUser, setFilterUser] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [activeTab, setActiveTab] = useState("pending");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -206,6 +212,23 @@ export default function Tasks() {
       toast.success("Tarefa excluída!");
       setDeleteDialogOpen(false);
       setTaskToDelete(null);
+      fetchTasks();
+    }
+  };
+
+  const handleStatusChange = async (taskId: string, newStatus: Task["status"]) => {
+    const { error } = await supabase
+      .from("internal_tasks")
+      .update({
+        status: newStatus,
+        completed_at: newStatus === "done" ? new Date().toISOString() : null,
+      })
+      .eq("id", taskId);
+
+    if (error) {
+      toast.error("Erro ao mover tarefa");
+    } else {
+      toast.success("Tarefa movida!");
       fetchTasks();
     }
   };
@@ -490,13 +513,36 @@ export default function Tasks() {
               </div>
             </div>
           </div>
-          <Button 
-            onClick={() => { setEditingTask(null); setDialogOpen(true); }}
-            className="shadow-sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Tarefa
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex items-center border rounded-lg p-1 bg-muted/50">
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="h-8 px-3"
+              >
+                <List className="h-4 w-4 mr-1.5" />
+                Lista
+              </Button>
+              <Button
+                variant={viewMode === "kanban" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("kanban")}
+                className="h-8 px-3"
+              >
+                <LayoutGrid className="h-4 w-4 mr-1.5" />
+                Kanban
+              </Button>
+            </div>
+            <Button 
+              onClick={() => { setEditingTask(null); setDialogOpen(true); }}
+              className="shadow-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Tarefa
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -629,44 +675,62 @@ export default function Tasks() {
         </Select>
       </div>
 
-      {/* Tabs & Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="pending" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Clock className="h-4 w-4" />
-            Pendentes
-            {pendingCount > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                {pendingCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="done" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <CheckCircle2 className="h-4 w-4" />
-            Concluídas
-            {doneCount > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                {doneCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="cancelled" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            Canceladas
-          </TabsTrigger>
-        </TabsList>
+      {/* Content based on view mode */}
+      {viewMode === "kanban" ? (
+        <TaskKanban
+          tasks={tasks.filter((task) => {
+            const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const matchesUser = filterUser === "all" || 
+              filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
 
-        <TabsContent value="pending" className="mt-6">
-          <TaskTable tasks={sortedTasks} />
-        </TabsContent>
+            return matchesSearch && matchesUser;
+          })}
+          onEditTask={openEditDialog}
+          onDeleteTask={openDeleteDialog}
+          onStatusChange={handleStatusChange}
+        />
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="pending" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Clock className="h-4 w-4" />
+              Pendentes
+              {pendingCount > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                  {pendingCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="done" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <CheckCircle2 className="h-4 w-4" />
+              Concluídas
+              {doneCount > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                  {doneCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="cancelled" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Canceladas
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="done" className="mt-6">
-          <TaskTable tasks={sortedTasks} />
-        </TabsContent>
+          <TabsContent value="pending" className="mt-6">
+            <TaskTable tasks={sortedTasks} />
+          </TabsContent>
 
-        <TabsContent value="cancelled" className="mt-6">
-          <TaskTable tasks={sortedTasks} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="done" className="mt-6">
+            <TaskTable tasks={sortedTasks} />
+          </TabsContent>
+
+          <TabsContent value="cancelled" className="mt-6">
+            <TaskTable tasks={sortedTasks} />
+          </TabsContent>
+        </Tabs>
+      )}
 
       {/* Task Dialog */}
       <TaskDialog
