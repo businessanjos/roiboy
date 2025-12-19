@@ -2005,6 +2005,10 @@ export type Database = {
           is_active: boolean
           max_ai_analyses: number | null
           max_clients: number | null
+          max_events: number | null
+          max_forms: number | null
+          max_products: number | null
+          max_storage_mb: number | null
           max_users: number | null
           name: string
           price: number
@@ -2020,6 +2024,10 @@ export type Database = {
           is_active?: boolean
           max_ai_analyses?: number | null
           max_clients?: number | null
+          max_events?: number | null
+          max_forms?: number | null
+          max_products?: number | null
+          max_storage_mb?: number | null
           max_users?: number | null
           name: string
           price?: number
@@ -2035,6 +2043,10 @@ export type Database = {
           is_active?: boolean
           max_ai_analyses?: number | null
           max_clients?: number | null
+          max_events?: number | null
+          max_forms?: number | null
+          max_products?: number | null
+          max_storage_mb?: number | null
           max_users?: number | null
           name?: string
           price?: number
@@ -2225,6 +2237,7 @@ export type Database = {
     }
     Functions: {
       generate_checkin_code: { Args: never; Returns: string }
+      get_account_limits: { Args: never; Returns: Json }
       get_user_account_id: { Args: never; Returns: string }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
