@@ -353,15 +353,37 @@ export function validateBrazilianPhone(phone: string): { isValid: boolean; dddVa
 export function formatBrazilianPhone(value: string): string {
   let digits = value.replace(/\D/g, '');
   
-  // Add country code if not present and has enough digits
-  if (digits.length > 0 && !digits.startsWith('55') && digits.length <= 11) {
-    digits = '55' + digits;
-  }
+  // If user is typing and doesn't have country code yet, don't auto-add 55
+  // Only add 55 if we have a reasonable number of digits and it's clearly not starting with a country code
+  if (digits.length === 0) return '';
+  
+  // If starts with 55, it's already Brazilian format
+  const hasBrazilCode = digits.startsWith('55');
   
   // Limit to max length (55 + 11 digits = 13)
-  digits = digits.slice(0, 13);
+  digits = digits.slice(0, hasBrazilCode ? 13 : 11);
   
-  if (digits.length <= 2) return digits.length > 0 ? `+${digits}` : '';
+  // For formatting, if no country code and short, just format raw
+  if (!hasBrazilCode) {
+    // Format as local Brazilian number without country code prefix
+    if (digits.length <= 2) return `+55 ${digits}`;
+    if (digits.length <= 7) return `+55 ${digits.slice(0, 2)} ${digits.slice(2)}`;
+    if (digits.length <= 11) {
+      const ddd = digits.slice(0, 2);
+      const number = digits.slice(2);
+      if (number.length <= 4) {
+        return `+55 ${ddd} ${number}`;
+      } else if (number.length <= 8) {
+        return `+55 ${ddd} ${number.slice(0, 4)}-${number.slice(4)}`;
+      } else {
+        return `+55 ${ddd} ${number.slice(0, 5)}-${number.slice(5)}`;
+      }
+    }
+    return `+55 ${digits}`;
+  }
+  
+  // Has 55 prefix
+  if (digits.length <= 2) return `+${digits}`;
   if (digits.length <= 4) return `+${digits.slice(0, 2)} ${digits.slice(2)}`;
   if (digits.length <= 9) return `+${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4)}`;
   if (digits.length <= 13) {

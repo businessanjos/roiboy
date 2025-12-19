@@ -83,6 +83,81 @@ function ValidationIndicator({ isValid, isEmpty }: { isValid: boolean; isEmpty: 
 
 // Using shared MLS_LEVELS from mls-utils
 
+// Birth Date Field with local state for typing
+function BirthDateField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  // Local state for the display value (DD/MM/AAAA format)
+  const [displayValue, setDisplayValue] = useState(() => parseISOToDateBR(value));
+  
+  // Sync display value when external value changes (e.g., form reset)
+  useEffect(() => {
+    const newDisplay = parseISOToDateBR(value);
+    if (newDisplay !== displayValue && value) {
+      setDisplayValue(newDisplay);
+    } else if (!value && displayValue) {
+      // If external value is cleared, clear display
+      setDisplayValue('');
+    }
+  }, [value]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatDateBR(e.target.value);
+    setDisplayValue(formatted);
+    
+    // Only update the ISO value when we have a complete valid date
+    const isoDate = parseDateBRToISO(formatted);
+    if (isoDate) {
+      onChange(isoDate);
+    } else if (formatted === '') {
+      onChange('');
+    }
+    // If incomplete, don't update parent - keep showing what user is typing
+  };
+  
+  const validation = validateBirthDate(displayValue);
+  const showValidation = displayValue.length > 0;
+  
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium">Data de Nascimento</Label>
+      <div className="relative">
+        <Input
+          value={displayValue}
+          onChange={handleChange}
+          placeholder="DD/MM/AAAA"
+          maxLength={10}
+          className={`h-9 pr-9 ${
+            showValidation && validation.error && validation.error !== 'incomplete'
+              ? "border-destructive ring-1 ring-destructive/30" 
+              : showValidation && validation.isValid
+                ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                : ""
+          }`}
+        />
+        {showValidation && validation.error !== 'incomplete' && (
+          <ValidationIndicator 
+            isValid={validation.isValid} 
+            isEmpty={false} 
+          />
+        )}
+      </div>
+      {showValidation && validation.error === 'incomplete' && (
+        <p className="text-[11px] text-amber-600">Digitando...</p>
+      )}
+      {showValidation && !validation.isValid && validation.error && validation.error !== 'incomplete' && (
+        <p className="text-[11px] text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          {validation.error}
+        </p>
+      )}
+      {validation.isValid && validation.age !== null && (
+        <p className="text-[11px] text-emerald-600 font-medium">
+          {validation.age} {validation.age === 1 ? 'ano' : 'anos'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true }: ClientInfoFormProps) {
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
@@ -526,57 +601,10 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               className="h-9"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Data de Nascimento</Label>
-            <div className="relative">
-              <Input
-                value={parseISOToDateBR(data.birth_date)}
-                onChange={(e) => {
-                  const formatted = formatDateBR(e.target.value);
-                  const isoDate = parseDateBRToISO(formatted);
-                  updateField("birth_date", isoDate || "");
-                }}
-                placeholder="DD/MM/AAAA"
-                maxLength={10}
-                className={`h-9 pr-9 ${
-                  data.birth_date && !validateBirthDate(parseISOToDateBR(data.birth_date)).isValid 
-                    ? "border-destructive ring-1 ring-destructive/30" 
-                    : data.birth_date && validateBirthDate(parseISOToDateBR(data.birth_date)).isValid
-                      ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
-                      : ""
-                }`}
-              />
-              {data.birth_date && (
-                <ValidationIndicator 
-                  isValid={validateBirthDate(parseISOToDateBR(data.birth_date)).isValid} 
-                  isEmpty={false} 
-                />
-              )}
-            </div>
-            {(() => {
-              const birthValidation = validateBirthDate(parseISOToDateBR(data.birth_date));
-              if (!data.birth_date) return null;
-              if (birthValidation.error === 'incomplete') {
-                return <p className="text-[11px] text-amber-600">Digitando...</p>;
-              }
-              if (!birthValidation.isValid && birthValidation.error) {
-                return (
-                  <p className="text-[11px] text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {birthValidation.error}
-                  </p>
-                );
-              }
-              if (birthValidation.isValid && birthValidation.age !== null) {
-                return (
-                  <p className="text-[11px] text-emerald-600 font-medium">
-                    {birthValidation.age} {birthValidation.age === 1 ? 'ano' : 'anos'}
-                  </p>
-                );
-              }
-              return null;
-            })()}
-          </div>
+          <BirthDateField 
+            value={data.birth_date}
+            onChange={(value) => updateField("birth_date", value)}
+          />
         </div>
       </div>
 
