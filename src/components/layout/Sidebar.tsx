@@ -85,7 +85,7 @@ const navItems: NavItem[] = [
   { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
   { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
   { to: "/integrations", icon: Link2, label: "Integrações", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/settings", icon: Settings, label: "Plataforma", permission: PERMISSIONS.SETTINGS_VIEW },
+  { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
 ];
 
 // Simplified navigation for super admins - only admin-related items
@@ -304,10 +304,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             <DropdownMenuItem onClick={() => { navigate("/profile"); onNavigate?.(); }}>
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { navigate("/settings"); onNavigate?.(); }}>
-              <Settings className="mr-2 h-4 w-4" />
-              Configurações
             </DropdownMenuItem>
             <DropdownMenuItem onClick={toggleTheme}>
               {theme === "dark" ? (
