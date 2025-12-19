@@ -76,6 +76,18 @@ interface Account {
   plan_id: string | null;
   trial_ends_at: string | null;
   subscription_status: string | null;
+  email: string | null;
+  phone: string | null;
+  document_type: string | null;
+  document: string | null;
+  contact_name: string | null;
+  street: string | null;
+  street_number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
   user_count?: number;
   client_count?: number;
 }
@@ -755,6 +767,18 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   // Separate form states for create and edit to avoid conflicts
   const [createFormData, setCreateFormData] = useState({
     name: '',
+    email: '',
+    phone: '',
+    document_type: 'cpf',
+    document: '',
+    contact_name: '',
+    street: '',
+    street_number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zip_code: '',
     plan_id: '',
     subscription_status: 'trial',
     trial_ends_at: ''
@@ -762,6 +786,18 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   
   const [editFormData, setEditFormData] = useState({
     name: '',
+    email: '',
+    phone: '',
+    document_type: 'cpf',
+    document: '',
+    contact_name: '',
+    street: '',
+    street_number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zip_code: '',
     plan_id: '',
     subscription_status: 'trial',
     trial_ends_at: ''
@@ -770,6 +806,18 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   const resetCreateForm = () => {
     setCreateFormData({
       name: '',
+      email: '',
+      phone: '',
+      document_type: 'cpf',
+      document: '',
+      contact_name: '',
+      street: '',
+      street_number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zip_code: '',
       plan_id: '',
       subscription_status: 'trial',
       trial_ends_at: ''
@@ -777,17 +825,26 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   };
 
   const openEdit = (account: Account) => {
-    console.log('Opening edit for account:', account);
     const newFormData = {
       name: account.name,
+      email: account.email || '',
+      phone: account.phone || '',
+      document_type: account.document_type || 'cpf',
+      document: account.document || '',
+      contact_name: account.contact_name || '',
+      street: account.street || '',
+      street_number: account.street_number || '',
+      complement: account.complement || '',
+      neighborhood: account.neighborhood || '',
+      city: account.city || '',
+      state: account.state || '',
+      zip_code: account.zip_code || '',
       plan_id: account.plan_id || '',
       subscription_status: account.subscription_status || 'trial',
       trial_ends_at: account.trial_ends_at ? account.trial_ends_at.split('T')[0] : ''
     };
-    console.log('Setting edit form data:', newFormData);
     setEditFormData(newFormData);
     setEditingAccount(account);
-    console.log('editingAccount set to:', account.id);
   };
 
   const createMutation = useMutation({
@@ -797,6 +854,18 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
         .from('accounts')
         .insert({
           name: createFormData.name,
+          email: createFormData.email || null,
+          phone: createFormData.phone || null,
+          document_type: createFormData.document_type,
+          document: createFormData.document || null,
+          contact_name: createFormData.contact_name || null,
+          street: createFormData.street || null,
+          street_number: createFormData.street_number || null,
+          complement: createFormData.complement || null,
+          neighborhood: createFormData.neighborhood || null,
+          city: createFormData.city || null,
+          state: createFormData.state || null,
+          zip_code: createFormData.zip_code || null,
           plan_id: createFormData.plan_id || null,
           subscription_status: createFormData.subscription_status,
           trial_ends_at: createFormData.trial_ends_at ? new Date(createFormData.trial_ends_at).toISOString() : null
@@ -833,6 +902,18 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
         .from('accounts')
         .update({
           name: editFormData.name,
+          email: editFormData.email || null,
+          phone: editFormData.phone || null,
+          document_type: editFormData.document_type,
+          document: editFormData.document || null,
+          contact_name: editFormData.contact_name || null,
+          street: editFormData.street || null,
+          street_number: editFormData.street_number || null,
+          complement: editFormData.complement || null,
+          neighborhood: editFormData.neighborhood || null,
+          city: editFormData.city || null,
+          state: editFormData.state || null,
+          zip_code: editFormData.zip_code || null,
           plan_id: editFormData.plan_id || null,
           subscription_status: editFormData.subscription_status,
           trial_ends_at: editFormData.trial_ends_at ? new Date(editFormData.trial_ends_at).toISOString() : null
@@ -901,57 +982,198 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 Nova Conta
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Nova Conta</DialogTitle>
                 <DialogDescription>Crie uma nova conta na plataforma</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label className="text-sm">Nome</Label>
-                  <Input 
-                    value={createFormData.name} 
-                    onChange={e => setCreateFormData(f => ({ ...f, name: e.target.value }))} 
-                    placeholder="Nome da empresa/conta"
-                    className="h-9"
-                  />
+                {/* Dados Básicos */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Dados Básicos</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Nome da Conta *</Label>
+                      <Input 
+                        value={createFormData.name} 
+                        onChange={e => setCreateFormData(f => ({ ...f, name: e.target.value }))} 
+                        placeholder="Nome da empresa/conta"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Nome do Contato</Label>
+                      <Input 
+                        value={createFormData.contact_name} 
+                        onChange={e => setCreateFormData(f => ({ ...f, contact_name: e.target.value }))} 
+                        placeholder="Pessoa responsável"
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label className="text-sm">E-mail</Label>
+                      <Input 
+                        type="email"
+                        value={createFormData.email} 
+                        onChange={e => setCreateFormData(f => ({ ...f, email: e.target.value }))} 
+                        placeholder="email@empresa.com"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Telefone</Label>
+                      <Input 
+                        value={createFormData.phone} 
+                        onChange={e => setCreateFormData(f => ({ ...f, phone: e.target.value }))} 
+                        placeholder="+55 11 99999-9999"
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Tipo de Documento</Label>
+                      <Select value={createFormData.document_type} onValueChange={v => setCreateFormData(f => ({ ...f, document_type: v }))}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
+                          <SelectItem value="cnpj">CNPJ (Pessoa Jurídica)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-sm">{createFormData.document_type === 'cnpj' ? 'CNPJ' : 'CPF'}</Label>
+                      <Input 
+                        value={createFormData.document} 
+                        onChange={e => setCreateFormData(f => ({ ...f, document: e.target.value }))} 
+                        placeholder={createFormData.document_type === 'cnpj' ? '00.000.000/0000-00' : '000.000.000-00'}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label className="text-sm">Plano</Label>
-                  <Select value={createFormData.plan_id || "none"} onValueChange={v => setCreateFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Selecione um plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sem plano (Trial)</SelectItem>
-                      {plans.filter(p => p.is_active).map(plan => (
-                        <SelectItem key={plan.id} value={plan.id}>{plan.name} - R$ {plan.price.toLocaleString('pt-BR')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                {/* Endereço */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Endereço</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="grid gap-2">
+                      <Label className="text-sm">CEP</Label>
+                      <Input 
+                        value={createFormData.zip_code} 
+                        onChange={e => setCreateFormData(f => ({ ...f, zip_code: e.target.value }))} 
+                        placeholder="00000-000"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="col-span-2 grid gap-2">
+                      <Label className="text-sm">Rua</Label>
+                      <Input 
+                        value={createFormData.street} 
+                        onChange={e => setCreateFormData(f => ({ ...f, street: e.target.value }))} 
+                        placeholder="Nome da rua"
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Número</Label>
+                      <Input 
+                        value={createFormData.street_number} 
+                        onChange={e => setCreateFormData(f => ({ ...f, street_number: e.target.value }))} 
+                        placeholder="123"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Complemento</Label>
+                      <Input 
+                        value={createFormData.complement} 
+                        onChange={e => setCreateFormData(f => ({ ...f, complement: e.target.value }))} 
+                        placeholder="Apto 101"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="col-span-2 grid gap-2">
+                      <Label className="text-sm">Bairro</Label>
+                      <Input 
+                        value={createFormData.neighborhood} 
+                        onChange={e => setCreateFormData(f => ({ ...f, neighborhood: e.target.value }))} 
+                        placeholder="Centro"
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2 grid gap-2">
+                      <Label className="text-sm">Cidade</Label>
+                      <Input 
+                        value={createFormData.city} 
+                        onChange={e => setCreateFormData(f => ({ ...f, city: e.target.value }))} 
+                        placeholder="São Paulo"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Estado</Label>
+                      <Input 
+                        value={createFormData.state} 
+                        onChange={e => setCreateFormData(f => ({ ...f, state: e.target.value }))} 
+                        placeholder="SP"
+                        className="h-9"
+                        maxLength={2}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label className="text-sm">Status</Label>
-                  <Select value={createFormData.subscription_status} onValueChange={v => setCreateFormData(f => ({ ...f, subscription_status: v }))}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="trial">Trial</SelectItem>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="suspended">Suspenso</SelectItem>
-                      <SelectItem value="cancelled">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-sm">Término do Trial</Label>
-                  <Input 
-                    type="date"
-                    value={createFormData.trial_ends_at} 
-                    onChange={e => setCreateFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
-                    className="h-9"
-                  />
+
+                {/* Assinatura */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Assinatura</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Plano</Label>
+                      <Select value={createFormData.plan_id || "none"} onValueChange={v => setCreateFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Selecione um plano" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem plano (Trial)</SelectItem>
+                          {plans.filter(p => p.is_active).map(plan => (
+                            <SelectItem key={plan.id} value={plan.id}>{plan.name} - R$ {plan.price.toLocaleString('pt-BR')}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-sm">Status</Label>
+                      <Select value={createFormData.subscription_status} onValueChange={v => setCreateFormData(f => ({ ...f, subscription_status: v }))}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="trial">Trial</SelectItem>
+                          <SelectItem value="active">Ativo</SelectItem>
+                          <SelectItem value="suspended">Suspenso</SelectItem>
+                          <SelectItem value="cancelled">Cancelado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Término do Trial</Label>
+                    <Input 
+                      type="date"
+                      value={createFormData.trial_ends_at} 
+                      onChange={e => setCreateFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
+                      className="h-9"
+                    />
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -1046,57 +1268,198 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
         )}
 
         <Dialog open={!!editingAccount} onOpenChange={(open) => !open && setEditingAccount(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Editar Conta</DialogTitle>
               <DialogDescription>Atualize os dados da conta</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label className="text-sm">Nome</Label>
-                <Input 
-                  value={editFormData.name} 
-                  onChange={e => setEditFormData(f => ({ ...f, name: e.target.value }))} 
-                  className="h-9"
-                />
+              {/* Dados Básicos */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Dados Básicos</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Nome da Conta *</Label>
+                    <Input 
+                      value={editFormData.name} 
+                      onChange={e => setEditFormData(f => ({ ...f, name: e.target.value }))} 
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Nome do Contato</Label>
+                    <Input 
+                      value={editFormData.contact_name} 
+                      onChange={e => setEditFormData(f => ({ ...f, contact_name: e.target.value }))} 
+                      placeholder="Pessoa responsável"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label className="text-sm">E-mail</Label>
+                    <Input 
+                      type="email"
+                      value={editFormData.email} 
+                      onChange={e => setEditFormData(f => ({ ...f, email: e.target.value }))} 
+                      placeholder="email@empresa.com"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Telefone</Label>
+                    <Input 
+                      value={editFormData.phone} 
+                      onChange={e => setEditFormData(f => ({ ...f, phone: e.target.value }))} 
+                      placeholder="+55 11 99999-9999"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Tipo de Documento</Label>
+                    <Select value={editFormData.document_type} onValueChange={v => setEditFormData(f => ({ ...f, document_type: v }))}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cpf">CPF (Pessoa Física)</SelectItem>
+                        <SelectItem value="cnpj">CNPJ (Pessoa Jurídica)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm">{editFormData.document_type === 'cnpj' ? 'CNPJ' : 'CPF'}</Label>
+                    <Input 
+                      value={editFormData.document} 
+                      onChange={e => setEditFormData(f => ({ ...f, document: e.target.value }))} 
+                      placeholder={editFormData.document_type === 'cnpj' ? '00.000.000/0000-00' : '000.000.000-00'}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label className="text-sm">Plano</Label>
-                <Select value={editFormData.plan_id || "none"} onValueChange={v => setEditFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Selecione um plano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem plano</SelectItem>
-                    {plans.filter(p => p.is_active).map(plan => (
-                      <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              {/* Endereço */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Endereço</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="grid gap-2">
+                    <Label className="text-sm">CEP</Label>
+                    <Input 
+                      value={editFormData.zip_code} 
+                      onChange={e => setEditFormData(f => ({ ...f, zip_code: e.target.value }))} 
+                      placeholder="00000-000"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="col-span-2 grid gap-2">
+                    <Label className="text-sm">Rua</Label>
+                    <Input 
+                      value={editFormData.street} 
+                      onChange={e => setEditFormData(f => ({ ...f, street: e.target.value }))} 
+                      placeholder="Nome da rua"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Número</Label>
+                    <Input 
+                      value={editFormData.street_number} 
+                      onChange={e => setEditFormData(f => ({ ...f, street_number: e.target.value }))} 
+                      placeholder="123"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Complemento</Label>
+                    <Input 
+                      value={editFormData.complement} 
+                      onChange={e => setEditFormData(f => ({ ...f, complement: e.target.value }))} 
+                      placeholder="Apto 101"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="col-span-2 grid gap-2">
+                    <Label className="text-sm">Bairro</Label>
+                    <Input 
+                      value={editFormData.neighborhood} 
+                      onChange={e => setEditFormData(f => ({ ...f, neighborhood: e.target.value }))} 
+                      placeholder="Centro"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2 grid gap-2">
+                    <Label className="text-sm">Cidade</Label>
+                    <Input 
+                      value={editFormData.city} 
+                      onChange={e => setEditFormData(f => ({ ...f, city: e.target.value }))} 
+                      placeholder="São Paulo"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Estado</Label>
+                    <Input 
+                      value={editFormData.state} 
+                      onChange={e => setEditFormData(f => ({ ...f, state: e.target.value }))} 
+                      placeholder="SP"
+                      className="h-9"
+                      maxLength={2}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label className="text-sm">Status</Label>
-                <Select value={editFormData.subscription_status} onValueChange={v => setEditFormData(f => ({ ...f, subscription_status: v }))}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="suspended">Suspenso</SelectItem>
-                    <SelectItem value="cancelled">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label className="text-sm">Término do Trial</Label>
-                <Input 
-                  type="date"
-                  value={editFormData.trial_ends_at} 
-                  onChange={e => setEditFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
-                  className="h-9"
-                />
-                <p className="text-xs text-muted-foreground">Deixe vazio para trial sem prazo</p>
+
+              {/* Assinatura */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Assinatura</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Plano</Label>
+                    <Select value={editFormData.plan_id || "none"} onValueChange={v => setEditFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Selecione um plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem plano</SelectItem>
+                        {plans.filter(p => p.is_active).map(plan => (
+                          <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm">Status</Label>
+                    <Select value={editFormData.subscription_status} onValueChange={v => setEditFormData(f => ({ ...f, subscription_status: v }))}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="trial">Trial</SelectItem>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="suspended">Suspenso</SelectItem>
+                        <SelectItem value="cancelled">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-sm">Término do Trial</Label>
+                  <Input 
+                    type="date"
+                    value={editFormData.trial_ends_at} 
+                    onChange={e => setEditFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
+                    className="h-9"
+                  />
+                  <p className="text-xs text-muted-foreground">Deixe vazio para trial sem prazo</p>
+                </div>
               </div>
             </div>
             <DialogFooter>

@@ -129,28 +129,67 @@ export type Database = {
       }
       accounts: {
         Row: {
+          city: string | null
+          complement: string | null
+          contact_name: string | null
           created_at: string
+          document: string | null
+          document_type: string | null
+          email: string | null
           id: string
           name: string
+          neighborhood: string | null
+          phone: string | null
           plan_id: string | null
+          state: string | null
+          street: string | null
+          street_number: string | null
           subscription_status: string | null
           trial_ends_at: string | null
+          updated_at: string | null
+          zip_code: string | null
         }
         Insert: {
+          city?: string | null
+          complement?: string | null
+          contact_name?: string | null
           created_at?: string
+          document?: string | null
+          document_type?: string | null
+          email?: string | null
           id?: string
           name: string
+          neighborhood?: string | null
+          phone?: string | null
           plan_id?: string | null
+          state?: string | null
+          street?: string | null
+          street_number?: string | null
           subscription_status?: string | null
           trial_ends_at?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
         }
         Update: {
+          city?: string | null
+          complement?: string | null
+          contact_name?: string | null
           created_at?: string
+          document?: string | null
+          document_type?: string | null
+          email?: string | null
           id?: string
           name?: string
+          neighborhood?: string | null
+          phone?: string | null
           plan_id?: string | null
+          state?: string | null
+          street?: string | null
+          street_number?: string | null
           subscription_status?: string | null
           trial_ends_at?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {
