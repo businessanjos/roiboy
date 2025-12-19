@@ -66,8 +66,18 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (userError || !userData?.team_role_id) {
-        // No role assigned, no permissions
-        setPermissions([]);
+        // No team_role_id assigned - give default permissions based on user role
+        // This ensures users can still navigate even without a specific team role
+        const defaultPermissions = [
+          PERMISSIONS.CLIENTS_VIEW,
+          PERMISSIONS.CLIENTS_EDIT,
+          PERMISSIONS.REPORTS_VIEW,
+          PERMISSIONS.EVENTS_VIEW,
+          PERMISSIONS.FORMS_VIEW,
+          PERMISSIONS.PRODUCTS_VIEW,
+          PERMISSIONS.TEAM_VIEW,
+        ];
+        setPermissions(defaultPermissions);
         setIsAdmin(false);
         setLoading(false);
         return;
