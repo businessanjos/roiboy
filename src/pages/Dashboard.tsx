@@ -835,39 +835,8 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Calendar + Events Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Calendar */}
-            <Card className="shadow-card lg:col-span-1">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-base">Calendário CX</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <CalendarComponent
-                  mode="multiple"
-                  selected={upcomingEvents.map((e: any) => e.nextDate)}
-                  className="rounded-md pointer-events-auto"
-                  locale={ptBR}
-                  modifiers={{
-                    event: upcomingEvents.map((e: any) => e.nextDate),
-                  }}
-                  modifiersStyles={{
-                    event: {
-                      backgroundColor: "hsl(var(--primary) / 0.2)",
-                      borderRadius: "50%",
-                      fontWeight: "bold",
-                    },
-                  }}
-                  disabled={false}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Upcoming Life Events */}
-            <Card className="shadow-card lg:col-span-2">
+          {/* Upcoming Life Events */}
+          <Card className="shadow-card">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Bell className="h-5 w-5 text-primary" />
@@ -920,13 +889,12 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
-          </div>
 
           {/* Live Participation Report */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Video className="h-5 w-5 text-primary" />
-              Participação em Lives
+              Relatório de Participação em Eventos
             </h3>
             <LiveParticipationReport />
           </div>
