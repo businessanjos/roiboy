@@ -85,7 +85,8 @@ const navItems: NavItem[] = [
   { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
   { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
   { to: "/integrations", icon: Link2, label: "Integrações", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
+  { to: "/account-settings", icon: User, label: "Minha Conta" },
+  { to: "/settings", icon: Settings, label: "Plataforma", permission: PERMISSIONS.SETTINGS_VIEW },
 ];
 
 // Simplified navigation for super admins - only admin-related items
