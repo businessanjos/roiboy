@@ -83,6 +83,104 @@ function ValidationIndicator({ isValid, isEmpty }: { isValid: boolean; isEmpty: 
 
 // Using shared MLS_LEVELS from mls-utils
 
+// Phone Field with local state for typing - stores E.164 but displays formatted
+function PhoneField({ 
+  value, 
+  onChange, 
+  error,
+  label = "Telefone principal *",
+  placeholder = "+55 11 99999-9999"
+}: { 
+  value: string; 
+  onChange: (value: string) => void;
+  error?: string;
+  label?: string;
+  placeholder?: string;
+}) {
+  // Convert E.164 to display format
+  const e164ToDisplay = (e164: string): string => {
+    if (!e164) return '';
+    const digits = e164.replace(/\D/g, '');
+    return formatInternationalPhone(digits);
+  };
+  
+  const [displayValue, setDisplayValue] = useState(() => e164ToDisplay(value));
+  
+  // Sync when external value changes
+  useEffect(() => {
+    const newDisplay = e164ToDisplay(value);
+    const currentDigits = displayValue.replace(/\D/g, '');
+    const valueDigits = value.replace(/\D/g, '');
+    // Only sync if digits are different (to avoid cursor issues)
+    if (currentDigits !== valueDigits) {
+      setDisplayValue(newDisplay);
+    }
+  }, [value]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatInternationalPhone(e.target.value);
+    setDisplayValue(formatted);
+    
+    // Store as E.164 (just + and digits)
+    const digits = formatted.replace(/\D/g, '');
+    const e164Value = digits.length > 0 ? `+${digits}` : '';
+    onChange(e164Value);
+  };
+  
+  const validation = validateInternationalPhone(displayValue);
+  const isEmpty = !displayValue || displayValue.replace(/\D/g, '').length === 0;
+  
+  return (
+    <div className={`space-y-1.5 ${error ? "animate-shake" : ""}`} data-error={!!error}>
+      <Label className="text-sm font-medium">{label}</Label>
+      <div className="relative">
+        <Input
+          value={displayValue}
+          onChange={handleChange}
+          placeholder={placeholder}
+          maxLength={20}
+          className={`h-9 pr-9 ${
+            error 
+              ? "border-destructive ring-1 ring-destructive/30" 
+              : isEmpty
+                ? ""
+                : validation.isValid
+                  ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                  : validation.error === 'incomplete'
+                    ? "border-amber-500/50 ring-1 ring-amber-500/20"
+                    : "border-destructive ring-1 ring-destructive/30"
+          }`}
+        />
+        {!isEmpty && validation.error !== 'incomplete' && (
+          <ValidationIndicator isValid={validation.isValid} isEmpty={false} />
+        )}
+      </div>
+      {error && (
+        <p className="text-[11px] text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          {error}
+        </p>
+      )}
+      {!error && validation.error === 'incomplete' && (
+        <p className="text-[11px] text-amber-600 flex items-center gap-1">
+          Digitando...
+        </p>
+      )}
+      {!error && !isEmpty && validation.error && validation.error !== 'incomplete' && (
+        <p className="text-[11px] text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          {validation.error}
+        </p>
+      )}
+      {!error && !isEmpty && validation.country && !validation.error && (
+        <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+          {validation.country.flag} {validation.country.name}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // Birth Date Field with local state for typing
 function BirthDateField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   // Local state for the display value (DD/MM/AAAA format)
@@ -394,41 +492,11 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                 </p>
               )}
             </div>
-            <div className={`space-y-1.5 ${errors.phone_e164 ? "animate-shake" : ""}`} data-error={!!errors.phone_e164}>
-              <Label className="text-sm font-medium">Telefone principal *</Label>
-              <div className="relative">
-                <Input
-                  value={data.phone_e164}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  placeholder="+55 11 99999-9999"
-                  maxLength={20}
-                  className={`h-9 pr-9 ${errors.phone_e164 ? "border-destructive ring-1 ring-destructive/30" : getInputClass(validation.phone)}`}
-                />
-                <ValidationIndicator isValid={validation.phone.isValid} isEmpty={validation.phone.isEmpty} />
-              </div>
-              {errors.phone_e164 && (
-                <p className="text-[11px] text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.phone_e164}
-                </p>
-              )}
-              {!errors.phone_e164 && validation.phone.isPartial && (
-                <p className="text-[11px] text-amber-600 flex items-center gap-1">
-                  Digitando...
-                </p>
-              )}
-              {!errors.phone_e164 && !validation.phone.isEmpty && !validation.phone.isPartial && validation.phone.error && (
-                <p className="text-[11px] text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {validation.phone.error}
-                </p>
-              )}
-              {!errors.phone_e164 && !validation.phone.isEmpty && validation.phone.country && !validation.phone.error && (
-                <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                  {validation.phone.country.flag} {validation.phone.country.name}
-                </p>
-              )}
-            </div>
+            <PhoneField
+              value={data.phone_e164}
+              onChange={(value) => updateField("phone_e164", value)}
+              error={errors.phone_e164}
+            />
           </div>
         </div>
       )}
