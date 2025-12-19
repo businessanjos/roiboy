@@ -311,9 +311,16 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
+
       const { data: userData } = await supabase
         .from("users")
         .select("account_id")
+        .eq("auth_user_id", user.id)
         .single();
 
       if (!userData) {
