@@ -25,10 +25,10 @@ Extensão Chrome para captura automática de engajamento em WhatsApp Web, Zoom e
 ### Passo 1: Preparar os arquivos
 
 1. Copie a pasta `extension/` para seu computador
-2. Crie os ícones (ou use placeholders):
-   - `assets/icon16.png` (16x16 pixels)
-   - `assets/icon48.png` (48x48 pixels)
-   - `assets/icon128.png` (128x128 pixels)
+2. Converta os ícones SVG para PNG (use https://svgtopng.com):
+   - `assets/icon16.svg` → `assets/icon16.png`
+   - `assets/icon48.svg` → `assets/icon48.png`
+   - `assets/icon128.svg` → `assets/icon128.png`
 
 ### Passo 2: Carregar no Chrome
 
