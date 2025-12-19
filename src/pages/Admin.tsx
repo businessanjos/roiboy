@@ -31,7 +31,12 @@ import {
   LayoutDashboard,
   TrendingUp,
   UserCheck,
-  Activity
+  Activity,
+  Wallet,
+  ExternalLink,
+  CheckCircle2,
+  XCircle,
+  Settings
 } from "lucide-react";
 
 interface SubscriptionPlan {
@@ -233,6 +238,10 @@ export default function Admin() {
             <Users className="h-4 w-4" />
             Usuários
           </TabsTrigger>
+          <TabsTrigger value="payments" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Wallet className="h-4 w-4" />
+            Pagamentos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -249,6 +258,10 @@ export default function Admin() {
 
         <TabsContent value="users" className="mt-0">
           <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />
+        </TabsContent>
+
+        <TabsContent value="payments" className="mt-0">
+          <PaymentsTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -996,5 +1009,207 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// Payments Tab Component
+function PaymentsTab() {
+  const gateways: Array<{
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    status: 'connected' | 'disconnected';
+    features: string[];
+  }> = [
+    {
+      id: 'stripe',
+      name: 'Stripe',
+      description: 'Pagamentos globais com cartão de crédito, débito e mais',
+      icon: '💳',
+      status: 'disconnected',
+      features: ['Cartão de crédito/débito', 'PIX', 'Boleto', 'Assinaturas recorrentes']
+    },
+    {
+      id: 'asaas',
+      name: 'Asaas',
+      description: 'Gateway brasileiro com foco em boleto e PIX',
+      icon: '🏦',
+      status: 'disconnected',
+      features: ['Boleto bancário', 'PIX', 'Cartão de crédito', 'Cobranças recorrentes']
+    },
+    {
+      id: 'pagarme',
+      name: 'Pagar.me',
+      description: 'Plataforma completa de pagamentos',
+      icon: '💰',
+      status: 'disconnected',
+      features: ['Cartão de crédito', 'Boleto', 'PIX', 'Split de pagamentos']
+    },
+    {
+      id: 'mercadopago',
+      name: 'Mercado Pago',
+      description: 'Soluções de pagamento do Mercado Livre',
+      icon: '🛒',
+      status: 'disconnected',
+      features: ['Cartão de crédito/débito', 'PIX', 'Boleto', 'Checkout transparente']
+    }
+  ];
+
+  const handleConnect = (gatewayId: string) => {
+    toast.info(`Configuração de ${gatewayId} em breve!`);
+  };
+
+  const handleConfigure = (gatewayId: string) => {
+    toast.info(`Abrindo configurações de ${gatewayId}...`);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-medium">Gateways de Pagamento</CardTitle>
+              <CardDescription className="text-sm">
+                Configure as integrações para processar cobranças
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            {gateways.map(gateway => (
+              <Card key={gateway.id} className="border shadow-none hover:shadow-sm transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-3xl">{gateway.icon}</div>
+                      <div>
+                        <h3 className="font-medium">{gateway.name}</h3>
+                        <p className="text-xs text-muted-foreground">{gateway.description}</p>
+                      </div>
+                    </div>
+                    <Badge 
+                      variant={gateway.status === 'connected' ? 'default' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {gateway.status === 'connected' ? (
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Conectado
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <XCircle className="h-3 w-3" />
+                          Desconectado
+                        </span>
+                      )}
+                    </Badge>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <p className="text-xs text-muted-foreground mb-2">Recursos disponíveis:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {gateway.features.map(feature => (
+                        <Badge key={feature} variant="outline" className="text-xs font-normal">
+                          {feature}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {gateway.status === 'connected' ? (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-2"
+                          onClick={() => handleConfigure(gateway.id)}
+                        >
+                          <Settings className="h-4 w-4" />
+                          Configurar
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => handleConnect(gateway.id)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Conectar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium">Configurações de Cobrança</CardTitle>
+          <CardDescription className="text-sm">
+            Defina as regras padrão para geração de cobranças
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Gateway padrão</Label>
+              <Select defaultValue="">
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Selecione um gateway" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stripe">Stripe</SelectItem>
+                  <SelectItem value="asaas">Asaas</SelectItem>
+                  <SelectItem value="pagarme">Pagar.me</SelectItem>
+                  <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Método de pagamento padrão</Label>
+              <Select defaultValue="credit_card">
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <Label className="text-sm">Retry automático</Label>
+              <p className="text-xs text-muted-foreground">Tentar novamente cobranças falhadas automaticamente</p>
+            </div>
+            <Switch defaultChecked />
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <Label className="text-sm">Notificar clientes</Label>
+              <p className="text-xs text-muted-foreground">Enviar email quando cobrança for gerada</p>
+            </div>
+            <Switch defaultChecked />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
