@@ -652,11 +652,11 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
-          {/* Address */}
+          {/* Residential Address */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
               <MapPin className="h-3.5 w-3.5" />
-              Endereço
+              Endereço Residencial
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
