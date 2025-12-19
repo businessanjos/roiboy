@@ -166,7 +166,7 @@ export function SubscriptionManager() {
         value: currentPlan.price,
         dueDate,
         description: `Assinatura ${currentPlan.name} - ${account.name}`,
-        externalReference: account.id,
+        externalReference: `account_${account.id}`,
       });
 
       if (result.error) {
@@ -232,7 +232,7 @@ export function SubscriptionManager() {
         value: currentPlan.price,
         dueDate,
         description: `Assinatura ${currentPlan.name} - ${account.name}`,
-        externalReference: account.id,
+        externalReference: `account_${account.id}`,
         creditCard: {
           holderName: cardForm.holderName,
           number: cardForm.number.replace(/\D/g, ''),

@@ -112,6 +112,32 @@ serve(async (req) => {
       }
     }
 
+    // Handle account/platform subscription payments (for account_)
+    if (externalReference && externalReference.startsWith('account_')) {
+      const accountId = externalReference.replace('account_', '');
+      
+      const updateData: Record<string, any> = {
+        subscription_status: mappedStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      // If payment confirmed, clear trial_ends_at to indicate paid status
+      if (mappedStatus === 'active') {
+        updateData.trial_ends_at = null;
+      }
+
+      const { error: updateError } = await supabaseClient
+        .from('accounts')
+        .update(updateData)
+        .eq('id', accountId);
+
+      if (updateError) {
+        console.error('[Asaas Webhook] Error updating account subscription:', updateError);
+      } else {
+        console.log('[Asaas Webhook] Account subscription updated successfully to:', mappedStatus);
+      }
+    }
+
     // Handle contract payments
     if (externalReference && externalReference.startsWith('contract_')) {
       const contractId = externalReference.replace('contract_', '');
