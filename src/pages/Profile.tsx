@@ -690,67 +690,6 @@ export default function Profile() {
                 </CardContent>
               </Card>
 
-              {/* Plan Summary Card */}
-              <Card className="shadow-card">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <CreditCard className="h-5 w-5" />
-                        Plano Atual
-                      </CardTitle>
-                      <CardDescription>
-                        Resumo da sua assinatura
-                      </CardDescription>
-                    </div>
-                    {getStatusBadge(account.subscription_status)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {plan ? (
-                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-semibold text-lg">{plan.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(plan.price)}
-                          {plan.billing_period === "monthly" && "/mês"}
-                          {plan.billing_period === "annual" && "/ano"}
-                        </p>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          const tabsList = document.querySelector('[role="tablist"]');
-                          const subscriptionTab = tabsList?.querySelector('[value="subscription"]') as HTMLButtonElement;
-                          subscriptionTab?.click();
-                        }}
-                      >
-                        Gerenciar
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground">
-                      <p>Período de teste</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2"
-                        onClick={() => {
-                          const tabsList = document.querySelector('[role="tablist"]');
-                          const subscriptionTab = tabsList?.querySelector('[value="subscription"]') as HTMLButtonElement;
-                          subscriptionTab?.click();
-                        }}
-                      >
-                        Ver planos
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </>
           )}
         </TabsContent>
