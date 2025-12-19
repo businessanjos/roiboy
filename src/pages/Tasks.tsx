@@ -132,6 +132,7 @@ export default function Tasks() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [initialStatus, setInitialStatus] = useState<Task["status"] | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
@@ -235,6 +236,13 @@ export default function Tasks() {
 
   const openEditDialog = (task: Task) => {
     setEditingTask(task);
+    setInitialStatus(undefined);
+    setDialogOpen(true);
+  };
+
+  const openNewTaskDialog = (status?: Task["status"]) => {
+    setEditingTask(null);
+    setInitialStatus(status);
     setDialogOpen(true);
   };
 
@@ -536,7 +544,7 @@ export default function Tasks() {
               </Button>
             </div>
             <Button 
-              onClick={() => { setEditingTask(null); setDialogOpen(true); }}
+              onClick={() => openNewTaskDialog()}
               className="shadow-sm"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -691,6 +699,7 @@ export default function Tasks() {
           onEditTask={openEditDialog}
           onDeleteTask={openDeleteDialog}
           onStatusChange={handleStatusChange}
+          onAddTask={openNewTaskDialog}
         />
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -737,6 +746,7 @@ export default function Tasks() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         task={editingTask}
+        initialStatus={initialStatus}
         onSuccess={fetchTasks}
       />
 
