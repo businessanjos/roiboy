@@ -20,9 +20,44 @@ interface MessagePayload {
   is_group?: boolean;
   group_name?: string;
   sender_phone_e164?: string;
+  source?: string;
 }
 
-// Validate API key against integration config
+// Validate via JWT token (for extension auth)
+async function validateJwtToken(supabase: any, token: string): Promise<{ valid: boolean; accountId?: string }> {
+  if (!token || token.length < 50) {
+    return { valid: false };
+  }
+
+  try {
+    // Verify the JWT and get user
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      console.log("JWT validation failed:", error?.message);
+      return { valid: false };
+    }
+
+    // Get account_id from users table
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("account_id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+    if (userError || !userData) {
+      console.log("User lookup failed:", userError?.message);
+      return { valid: false };
+    }
+
+    return { valid: true, accountId: userData.account_id };
+  } catch (err) {
+    console.error("JWT validation error:", err);
+    return { valid: false };
+  }
+}
+
+// Validate API key against integration config (for external integrations)
 async function validateApiKey(supabase: any, apiKey: string): Promise<{ valid: boolean; accountId?: string }> {
   if (!apiKey || apiKey.length < 16 || apiKey.length > 128) {
     return { valid: false };
@@ -69,19 +104,22 @@ serve(async (req) => {
   }
 
   try {
-    // Get API key from header
+    // Get API key from header (can be JWT token or API key)
     const apiKey = req.headers.get("x-api-key") || "";
     
     const payload: MessagePayload = await req.json();
     
     // Use API key from payload if not in header
     const effectiveApiKey = apiKey || payload.api_key || "";
+    const isFromExtension = payload.source === "extension";
     
     console.log("Received message payload:", { 
       hasApiKey: !!effectiveApiKey,
       is_group: payload.is_group,
       group_name: payload.group_name,
-      hasContent: !!payload.content_text
+      hasContent: !!payload.content_text,
+      source: payload.source,
+      isFromExtension
     });
 
     // Input validation
@@ -133,15 +171,30 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate API key
-    const authResult = await validateApiKey(supabase, effectiveApiKey);
+    // Try to authenticate - first try JWT (for extension), then API key (for integrations)
+    let authResult: { valid: boolean; accountId?: string } = { valid: false, accountId: undefined };
+    
+    // If it looks like a JWT (long token), try JWT validation first
+    if (effectiveApiKey.length > 100) {
+      console.log("Attempting JWT validation (extension auth)");
+      authResult = await validateJwtToken(supabase, effectiveApiKey);
+    }
+    
+    // If JWT didn't work, try API key validation
     if (!authResult.valid) {
-      console.log("API key validation failed");
+      console.log("Attempting API key validation (integration auth)");
+      authResult = await validateApiKey(supabase, effectiveApiKey);
+    }
+    
+    if (!authResult.valid) {
+      console.log("All authentication methods failed");
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log("Authenticated for account:", authResult.accountId);
 
     // Find client by phone - now scoped to authenticated account
     const { data: client, error: clientError } = await supabase
