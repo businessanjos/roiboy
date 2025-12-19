@@ -69,6 +69,7 @@ interface SubscriptionPlan {
   max_users: number | null;
   max_ai_analyses: number | null;
   features: any;
+  plan_type: string;
 }
 
 export function SubscriptionManager() {
@@ -672,18 +673,18 @@ export function SubscriptionManager() {
         </CardContent>
       </Card>
 
-      {/* Available Plans */}
-      {availablePlans.length > 0 && (
+      {/* Main Plans */}
+      {availablePlans.filter(p => p.plan_type === 'main').length > 0 && (
         <Card id="available-plans">
           <CardHeader>
             <CardTitle>Planos Disponíveis</CardTitle>
             <CardDescription>
-              Compare os planos e escolha o ideal para você
+              Escolha o plano ideal para sua empresa
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {availablePlans.map((plan) => {
+              {availablePlans.filter(p => p.plan_type === 'main').map((plan) => {
                 const Icon = getPlanIcon(plan.name);
                 const isCurrent = plan.id === currentPlan?.id;
                 
@@ -746,6 +747,65 @@ export function SubscriptionManager() {
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : null}
                       {isCurrent ? "Plano atual" : "Escolher plano"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add-ons */}
+      {availablePlans.filter(p => p.plan_type === 'addon').length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Complementos</CardTitle>
+            <CardDescription>
+              Adicione recursos extras ao seu plano
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availablePlans.filter(p => p.plan_type === 'addon').map((addon) => {
+                const Icon = getPlanIcon(addon.name);
+                
+                return (
+                  <div 
+                    key={addon.id}
+                    className="relative rounded-lg border p-4 bg-muted/30 hover:border-primary/50 transition-all"
+                  >
+                    <Badge variant="secondary" className="absolute -top-2 left-4 text-xs">
+                      Complemento
+                    </Badge>
+                    
+                    <div className="flex items-center gap-2 mb-3 mt-1">
+                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <h3 className="font-semibold">{addon.name}</h3>
+                    </div>
+                    
+                    <p className="text-xl font-bold mb-2">
+                      {formatPrice(addon.price, addon.billing_period)}
+                    </p>
+                    
+                    {addon.description && (
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {addon.description}
+                      </p>
+                    )}
+                    
+                    <Button 
+                      className="w-full" 
+                      variant="outline"
+                      disabled={!currentPlan}
+                      onClick={() => {
+                        toast({
+                          title: "Em breve!",
+                          description: "A funcionalidade de add-ons será disponibilizada em breve.",
+                        });
+                      }}
+                    >
+                      {currentPlan ? "Adicionar" : "Selecione um plano primeiro"}
                     </Button>
                   </div>
                 );
