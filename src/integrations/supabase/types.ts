@@ -174,6 +174,7 @@ export type Database = {
       }
       accounts: {
         Row: {
+          asaas_customer_id: string | null
           city: string | null
           complement: string | null
           contact_name: string | null
@@ -195,6 +196,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          asaas_customer_id?: string | null
           city?: string | null
           complement?: string | null
           contact_name?: string | null
@@ -216,6 +218,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          asaas_customer_id?: string | null
           city?: string | null
           complement?: string | null
           contact_name?: string | null
