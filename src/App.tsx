@@ -38,6 +38,7 @@ const ApiDocs = lazy(() => import("./pages/ApiDocs"));
 const Admin = lazy(() => import("./pages/Admin"));
 const EventCheckin = lazy(() => import("./pages/EventCheckin"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const ChoosePlan = lazy(() => import("./pages/ChoosePlan"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,6 +78,7 @@ const App = () => (
                         <Route path="/sobre" element={<Presentation />} />
                         <Route path="/extension-preview" element={<ExtensionPreview />} />
                         <Route path="/onboarding" element={<Onboarding />} />
+                        <Route path="/choose-plan" element={<ChoosePlan />} />
                         <Route element={<AppLayout />}>
                           <Route path="/dashboard" element={<Dashboard />} />
                           <Route path="/clients" element={<Clients />} />
