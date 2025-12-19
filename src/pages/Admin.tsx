@@ -751,15 +751,24 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [formData, setFormData] = useState({
+  
+  // Separate form states for create and edit to avoid conflicts
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    plan_id: '',
+    subscription_status: 'trial',
+    trial_ends_at: ''
+  });
+  
+  const [editFormData, setEditFormData] = useState({
     name: '',
     plan_id: '',
     subscription_status: 'trial',
     trial_ends_at: ''
   });
 
-  const resetForm = () => {
-    setFormData({
+  const resetCreateForm = () => {
+    setCreateFormData({
       name: '',
       plan_id: '',
       subscription_status: 'trial',
@@ -775,8 +784,8 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
       subscription_status: account.subscription_status || 'trial',
       trial_ends_at: account.trial_ends_at ? account.trial_ends_at.split('T')[0] : ''
     };
-    console.log('Setting form data:', newFormData);
-    setFormData(newFormData);
+    console.log('Setting edit form data:', newFormData);
+    setEditFormData(newFormData);
     setEditingAccount(account);
     console.log('editingAccount set to:', account.id);
   };
@@ -787,10 +796,10 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
       const { data: newAccount, error: accountError } = await supabase
         .from('accounts')
         .insert({
-          name: formData.name,
-          plan_id: formData.plan_id || null,
-          subscription_status: formData.subscription_status,
-          trial_ends_at: formData.trial_ends_at ? new Date(formData.trial_ends_at).toISOString() : null
+          name: createFormData.name,
+          plan_id: createFormData.plan_id || null,
+          subscription_status: createFormData.subscription_status,
+          trial_ends_at: createFormData.trial_ends_at ? new Date(createFormData.trial_ends_at).toISOString() : null
         })
         .select()
         .single();
@@ -810,7 +819,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
       queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
       toast.success('Conta criada com sucesso!');
       setIsCreateDialogOpen(false);
-      resetForm();
+      resetCreateForm();
     },
     onError: (error) => {
       toast.error('Erro ao criar conta: ' + error.message);
@@ -823,10 +832,10 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
       const { error } = await supabase
         .from('accounts')
         .update({
-          name: formData.name,
-          plan_id: formData.plan_id || null,
-          subscription_status: formData.subscription_status,
-          trial_ends_at: formData.trial_ends_at ? new Date(formData.trial_ends_at).toISOString() : null
+          name: editFormData.name,
+          plan_id: editFormData.plan_id || null,
+          subscription_status: editFormData.subscription_status,
+          trial_ends_at: editFormData.trial_ends_at ? new Date(editFormData.trial_ends_at).toISOString() : null
         })
         .eq('id', editingAccount.id);
       if (error) throw error;
@@ -885,7 +894,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
             onChange={e => setSearch(e.target.value)}
             className="h-9 w-48"
           />
-          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { setIsCreateDialogOpen(open); if (!open) resetForm(); }}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { setIsCreateDialogOpen(open); if (!open) resetCreateForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -901,15 +910,15 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 <div className="grid gap-2">
                   <Label className="text-sm">Nome</Label>
                   <Input 
-                    value={formData.name} 
-                    onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} 
+                    value={createFormData.name} 
+                    onChange={e => setCreateFormData(f => ({ ...f, name: e.target.value }))} 
                     placeholder="Nome da empresa/conta"
                     className="h-9"
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-sm">Plano</Label>
-                  <Select value={formData.plan_id} onValueChange={v => setFormData(f => ({ ...f, plan_id: v }))}>
+                  <Select value={createFormData.plan_id} onValueChange={v => setCreateFormData(f => ({ ...f, plan_id: v }))}>
                     <SelectTrigger className="h-9">
                       <SelectValue placeholder="Selecione um plano" />
                     </SelectTrigger>
@@ -923,7 +932,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-sm">Status</Label>
-                  <Select value={formData.subscription_status} onValueChange={v => setFormData(f => ({ ...f, subscription_status: v }))}>
+                  <Select value={createFormData.subscription_status} onValueChange={v => setCreateFormData(f => ({ ...f, subscription_status: v }))}>
                     <SelectTrigger className="h-9">
                       <SelectValue />
                     </SelectTrigger>
@@ -939,15 +948,15 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                   <Label className="text-sm">Término do Trial</Label>
                   <Input 
                     type="date"
-                    value={formData.trial_ends_at} 
-                    onChange={e => setFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
+                    value={createFormData.trial_ends_at} 
+                    onChange={e => setCreateFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
                     className="h-9"
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="ghost" onClick={() => { setIsCreateDialogOpen(false); resetForm(); }}>Cancelar</Button>
-                <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !formData.name}>
+                <Button variant="ghost" onClick={() => { setIsCreateDialogOpen(false); resetCreateForm(); }}>Cancelar</Button>
+                <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !createFormData.name}>
                   {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Criar Conta
                 </Button>
@@ -1046,14 +1055,14 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
               <div className="grid gap-2">
                 <Label className="text-sm">Nome</Label>
                 <Input 
-                  value={formData.name} 
-                  onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} 
+                  value={editFormData.name} 
+                  onChange={e => setEditFormData(f => ({ ...f, name: e.target.value }))} 
                   className="h-9"
                 />
               </div>
               <div className="grid gap-2">
                 <Label className="text-sm">Plano</Label>
-                <Select value={formData.plan_id} onValueChange={v => setFormData(f => ({ ...f, plan_id: v }))}>
+                <Select value={editFormData.plan_id} onValueChange={v => setEditFormData(f => ({ ...f, plan_id: v }))}>
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Selecione um plano" />
                   </SelectTrigger>
@@ -1067,7 +1076,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
               </div>
               <div className="grid gap-2">
                 <Label className="text-sm">Status</Label>
-                <Select value={formData.subscription_status} onValueChange={v => setFormData(f => ({ ...f, subscription_status: v }))}>
+                <Select value={editFormData.subscription_status} onValueChange={v => setEditFormData(f => ({ ...f, subscription_status: v }))}>
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -1083,8 +1092,8 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 <Label className="text-sm">Término do Trial</Label>
                 <Input 
                   type="date"
-                  value={formData.trial_ends_at} 
-                  onChange={e => setFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
+                  value={editFormData.trial_ends_at} 
+                  onChange={e => setEditFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
                   className="h-9"
                 />
                 <p className="text-xs text-muted-foreground">Deixe vazio para trial sem prazo</p>
