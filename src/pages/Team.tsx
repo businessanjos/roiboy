@@ -27,7 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye
 } from "lucide-react";
 
 interface TeamRole {
@@ -863,7 +863,7 @@ export default function Team() {
                     return (
                       <div
                         key={role.id}
-                        className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors group"
+                        className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
                       >
                         <div 
                           className="p-2.5 rounded-xl shrink-0"
@@ -876,13 +876,13 @@ export default function Team() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-foreground truncate">
+                            <h3 className="font-medium text-foreground">
                               {role.name}
                             </h3>
                             {role.is_system && (
                               <Badge 
                                 variant="secondary" 
-                                className="text-[10px] px-1.5 font-normal bg-muted/50"
+                                className="text-[10px] px-1.5 font-normal bg-muted/50 shrink-0"
                               >
                                 Sistema
                               </Badge>
@@ -894,7 +894,7 @@ export default function Team() {
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground hidden sm:flex">
+                        <div className="flex items-center gap-6 text-sm text-muted-foreground shrink-0">
                           <div className="flex items-center gap-1.5">
                             <Users className="h-4 w-4" />
                             <span>{memberCount}</span>
@@ -904,12 +904,22 @@ export default function Team() {
                             <span>{permissionCount}</span>
                           </div>
                         </div>
-                        <div className="flex gap-0.5">
+                        <div className="flex gap-1 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8"
                             onClick={() => openRoleDialog(role)}
+                            title="Visualizar/Editar"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openRoleDialog(role)}
+                            title="Configurar"
                           >
                             <Settings className="h-4 w-4" />
                           </Button>
@@ -917,8 +927,9 @@ export default function Team() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => handleDeleteRole(role)}
+                              title="Excluir"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
