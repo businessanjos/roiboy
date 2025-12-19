@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { User, Mail, Building2, Save, Loader2, Camera } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 
 interface UserProfile {
   id: string;
@@ -370,6 +371,9 @@ export default function Profile() {
           </CardContent>
         </Card>
       )}
+
+      {/* Subscription */}
+      <SubscriptionManager />
     </div>
   );
 }
