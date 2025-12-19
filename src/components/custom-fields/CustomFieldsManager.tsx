@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -164,6 +165,7 @@ interface CustomFieldsManagerProps {
 }
 
 export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpenChange: externalOnOpenChange }: CustomFieldsManagerProps) {
+  const { currentUser } = useCurrentUser();
   const [fields, setFields] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
   const [internalDialogOpen, setInternalDialogOpen] = useState(false);
@@ -311,25 +313,13 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!currentUser?.account_id) {
         toast.error("Sessão expirada. Faça login novamente.");
         return;
       }
 
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("auth_user_id", user.id)
-        .single();
-
-      if (!userData) {
-        toast.error("Usuário não encontrado");
-        return;
-      }
-
       const fieldData = {
-        account_id: userData.account_id,
+        account_id: currentUser.account_id,
         name: name.trim(),
         field_type: fieldType,
         options: needsOpts ? validOptions.map(opt => ({
