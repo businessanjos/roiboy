@@ -93,7 +93,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const { pendingCount: pendingTasksCount, overdueCount } = usePendingTasksCount();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { setTheme, theme } = useTheme();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
@@ -109,13 +109,16 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   // Filter nav items based on permissions
   const filteredNavItems = useMemo(() => {
+    // While loading permissions, show all items to avoid flash
+    if (permissionsLoading) return navItems;
+    
     return navItems.filter((item) => {
       // Items without permission requirement are always visible
       if (!item.permission) return true;
       // Check permission(s)
       return hasPermission(item.permission);
     });
-  }, [hasPermission]);
+  }, [hasPermission, permissionsLoading]);
 
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
