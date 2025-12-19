@@ -550,7 +550,7 @@ export function AdminPaymentsManager() {
 
       {/* Payment Details Dialog */}
       <Dialog open={!!selectedPayment} onOpenChange={(open) => !open && setSelectedPayment(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detalhes da Cobrança</DialogTitle>
             <DialogDescription>
@@ -559,11 +559,14 @@ export function AdminPaymentsManager() {
           </DialogHeader>
           {selectedPayment && (
             <div className="space-y-4">
+              {/* Conta - full width */}
+              <div>
+                <p className="text-xs text-muted-foreground">Conta</p>
+                <p className="font-medium break-all">{selectedPayment.accountName}</p>
+              </div>
+
+              {/* Grid for other fields */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Conta</p>
-                  <p className="font-medium">{selectedPayment.accountName}</p>
-                </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Valor</p>
                   <p className="font-medium">
@@ -600,13 +603,15 @@ export function AdminPaymentsManager() {
                     </p>
                   </div>
                 )}
-                {selectedPayment.description && (
-                  <div className="col-span-2">
-                    <p className="text-xs text-muted-foreground">Descrição</p>
-                    <p className="font-medium">{selectedPayment.description}</p>
-                  </div>
-                )}
               </div>
+
+              {/* Descrição - full width */}
+              {selectedPayment.description && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Descrição</p>
+                  <p className="font-medium break-words">{selectedPayment.description}</p>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-4 border-t">
                 {selectedPayment.billingType === 'PIX' && selectedPayment.status === 'PENDING' && (
