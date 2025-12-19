@@ -29,11 +29,15 @@ import {
   RefreshCw,
   Eye,
   Mic,
-  LogInIcon
+  LogInIcon,
+  Laptop,
+  Apple,
+  Terminal
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -110,6 +114,7 @@ export default function Presentation() {
   const location = useLocation();
   const { user } = useAuth();
   const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
+  const [isDesktopModalOpen, setIsDesktopModalOpen] = useState(false);
   
   // Check if we're on the public route
   const isPublicRoute = location.pathname === "/sobre";
@@ -526,313 +531,365 @@ export default function Presentation() {
         </div>
       </section>
 
-      {/* Chrome Extension Section */}
-      <section className="p-4 sm:p-6 lg:p-8 border-t border-border bg-gradient-to-br from-blue-500/5 via-transparent to-blue-500/10">
+      {/* WhatsApp Capture Section */}
+      <section className="p-4 sm:p-6 lg:p-8 border-t border-border bg-gradient-to-br from-blue-500/5 via-transparent to-green-500/10">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8">
-            <Badge variant="secondary" className="mb-4 bg-blue-500/10 text-blue-600 border-blue-500/30">
-              <Chrome className="h-3 w-3 mr-1" />
-              Extensão Chrome
+            <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary border-primary/30">
+              <MessageSquare className="h-3 w-3 mr-1" />
+              Captura WhatsApp
             </Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Extensão para WhatsApp Web</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Capture Mensagens do WhatsApp</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
-              Capture automaticamente mensagens e áudios do WhatsApp Web para análise em tempo real
+              Escolha entre a extensão Chrome ou o app desktop para captura automática de mensagens
             </p>
-            
-            {/* Download Button and Preview Link */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Dialog open={isExtensionModalOpen} onOpenChange={setIsExtensionModalOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700">
-                    <Download className="h-4 w-4" />
-                    Baixar Extensão
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-xl">
-                    <Chrome className="h-5 w-5 text-blue-600" />
-                    Instruções de Instalação da Extensão
-                  </DialogTitle>
-                  <DialogDescription>
-                    Siga o passo a passo completo para instalar e configurar a extensão do ROY para WhatsApp Web
-                  </DialogDescription>
-                </DialogHeader>
+          </div>
+
+          {/* Tabs for Extension vs Desktop App */}
+          <Tabs defaultValue="desktop" className="mb-8">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+              <TabsTrigger value="desktop" className="gap-2">
+                <Laptop className="h-4 w-4" />
+                App Desktop
+              </TabsTrigger>
+              <TabsTrigger value="extension" className="gap-2">
+                <Chrome className="h-4 w-4" />
+                Extensão Chrome
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Desktop App Tab */}
+            <TabsContent value="desktop" className="space-y-6">
+              <div className="text-center">
+                <Badge className="mb-4 bg-green-500/10 text-green-600 border-green-500/30">
+                  Recomendado
+                </Badge>
+                <h3 className="text-xl font-semibold mb-2">App Desktop para Windows, Mac e Linux</h3>
+                <p className="text-muted-foreground max-w-xl mx-auto mb-6">
+                  Mais estável e robusto. Roda em segundo plano e reconecta automaticamente.
+                </p>
                 
-                <div className="space-y-6 mt-4">
-                  {/* Requirements */}
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-amber-600" />
-                      Requisitos
-                    </h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Google Chrome versão 88 ou superior</li>
-                      <li>• Conta ativa no ROY</li>
-                      <li>• WhatsApp conectado ao celular</li>
-                    </ul>
-                  </div>
-
-                  {/* Step 1 */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">1</div>
-                      <h4 className="font-semibold">Baixar o arquivo da extensão</h4>
-                    </div>
-                    <div className="ml-11 space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Clique no botão abaixo para baixar o arquivo .zip da extensão. Se o download não iniciar automaticamente, 
-                        entre em contato com o administrador do sistema.
-                      </p>
-                      <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-                        // In a real implementation, this would download the extension file
-                        window.open('/extension/roy-extension.zip', '_blank');
-                      }}>
-                        <Download className="h-3 w-3" />
-                        Baixar roy-extension.zip
+                <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+                  <Dialog open={isDesktopModalOpen} onOpenChange={setIsDesktopModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="lg" className="gap-2 bg-green-600 hover:bg-green-700">
+                        <Download className="h-4 w-4" />
+                        Baixar App Desktop
                       </Button>
-                    </div>
-                  </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                          <Laptop className="h-5 w-5 text-green-600" />
+                          Download e Instalação do App Desktop
+                        </DialogTitle>
+                        <DialogDescription>
+                          Siga as instruções para instalar o ROY WhatsApp Capture no seu computador
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="space-y-6 mt-4">
+                        {/* Requirements */}
+                        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-green-600" />
+                            Requisitos do Sistema
+                          </h4>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            <li>• Windows 10/11, macOS 10.15+ ou Linux</li>
+                            <li>• Node.js 18 ou superior (para desenvolvedores)</li>
+                            <li>• Conta ativa no ROY</li>
+                            <li>• WhatsApp conectado ao celular</li>
+                          </ul>
+                        </div>
 
-                  {/* Step 2 */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">2</div>
-                      <h4 className="font-semibold">Extrair os arquivos</h4>
-                    </div>
-                    <div className="ml-11">
-                      <p className="text-sm text-muted-foreground">
-                        Localize o arquivo <code className="bg-muted px-1 py-0.5 rounded text-xs">roy-extension.zip</code> na pasta de downloads 
-                        e extraia-o em uma pasta de fácil acesso. Não delete essa pasta depois — o Chrome precisa dela para rodar a extensão.
-                      </p>
-                    </div>
-                  </div>
+                        {/* Download Options */}
+                        <div className="space-y-3">
+                          <h4 className="font-semibold">Escolha seu sistema operacional:</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
+                              window.open('https://github.com/seu-usuario/roiboy-whatsapp-capture/releases', '_blank');
+                            }}>
+                              <Monitor className="h-6 w-6" />
+                              <span>Windows</span>
+                              <span className="text-xs text-muted-foreground">.exe</span>
+                            </Button>
+                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
+                              window.open('https://github.com/seu-usuario/roiboy-whatsapp-capture/releases', '_blank');
+                            }}>
+                              <Apple className="h-6 w-6" />
+                              <span>macOS</span>
+                              <span className="text-xs text-muted-foreground">.dmg</span>
+                            </Button>
+                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
+                              window.open('https://github.com/seu-usuario/roiboy-whatsapp-capture/releases', '_blank');
+                            }}>
+                              <Terminal className="h-6 w-6" />
+                              <span>Linux</span>
+                              <span className="text-xs text-muted-foreground">.AppImage</span>
+                            </Button>
+                          </div>
+                        </div>
 
-                  {/* Step 3 */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">3</div>
-                      <h4 className="font-semibold">Acessar as extensões do Chrome</h4>
+                        {/* For Developers */}
+                        <div className="p-4 bg-muted/50 border rounded-lg">
+                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <Code2 className="h-4 w-4" />
+                            Para Desenvolvedores
+                          </h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Clone o repositório e execute localmente:
+                          </p>
+                          <div className="bg-background rounded-md p-3 font-mono text-xs space-y-1">
+                            <p>git clone https://github.com/seu-usuario/roiboy-whatsapp-capture</p>
+                            <p>cd electron-app</p>
+                            <p>npm install</p>
+                            <p>npm start</p>
+                          </div>
+                        </div>
+
+                        {/* Steps */}
+                        <div className="space-y-4">
+                          <h4 className="font-semibold">Como Usar:</h4>
+                          
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">1</div>
+                            <div>
+                              <p className="font-medium text-sm">Instale e abra o app</p>
+                              <p className="text-xs text-muted-foreground">Execute o instalador e abra o ROY WhatsApp Capture</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">2</div>
+                            <div>
+                              <p className="font-medium text-sm">Faça login com suas credenciais do ROY</p>
+                              <p className="text-xs text-muted-foreground">Use o mesmo email e senha do sistema</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">3</div>
+                            <div>
+                              <p className="font-medium text-sm">Clique em "Conectar" para abrir o WhatsApp</p>
+                              <p className="text-xs text-muted-foreground">O WhatsApp Web abrirá dentro do app</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">4</div>
+                            <div>
+                              <p className="font-medium text-sm">Escaneie o QR Code com seu celular</p>
+                              <p className="text-xs text-muted-foreground">A captura inicia automaticamente após conectar</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Advantages */}
+                        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            Vantagens do App Desktop
+                          </h4>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            <li>• Roda em segundo plano mesmo com o navegador fechado</li>
+                            <li>• Reconecta automaticamente se o WhatsApp desconectar</li>
+                            <li>• Mais estável que extensões de navegador</li>
+                            <li>• Não é afetado por atualizações do Chrome</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              {/* Desktop App Features */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Card className="text-center hover:shadow-md transition-shadow border-green-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
+                      <RefreshCw className="h-5 w-5 text-green-600" />
                     </div>
-                    <div className="ml-11 space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Digite na barra de endereço do Chrome:
-                      </p>
-                      <code className="block bg-muted px-3 py-2 rounded text-sm font-mono">chrome://extensions</code>
-                      <p className="text-sm text-muted-foreground">
-                        Ative o <strong>"Modo desenvolvedor"</strong> no canto superior direito da página.
-                      </p>
+                    <p className="font-medium text-sm">Auto Reconexão</p>
+                    <p className="text-xs text-muted-foreground">Nunca perde dados</p>
+                  </CardContent>
+                </Card>
+                <Card className="text-center hover:shadow-md transition-shadow border-green-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
+                      <Monitor className="h-5 w-5 text-green-600" />
                     </div>
-                  </div>
-
-                  {/* Step 4 */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">4</div>
-                      <h4 className="font-semibold">Carregar a extensão</h4>
+                    <p className="font-medium text-sm">Background</p>
+                    <p className="text-xs text-muted-foreground">Roda minimizado</p>
+                  </CardContent>
+                </Card>
+                <Card className="text-center hover:shadow-md transition-shadow border-green-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
+                      <Shield className="h-5 w-5 text-green-600" />
                     </div>
-                    <div className="ml-11">
-                      <p className="text-sm text-muted-foreground">
-                        Clique em <strong>"Carregar sem compactação"</strong> e selecione a pasta onde você extraiu os arquivos da extensão.
-                        A extensão aparecerá na lista e um ícone será adicionado à barra de ferramentas do Chrome.
-                      </p>
+                    <p className="font-medium text-sm">Mais Estável</p>
+                    <p className="text-xs text-muted-foreground">Sem conflitos</p>
+                  </CardContent>
+                </Card>
+                <Card className="text-center hover:shadow-md transition-shadow border-green-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
+                      <Zap className="h-5 w-5 text-green-600" />
                     </div>
-                  </div>
+                    <p className="font-medium text-sm">Tempo Real</p>
+                    <p className="text-xs text-muted-foreground">Sync instantâneo</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
-                  {/* Step 5 */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">5</div>
-                      <h4 className="font-semibold">Fazer login na extensão</h4>
+            {/* Chrome Extension Tab */}
+            <TabsContent value="extension" className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Extensão para Google Chrome</h3>
+                <p className="text-muted-foreground max-w-xl mx-auto mb-6">
+                  Leve e simples. Funciona diretamente no navegador enquanto você trabalha.
+                </p>
+            
+                {/* Download Button and Preview Link */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+                  <Dialog open={isExtensionModalOpen} onOpenChange={setIsExtensionModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700">
+                        <Download className="h-4 w-4" />
+                        Baixar Extensão
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                          <Chrome className="h-5 w-5 text-blue-600" />
+                          Instruções de Instalação da Extensão
+                        </DialogTitle>
+                        <DialogDescription>
+                          Siga o passo a passo completo para instalar e configurar a extensão do ROY para WhatsApp Web
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="space-y-6 mt-4">
+                        {/* Requirements */}
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-amber-600" />
+                            Requisitos
+                          </h4>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            <li>• Google Chrome versão 88 ou superior</li>
+                            <li>• Conta ativa no ROY</li>
+                            <li>• WhatsApp conectado ao celular</li>
+                          </ul>
+                        </div>
+
+                        {/* Steps */}
+                        <div className="space-y-4">
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">1</div>
+                            <div>
+                              <p className="font-medium text-sm">Baixe o arquivo .zip</p>
+                              <p className="text-xs text-muted-foreground">Solicite ao administrador do sistema</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">2</div>
+                            <div>
+                              <p className="font-medium text-sm">Extraia os arquivos</p>
+                              <p className="text-xs text-muted-foreground">Descompacte em uma pasta de fácil acesso</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">3</div>
+                            <div>
+                              <p className="font-medium text-sm">Acesse chrome://extensions</p>
+                              <p className="text-xs text-muted-foreground">Ative o "Modo desenvolvedor"</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">4</div>
+                            <div>
+                              <p className="font-medium text-sm">Carregue a extensão</p>
+                              <p className="text-xs text-muted-foreground">Clique em "Carregar sem compactação"</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Privacy Note */}
+                        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            Privacidade e Segurança
+                          </h4>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            <li>• Apenas conversas de clientes cadastrados são capturadas</li>
+                            <li>• Áudios são transcritos e imediatamente deletados</li>
+                            <li>• Todos os dados são criptografados</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="gap-2 border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
+                    onClick={() => navigate("/extension-preview")}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Ver Preview
+                  </Button>
+                </div>
+              </div>
+
+              {/* Extension Features */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Card className="text-center hover:shadow-md transition-shadow border-blue-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-blue-500/10 w-fit mx-auto mb-2">
+                      <MessageSquare className="h-5 w-5 text-blue-600" />
                     </div>
-                    <div className="ml-11">
-                      <p className="text-sm text-muted-foreground">
-                        Clique no ícone da extensão ROY na barra de ferramentas do Chrome e faça login com suas credenciais do sistema.
-                        A extensão se conectará automaticamente à sua conta.
-                      </p>
+                    <p className="font-medium text-sm">Captura de Textos</p>
+                    <p className="text-xs text-muted-foreground">Em tempo real</p>
+                  </CardContent>
+                </Card>
+                <Card className="text-center hover:shadow-md transition-shadow border-blue-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-purple-500/10 w-fit mx-auto mb-2">
+                      <Mic className="h-5 w-5 text-purple-600" />
                     </div>
-                  </div>
-
-                  {/* Step 6 */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">6</div>
-                      <h4 className="font-semibold">Começar a usar</h4>
+                    <p className="font-medium text-sm">Transcrição de Áudios</p>
+                    <p className="text-xs text-muted-foreground">Automático</p>
+                  </CardContent>
+                </Card>
+                <Card className="text-center hover:shadow-md transition-shadow border-blue-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-amber-500/10 w-fit mx-auto mb-2">
+                      <Users className="h-5 w-5 text-amber-600" />
                     </div>
-                    <div className="ml-11">
-                      <p className="text-sm text-muted-foreground">
-                        Acesse <strong>web.whatsapp.com</strong> e escaneie o QR code com seu celular. 
-                        A extensão começará a capturar automaticamente as mensagens das conversas com clientes cadastrados no ROY.
-                      </p>
+                    <p className="font-medium text-sm">Identificação</p>
+                    <p className="text-xs text-muted-foreground">Por telefone</p>
+                  </CardContent>
+                </Card>
+                <Card className="text-center hover:shadow-md transition-shadow border-blue-500/20">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
+                      <RefreshCw className="h-5 w-5 text-green-600" />
                     </div>
-                  </div>
+                    <p className="font-medium text-sm">Sync Histórico</p>
+                    <p className="text-xs text-muted-foreground">Mensagens antigas</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
 
-                  {/* Troubleshooting */}
-                  <div className="p-4 bg-muted/50 border rounded-lg mt-6">
-                    <h4 className="font-semibold text-sm mb-2">Problemas comuns</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      <li><strong>Extensão não aparece:</strong> Verifique se o modo desenvolvedor está ativo</li>
-                      <li><strong>Erro ao carregar:</strong> Certifique-se de selecionar a pasta correta (deve conter o manifest.json)</li>
-                      <li><strong>Login não funciona:</strong> Verifique suas credenciais e conexão com a internet</li>
-                      <li><strong>Mensagens não sincronizam:</strong> O cliente precisa estar cadastrado no ROY pelo telefone</li>
-                    </ul>
-                  </div>
-
-                  {/* Privacy Note */}
-                  <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Privacidade e Segurança
-                    </h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      <li>• Apenas conversas de clientes cadastrados são capturadas</li>
-                      <li>• Áudios são transcritos e imediatamente deletados</li>
-                      <li>• Todos os dados são criptografados em trânsito e repouso</li>
-                      <li>• A extensão não tem acesso a conversas pessoais</li>
-                    </ul>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-              
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="gap-2 border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
-                onClick={() => navigate("/extension-preview")}
-              >
-                <Eye className="h-4 w-4" />
-                Ver Preview
-              </Button>
-            </div>
-          </div>
-
-          {/* Installation Steps */}
-          <div className="grid lg:grid-cols-2 gap-6 mb-8">
-            {/* Installation Card */}
-            <Card className="border-2 border-blue-500/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Download className="h-5 w-5 text-blue-600" />
-                  Instalação
-                </CardTitle>
-                <CardDescription>Como instalar a extensão no Chrome</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">1</div>
-                  <div>
-                    <p className="font-medium text-sm">Baixe a extensão</p>
-                    <p className="text-xs text-muted-foreground">Solicite o arquivo .zip da extensão ao administrador do sistema</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">2</div>
-                  <div>
-                    <p className="font-medium text-sm">Extraia os arquivos</p>
-                    <p className="text-xs text-muted-foreground">Descompacte o .zip em uma pasta de fácil acesso</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">3</div>
-                  <div>
-                    <p className="font-medium text-sm">Acesse chrome://extensions</p>
-                    <p className="text-xs text-muted-foreground">Digite esse endereço na barra do Chrome e ative o "Modo desenvolvedor"</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">4</div>
-                  <div>
-                    <p className="font-medium text-sm">Carregue a extensão</p>
-                    <p className="text-xs text-muted-foreground">Clique em "Carregar sem compactação" e selecione a pasta extraída</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Usage Card */}
-            <Card className="border-2 border-green-500/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Play className="h-5 w-5 text-green-600" />
-                  Como Usar
-                </CardTitle>
-                <CardDescription>Passo a passo para começar a capturar</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">1</div>
-                  <div>
-                    <p className="font-medium text-sm">Faça login na extensão</p>
-                    <p className="text-xs text-muted-foreground">Clique no ícone da extensão e entre com suas credenciais do ROY</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">2</div>
-                  <div>
-                    <p className="font-medium text-sm">Abra o WhatsApp Web</p>
-                    <p className="text-xs text-muted-foreground">Acesse web.whatsapp.com e escaneie o QR code com seu celular</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">3</div>
-                  <div>
-                    <p className="font-medium text-sm">Selecione uma conversa</p>
-                    <p className="text-xs text-muted-foreground">Clique em qualquer conversa para ativar a captura automática</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">4</div>
-                  <div>
-                    <p className="font-medium text-sm">Aguarde a sincronização</p>
-                    <p className="text-xs text-muted-foreground">Mensagens são enviadas automaticamente para análise pela IA</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            <Card className="text-center hover:shadow-md transition-shadow">
-              <CardContent className="pt-4 pb-4">
-                <div className="p-2 rounded-lg bg-blue-500/10 w-fit mx-auto mb-2">
-                  <MessageSquare className="h-5 w-5 text-blue-600" />
-                </div>
-                <p className="font-medium text-sm">Captura de Textos</p>
-                <p className="text-xs text-muted-foreground">Mensagens em tempo real</p>
-              </CardContent>
-            </Card>
-            <Card className="text-center hover:shadow-md transition-shadow">
-              <CardContent className="pt-4 pb-4">
-                <div className="p-2 rounded-lg bg-purple-500/10 w-fit mx-auto mb-2">
-                  <Mic className="h-5 w-5 text-purple-600" />
-                </div>
-                <p className="font-medium text-sm">Transcrição de Áudios</p>
-                <p className="text-xs text-muted-foreground">Convertido automaticamente</p>
-              </CardContent>
-            </Card>
-            <Card className="text-center hover:shadow-md transition-shadow">
-              <CardContent className="pt-4 pb-4">
-                <div className="p-2 rounded-lg bg-amber-500/10 w-fit mx-auto mb-2">
-                  <Users className="h-5 w-5 text-amber-600" />
-                </div>
-                <p className="font-medium text-sm">Identificação Automática</p>
-                <p className="text-xs text-muted-foreground">Clientes reconhecidos por telefone</p>
-              </CardContent>
-            </Card>
-            <Card className="text-center hover:shadow-md transition-shadow">
-              <CardContent className="pt-4 pb-4">
-                <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
-                  <RefreshCw className="h-5 w-5 text-green-600" />
-                </div>
-                <p className="font-medium text-sm">Sync Histórico</p>
-                <p className="text-xs text-muted-foreground">Importe mensagens antigas</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Important Notes */}
+          {/* Important Notes - shared by both tabs */}
           <Card className="bg-amber-500/5 border-amber-500/20">
             <CardContent className="py-4">
               <div className="flex items-start gap-3">
