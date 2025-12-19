@@ -154,17 +154,24 @@ serve(async (req) => {
       );
     }
 
-    // SECURITY: Verify signature for ALL non-validation events
-    const signature = req.headers.get("x-zm-signature");
-    const timestamp = req.headers.get("x-zm-request-timestamp");
-    
-    if (!await verifyZoomSignature(body, signature, timestamp, secretToken)) {
-      console.log("Signature verification failed");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Check if request is from extension (skip signature verification)
+    const isFromExtension = url.searchParams.get("source") === "extension";
+
+    // SECURITY: Verify signature for ALL non-validation events (except from extension)
+    if (!isFromExtension) {
+      const signature = req.headers.get("x-zm-signature");
+      const timestamp = req.headers.get("x-zm-request-timestamp");
+      
+      if (!await verifyZoomSignature(body, signature, timestamp, secretToken)) {
+        console.log("Signature verification failed");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
+
+    console.log("Processing Zoom webhook, from extension:", isFromExtension);
 
     const webhookPayload = payload as ZoomWebhookPayload;
     const { event, payload: eventPayload } = webhookPayload;

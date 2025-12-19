@@ -99,9 +99,9 @@ async function handleLogin({ email, password }) {
     }
 
     await saveAuthData({
-      apiKey: data.apiKey,
+      apiKey: data.api_key || data.session_token,
       user: data.user,
-      accountId: data.accountId
+      accountId: data.account?.id
     });
 
     console.log('[ROI Boy] Login successful');
@@ -133,21 +133,37 @@ async function handleWhatsAppMessage(payload) {
   }
 
   try {
+    // Format phone number to E.164 if needed
+    let phoneE164 = payload.phone || '';
+    if (phoneE164 && !phoneE164.startsWith('+')) {
+      phoneE164 = '+' + phoneE164.replace(/\D/g, '');
+    }
+
+    const messagePayload = {
+      api_key: authData.apiKey,
+      phone_e164: phoneE164,
+      direction: 'client_to_team',
+      content_text: payload.content || '',
+      sent_at: payload.timestamp || new Date().toISOString(),
+      is_group: payload.isGroup || false,
+      group_name: payload.groupName || null,
+      sender_phone_e164: payload.isGroup ? phoneE164 : undefined,
+      source: 'extension'
+    };
+
     const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authData.apiKey}`
+        'x-api-key': authData.apiKey
       },
-      body: JSON.stringify({
-        ...payload,
-        source: 'extension'
-      })
+      body: JSON.stringify(messagePayload)
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to send message');
+    const result = await response.json();
+
+    if (!response.ok && !result.skipped) {
+      throw new Error(result.error || 'Failed to send message');
     }
 
     // Update stats
@@ -170,18 +186,22 @@ async function handleZoomParticipant(payload) {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/zoom-webhook`, {
+    // Send directly to zoom-webhook with extension source
+    const response = await fetch(`${API_BASE_URL}/zoom-webhook?account_id=${authData.accountId}&source=extension`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authData.apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         event: 'meeting.participant_joined',
         payload: {
           object: {
-            participant: payload,
-            id: payload.meetingId
+            id: payload.meetingId,
+            topic: payload.meetingTitle,
+            participant: {
+              user_name: payload.name,
+              join_time: payload.joinTime
+            }
           }
         },
         source: 'extension'
@@ -212,15 +232,25 @@ async function handleGoogleMeetParticipant(payload) {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/google-meet-webhook`, {
+    // Send to google-meet-webhook with extension source
+    const response = await fetch(`${API_BASE_URL}/google-meet-webhook?account_id=${authData.accountId}&source=extension`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authData.apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        event: 'participant_joined',
-        payload: payload,
+        eventType: 'google.workspace.meet.participant.v2.joined',
+        conferenceRecord: {
+          name: payload.meetingId,
+          space: payload.meetingTitle,
+          startTime: new Date().toISOString()
+        },
+        participant: {
+          user: {
+            displayName: payload.name
+          },
+          earliestStartTime: payload.joinTime
+        },
         source: 'extension'
       })
     });
