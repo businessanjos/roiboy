@@ -2226,6 +2226,7 @@ export type Database = {
     Functions: {
       generate_checkin_code: { Args: never; Returns: string }
       get_user_account_id: { Args: never; Returns: string }
+      is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
     }
     Enums: {
