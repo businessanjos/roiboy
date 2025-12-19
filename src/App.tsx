@@ -23,6 +23,7 @@ const Clients = lazy(() => import("./pages/Clients"));
 const ClientDetail = lazy(() => import("./pages/ClientDetail"));
 const Integrations = lazy(() => import("./pages/Integrations"));
 const Settings = lazy(() => import("./pages/Settings"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const Products = lazy(() => import("./pages/Products"));
 const Events = lazy(() => import("./pages/Events"));
 const Team = lazy(() => import("./pages/Team"));
@@ -92,6 +93,7 @@ const App = () => (
                           <Route path="/presentation" element={<Presentation />} />
                           <Route path="/api-docs" element={<ApiDocs />} />
                           <Route path="/settings" element={<Settings />} />
+                          <Route path="/account-settings" element={<AccountSettings />} />
                           <Route path="/admin" element={<Admin />} />
                         </Route>
                         <Route path="*" element={<NotFound />} />
