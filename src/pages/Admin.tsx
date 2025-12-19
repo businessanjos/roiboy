@@ -55,6 +55,7 @@ interface SubscriptionPlan {
   features: Record<string, boolean> | string[] | null;
   is_active: boolean;
   created_at: string;
+  plan_type: string;
 }
 
 // Helper to get features as array
@@ -399,6 +400,83 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
   );
 }
 
+// Plan Card Component
+function PlanCard({ 
+  plan, 
+  billingPeriodLabels, 
+  onEdit, 
+  onDelete,
+  isAddon = false 
+}: { 
+  plan: SubscriptionPlan; 
+  billingPeriodLabels: Record<string, string>;
+  onEdit: (plan: SubscriptionPlan) => void;
+  onDelete: (id: string) => void;
+  isAddon?: boolean;
+}) {
+  return (
+    <div 
+      className={`group relative p-5 rounded-xl border bg-card hover:shadow-md transition-all ${!plan.is_active ? 'opacity-50' : ''}`}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium">{plan.name}</h3>
+            {isAddon && <Badge variant="secondary" className="text-xs">Add-on</Badge>}
+          </div>
+          {plan.description && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</p>
+          )}
+        </div>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(plan)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={() => onDelete(plan.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+      
+      <div className="flex items-baseline gap-1 mb-3">
+        <span className="text-2xl font-semibold">R$ {plan.price.toLocaleString('pt-BR')}</span>
+        <span className="text-xs text-muted-foreground">/{billingPeriodLabels[plan.billing_period]?.toLowerCase() || plan.billing_period}</span>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {!plan.is_active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
+        {plan.trial_days && plan.trial_days > 0 && (
+          <Badge variant="outline" className="text-xs">{plan.trial_days}d trial</Badge>
+        )}
+      </div>
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        {plan.max_clients && <div>• Até {plan.max_clients} clientes</div>}
+        {plan.max_users && <div>• Até {plan.max_users} usuários</div>}
+        {plan.max_ai_analyses && <div>• {plan.max_ai_analyses} análises AI/mês</div>}
+      </div>
+
+      {(() => {
+        const featuresArr = getFeaturesArray(plan.features);
+        return featuresArr.length > 0 && (
+          <div className="border-t mt-3 pt-3 text-xs space-y-0.5">
+            {featuresArr.slice(0, 3).map((f, i) => (
+              <div key={i} className="text-muted-foreground">✓ {f}</div>
+            ))}
+            {featuresArr.length > 3 && (
+              <div className="text-muted-foreground/60">+{featuresArr.length - 3} mais</div>
+            )}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
 
 // Plans Tab Component
 function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: boolean }) {
@@ -416,7 +494,8 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
     max_users: 5,
     max_ai_analyses: 1000,
     features: '',
-    is_active: true
+    is_active: true,
+    plan_type: 'main'
   });
 
   const resetForm = () => {
@@ -431,7 +510,8 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
       max_users: 5,
       max_ai_analyses: 1000,
       features: '',
-      is_active: true
+      is_active: true,
+      plan_type: 'main'
     });
     setEditingPlan(null);
   };
@@ -465,7 +545,8 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
       max_users: plan.max_users || 0,
       max_ai_analyses: plan.max_ai_analyses || 0,
       features: featuresText,
-      is_active: plan.is_active
+      is_active: plan.is_active,
+      plan_type: plan.plan_type || 'main'
     });
     setIsDialogOpen(true);
   };
@@ -482,7 +563,8 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
         max_users: formData.max_users || null,
         max_ai_analyses: formData.max_ai_analyses || null,
         features: formData.features.split('\n').filter(f => f.trim()),
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        plan_type: formData.plan_type
       };
 
       if (editingPlan) {
@@ -658,12 +740,26 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
                   className="resize-none"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Switch 
-                  checked={formData.is_active} 
-                  onCheckedChange={v => setFormData(f => ({ ...f, is_active: v }))} 
-                />
-                <Label className="text-sm">Plano ativo</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label className="text-sm">Tipo</Label>
+                  <Select value={formData.plan_type} onValueChange={v => setFormData(f => ({ ...f, plan_type: v }))}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="main">Plano Principal</SelectItem>
+                      <SelectItem value="addon">Complemento (Add-on)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <Switch 
+                    checked={formData.is_active} 
+                    onCheckedChange={v => setFormData(f => ({ ...f, is_active: v }))} 
+                  />
+                  <Label className="text-sm">Plano ativo</Label>
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -687,69 +783,47 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
             <p className="text-sm text-muted-foreground">Nenhum plano cadastrado</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {plans.map(plan => (
-              <div 
-                key={plan.id} 
-                className={`group relative p-5 rounded-xl border bg-card hover:shadow-md transition-all ${!plan.is_active ? 'opacity-50' : ''}`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-medium">{plan.name}</h3>
-                    {plan.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(plan)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => {
-                        if (confirm('Excluir este plano?')) deleteMutation.mutate(plan.id);
+          <div className="space-y-8">
+            {/* Planos Principais */}
+            {plans.filter(p => p.plan_type !== 'addon').length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-4">Planos Principais</h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {plans.filter(p => p.plan_type !== 'addon').map(plan => (
+                    <PlanCard 
+                      key={plan.id} 
+                      plan={plan} 
+                      billingPeriodLabels={billingPeriodLabels}
+                      onEdit={openEdit}
+                      onDelete={(id) => {
+                        if (confirm('Excluir este plano?')) deleteMutation.mutate(id);
                       }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                    />
+                  ))}
                 </div>
-                
-                <div className="flex items-baseline gap-1 mb-3">
-                  <span className="text-2xl font-semibold">R$ {plan.price.toLocaleString('pt-BR')}</span>
-                  <span className="text-xs text-muted-foreground">/{billingPeriodLabels[plan.billing_period]?.toLowerCase() || plan.billing_period}</span>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {!plan.is_active && <Badge variant="secondary" className="text-xs">Inativo</Badge>}
-                  {plan.trial_days && plan.trial_days > 0 && (
-                    <Badge variant="outline" className="text-xs">{plan.trial_days}d trial</Badge>
-                  )}
-                </div>
-
-                <div className="text-xs text-muted-foreground space-y-1">
-                  {plan.max_clients && <div>• Até {plan.max_clients} clientes</div>}
-                  {plan.max_users && <div>• Até {plan.max_users} usuários</div>}
-                  {plan.max_ai_analyses && <div>• {plan.max_ai_analyses} análises AI/mês</div>}
-                </div>
-
-                {(() => {
-                  const featuresArr = getFeaturesArray(plan.features);
-                  return featuresArr.length > 0 && (
-                    <div className="border-t mt-3 pt-3 text-xs space-y-0.5">
-                      {featuresArr.slice(0, 3).map((f, i) => (
-                        <div key={i} className="text-muted-foreground">✓ {f}</div>
-                      ))}
-                      {featuresArr.length > 3 && (
-                        <div className="text-muted-foreground/60">+{featuresArr.length - 3} mais</div>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
-            ))}
+            )}
+
+            {/* Complementos (Add-ons) */}
+            {plans.filter(p => p.plan_type === 'addon').length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-4">Complementos (Add-ons)</h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {plans.filter(p => p.plan_type === 'addon').map(plan => (
+                    <PlanCard 
+                      key={plan.id} 
+                      plan={plan} 
+                      billingPeriodLabels={billingPeriodLabels}
+                      onEdit={openEdit}
+                      onDelete={(id) => {
+                        if (confirm('Excluir este plano?')) deleteMutation.mutate(id);
+                      }}
+                      isAddon
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
