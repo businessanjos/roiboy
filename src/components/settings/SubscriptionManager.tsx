@@ -3,8 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAsaas } from "@/hooks/useAsaas";
 import { 
   CreditCard, 
   Calendar, 
@@ -14,7 +17,10 @@ import {
   Crown,
   Zap,
   Building2,
-  Sparkles
+  Sparkles,
+  Receipt,
+  QrCode,
+  FileText
 } from "lucide-react";
 import {
   AlertDialog,
@@ -27,7 +33,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { format, differenceInDays, isPast } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { format, differenceInDays, isPast, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Account {
@@ -52,11 +73,16 @@ interface SubscriptionPlan {
 
 export function SubscriptionManager() {
   const { toast } = useToast();
+  const { createPayment, getPixQrCode, loading: asaasLoading } = useAsaas();
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null);
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO'>('PIX');
+  const [generatingPayment, setGeneratingPayment] = useState(false);
+  const [pixData, setPixData] = useState<{ qrCode: string; payload: string } | null>(null);
 
   useEffect(() => {
     loadAccountAndPlans();
@@ -93,6 +119,72 @@ export function SubscriptionManager() {
       console.error("Error loading subscription data:", err);
     }
     setLoading(false);
+  };
+
+  const handleGeneratePayment = async () => {
+    if (!account || !currentPlan) {
+      toast({
+        title: "Erro",
+        description: "Dados da conta ou plano não encontrados",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingPayment(true);
+    setPixData(null);
+    
+    try {
+      const dueDate = format(addMonths(new Date(), 0), 'yyyy-MM-dd');
+      
+      const result = await createPayment({
+        customer: account.id,
+        billingType: paymentMethod,
+        value: currentPlan.price,
+        dueDate,
+        description: `Assinatura ${currentPlan.name} - ${account.name}`,
+        externalReference: account.id,
+      });
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (paymentMethod === 'PIX' && result.data?.id) {
+        const pixResult = await getPixQrCode(result.data.id);
+        if (pixResult.data) {
+          setPixData({
+            qrCode: pixResult.data.encodedImage,
+            payload: pixResult.data.payload,
+          });
+        }
+      }
+
+      toast({
+        title: "Cobrança gerada",
+        description: "A cobrança foi gerada com sucesso!",
+      });
+      setIsPaymentDialogOpen(true);
+    } catch (error: any) {
+      console.error("Error generating payment:", error);
+      toast({
+        title: "Erro ao gerar cobrança",
+        description: error.message || "Não foi possível gerar a cobrança",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPayment(false);
+    }
+  };
+
+  const handleCopyPixCode = () => {
+    if (pixData?.payload) {
+      navigator.clipboard.writeText(pixData.payload);
+      toast({
+        title: "Copiado!",
+        description: "Código PIX copiado para a área de transferência",
+      });
+    }
   };
 
   const handleCancelSubscription = async () => {
@@ -273,6 +365,45 @@ export function SubscriptionManager() {
                   </div>
                 )}
               </div>
+
+              {/* Payment Generation Section */}
+              <Separator />
+              <div className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="flex-1">
+                  <Label className="text-sm mb-2 block">Método de pagamento</Label>
+                  <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'PIX' | 'BOLETO')}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PIX">
+                        <span className="flex items-center gap-2">
+                          <QrCode className="h-4 w-4" />
+                          PIX
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="BOLETO">
+                        <span className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Boleto
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  onClick={handleGeneratePayment} 
+                  disabled={generatingPayment}
+                  className="gap-2"
+                >
+                  {generatingPayment ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Receipt className="h-4 w-4" />
+                  )}
+                  Gerar Cobrança
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="bg-muted/50 rounded-lg p-6 text-center">
@@ -426,6 +557,67 @@ export function SubscriptionManager() {
           </CardContent>
         </Card>
       )}
+
+      {/* PIX Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagamento via {paymentMethod}</DialogTitle>
+            <DialogDescription>
+              {paymentMethod === 'PIX' 
+                ? 'Escaneie o QR Code ou copie o código para pagar'
+                : 'Copie o código de barras do boleto'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          {paymentMethod === 'PIX' && pixData ? (
+            <div className="space-y-4">
+              <div className="flex justify-center p-4 bg-white rounded-lg">
+                <img 
+                  src={`data:image/png;base64,${pixData.qrCode}`} 
+                  alt="QR Code PIX"
+                  className="w-48 h-48"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Código PIX (Copia e Cola)</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={pixData.payload} 
+                    readOnly 
+                    className="text-xs font-mono"
+                  />
+                  <Button variant="outline" size="sm" onClick={handleCopyPixCode}>
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : generatingPayment ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mt-2">Gerando cobrança...</p>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Receipt className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mt-2">Cobrança gerada com sucesso!</p>
+              {paymentMethod === 'BOLETO' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  O boleto será enviado para seu email.
+                </p>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

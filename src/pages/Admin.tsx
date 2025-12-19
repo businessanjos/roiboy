@@ -969,199 +969,234 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
 
 // Payments Tab Component
 function PaymentsTab() {
-  const gateways: Array<{
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
-    status: 'connected' | 'disconnected';
-    features: string[];
-  }> = [
-    {
-      id: 'stripe',
-      name: 'Stripe',
-      description: 'Pagamentos globais com cartão de crédito, débito e mais',
-      icon: '💳',
-      status: 'disconnected',
-      features: ['Cartão de crédito/débito', 'PIX', 'Boleto', 'Assinaturas recorrentes']
-    },
-    {
-      id: 'asaas',
-      name: 'Asaas',
-      description: 'Gateway brasileiro com foco em boleto e PIX',
-      icon: '🏦',
-      status: 'disconnected',
-      features: ['Boleto bancário', 'PIX', 'Cartão de crédito', 'Cobranças recorrentes']
-    },
-    {
-      id: 'pagarme',
-      name: 'Pagar.me',
-      description: 'Plataforma completa de pagamentos',
-      icon: '💰',
-      status: 'disconnected',
-      features: ['Cartão de crédito', 'Boleto', 'PIX', 'Split de pagamentos']
-    },
-    {
-      id: 'mercadopago',
-      name: 'Mercado Pago',
-      description: 'Soluções de pagamento do Mercado Livre',
-      icon: '🛒',
-      status: 'disconnected',
-      features: ['Cartão de crédito/débito', 'PIX', 'Boleto', 'Checkout transparente']
-    }
-  ];
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
 
-  const handleConnect = (gatewayId: string) => {
-    toast.info(`Configuração de ${gatewayId} em breve!`);
+  // Fetch all accounts with plan info
+  const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
+    queryKey: ['admin-payments-accounts'],
+    queryFn: async () => {
+      const { data: accountsData, error: accountsError } = await supabase
+        .from('accounts')
+        .select('id, name, subscription_status, plan_id')
+        .order('name');
+      
+      if (accountsError) throw accountsError;
+
+      // Get plan names
+      const { data: plansData } = await supabase
+        .from('subscription_plans')
+        .select('id, name, price');
+
+      const planMap: Record<string, { name: string; price: number }> = {};
+      plansData?.forEach((p: { id: string; name: string; price: number }) => {
+        planMap[p.id] = { name: p.name, price: p.price };
+      });
+
+      return accountsData.map((acc: any) => ({
+        ...acc,
+        plan_name: acc.plan_id ? planMap[acc.plan_id]?.name : 'Sem plano',
+        plan_price: acc.plan_id ? planMap[acc.plan_id]?.price : 0
+      }));
+    }
+  });
+
+  const filteredAccounts = accounts.filter((acc: any) => 
+    acc.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Stats
+  const activeCount = accounts.filter((a: any) => a.subscription_status === 'active').length;
+  const trialCount = accounts.filter((a: any) => a.subscription_status === 'trial').length;
+  const overdueCount = accounts.filter((a: any) => a.subscription_status === 'overdue').length;
+  
+  // Calculate MRR
+  const mrr = accounts.reduce((sum: number, acc: any) => {
+    if (acc.subscription_status === 'active' && acc.plan_price) {
+      return sum + acc.plan_price;
+    }
+    return sum;
+  }, 0);
+
+  const statusColors: Record<string, string> = {
+    active: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+    trial: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+    overdue: "bg-red-500/10 text-red-500 border-red-500/20",
+    cancelled: "bg-muted text-muted-foreground border-muted",
+    pending: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    suspended: "bg-orange-500/10 text-orange-500 border-orange-500/20",
   };
 
-  const handleConfigure = (gatewayId: string) => {
-    toast.info(`Abrindo configurações de ${gatewayId}...`);
+  const statusLabels: Record<string, string> = {
+    active: "Ativa",
+    trial: "Trial",
+    overdue: "Inadimplente",
+    cancelled: "Cancelada",
+    pending: "Pendente",
+    suspended: "Suspensa",
   };
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Wallet className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold">R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-xs text-muted-foreground">MRR</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold">{activeCount}</p>
+                <p className="text-xs text-muted-foreground">Ativas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <Activity className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold">{trialCount}</p>
+                <p className="text-xs text-muted-foreground">Em Trial</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-500/10">
+                <XCircle className="h-5 w-5 text-red-500" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold">{overdueCount}</p>
+                <p className="text-xs text-muted-foreground">Inadimplentes</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Accounts Table */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-base font-medium">Gateways de Pagamento</CardTitle>
-              <CardDescription className="text-sm">
-                Configure as integrações para processar cobranças
-              </CardDescription>
+              <CardTitle className="text-base font-medium">Assinaturas por Conta</CardTitle>
+              <CardDescription className="text-sm">Gerencie pagamentos e assinaturas de cada conta via Asaas</CardDescription>
             </div>
+            <Input 
+              placeholder="Buscar contas..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)}
+              className="h-9 w-full sm:w-64"
+            />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            {gateways.map(gateway => (
-              <Card key={gateway.id} className="border shadow-none hover:shadow-sm transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="text-3xl">{gateway.icon}</div>
-                      <div>
-                        <h3 className="font-medium">{gateway.name}</h3>
-                        <p className="text-xs text-muted-foreground">{gateway.description}</p>
-                      </div>
-                    </div>
-                    <Badge 
-                      variant={gateway.status === 'connected' ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {gateway.status === 'connected' ? (
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Conectado
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1">
-                          <XCircle className="h-3 w-3" />
-                          Desconectado
-                        </span>
-                      )}
-                    </Badge>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <p className="text-xs text-muted-foreground mb-2">Recursos disponíveis:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {gateway.features.map(feature => (
-                        <Badge key={feature} variant="outline" className="text-xs font-normal">
-                          {feature}
+          {loadingAccounts ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredAccounts.length === 0 ? (
+            <div className="text-center py-12">
+              <Building2 className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">
+                {search ? 'Nenhuma conta encontrada' : 'Nenhuma conta cadastrada'}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="font-medium">Conta</TableHead>
+                    <TableHead className="font-medium">Plano</TableHead>
+                    <TableHead className="font-medium">Valor</TableHead>
+                    <TableHead className="font-medium">Status</TableHead>
+                    <TableHead className="font-medium text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAccounts.map((account: any) => (
+                    <TableRow key={account.id}>
+                      <TableCell className="font-medium">{account.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {account.plan_name}
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {gateway.status === 'connected' ? (
-                      <>
-                        <Button 
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {account.plan_price > 0 
+                          ? `R$ ${account.plan_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                          : '-'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
                           variant="outline" 
-                          size="sm" 
-                          className="flex-1 gap-2"
-                          onClick={() => handleConfigure(gateway.id)}
+                          className={`text-xs ${statusColors[account.subscription_status || 'trial']}`}
                         >
-                          <Settings className="h-4 w-4" />
-                          Configurar
-                        </Button>
+                          {statusLabels[account.subscription_status || 'trial']}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          className="gap-2"
+                          onClick={() => toast.info("Painel Asaas em breve!")}
                         >
-                          <ExternalLink className="h-4 w-4" />
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Asaas
                         </Button>
-                      </>
-                    ) : (
-                      <Button 
-                        size="sm" 
-                        className="flex-1 gap-2"
-                        onClick={() => handleConnect(gateway.id)}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Conectar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Gateway Info */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-medium">Configurações de Cobrança</CardTitle>
+          <CardTitle className="text-base font-medium">Gateway Configurado</CardTitle>
           <CardDescription className="text-sm">
-            Defina as regras padrão para geração de cobranças
+            Integração ativa para processamento de pagamentos
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-sm">Gateway padrão</Label>
-              <Select defaultValue="">
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Selecione um gateway" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="stripe">Stripe</SelectItem>
-                  <SelectItem value="asaas">Asaas</SelectItem>
-                  <SelectItem value="pagarme">Pagar.me</SelectItem>
-                  <SelectItem value="mercadopago">Mercado Pago</SelectItem>
-                </SelectContent>
-              </Select>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">🏦</div>
+              <div>
+                <h3 className="font-medium">Asaas</h3>
+                <p className="text-xs text-muted-foreground">Boleto, PIX e Cartão de Crédito</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm">Método de pagamento padrão</Label>
-              <Select defaultValue="credit_card">
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                  <SelectItem value="pix">PIX</SelectItem>
-                  <SelectItem value="boleto">Boleto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <Label className="text-sm">Retry automático</Label>
-              <p className="text-xs text-muted-foreground">Tentar novamente cobranças falhadas automaticamente</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <Label className="text-sm">Notificar clientes</Label>
-              <p className="text-xs text-muted-foreground">Enviar email quando cobrança for gerada</p>
-            </div>
-            <Switch defaultChecked />
+            <Badge className="gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              Conectado
+            </Badge>
           </div>
         </CardContent>
       </Card>
