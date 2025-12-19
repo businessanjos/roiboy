@@ -71,7 +71,7 @@ export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
   if (collapsed) {
     return (
       <Link 
-        to="/account-settings"
+        to="/profile?tab=subscription"
         className={cn(
           "flex items-center justify-center p-2 mx-3 mb-2 rounded-lg transition-colors",
           isExpiring 
@@ -89,7 +89,7 @@ export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
 
   return (
     <Link
-      to="/account-settings"
+      to="/profile?tab=subscription"
       className={cn(
         "flex items-center gap-3 p-3 mx-3 mb-2 rounded-lg transition-all hover:opacity-80",
         isExpiring 
