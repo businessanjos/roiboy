@@ -24,6 +24,7 @@ import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/compon
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
+import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
 import { ClientContracts } from "@/components/client/ClientContracts";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
@@ -95,6 +96,7 @@ interface Client {
   business_state?: string;
   business_zip_code?: string;
   avatar_url?: string | null;
+  logo_url?: string | null;
   contract_start_date?: string | null;
   contract_end_date?: string | null;
   is_mls?: boolean;
@@ -531,6 +533,7 @@ export default function ClientDetail() {
         business_state: clientData.business_state || "",
         business_zip_code: clientData.business_zip_code || "",
         avatar_url: clientData.avatar_url || null,
+        logo_url: (clientData as any).logo_url || null,
         contract_start_date: clientData.contract_start_date || null,
         contract_end_date: clientData.contract_end_date || null,
         is_mls: clientData.is_mls || false,
@@ -1421,6 +1424,13 @@ export default function ClientDetail() {
             clientName={client.full_name}
             currentAvatarUrl={client.avatar_url}
             onAvatarChange={(url) => setClient({ ...client, avatar_url: url })}
+            size="lg"
+          />
+          <ClientLogoUpload
+            clientId={client.id}
+            clientName={client.full_name}
+            currentLogoUrl={client.logo_url}
+            onLogoChange={(url) => setClient({ ...client, logo_url: url })}
             size="lg"
           />
           <div className="min-w-0 flex-1">

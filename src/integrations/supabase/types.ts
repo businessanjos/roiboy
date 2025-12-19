@@ -824,6 +824,7 @@ export type Database = {
           full_name: string
           id: string
           is_mls: boolean
+          logo_url: string | null
           mls_level: string | null
           neighborhood: string | null
           notes: string | null
@@ -859,6 +860,7 @@ export type Database = {
           full_name: string
           id?: string
           is_mls?: boolean
+          logo_url?: string | null
           mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null
@@ -894,6 +896,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_mls?: boolean
+          logo_url?: string | null
           mls_level?: string | null
           neighborhood?: string | null
           notes?: string | null
