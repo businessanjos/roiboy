@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "ROI Boy - Captura de Engajamento",
+  "version": "1.0.0",
+  "description": "Captura automática de mensagens WhatsApp e participação em lives (Zoom/Google Meet)",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://*.zoom.us/*",
+    "https://meet.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["content-scripts/whatsapp.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.zoom.us/wc/*", "https://*.zoom.us/j/*"],
+      "js": ["content-scripts/zoom.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["content-scripts/google-meet.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  }
+}

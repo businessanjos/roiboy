@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROI Boy</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="14" fill="#10B981"/>
+          <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="logo-text">ROI Boy</span>
+      </div>
+      <div id="user-badge" class="user-badge hidden">
+        <span id="user-name"></span>
+      </div>
+    </header>
+
+    <!-- Login View -->
+    <div id="login-view" class="view">
+      <h2>Entrar</h2>
+      <p class="subtitle">Use suas credenciais do ROI Boy</p>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" required placeholder="seu@email.com">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" required placeholder="••••••••">
+        </div>
+        
+        <div id="login-error" class="error-message hidden"></div>
+        
+        <button type="submit" id="login-btn" class="btn btn-primary">
+          <span class="btn-text">Entrar</span>
+          <span class="btn-loading hidden">
+            <svg class="spinner" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="32" stroke-dashoffset="12"/>
+            </svg>
+          </span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Main View -->
+    <div id="main-view" class="view hidden">
+      <!-- Integration Status -->
+      <div id="integration-status" class="status-card">
+        <div class="status-header">
+          <span id="integration-icon" class="integration-icon">📱</span>
+          <span id="integration-name">Nenhuma integração ativa</span>
+        </div>
+        <div id="integration-indicator" class="status-indicator inactive">
+          <span class="status-dot"></span>
+          <span class="status-text">Inativo</span>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card whatsapp">
+          <div class="stat-icon">💬</div>
+          <div class="stat-content">
+            <span class="stat-label">WhatsApp</span>
+            <span id="whatsapp-count" class="stat-value">0</span>
+          </div>
+        </div>
+        
+        <div class="stat-card zoom">
+          <div class="stat-icon">📹</div>
+          <div class="stat-content">
+            <span class="stat-label">Zoom</span>
+            <span id="zoom-count" class="stat-value">0</span>
+          </div>
+        </div>
+        
+        <div class="stat-card meet">
+          <div class="stat-icon">🎥</div>
+          <div class="stat-content">
+            <span class="stat-label">Google Meet</span>
+            <span id="meet-count" class="stat-value">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <h3>Abrir Integração</h3>
+        <div class="action-buttons">
+          <button class="action-btn" id="open-whatsapp">
+            <span class="action-icon">💬</span>
+            WhatsApp
+          </button>
+          <button class="action-btn" id="open-zoom">
+            <span class="action-icon">📹</span>
+            Zoom
+          </button>
+          <button class="action-btn" id="open-meet">
+            <span class="action-icon">🎥</span>
+            Google Meet
+          </button>
+        </div>
+      </div>
+
+      <!-- Last Sync -->
+      <div class="last-sync">
+        <span id="last-sync-text">Última sincronização: --</span>
+      </div>
+
+      <!-- Logout Button -->
+      <button id="logout-btn" class="btn btn-secondary">
+        Sair
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>ROI Boy v1.0.0</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
