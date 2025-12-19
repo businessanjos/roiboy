@@ -16,15 +16,13 @@ import {
   Loader2, 
   Camera, 
   Phone, 
-  MapPin, 
-  FileText,
-  CreditCard,
-  ExternalLink
+  MapPin,
+  CreditCard
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface UserProfile {
   id: string;
@@ -62,18 +60,41 @@ interface Plan {
   billing_period: string;
 }
 
+const STATES = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+];
+
 export default function Profile() {
   const { updateUser } = useCurrentUser();
-  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingAccount, setSavingAccount] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [hasAccountChanges, setHasAccountChanges] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [editName, setEditName] = useState("");
+
+  // Account form data
+  const [accountForm, setAccountForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    document_type: "cpf",
+    document: "",
+    contact_name: "",
+    street: "",
+    street_number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    zip_code: "",
+  });
 
   useEffect(() => {
     fetchProfile();
@@ -101,6 +122,21 @@ export default function Profile() {
 
         if (accountData) {
           setAccount(accountData as Account);
+          setAccountForm({
+            name: accountData.name || "",
+            email: accountData.email || "",
+            phone: accountData.phone || "",
+            document_type: accountData.document_type || "cpf",
+            document: accountData.document || "",
+            contact_name: accountData.contact_name || "",
+            street: accountData.street || "",
+            street_number: accountData.street_number || "",
+            complement: accountData.complement || "",
+            neighborhood: accountData.neighborhood || "",
+            city: accountData.city || "",
+            state: accountData.state || "",
+            zip_code: accountData.zip_code || "",
+          });
 
           // Fetch plan if exists
           if (accountData.plan_id) {
@@ -121,6 +157,74 @@ export default function Profile() {
       toast.error("Erro ao carregar perfil");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAccountChange = (field: string, value: string) => {
+    setAccountForm((prev) => ({ ...prev, [field]: value }));
+    setHasAccountChanges(true);
+  };
+
+  const handleSaveAccount = async () => {
+    if (!account || !accountForm.name.trim()) {
+      toast.error("O nome da conta é obrigatório");
+      return;
+    }
+
+    setSavingAccount(true);
+    try {
+      const { error } = await supabase
+        .from("accounts")
+        .update({
+          name: accountForm.name,
+          email: accountForm.email || null,
+          phone: accountForm.phone || null,
+          document_type: accountForm.document_type,
+          document: accountForm.document || null,
+          contact_name: accountForm.contact_name || null,
+          street: accountForm.street || null,
+          street_number: accountForm.street_number || null,
+          complement: accountForm.complement || null,
+          neighborhood: accountForm.neighborhood || null,
+          city: accountForm.city || null,
+          state: accountForm.state || null,
+          zip_code: accountForm.zip_code || null,
+        })
+        .eq("id", account.id);
+
+      if (error) throw error;
+
+      setAccount({ ...account, ...accountForm });
+      setHasAccountChanges(false);
+      toast.success("Conta atualizada!");
+    } catch (error: any) {
+      console.error("Error saving account:", error);
+      toast.error(error.message || "Erro ao salvar conta");
+    } finally {
+      setSavingAccount(false);
+    }
+  };
+
+  const fetchAddressByCep = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, "");
+    if (cleanCep.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+
+      if (!data.erro) {
+        setAccountForm((prev) => ({
+          ...prev,
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state,
+        }));
+        setHasAccountChanges(true);
+      }
+    } catch (error) {
+      console.error("Error fetching address:", error);
     }
   };
 
@@ -233,26 +337,6 @@ export default function Profile() {
     };
     const c = config[status || "trial"] || { label: status || "Teste", variant: "outline" as const };
     return <Badge variant={c.variant}>{c.label}</Badge>;
-  };
-
-  const formatAddress = () => {
-    if (!account) return null;
-    const parts = [
-      account.street,
-      account.street_number,
-      account.complement,
-      account.neighborhood,
-      account.city,
-      account.state,
-      account.zip_code,
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(", ") : null;
-  };
-
-  const formatDocument = () => {
-    if (!account?.document) return null;
-    const type = account.document_type === "cnpj" ? "CNPJ" : "CPF";
-    return `${type}: ${account.document}`;
   };
 
   if (loading) {
@@ -394,101 +478,215 @@ export default function Profile() {
         <TabsContent value="account" className="space-y-6">
           {account && (
             <>
+              {/* Identification Card */}
               <Card className="shadow-card">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <Building2 className="h-5 w-5" />
-                        {account.name}
+                        Identificação
                       </CardTitle>
                       <CardDescription>
-                        Dados cadastrais da conta
+                        Dados principais da conta
                       </CardDescription>
                     </div>
                     <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate("/account-settings")}
+                      onClick={handleSaveAccount} 
+                      disabled={!hasAccountChanges || savingAccount}
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Editar Conta
+                      {savingAccount ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Salvar
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Contact Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {account.contact_name && (
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <User className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Responsável</p>
-                          <p className="font-medium">{account.contact_name}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {account.email && (
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Mail className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">E-mail</p>
-                          <p className="font-medium">{account.email}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {account.phone && (
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Phone className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Telefone</p>
-                          <p className="font-medium">{account.phone}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {formatDocument() && (
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Documento</p>
-                          <p className="font-medium">{formatDocument()}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Address */}
-                  {formatAddress() && (
-                    <>
-                      <Separator />
-                      <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                        <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Endereço</p>
-                          <p className="font-medium">{formatAddress()}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Empty State */}
-                  {!account.email && !account.phone && !formatDocument() && !formatAddress() && (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <Building2 className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                      <p>Nenhum dado cadastral preenchido</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-3"
-                        onClick={() => navigate("/account-settings")}
-                      >
-                        Completar cadastro
-                      </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="account-name">Nome / Razão Social *</Label>
+                      <Input
+                        id="account-name"
+                        value={accountForm.name}
+                        onChange={(e) => handleAccountChange("name", e.target.value)}
+                        placeholder="Nome da empresa ou pessoa"
+                      />
                     </div>
-                  )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_name">Nome do Responsável</Label>
+                      <Input
+                        id="contact_name"
+                        value={accountForm.contact_name}
+                        onChange={(e) => handleAccountChange("contact_name", e.target.value)}
+                        placeholder="Nome do contato principal"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="document_type">Tipo de Documento</Label>
+                      <Select
+                        value={accountForm.document_type}
+                        onValueChange={(value) => handleAccountChange("document_type", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cpf">CPF</SelectItem>
+                          <SelectItem value="cnpj">CNPJ</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="document">
+                        {accountForm.document_type === "cnpj" ? "CNPJ" : "CPF"}
+                      </Label>
+                      <Input
+                        id="document"
+                        value={accountForm.document}
+                        onChange={(e) => handleAccountChange("document", e.target.value)}
+                        placeholder={accountForm.document_type === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Contact Card */}
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5" />
+                    Contato
+                  </CardTitle>
+                  <CardDescription>
+                    Informações de contato da conta
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="account-email">E-mail</Label>
+                      <Input
+                        id="account-email"
+                        type="email"
+                        value={accountForm.email}
+                        onChange={(e) => handleAccountChange("email", e.target.value)}
+                        placeholder="contato@empresa.com"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="account-phone">Telefone</Label>
+                      <Input
+                        id="account-phone"
+                        value={accountForm.phone}
+                        onChange={(e) => handleAccountChange("phone", e.target.value)}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Address Card */}
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Endereço
+                  </CardTitle>
+                  <CardDescription>
+                    Digite o CEP para preenchimento automático
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="zip_code">CEP</Label>
+                      <Input
+                        id="zip_code"
+                        value={accountForm.zip_code}
+                        onChange={(e) => handleAccountChange("zip_code", e.target.value)}
+                        onBlur={(e) => fetchAddressByCep(e.target.value)}
+                        placeholder="00000-000"
+                      />
+                    </div>
+
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="street">Logradouro</Label>
+                      <Input
+                        id="street"
+                        value={accountForm.street}
+                        onChange={(e) => handleAccountChange("street", e.target.value)}
+                        placeholder="Rua, Avenida, etc."
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="street_number">Número</Label>
+                      <Input
+                        id="street_number"
+                        value={accountForm.street_number}
+                        onChange={(e) => handleAccountChange("street_number", e.target.value)}
+                        placeholder="123"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="complement">Complemento</Label>
+                      <Input
+                        id="complement"
+                        value={accountForm.complement}
+                        onChange={(e) => handleAccountChange("complement", e.target.value)}
+                        placeholder="Sala, Apto, etc."
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="neighborhood">Bairro</Label>
+                      <Input
+                        id="neighborhood"
+                        value={accountForm.neighborhood}
+                        onChange={(e) => handleAccountChange("neighborhood", e.target.value)}
+                        placeholder="Bairro"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Cidade</Label>
+                      <Input
+                        id="city"
+                        value={accountForm.city}
+                        onChange={(e) => handleAccountChange("city", e.target.value)}
+                        placeholder="Cidade"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="state">Estado</Label>
+                      <Select
+                        value={accountForm.state}
+                        onValueChange={(value) => handleAccountChange("state", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATES.map((state) => (
+                            <SelectItem key={state} value={state}>
+                              {state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
