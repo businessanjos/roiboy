@@ -77,6 +77,7 @@ interface User {
   account_id: string;
   created_at: string;
   account_name?: string;
+  auth_user_id?: string | null;
 }
 
 export default function Admin() {
@@ -721,7 +722,8 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   const [formData, setFormData] = useState({
     name: '',
     plan_id: '',
-    subscription_status: 'trial'
+    subscription_status: 'trial',
+    trial_ends_at: ''
   });
 
   const openEdit = (account: Account) => {
@@ -729,7 +731,8 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
     setFormData({
       name: account.name,
       plan_id: account.plan_id || '',
-      subscription_status: account.subscription_status || 'trial'
+      subscription_status: account.subscription_status || 'trial',
+      trial_ends_at: account.trial_ends_at ? account.trial_ends_at.split('T')[0] : ''
     });
   };
 
@@ -741,7 +744,8 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
         .update({
           name: formData.name,
           plan_id: formData.plan_id || null,
-          subscription_status: formData.subscription_status
+          subscription_status: formData.subscription_status,
+          trial_ends_at: formData.trial_ends_at ? new Date(formData.trial_ends_at).toISOString() : null
         })
         .eq('id', editingAccount.id);
       if (error) throw error;
@@ -753,6 +757,27 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
     },
     onError: (error) => {
       toast.error('Erro ao atualizar conta: ' + error.message);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // First delete all related data in order
+      // Users
+      await supabase.from('users').delete().eq('account_id', id);
+      // Account settings
+      await supabase.from('account_settings').delete().eq('account_id', id);
+      // Then delete account
+      const { error } = await supabase.from('accounts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast.success('Conta excluída!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir conta: ' + error.message);
     }
   });
 
@@ -816,14 +841,28 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                         {format(new Date(account.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => openEdit(account)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => openEdit(account)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Excluir a conta "${account.name}"? Esta ação irá remover todos os usuários e dados associados.`)) {
+                                deleteMutation.mutate(account.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -876,6 +915,16 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-2">
+                <Label className="text-sm">Término do Trial</Label>
+                <Input 
+                  type="date"
+                  value={formData.trial_ends_at} 
+                  onChange={e => setFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
+                  className="h-9"
+                />
+                <p className="text-xs text-muted-foreground">Deixe vazio para trial sem prazo</p>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setEditingAccount(null)}>Cancelar</Button>
@@ -893,7 +942,27 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
 
 // Users Tab Component
 function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Account[]; isLoading: boolean }) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    role: 'mentor',
+    account_id: ''
+  });
+
+  // Fetch super admins list
+  const { data: superAdmins = [] } = useQuery({
+    queryKey: ['admin-super-admins'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('super_admins')
+        .select('user_id');
+      if (error) throw error;
+      return data.map((sa: { user_id: string }) => sa.user_id);
+    }
+  });
   
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -910,6 +979,93 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
     consultor: 'Consultor',
     head: 'Head',
     gestor: 'Gestor'
+  };
+
+  const openEdit = (user: User) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      account_id: user.account_id
+    });
+  };
+
+  const updateUserMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingUser) return;
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role as "admin" | "consultor" | "cs" | "cx" | "gestor" | "head" | "leader" | "mentor",
+          account_id: formData.account_id
+        })
+        .eq('id', editingUser.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast.success('Usuário atualizado!');
+      setEditingUser(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar usuário: ' + error.message);
+    }
+  });
+
+  const toggleSuperAdminMutation = useMutation({
+    mutationFn: async ({ userId, authUserId, isSuperAdmin }: { userId: string; authUserId: string | null; isSuperAdmin: boolean }) => {
+      if (!authUserId) {
+        throw new Error('Usuário não tem auth_user_id vinculado');
+      }
+      
+      if (isSuperAdmin) {
+        // Remove super admin
+        const { error } = await supabase
+          .from('super_admins')
+          .delete()
+          .eq('user_id', authUserId);
+        if (error) throw error;
+      } else {
+        // Add super admin
+        const { error } = await supabase
+          .from('super_admins')
+          .insert({ user_id: authUserId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, { isSuperAdmin }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-super-admins'] });
+      toast.success(isSuperAdmin ? 'Super admin removido!' : 'Super admin adicionado!');
+    },
+    onError: (error) => {
+      toast.error('Erro: ' + error.message);
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast.success('Usuário excluído!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir usuário: ' + error.message);
+    }
+  });
+
+  // Get auth_user_id for a user (need to fetch from users table)
+  const getUserAuthId = (user: User) => {
+    // The user object from query includes auth_user_id
+    return (user as any).auth_user_id;
   };
 
   return (
@@ -949,29 +1105,138 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
                   <TableHead className="font-medium">Email</TableHead>
                   <TableHead className="font-medium">Conta</TableHead>
                   <TableHead className="font-medium">Role</TableHead>
+                  <TableHead className="font-medium">Super Admin</TableHead>
                   <TableHead className="font-medium">Criado em</TableHead>
+                  <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map(user => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">{user.account_name}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs">{roleLabels[user.role] || user.role}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredUsers.map(user => {
+                  const authUserId = getUserAuthId(user);
+                  const isSuperAdmin = authUserId ? superAdmins.includes(authUserId) : false;
+                  
+                  return (
+                    <TableRow key={user.id} className="group">
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">{user.account_name}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">{roleLabels[user.role] || user.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={isSuperAdmin}
+                          onCheckedChange={() => toggleSuperAdminMutation.mutate({ 
+                            userId: user.id, 
+                            authUserId, 
+                            isSuperAdmin 
+                          })}
+                          disabled={toggleSuperAdminMutation.isPending || !authUserId}
+                        />
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => openEdit(user)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              if (confirm('Excluir este usuário? Esta ação não pode ser desfeita.')) {
+                                deleteUserMutation.mutate(user.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
         )}
+
+        {/* Edit User Dialog */}
+        <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+              <DialogDescription>Atualize os dados do usuário</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label className="text-sm">Nome</Label>
+                <Input 
+                  value={formData.name} 
+                  onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} 
+                  className="h-9"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-sm">Email</Label>
+                <Input 
+                  type="email"
+                  value={formData.email} 
+                  onChange={e => setFormData(f => ({ ...f, email: e.target.value }))} 
+                  className="h-9"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-sm">Conta</Label>
+                <Select value={formData.account_id} onValueChange={v => setFormData(f => ({ ...f, account_id: v }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Selecione uma conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map(account => (
+                      <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-sm">Role</Label>
+                <Select value={formData.role} onValueChange={v => setFormData(f => ({ ...f, role: v }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="leader">Líder</SelectItem>
+                    <SelectItem value="mentor">Mentor</SelectItem>
+                    <SelectItem value="head">Head</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                    <SelectItem value="consultor">Consultor</SelectItem>
+                    <SelectItem value="cx">CX</SelectItem>
+                    <SelectItem value="cs">CS</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditingUser(null)}>Cancelar</Button>
+              <Button onClick={() => updateUserMutation.mutate()} disabled={updateUserMutation.isPending}>
+                {updateUserMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
