@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -102,6 +102,15 @@ export default function Clients() {
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filter states
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterProduct, setFilterProduct] = useState<string>("all");
+  const [filterVNPS, setFilterVNPS] = useState<string>("all");
+  const [filterContract, setFilterContract] = useState<string>("all");
+  const [filterResponsible, setFilterResponsible] = useState<string>("all");
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -679,10 +688,67 @@ export default function Clients() {
   const validCount = csvData.filter(r => r.valid).length;
   const invalidCount = csvData.filter(r => !r.valid).length;
 
-  const filtered = clients.filter(c => 
-    c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.phone_e164.includes(searchQuery)
-  );
+  // Calculate active filter count
+  const activeFilterCount = [
+    filterStatus !== "all",
+    filterProduct !== "all",
+    filterVNPS !== "all",
+    filterContract !== "all",
+    filterResponsible !== "all",
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setFilterStatus("all");
+    setFilterProduct("all");
+    setFilterVNPS("all");
+    setFilterContract("all");
+    setFilterResponsible("all");
+  };
+
+  const filtered = clients.filter(c => {
+    // Search filter
+    const matchesSearch = c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.phone_e164.includes(searchQuery);
+    if (!matchesSearch) return false;
+
+    // Status filter
+    if (filterStatus !== "all" && c.status !== filterStatus) return false;
+
+    // Product filter
+    if (filterProduct !== "all") {
+      const clientProductIds = (c.client_products || []).map((cp: any) => cp.product_id);
+      if (!clientProductIds.includes(filterProduct)) return false;
+    }
+
+    // V-NPS filter
+    if (filterVNPS !== "all") {
+      const vnps = vnpsMap[c.id];
+      if (!vnps) {
+        if (filterVNPS !== "none") return false;
+      } else {
+        if (filterVNPS !== vnps.vnps_class) return false;
+      }
+    }
+
+    // Contract filter
+    if (filterContract !== "all") {
+      const expiryStatus = getContractExpiryStatus(c.contract_end_date);
+      if (filterContract === "expired" && expiryStatus?.type !== "expired") return false;
+      if (filterContract === "urgent" && expiryStatus?.type !== "urgent") return false;
+      if (filterContract === "warning" && expiryStatus?.type !== "warning") return false;
+      if (filterContract === "ok" && expiryStatus !== null) return false;
+      if (filterContract === "none" && c.contract_end_date !== null) return false;
+    }
+
+    // Responsible filter
+    if (filterResponsible !== "all") {
+      const responsibles = getResponsibleUsers(c.id);
+      if (filterResponsible === "none" && responsibles.length > 0) return false;
+      if (filterResponsible !== "none" && !responsibles.some(r => r.id === filterResponsible)) return false;
+    }
+
+    return true;
+  });
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({
@@ -1296,14 +1362,196 @@ export default function Clients() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar..."
-          className="pl-9"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      {/* Search and Filters */}
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou telefone..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button 
+            variant={showFilters ? "secondary" : "outline"} 
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+            className="relative"
+          >
+            <Filter className="h-4 w-4" />
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-medium">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+        </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <Card className="p-4 bg-muted/30 border-dashed animate-fade-in">
+            <div className="flex flex-wrap gap-3">
+              {/* Status Filter */}
+              <div className="space-y-1.5 min-w-[140px]">
+                <Label className="text-xs text-muted-foreground">Status</Label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="paused">Pausado</SelectItem>
+                    <SelectItem value="churn_risk">Risco de Churn</SelectItem>
+                    <SelectItem value="churned">Churned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Product Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Produto</Label>
+                <Select value={filterProduct} onValueChange={setFilterProduct}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os produtos</SelectItem>
+                    {products.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* V-NPS Filter */}
+              <div className="space-y-1.5 min-w-[140px]">
+                <Label className="text-xs text-muted-foreground">V-NPS</Label>
+                <Select value={filterVNPS} onValueChange={setFilterVNPS}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="promoter">Promotor</SelectItem>
+                    <SelectItem value="neutral">Neutro</SelectItem>
+                    <SelectItem value="detractor">Detrator</SelectItem>
+                    <SelectItem value="none">Sem V-NPS</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Contract Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Contrato</Label>
+                <Select value={filterContract} onValueChange={setFilterContract}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="expired">Expirado</SelectItem>
+                    <SelectItem value="urgent">Expira em 30 dias</SelectItem>
+                    <SelectItem value="warning">Expira em 60 dias</SelectItem>
+                    <SelectItem value="ok">Vigente</SelectItem>
+                    <SelectItem value="none">Sem contrato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Responsible Filter */}
+              {teamUsers.length > 0 && (
+                <div className="space-y-1.5 min-w-[160px]">
+                  <Label className="text-xs text-muted-foreground">Responsável</Label>
+                  <Select value={filterResponsible} onValueChange={setFilterResponsible}>
+                    <SelectTrigger className="h-9 bg-background">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {teamUsers.map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                      ))}
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Clear Filters Button */}
+              {activeFilterCount > 0 && (
+                <div className="flex items-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="h-9 text-muted-foreground hover:text-foreground"
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Limpar ({activeFilterCount})
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Active Filters Summary */}
+            {activeFilterCount > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border/50">
+                <span className="text-xs text-muted-foreground mr-1">Filtros ativos:</span>
+                {filterStatus !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Status: {filterStatus === "active" ? "Ativo" : filterStatus === "paused" ? "Pausado" : filterStatus === "churn_risk" ? "Risco" : "Churned"}
+                    <button onClick={() => setFilterStatus("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterProduct !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Produto: {products.find(p => p.id === filterProduct)?.name || "..."}
+                    <button onClick={() => setFilterProduct("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterVNPS !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    V-NPS: {filterVNPS === "promoter" ? "Promotor" : filterVNPS === "neutral" ? "Neutro" : filterVNPS === "detractor" ? "Detrator" : "Sem V-NPS"}
+                    <button onClick={() => setFilterVNPS("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterContract !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Contrato: {filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : "Sem contrato"}
+                    <button onClick={() => setFilterContract("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterResponsible !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Responsável: {filterResponsible === "none" ? "Sem responsável" : teamUsers.find(u => u.id === filterResponsible)?.name || "..."}
+                    <button onClick={() => setFilterResponsible("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Results count */}
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {filtered.length} cliente{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
+            {activeFilterCount > 0 && ` (de ${clients.length} total)`}
+          </span>
+        </div>
       </div>
 
       {viewMode === "table" ? (
