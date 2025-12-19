@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,6 +110,7 @@ const EVENT_TYPES = [
 ];
 
 export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
+  const { currentUser } = useCurrentUser();
   const [events, setEvents] = useState<LifeEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -121,7 +123,6 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [quickTitle, setQuickTitle] = useState("");
   const [quickType, setQuickType] = useState("birthday");
   const [quickPopoverOpen, setQuickPopoverOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ name: string; avatar_url: string | null; account_id: string } | null>(null);
 
   // Form state
   const [formType, setFormType] = useState("birthday");
@@ -133,7 +134,6 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
 
   useEffect(() => {
     fetchEvents();
-    fetchCurrentUser();
 
     // Realtime subscription for automatic updates when AI detects new events
     const channel = supabase
@@ -203,16 +203,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     }
   };
 
-  const fetchCurrentUser = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("name, avatar_url, account_id")
-      .single();
-    if (data) setCurrentUser(data);
-  };
-
   const handleQuickAdd = async () => {
-    if (!quickTitle.trim() || !currentUser) return;
+    if (!quickTitle.trim() || !currentUser?.account_id) return;
 
     setSaving(true);
     try {
@@ -280,18 +272,13 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
       return;
     }
 
+    if (!currentUser?.account_id) {
+      toast.error("Usuário não encontrado");
+      return;
+    }
+
     setSaving(true);
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-
-      if (!userData) {
-        toast.error("Usuário não encontrado");
-        return;
-      }
-
       const eventData = {
         event_type: formType,
         title: formTitle.trim(),
@@ -314,7 +301,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
           .from("client_life_events")
           .insert({
             ...eventData,
-            account_id: userData.account_id,
+            account_id: currentUser.account_id,
             client_id: clientId,
             source: "manual",
           });

@@ -590,20 +590,15 @@ export default function Clients() {
       return;
     }
 
+    if (!currentUser?.account_id) {
+      toast.error("Perfil não encontrado. Faça logout e login novamente.");
+      return;
+    }
+
     setImporting(true);
     try {
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-      
-      if (userError || !userData) {
-        toast.error("Perfil não encontrado. Faça logout e login novamente.");
-        return;
-      }
-
       const clientsToInsert = validRows.map(row => ({
-        account_id: userData.account_id,
+        account_id: currentUser.account_id,
         full_name: row.full_name,
         phone_e164: row.phone_e164,
       }));
