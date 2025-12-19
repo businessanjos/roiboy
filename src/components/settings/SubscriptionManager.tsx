@@ -74,7 +74,7 @@ interface SubscriptionPlan {
 
 export function SubscriptionManager() {
   const { toast } = useToast();
-  const { createPayment, getPixQrCode, createPaymentWithCard, loading: asaasLoading } = useAsaas();
+  const { createPayment, getPixQrCode, createPaymentWithCard, getOrCreateAsaasCustomer, getBoletoUrl, loading: asaasLoading } = useAsaas();
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
@@ -86,6 +86,7 @@ export function SubscriptionManager() {
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [selectingPlan, setSelectingPlan] = useState(false);
   const [pixData, setPixData] = useState<{ qrCode: string; payload: string } | null>(null);
+  const [boletoData, setBoletoData] = useState<{ barCode: string; identificationField: string; bankSlipUrl?: string } | null>(null);
   
   // Credit card form state
   const [cardForm, setCardForm] = useState({
@@ -156,12 +157,20 @@ export function SubscriptionManager() {
 
     setGeneratingPayment(true);
     setPixData(null);
+    setBoletoData(null);
     
     try {
+      // First, get or create Asaas customer
+      const { customerId, error: customerError } = await getOrCreateAsaasCustomer(account.id);
+      
+      if (customerError || !customerId) {
+        throw new Error(customerError || 'Não foi possível criar cliente no Asaas');
+      }
+
       const dueDate = format(addMonths(new Date(), 0), 'yyyy-MM-dd');
       
       const result = await createPayment({
-        customer: account.id,
+        customer: customerId,
         billingType: paymentMethod,
         value: currentPlan.price,
         dueDate,
@@ -179,6 +188,17 @@ export function SubscriptionManager() {
           setPixData({
             qrCode: pixResult.data.encodedImage,
             payload: pixResult.data.payload,
+          });
+        }
+      }
+
+      if (paymentMethod === 'BOLETO' && result.data?.id) {
+        const boletoResult = await getBoletoUrl(result.data.id);
+        if (boletoResult.data) {
+          setBoletoData({
+            barCode: boletoResult.data.barCode,
+            identificationField: boletoResult.data.identificationField,
+            bankSlipUrl: result.data.bankSlipUrl,
           });
         }
       }
@@ -225,10 +245,17 @@ export function SubscriptionManager() {
     setGeneratingPayment(true);
     
     try {
+      // First, get or create Asaas customer
+      const { customerId, error: customerError } = await getOrCreateAsaasCustomer(account.id);
+      
+      if (customerError || !customerId) {
+        throw new Error(customerError || 'Não foi possível criar cliente no Asaas');
+      }
+
       const dueDate = format(new Date(), 'yyyy-MM-dd');
       
       const result = await createPaymentWithCard({
-        customer: account.id,
+        customer: customerId,
         value: currentPlan.price,
         dueDate,
         description: `Assinatura ${currentPlan.name} - ${account.name}`,

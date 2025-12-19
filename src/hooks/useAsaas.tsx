@@ -128,6 +128,64 @@ export function useAsaas() {
     }
   }, []);
 
+  // Helper function to get or create Asaas customer for an account
+  const getOrCreateAsaasCustomer = useCallback(async (accountId: string): Promise<{ customerId: string | null; error?: string }> => {
+    try {
+      // First, check if account already has an asaas_customer_id
+      const { data: account, error: fetchError } = await supabase
+        .from('accounts')
+        .select('asaas_customer_id, name, email, phone, document, document_type, contact_name')
+        .eq('id', accountId)
+        .single();
+
+      if (fetchError) {
+        throw new Error('Conta não encontrada');
+      }
+
+      // If already has customer ID, return it
+      if (account.asaas_customer_id) {
+        return { customerId: account.asaas_customer_id };
+      }
+
+      // Need to create customer in Asaas
+      // Validate required fields
+      if (!account.document) {
+        return { customerId: null, error: 'CPF/CNPJ é obrigatório para gerar cobrança. Preencha na aba Conta.' };
+      }
+
+      const customerName = account.contact_name || account.name || 'Cliente';
+      
+      const { data: newCustomer, error: createError } = await supabase.functions.invoke('asaas-api', {
+        body: {
+          action: 'createCustomer',
+          name: customerName,
+          cpfCnpj: account.document,
+          email: account.email,
+          phone: account.phone,
+          externalReference: accountId,
+        },
+      });
+
+      if (createError || newCustomer?.error) {
+        throw new Error(createError?.message || newCustomer?.error || 'Erro ao criar cliente no Asaas');
+      }
+
+      // Save the Asaas customer ID to the account
+      const { error: updateError } = await supabase
+        .from('accounts')
+        .update({ asaas_customer_id: newCustomer.id })
+        .eq('id', accountId);
+
+      if (updateError) {
+        console.error('Error saving asaas_customer_id:', updateError);
+      }
+
+      return { customerId: newCustomer.id };
+    } catch (err: any) {
+      return { customerId: null, error: err.message };
+    }
+  }, []);
+
   // ================== CUSTOMERS ==================
   const createCustomer = useCallback(async (customer: AsaasCustomer) => {
     return callAsaasApi<AsaasCustomer>('createCustomer', customer);
@@ -229,6 +287,7 @@ export function useAsaas() {
     getCustomer,
     findCustomerByCpfCnpj,
     listCustomers,
+    getOrCreateAsaasCustomer,
     // Subscriptions
     createSubscription,
     getSubscription,
