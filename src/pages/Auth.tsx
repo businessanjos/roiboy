@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, Loader2, AlertCircle, Info, ArrowLeft, CheckCircle } from "lucide-react";
+import { TrendingUp, Loader2, AlertCircle, Info, ArrowLeft, CheckCircle, CreditCard, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
@@ -26,7 +27,12 @@ export default function Auth() {
   // Signup form state
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  
+  // Post-signup payment state
+  const [showPaymentSetup, setShowPaymentSetup] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<"loading" | "form" | "success" | "skip">("loading");
 
   // Reset password form state
   const [resetEmail, setResetEmail] = useState("");
@@ -74,6 +80,11 @@ export default function Auth() {
     e.preventDefault();
     setError(null);
 
+    if (!signupPhone.trim()) {
+      setError("O telefone é obrigatório.");
+      return;
+    }
+
     if (signupPassword.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres.");
       return;
@@ -81,7 +92,7 @@ export default function Auth() {
 
     setIsSubmitting(true);
 
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
+    const { error } = await signUp(signupEmail, signupPassword, signupName, signupPhone);
 
     if (error) {
       if (error.message.includes("already registered")) {
@@ -92,6 +103,9 @@ export default function Auth() {
       toast.error("Falha ao criar conta");
     } else {
       toast.success("Conta criada com sucesso!");
+      // Show payment setup dialog after successful signup
+      setShowPaymentSetup(true);
+      setPaymentStep("form");
     }
 
     setIsSubmitting(false);
@@ -468,6 +482,22 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Telefone</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-phone"
+                        type="tel"
+                        placeholder="(11) 99999-9999"
+                        value={signupPhone}
+                        onChange={(e) => setSignupPhone(e.target.value)}
+                        required
+                        disabled={isSubmitting}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="signup-password">Senha</Label>
                     <Input
                       id="signup-password"
@@ -508,6 +538,111 @@ export default function Auth() {
           Conheça mais sobre o ROY
         </Link>
       </div>
+
+      {/* Payment Setup Dialog */}
+      <Dialog open={showPaymentSetup} onOpenChange={(open) => {
+        if (!open && paymentStep === "form") {
+          // User is trying to close without setting up payment
+          setPaymentStep("skip");
+        }
+        if (!open && (paymentStep === "success" || paymentStep === "skip")) {
+          setShowPaymentSetup(false);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Configurar Pagamento
+            </DialogTitle>
+            <DialogDescription>
+              {paymentStep === "form" && "Configure seu método de pagamento para aproveitar todos os recursos."}
+              {paymentStep === "skip" && "Você pode configurar o pagamento depois nas configurações."}
+              {paymentStep === "success" && "Cartão configurado com sucesso!"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {paymentStep === "form" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Você está no período de teste gratuito. Configure seu cartão agora para não perder acesso quando o trial terminar.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle className="h-3.5 w-3.5 text-success" />
+                  <span>Não cobramos nada durante o trial</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle className="h-3.5 w-3.5 text-success" />
+                  <span>Cancele a qualquer momento</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1"
+                  onClick={() => {
+                    // Open Asaas payment link or redirect to settings
+                    window.location.href = "/settings?tab=subscription";
+                  }}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Configurar Cartão
+                </Button>
+              </div>
+
+              <Button 
+                variant="ghost" 
+                className="w-full text-muted-foreground"
+                onClick={() => setPaymentStep("skip")}
+              >
+                Configurar depois
+              </Button>
+            </div>
+          )}
+
+          {paymentStep === "skip" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-warning/10 rounded-lg">
+                <p className="text-sm">
+                  Sem problemas! Você pode configurar o pagamento a qualquer momento em <strong>Configurações → Assinatura</strong>.
+                </p>
+              </div>
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  setShowPaymentSetup(false);
+                  window.location.href = "/dashboard";
+                }}
+              >
+                Ir para o Dashboard
+              </Button>
+            </div>
+          )}
+
+          {paymentStep === "success" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-success" />
+                </div>
+              </div>
+              <p className="text-center text-sm text-muted-foreground">
+                Seu cartão foi configurado. Você não será cobrado durante o período de teste.
+              </p>
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  setShowPaymentSetup(false);
+                  window.location.href = "/dashboard";
+                }}
+              >
+                Ir para o Dashboard
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
