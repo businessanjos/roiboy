@@ -31,6 +31,9 @@ export type Database = {
           escore_live_presence: number
           escore_whatsapp_engagement: number
           id: string
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
+          onboarding_step: number
           threshold_engagement_drop_percent: number
           threshold_low_escore: number
           threshold_low_roizometer: number
@@ -62,6 +65,9 @@ export type Database = {
           escore_live_presence?: number
           escore_whatsapp_engagement?: number
           id?: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_step?: number
           threshold_engagement_drop_percent?: number
           threshold_low_escore?: number
           threshold_low_roizometer?: number
@@ -93,6 +99,9 @@ export type Database = {
           escore_live_presence?: number
           escore_whatsapp_engagement?: number
           id?: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_step?: number
           threshold_engagement_drop_percent?: number
           threshold_low_escore?: number
           threshold_low_roizometer?: number
