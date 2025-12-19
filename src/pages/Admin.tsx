@@ -719,12 +719,23 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
 function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plans: SubscriptionPlan[]; isLoading: boolean }) {
   const queryClient = useQueryClient();
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     plan_id: '',
     subscription_status: 'trial',
     trial_ends_at: ''
   });
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      plan_id: '',
+      subscription_status: 'trial',
+      trial_ends_at: ''
+    });
+  };
 
   const openEdit = (account: Account) => {
     setEditingAccount(account);
@@ -735,6 +746,42 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
       trial_ends_at: account.trial_ends_at ? account.trial_ends_at.split('T')[0] : ''
     });
   };
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      // Create account
+      const { data: newAccount, error: accountError } = await supabase
+        .from('accounts')
+        .insert({
+          name: formData.name,
+          plan_id: formData.plan_id || null,
+          subscription_status: formData.subscription_status,
+          trial_ends_at: formData.trial_ends_at ? new Date(formData.trial_ends_at).toISOString() : null
+        })
+        .select()
+        .single();
+      
+      if (accountError) throw accountError;
+
+      // Create account settings
+      const { error: settingsError } = await supabase
+        .from('account_settings')
+        .insert({ account_id: newAccount.id });
+      
+      if (settingsError) throw settingsError;
+
+      return newAccount;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
+      toast.success('Conta criada com sucesso!');
+      setIsCreateDialogOpen(false);
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error('Erro ao criar conta: ' + error.message);
+    }
+  });
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -763,11 +810,8 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       // First delete all related data in order
-      // Users
       await supabase.from('users').delete().eq('account_id', id);
-      // Account settings
       await supabase.from('account_settings').delete().eq('account_id', id);
-      // Then delete account
       const { error } = await supabase.from('accounts').delete().eq('id', id);
       if (error) throw error;
     },
@@ -785,24 +829,110 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
     trial: { label: 'Trial', variant: 'outline' },
     active: { label: 'Ativo', variant: 'default' },
     suspended: { label: 'Suspenso', variant: 'destructive' },
-    cancelled: { label: 'Cancelado', variant: 'secondary' }
+    cancelled: { label: 'Cancelado', variant: 'secondary' },
+    overdue: { label: 'Inadimplente', variant: 'destructive' }
   };
+
+  const filteredAccounts = accounts.filter(a => 
+    a.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <Card className="border-0 shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base font-medium">Contas</CardTitle>
-        <CardDescription className="text-sm">Todas as contas da plataforma</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between pb-4">
+        <div>
+          <CardTitle className="text-base font-medium">Contas</CardTitle>
+          <CardDescription className="text-sm">Todas as contas da plataforma</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input 
+            placeholder="Buscar contas..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)}
+            className="h-9 w-48"
+          />
+          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { setIsCreateDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Conta
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nova Conta</DialogTitle>
+                <DialogDescription>Crie uma nova conta na plataforma</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label className="text-sm">Nome</Label>
+                  <Input 
+                    value={formData.name} 
+                    onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} 
+                    placeholder="Nome da empresa/conta"
+                    className="h-9"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-sm">Plano</Label>
+                  <Select value={formData.plan_id} onValueChange={v => setFormData(f => ({ ...f, plan_id: v }))}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione um plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sem plano (Trial)</SelectItem>
+                      {plans.filter(p => p.is_active).map(plan => (
+                        <SelectItem key={plan.id} value={plan.id}>{plan.name} - R$ {plan.price.toLocaleString('pt-BR')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-sm">Status</Label>
+                  <Select value={formData.subscription_status} onValueChange={v => setFormData(f => ({ ...f, subscription_status: v }))}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="trial">Trial</SelectItem>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="suspended">Suspenso</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-sm">Término do Trial</Label>
+                  <Input 
+                    type="date"
+                    value={formData.trial_ends_at} 
+                    onChange={e => setFormData(f => ({ ...f, trial_ends_at: e.target.value }))} 
+                    className="h-9"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => { setIsCreateDialogOpen(false); resetForm(); }}>Cancelar</Button>
+                <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !formData.name}>
+                  {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Criar Conta
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : accounts.length === 0 ? (
+        ) : filteredAccounts.length === 0 ? (
           <div className="text-center py-12">
             <Building2 className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada</p>
+            <p className="text-sm text-muted-foreground">
+              {search ? 'Nenhuma conta encontrada' : 'Nenhuma conta cadastrada'}
+            </p>
           </div>
         ) : (
           <div className="rounded-lg border overflow-hidden">
@@ -819,7 +949,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {accounts.map(account => {
+                {filteredAccounts.map(account => {
                   const plan = plans.find(p => p.id === account.plan_id);
                   const status = statusLabels[account.subscription_status || 'trial'] || statusLabels.trial;
                   return (
