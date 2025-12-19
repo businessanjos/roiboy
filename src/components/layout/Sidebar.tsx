@@ -38,6 +38,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions";
 import { useTheme } from "next-themes";
+import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import {
   Sheet,
   SheetContent,
@@ -264,6 +265,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           </TooltipProvider>
         )}
       </nav>
+
+      {/* Plan Info - hide for super admins */}
+      {!isSuperAdmin && <SidebarPlanInfo collapsed={collapsed} />}
 
       {/* User Menu */}
       <div className="p-3 border-t border-border">
