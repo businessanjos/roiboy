@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
+import { CurrentUserProvider } from "@/hooks/useCurrentUser";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
@@ -57,47 +58,49 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <AuthProvider>
-        <PermissionsProvider>
-          <PlanLimitsProvider>
-            <NotificationsProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/f/:formId" element={<PublicForm />} />
-                      <Route path="/checkin/:code" element={<EventCheckin />} />
-                      <Route path="/sobre" element={<Presentation />} />
-                      <Route path="/extension-preview" element={<ExtensionPreview />} />
-                      <Route element={<AppLayout />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/clients" element={<Clients />} />
-                        <Route path="/clients/new" element={<Clients />} />
-                        <Route path="/clients/:id" element={<ClientDetail />} />
-                        <Route path="/products" element={<Products />} />
-                        <Route path="/events" element={<Events />} />
-                        <Route path="/tasks" element={<Tasks />} />
-                        <Route path="/forms" element={<Forms />} />
-                        <Route path="/integrations" element={<Integrations />} />
-                        <Route path="/team" element={<Team />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/notifications" element={<Notifications />} />
-                        <Route path="/presentation" element={<Presentation />} />
-                        <Route path="/api-docs" element={<ApiDocs />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/admin" element={<Admin />} />
-                      </Route>
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                </BrowserRouter>
-              </TooltipProvider>
-            </NotificationsProvider>
-          </PlanLimitsProvider>
-        </PermissionsProvider>
+        <CurrentUserProvider>
+          <PermissionsProvider>
+            <PlanLimitsProvider>
+              <NotificationsProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <Suspense fallback={<PageLoader />}>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/f/:formId" element={<PublicForm />} />
+                        <Route path="/checkin/:code" element={<EventCheckin />} />
+                        <Route path="/sobre" element={<Presentation />} />
+                        <Route path="/extension-preview" element={<ExtensionPreview />} />
+                        <Route element={<AppLayout />}>
+                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/clients" element={<Clients />} />
+                          <Route path="/clients/new" element={<Clients />} />
+                          <Route path="/clients/:id" element={<ClientDetail />} />
+                          <Route path="/products" element={<Products />} />
+                          <Route path="/events" element={<Events />} />
+                          <Route path="/tasks" element={<Tasks />} />
+                          <Route path="/forms" element={<Forms />} />
+                          <Route path="/integrations" element={<Integrations />} />
+                          <Route path="/team" element={<Team />} />
+                          <Route path="/profile" element={<Profile />} />
+                          <Route path="/notifications" element={<Notifications />} />
+                          <Route path="/presentation" element={<Presentation />} />
+                          <Route path="/api-docs" element={<ApiDocs />} />
+                          <Route path="/settings" element={<Settings />} />
+                          <Route path="/admin" element={<Admin />} />
+                        </Route>
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
+                  </BrowserRouter>
+                </TooltipProvider>
+              </NotificationsProvider>
+            </PlanLimitsProvider>
+          </PermissionsProvider>
+        </CurrentUserProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
