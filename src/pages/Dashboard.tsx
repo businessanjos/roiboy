@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,6 +127,8 @@ const EVENT_TYPE_ICONS: Record<string, any> = {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const [clients, setClients] = useState<ClientWithScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -141,6 +144,25 @@ export default function Dashboard() {
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
+
+  // Check onboarding status
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (!currentUser?.account_id) return;
+      
+      const { data } = await supabase
+        .from("account_settings")
+        .select("onboarding_completed")
+        .eq("account_id", currentUser.account_id)
+        .single();
+      
+      if (data && !data.onboarding_completed) {
+        navigate("/onboarding");
+      }
+    };
+    
+    checkOnboarding();
+  }, [currentUser?.account_id, navigate]);
 
   const fetchProducts = async () => {
     try {
