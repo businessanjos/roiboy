@@ -314,60 +314,87 @@ async function checkWhatsAppReady() {
   }
 
   try {
-    // Simple detection - just check if we're past the QR code screen
+    // Enhanced detection for WhatsApp Business Web
     const result = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
         try {
-          // Method 1: Check for QR code (if visible, NOT logged in)
-          const qrCanvas = document.querySelector('canvas');
-          const qrDiv = document.querySelector('[data-ref]');
-          const hasQR = qrCanvas || qrDiv;
+          // Check for conversation list items (most reliable indicator)
+          const chatListItems = document.querySelectorAll('[data-testid="cell-frame-container"]');
+          const hasChats = chatListItems.length > 0;
           
-          // Method 2: Check for side panel (conversations list)
+          // Check for conversation list by aria role
+          const listbox = document.querySelector('[role="listbox"]') || 
+                         document.querySelector('[aria-label*="Lista de conversas"]') ||
+                         document.querySelector('[aria-label*="Chat list"]');
+          
+          // Check for side panel (conversations list) - WhatsApp Business Web
           const sidePanel = document.getElementById('side') || 
                            document.getElementById('pane-side') ||
                            document.querySelector('#side') ||
-                           document.querySelector('[id="side"]');
+                           document.querySelector('[class*="side"]') ||
+                           document.querySelector('div[tabindex] > div > div > div'); // Generic nested structure
           
-          // Method 3: Check for any header with contact info
-          const header = document.querySelector('header');
-          const hasHeader = header && header.querySelector('[title]');
+          // Check for chat rows with avatars
+          const avatars = document.querySelectorAll('[data-testid="cell-frame-container"] img');
+          const hasAvatars = avatars.length > 0;
           
-          // Method 4: Check URL - if we're on web.whatsapp.com without QR
-          const isWhatsApp = window.location.hostname.includes('whatsapp');
+          // Check for search input (visible when logged in)
+          const searchInput = document.querySelector('[data-testid="chat-list-search"]') ||
+                             document.querySelector('input[title*="Pesquisar"]') ||
+                             document.querySelector('input[title*="Search"]') ||
+                             document.querySelector('[contenteditable="true"][data-tab]') ||
+                             document.querySelector('div[contenteditable="true"]');
           
-          // Method 5: Check for the app wrapper with content
-          const appDiv = document.getElementById('app');
-          const hasApp = appDiv && appDiv.children.length > 2;
+          // Check for header with user menu
+          const userMenu = document.querySelector('[data-testid="menu"]') ||
+                          document.querySelector('[aria-label*="Menu"]') ||
+                          document.querySelector('[title*="Menu"]');
           
-          // Method 6: Check for search box (only visible when logged in)
-          const searchBox = document.querySelector('[data-testid="chat-list-search"]') ||
-                           document.querySelector('[title*="Pesquisar"]') ||
-                           document.querySelector('[title*="Search"]') ||
-                           document.querySelector('input[title]');
+          // Check for "Archived" text (only visible when logged in) - Portuguese and English
+          const pageText = document.body.innerText || '';
+          const hasArchivedText = pageText.includes('Arquivadas') || pageText.includes('Archived');
           
-          // Method 7: Simple div count heuristic
+          // Check div count (logged in has many more elements)
           const divCount = document.querySelectorAll('div').length;
-          const hasManyDivs = divCount > 100;
+          const hasManyDivs = divCount > 150;
+          
+          // Check for QR code (if visible, NOT logged in)
+          const qrCanvas = document.querySelector('canvas[aria-label*="QR"]') || 
+                          document.querySelector('[data-ref]');
+          const hasQR = !!qrCanvas;
+          
+          // Check for WhatsApp Business specific elements
+          const businessBadge = document.querySelector('[data-testid="business-badge"]') ||
+                               pageText.includes('WhatsApp Business');
           
           const debug = {
-            hasQR: !!hasQR,
+            hasChats: hasChats,
+            chatCount: chatListItems.length,
+            hasListbox: !!listbox,
             sidePanel: !!sidePanel,
-            hasHeader: !!hasHeader,
-            hasApp: !!hasApp,
-            searchBox: !!searchBox,
+            hasAvatars: hasAvatars,
+            avatarCount: avatars.length,
+            searchInput: !!searchInput,
+            userMenu: !!userMenu,
+            hasArchivedText: hasArchivedText,
             divCount: divCount,
             hasManyDivs: hasManyDivs,
+            hasQR: hasQR,
+            isBusiness: !!businessBadge,
             url: window.location.href
           };
           
           console.log('[ROY Debug]', JSON.stringify(debug));
           
-          // If we have many divs and no QR, we're probably logged in
-          const isLoggedIn = !hasQR && (sidePanel || hasHeader || searchBox || (hasManyDivs && hasApp));
+          // Logged in if: has chats OR has avatars OR (has many divs AND no QR) OR has archived text
+          const isLoggedIn = hasChats || hasAvatars || hasArchivedText || 
+                            (hasManyDivs && !hasQR) || 
+                            (!!searchInput && !hasQR) ||
+                            (!!listbox && !hasQR);
           
           return { ready: isLoggedIn, debug: debug };
         } catch(e) {
+          console.error('[ROY] Detection error:', e);
           return { ready: false, error: e.message };
         }
       })()
