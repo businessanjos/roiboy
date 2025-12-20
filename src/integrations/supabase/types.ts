@@ -1831,6 +1831,27 @@ export type Database = {
           },
         ]
       }
+      rate_limit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          identifier: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          identifier: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          identifier?: string
+        }
+        Relationships: []
+      }
       recommendations: {
         Row: {
           account_id: string
@@ -2175,6 +2196,54 @@ export type Database = {
           },
         ]
       }
+      security_audit_logs: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_audit_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           billing_period: string
@@ -2453,11 +2522,25 @@ export type Database = {
       }
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          p_action: string
+          p_identifier: string
+          p_max_requests: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
+      cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
       generate_checkin_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
       get_user_account_id: { Args: never; Returns: string }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      record_rate_limit_hit: {
+        Args: { p_action: string; p_identifier: string }
+        Returns: undefined
+      }
       user_belongs_to_account: {
         Args: { _account_id: string }
         Returns: boolean

@@ -5,18 +5,87 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Rate limit configuration
+const RATE_LIMIT_MAX_REQUESTS = 5; // Max form submissions per window
+const RATE_LIMIT_WINDOW_SECONDS = 60; // 1 minute window
+
+// Input validation functions
+function validateUUID(uuid: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
+}
+
+function validatePhone(phone: string): boolean {
+  if (!phone) return true; // Optional field
+  const digits = phone.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 15;
+}
+
+function validateName(name: string): boolean {
+  if (!name) return true; // Optional field
+  return name.length >= 2 && name.length <= 200;
+}
+
+function sanitizeString(input: string): string {
+  if (!input) return input;
+  // Remove potential XSS characters but allow basic punctuation
+  return input.replace(/[<>]/g, '').trim().substring(0, 1000);
+}
+
+function sanitizeResponses(responses: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(responses)) {
+    const sanitizedKey = sanitizeString(key).substring(0, 100);
+    if (typeof value === 'string') {
+      sanitized[sanitizedKey] = sanitizeString(value);
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      sanitized[sanitizedKey] = value;
+    } else if (Array.isArray(value)) {
+      sanitized[sanitizedKey] = value.map(v => 
+        typeof v === 'string' ? sanitizeString(v) : v
+      ).slice(0, 100);
+    }
+    // Skip other types for security
+  }
+  return sanitized;
+}
+
+function getClientIP(req: Request): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+         req.headers.get('x-real-ip') || 
+         'unknown';
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const clientIP = getClientIP(req);
+
   try {
     const body = await req.json();
     const { formId, clientId, clientName, clientPhone, responses } = body;
 
+    // Validate required fields
     if (!formId) {
       return new Response(
         JSON.stringify({ error: "formId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!validateUUID(formId)) {
+      console.warn(`[${clientIP}] Invalid formId format: ${formId}`);
+      return new Response(
+        JSON.stringify({ error: "Invalid form ID format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (clientId && !validateUUID(clientId)) {
+      console.warn(`[${clientIP}] Invalid clientId format: ${clientId}`);
+      return new Response(
+        JSON.stringify({ error: "Invalid client ID format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -28,12 +97,63 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Submitting response for form ${formId}, client: ${clientId || clientName || "unknown"}`);
+    // Validate optional fields
+    if (clientName && !validateName(clientName)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid name format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (clientPhone && !validatePhone(clientPhone)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid phone format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Sanitize inputs
+    const sanitizedName = clientName ? sanitizeString(clientName) : null;
+    const sanitizedPhone = clientPhone ? sanitizeString(clientPhone) : null;
+    const sanitizedResponses = sanitizeResponses(responses);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Check rate limit
+    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+      p_identifier: clientIP,
+      p_action: 'form_submit',
+      p_max_requests: RATE_LIMIT_MAX_REQUESTS,
+      p_window_seconds: RATE_LIMIT_WINDOW_SECONDS
+    });
+
+    if (!canProceed) {
+      console.warn(`[${clientIP}] Rate limit exceeded for form submission`);
+      
+      // Log security event
+      await supabase.from('security_audit_logs').insert({
+        event_type: 'rate_limit_exceeded',
+        ip_address: clientIP,
+        user_agent: req.headers.get('user-agent'),
+        details: { action: 'form_submit', form_id: formId }
+      });
+      
+      return new Response(
+        JSON.stringify({ error: "Too many submissions. Please wait a moment." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Record the request
+    await supabase.rpc('record_rate_limit_hit', {
+      p_identifier: clientIP,
+      p_action: 'form_submit'
+    });
+
+    console.log(`[${clientIP}] Submitting response for form ${formId}`);
 
     // Fetch form to get account_id, title and validate
     const { data: form, error: formError } = await supabase
@@ -44,7 +164,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (formError) {
-      console.error("Error fetching form:", formError);
+      console.error(`[${clientIP}] Error fetching form:`, formError);
       return new Response(
         JSON.stringify({ error: "Failed to fetch form" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -60,7 +180,7 @@ Deno.serve(async (req) => {
 
     // If require_client_info and no clientId, we need name and phone
     if (form.require_client_info && !clientId) {
-      if (!clientName || !clientPhone) {
+      if (!sanitizedName || !sanitizedPhone) {
         return new Response(
           JSON.stringify({ error: "Client name and phone are required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -80,15 +200,15 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (clientError || !clientData) {
-        console.warn("Client not found, proceeding without linking");
+        console.warn(`[${clientIP}] Client not found, proceeding without linking`);
         resolvedClientId = null;
       }
     }
 
     // Try to find existing client by phone if not provided
-    if (!resolvedClientId && clientPhone) {
+    if (!resolvedClientId && sanitizedPhone) {
       // Normalize phone
-      let normalizedPhone = clientPhone.replace(/\D/g, "");
+      let normalizedPhone = sanitizedPhone.replace(/\D/g, "");
       if (!normalizedPhone.startsWith("+")) {
         if (normalizedPhone.length === 11 || normalizedPhone.length === 10) {
           normalizedPhone = "+55" + normalizedPhone;
@@ -106,7 +226,7 @@ Deno.serve(async (req) => {
 
       if (existingClient) {
         resolvedClientId = existingClient.id;
-        console.log(`Found existing client by phone: ${resolvedClientId}`);
+        console.log(`[${clientIP}] Found existing client by phone: ${resolvedClientId}`);
       }
     }
 
@@ -117,23 +237,37 @@ Deno.serve(async (req) => {
         account_id: form.account_id,
         form_id: formId,
         client_id: resolvedClientId,
-        client_name: clientName || null,
-        client_phone: clientPhone || null,
-        responses,
+        client_name: sanitizedName,
+        client_phone: sanitizedPhone,
+        responses: sanitizedResponses,
         submitted_at: new Date().toISOString(),
       })
       .select("id")
       .single();
 
     if (insertError) {
-      console.error("Error inserting response:", insertError);
+      console.error(`[${clientIP}] Error inserting response:`, insertError);
       return new Response(
         JSON.stringify({ error: "Failed to submit response" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Response submitted successfully: ${response.id}`);
+    console.log(`[${clientIP}] Response submitted successfully: ${response.id}`);
+
+    // Log successful submission
+    await supabase.from('security_audit_logs').insert({
+      event_type: 'form_submission',
+      account_id: form.account_id,
+      ip_address: clientIP,
+      user_agent: req.headers.get('user-agent'),
+      details: { 
+        form_id: formId, 
+        form_title: form.title,
+        response_id: response.id,
+        client_id: resolvedClientId 
+      }
+    });
 
     // Mark form send as responded if client linked
     if (resolvedClientId) {
@@ -145,9 +279,9 @@ Deno.serve(async (req) => {
         .is("responded_at", null);
 
       if (updateSendError) {
-        console.warn("Could not update form send status:", updateSendError);
+        console.warn(`[${clientIP}] Could not update form send status:`, updateSendError);
       } else {
-        console.log(`Marked form send as responded for client ${resolvedClientId}`);
+        console.log(`[${clientIP}] Marked form send as responded for client ${resolvedClientId}`);
       }
     }
 
@@ -161,7 +295,7 @@ Deno.serve(async (req) => {
 
       if (!usersError && accountUsers && accountUsers.length > 0) {
         // Get client name for notification
-        let notificationClientName = clientName || "Cliente";
+        let notificationClientName = sanitizedName || "Cliente";
         if (resolvedClientId) {
           const { data: clientData } = await supabase
             .from("clients")
@@ -191,13 +325,13 @@ Deno.serve(async (req) => {
           .insert(notifications);
 
         if (notifyError) {
-          console.warn("Could not create notifications:", notifyError);
+          console.warn(`[${clientIP}] Could not create notifications:`, notifyError);
         } else {
-          console.log(`Created ${notifications.length} notifications for form response`);
+          console.log(`[${clientIP}] Created ${notifications.length} notifications for form response`);
         }
       }
     } catch (notifyErr) {
-      console.warn("Error creating notifications:", notifyErr);
+      console.warn(`[${clientIP}] Error creating notifications:`, notifyErr);
     }
 
     return new Response(
@@ -205,7 +339,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error(`[${clientIP}] Unexpected error:`, error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
