@@ -56,7 +56,6 @@ function createWhatsAppWindow() {
       preload: path.join(__dirname, 'whatsapp-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      // Use partition for persistent session
       partition: 'persist:whatsapp',
       webSecurity: true
     },
@@ -64,9 +63,27 @@ function createWhatsAppWindow() {
     show: true
   });
 
-  // Set User-Agent to mimic Chrome
+  // Set User-Agent to mimic Chrome browser (not Electron)
   whatsappWindow.webContents.setUserAgent(CHROME_USER_AGENT);
   
+  // IMPORTANT: Block redirects to WhatsApp desktop app
+  whatsappWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Block whatsapp:// protocol that opens desktop app
+    if (url.startsWith('whatsapp://') || url.startsWith('whatsapp:')) {
+      console.log('[ROY] Bloqueando redirect para app desktop:', url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
+
+  // Block navigation to whatsapp:// protocol
+  whatsappWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('whatsapp://') || url.startsWith('whatsapp:')) {
+      console.log('[ROY] Bloqueando navegação para app desktop:', url);
+      event.preventDefault();
+    }
+  });
+
   // Handle navigation errors
   whatsappWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     console.error('[ROY] Falha ao carregar:', errorCode, errorDescription, validatedURL);
