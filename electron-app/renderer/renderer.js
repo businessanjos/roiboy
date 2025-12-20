@@ -162,20 +162,32 @@ const forceWhatsappBtn = document.getElementById('force-whatsapp-btn');
 openWhatsappBtn.addEventListener('click', async () => {
   await window.electronAPI.openWhatsApp();
   whatsappStatus.textContent = 'Abrindo...';
-  // Show force button after opening
-  setTimeout(() => {
-    if (forceWhatsappBtn) forceWhatsappBtn.style.display = 'inline-flex';
-  }, 5000);
 });
 
 // Force WhatsApp connection
 if (forceWhatsappBtn) {
   forceWhatsappBtn.addEventListener('click', async () => {
-    await window.electronAPI.forceWhatsAppConnection();
+    const result = await window.electronAPI.forceWhatsAppConnection();
+    if (result.success) {
+      whatsappStatus.textContent = 'Conectado (manual)';
+      whatsappIndicator.classList.add('active');
+    }
   });
 }
 
 openZoomBtn.addEventListener('click', async () => {
+  await window.electronAPI.openZoom();
+  zoomStatus.textContent = 'Abrindo...';
+});
+
+openMeetBtn.addEventListener('click', async () => {
+  await window.electronAPI.openMeet();
+  meetStatus.textContent = 'Abrindo...';
+});
+
+openDashboardBtn.addEventListener('click', async () => {
+  await window.electronAPI.openDashboard();
+});
   await window.electronAPI.openZoom();
   zoomStatus.textContent = 'Abrindo...';
 });
