@@ -157,10 +157,23 @@ logoutBtn.addEventListener('click', async () => {
 });
 
 // Platform buttons
+const forceWhatsappBtn = document.getElementById('force-whatsapp-btn');
+
 openWhatsappBtn.addEventListener('click', async () => {
   await window.electronAPI.openWhatsApp();
   whatsappStatus.textContent = 'Abrindo...';
+  // Show force button after opening
+  setTimeout(() => {
+    if (forceWhatsappBtn) forceWhatsappBtn.style.display = 'inline-flex';
+  }, 5000);
 });
+
+// Force WhatsApp connection
+if (forceWhatsappBtn) {
+  forceWhatsappBtn.addEventListener('click', async () => {
+    await window.electronAPI.forceWhatsAppConnection();
+  });
+}
 
 openZoomBtn.addEventListener('click', async () => {
   await window.electronAPI.openZoom();
