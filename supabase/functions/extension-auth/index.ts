@@ -76,7 +76,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        api_key: apiKey,
+        apiKey: apiKey,
+        api_key: apiKey, // backwards compatibility
         user: {
           id: userData.id,
           name: userData.name,
