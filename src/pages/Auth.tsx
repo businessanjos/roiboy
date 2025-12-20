@@ -10,6 +10,7 @@ import { TrendingUp, Loader2, AlertCircle, Info, ArrowLeft, CheckCircle, CreditC
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PasswordStrength, validatePassword, usePasswordStrength } from "@/components/ui/password-strength";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
@@ -85,8 +86,10 @@ export default function Auth() {
       return;
     }
 
-    if (signupPassword.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres.");
+    // Validate password strength
+    const passwordValidation = validatePassword(signupPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.error);
       return;
     }
 
@@ -133,8 +136,10 @@ export default function Auth() {
     e.preventDefault();
     setError(null);
 
-    if (newPassword.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres.");
+    // Validate password strength
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.error);
       return;
     }
 
@@ -326,13 +331,14 @@ export default function Auth() {
                     <Input
                       id="new-password"
                       type="password"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Crie uma senha forte"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
-                      minLength={6}
+                      minLength={8}
                       disabled={isSubmitting}
                     />
+                    <PasswordStrength password={newPassword} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirmar senha</Label>
@@ -502,13 +508,14 @@ export default function Auth() {
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Crie uma senha forte"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
                       required
-                      minLength={6}
+                      minLength={8}
                       disabled={isSubmitting}
                     />
+                    <PasswordStrength password={signupPassword} />
                   </div>
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? (
