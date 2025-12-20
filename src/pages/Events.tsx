@@ -77,11 +77,13 @@ interface Attendance {
   };
 }
 
+type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao";
+
 interface Event {
   id: string;
   title: string;
   description: string | null;
-  event_type: "live" | "material";
+  event_type: EventType;
   modality: "online" | "presencial";
   address: string | null;
   scheduled_at: string | null;
@@ -127,7 +129,7 @@ export default function Events() {
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [eventType, setEventType] = useState<"live" | "material">("live");
+  const [eventType, setEventType] = useState<EventType>("live");
   const [modality, setModality] = useState<"online" | "presencial">("online");
   const [address, setAddress] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -481,7 +483,7 @@ export default function Events() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Tipo de Evento</Label>
-                  <Select value={eventType} onValueChange={(v: "live" | "material") => setEventType(v)}>
+                  <Select value={eventType} onValueChange={(v: EventType) => setEventType(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -490,6 +492,42 @@ export default function Events() {
                         <div className="flex items-center gap-2">
                           <Video className="h-4 w-4" />
                           Live / Encontro
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="mentoria">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Mentoria
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="workshop">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-4 w-4" />
+                          Workshop
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="masterclass">
+                        <div className="flex items-center gap-2">
+                          <Video className="h-4 w-4" />
+                          Masterclass
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="webinar">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-4 w-4" />
+                          Webinar
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="imersao">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Imersão
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="plantao">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Plantão de Dúvidas
                         </div>
                       </SelectItem>
                       <SelectItem value="material">
