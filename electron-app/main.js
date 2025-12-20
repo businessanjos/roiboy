@@ -82,63 +82,103 @@ async function checkWhatsAppReady() {
   if (!whatsappWindow) return;
 
   try {
-    const isReady = await whatsappWindow.webContents.executeJavaScript(`
+    const result = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
-        // Multiple selectors for better detection - WhatsApp Web changes frequently
-        const selectors = [
+        // Debug: log what we find
+        const debug = [];
+        
+        // Check for QR code first (means NOT logged in)
+        const qrSelectors = [
+          '[data-testid="qrcode"]',
+          'canvas[aria-label*="QR"]',
+          'div[data-ref]',
+          '[data-testid="intro-md-beta-logo-dark"]',
+          '[data-testid="intro-md-beta-logo-light"]'
+        ];
+        
+        for (const sel of qrSelectors) {
+          if (document.querySelector(sel)) {
+            debug.push('QR found: ' + sel);
+            return { ready: false, debug };
+          }
+        }
+        
+        // Check for loading screen
+        if (document.querySelector('[data-testid="loading-screen"]')) {
+          debug.push('Loading screen visible');
+          return { ready: false, debug };
+        }
+        
+        // Multiple selectors for logged-in state
+        const loggedInSelectors = [
           '[data-testid="chat-list"]',
           '[data-testid="chatlist"]',
           '#pane-side',
+          'div#side',
           '[aria-label*="Lista de conversas"]',
           '[aria-label*="Chat list"]',
+          '[aria-label*="lista de chats"]',
           'div[data-testid="cell-frame-container"]',
-          'div[role="listitem"]'
+          'div[role="listitem"]',
+          '[data-testid="conversation-panel-wrapper"]',
+          'header span[title]',
+          '[data-testid="default-user"]'
         ];
         
-        for (const selector of selectors) {
+        for (const selector of loggedInSelectors) {
           const element = document.querySelector(selector);
           if (element) {
-            console.log('[ROY] WhatsApp detectado via:', selector);
-            return true;
+            debug.push('Logged in via: ' + selector);
+            return { ready: true, debug };
           }
         }
         
-        // Fallback: check if QR code is NOT visible (means logged in)
-        const qrCode = document.querySelector('[data-testid="qrcode"]') || 
-                      document.querySelector('canvas[aria-label*="QR"]') ||
-                      document.querySelector('div[data-ref]');
-        if (!qrCode) {
-          // If no QR and no chat list yet, might still be loading
-          const loadingIndicator = document.querySelector('[data-testid="loading-screen"]');
-          if (!loadingIndicator) {
-            // Check for any conversation items
-            const anyConversation = document.querySelector('[data-testid*="conversation"]') ||
-                                   document.querySelector('[data-testid*="chat"]');
-            if (anyConversation) {
-              console.log('[ROY] WhatsApp detectado via conversação');
-              return true;
-            }
+        // Check if we have ANY app content (fallback)
+        const appWrapper = document.querySelector('#app') || document.querySelector('[id="app"]');
+        if (appWrapper) {
+          const hasContent = appWrapper.querySelector('header') || 
+                            appWrapper.querySelectorAll('div').length > 50;
+          if (hasContent) {
+            debug.push('App has content, assuming logged in');
+            return { ready: true, debug };
           }
         }
         
-        return false;
+        debug.push('No matches found');
+        return { ready: false, debug };
       })()
     `);
 
+    console.log('[ROY] WhatsApp check:', JSON.stringify(result));
+
     updateMainWindow('whatsapp-status', { 
-      connected: isReady,
-      message: isReady ? 'Conectado' : 'Aguardando login...'
+      connected: result.ready,
+      message: result.ready ? 'Conectado' : 'Aguardando login...'
     });
 
-    if (isReady && !captureState.whatsapp.isCapturing) {
+    if (result.ready && !captureState.whatsapp.isCapturing) {
       startCapture('whatsapp');
     }
     
-    // Keep checking periodically (WhatsApp may reload or disconnect)
-    setTimeout(checkWhatsAppReady, isReady ? 10000 : 3000);
+    // Keep checking periodically
+    setTimeout(checkWhatsAppReady, result.ready ? 10000 : 2000);
   } catch (error) {
     console.error('[ROY] Erro ao verificar WhatsApp:', error);
-    setTimeout(checkWhatsAppReady, 5000);
+    setTimeout(checkWhatsAppReady, 3000);
+  }
+}
+
+// Force WhatsApp connection status (for manual override)
+function forceWhatsAppConnected() {
+  if (!whatsappWindow) return;
+  
+  updateMainWindow('whatsapp-status', { 
+    connected: true,
+    message: 'Conectado (manual)'
+  });
+  
+  if (!captureState.whatsapp.isCapturing) {
+    startCapture('whatsapp');
   }
 }
 
@@ -699,6 +739,16 @@ ipcMain.handle('open-dashboard', async () => {
   } else {
     createDashboardWindow();
   }
+  return { success: true };
+});
+
+// Force WhatsApp connection manually
+ipcMain.handle('force-whatsapp-connection', async () => {
+  if (!whatsappWindow) {
+    return { success: false, error: 'WhatsApp window not open' };
+  }
+  
+  forceWhatsAppConnected();
   return { success: true };
 });
 

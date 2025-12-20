@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openMeet: () => ipcRenderer.invoke('open-meet'),
   openDashboard: () => ipcRenderer.invoke('open-dashboard'),
   
+  // Force connection (manual override)
+  forceWhatsAppConnection: () => ipcRenderer.invoke('force-whatsapp-connection'),
+  
   // Events
   onWhatsAppStatus: (callback) => ipcRenderer.on('whatsapp-status', (event, data) => callback(data)),
   onZoomStatus: (callback) => ipcRenderer.on('zoom-status', (event, data) => callback(data)),
