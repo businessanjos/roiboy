@@ -5,6 +5,7 @@ const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
 const loginError = document.getElementById('login-error');
 const logoutBtn = document.getElementById('logout-btn');
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
 // Platform buttons
 const openWhatsappBtn = document.getElementById('open-whatsapp-btn');
@@ -31,6 +32,37 @@ const whatsappMessages = document.getElementById('whatsapp-messages');
 const zoomParticipants = document.getElementById('zoom-participants');
 const meetParticipants = document.getElementById('meet-participants');
 const lastSync = document.getElementById('last-sync');
+
+// Theme Management
+function initTheme() {
+  const savedTheme = localStorage.getItem('roy-theme') || 'dark';
+  setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('roy-theme', theme);
+  updateThemeIcon(theme);
+}
+
+function updateThemeIcon(theme) {
+  const sunIcon = document.getElementById('theme-icon-sun');
+  const moonIcon = document.getElementById('theme-icon-moon');
+  
+  if (theme === 'dark') {
+    sunIcon.style.display = 'block';
+    moonIcon.style.display = 'none';
+  } else {
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  setTheme(newTheme);
+}
 
 // Initialize app
 async function init() {
@@ -196,5 +228,9 @@ window.electronAPI.onMeetCapture((data) => {
 
 window.electronAPI.onStatsUpdate(updateStats);
 
+// Theme toggle
+themeToggleBtn.addEventListener('click', toggleTheme);
+
 // Initialize
+initTheme();
 init();

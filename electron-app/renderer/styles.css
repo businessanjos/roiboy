@@ -4,8 +4,9 @@
   box-sizing: border-box;
 }
 
-:root {
-  /* ROY Gold Theme Palette */
+:root,
+[data-theme="dark"] {
+  /* ROY Gold Theme Palette - Dark */
   --background: #201c19;
   --background-light: #2a2622;
   --foreground: #efede6;
@@ -36,6 +37,31 @@
   --radius: 10px;
 }
 
+[data-theme="light"] {
+  /* ROY Gold Theme Palette - Light */
+  --background: #f8f6f2;
+  --background-light: #ffffff;
+  --foreground: #201c19;
+  --foreground-muted: #6b6560;
+  
+  --card: #ffffff;
+  --card-foreground: #201c19;
+  
+  --primary: #c49a4d;
+  --primary-dark: #a8822f;
+  --primary-foreground: #ffffff;
+  
+  --accent: #506767;
+  --accent-foreground: #ffffff;
+  
+  --border: #e5e2dc;
+  --input: #f0ede6;
+  
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #c49a4d;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background: var(--background);
@@ -56,9 +82,19 @@ body {
 .header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 16px 0;
   margin-bottom: 20px;
+}
+
+.theme-toggle {
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--border);
+  color: var(--primary);
 }
 
 .logo {
