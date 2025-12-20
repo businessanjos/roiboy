@@ -1,8 +1,36 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, protocol } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
 const store = new Store();
+
+// IMPORTANT: Prevent WhatsApp protocol from opening external apps
+app.on('ready', () => {
+  // Remove whatsapp as external protocol handler
+  protocol.registerHttpProtocol('whatsapp', (request, callback) => {
+    console.log('[ROY] Bloqueando protocolo whatsapp://');
+    // Don't do anything - just block it
+  });
+});
+
+// Prevent the app from opening external protocols
+app.on('web-contents-created', (event, contents) => {
+  contents.on('will-navigate', (event, url) => {
+    if (url.startsWith('whatsapp:')) {
+      console.log('[ROY] Bloqueando navegação externa:', url);
+      event.preventDefault();
+    }
+  });
+  
+  // Block new window requests that try to open whatsapp://
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('whatsapp:')) {
+      console.log('[ROY] Bloqueando abertura externa:', url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
+});
 
 // API Configuration - ROY Backend
 const API_BASE_URL = 'https://mtzoavtbtqflufyccern.supabase.co/functions/v1';
@@ -99,6 +127,26 @@ function createWhatsAppWindow() {
   console.log('[ROY] Carregando WhatsApp Web...');
   whatsappWindow.loadURL('https://web.whatsapp.com');
   whatsappWindow.setMenuBarVisibility(false);
+
+  // Inject script to prevent desktop app detection BEFORE page runs its scripts
+  whatsappWindow.webContents.on('did-start-loading', () => {
+    whatsappWindow.webContents.executeJavaScript(`
+      // Override location.href setter to block whatsapp:// redirects
+      const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+      
+      // Block window.open for whatsapp:// URLs
+      const originalOpen = window.open;
+      window.open = function(url, ...args) {
+        if (url && url.toString().startsWith('whatsapp:')) {
+          console.log('[ROY] Blocked window.open to whatsapp://');
+          return null;
+        }
+        return originalOpen.call(this, url, ...args);
+      };
+      
+      console.log('[ROY] Proteção contra redirect ativada');
+    `).catch(() => {});
+  });
 
   // Open DevTools to debug
   if (process.argv.includes('--dev')) {
