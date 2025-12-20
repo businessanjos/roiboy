@@ -7,10 +7,14 @@ const store = new Store();
 // API Configuration - ROY Backend
 const API_BASE_URL = 'https://mtzoavtbtqflufyccern.supabase.co/functions/v1';
 
+// ROY Dashboard URL
+const ROY_DASHBOARD_URL = 'https://cxroy.lovable.app';
+
 let mainWindow = null;
 let whatsappWindow = null;
 let zoomWindow = null;
 let meetWindow = null;
+let dashboardWindow = null;
 let authData = null;
 
 // Capture states
@@ -217,6 +221,39 @@ async function checkMeetReady() {
     console.error('[ROY] Erro ao verificar Meet:', error);
     setTimeout(checkMeetReady, 5000);
   }
+}
+
+// ============= Dashboard Window =============
+function createDashboardWindow() {
+  dashboardWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    title: 'ROY - Dashboard',
+    show: true
+  });
+
+  // Set modern Chrome User-Agent
+  dashboardWindow.webContents.setUserAgent(CHROME_USER_AGENT);
+  
+  dashboardWindow.loadURL(ROY_DASHBOARD_URL);
+  dashboardWindow.setMenuBarVisibility(false);
+
+  dashboardWindow.on('closed', () => {
+    dashboardWindow = null;
+  });
+
+  // Open external links in default browser
+  dashboardWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (!url.startsWith(ROY_DASHBOARD_URL)) {
+      require('electron').shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
 }
 
 // ============= Capture Functions =============
@@ -615,6 +652,15 @@ ipcMain.handle('open-meet', async () => {
     meetWindow.focus();
   } else {
     createMeetWindow();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('open-dashboard', async () => {
+  if (dashboardWindow) {
+    dashboardWindow.focus();
+  } else {
+    createDashboardWindow();
   }
   return { success: true };
 });

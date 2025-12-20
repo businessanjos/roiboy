@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openWhatsApp: () => ipcRenderer.invoke('open-whatsapp'),
   openZoom: () => ipcRenderer.invoke('open-zoom'),
   openMeet: () => ipcRenderer.invoke('open-meet'),
+  openDashboard: () => ipcRenderer.invoke('open-dashboard'),
   
   // Events
   onWhatsAppStatus: (callback) => ipcRenderer.on('whatsapp-status', (event, data) => callback(data)),

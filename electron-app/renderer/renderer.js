@@ -11,6 +11,7 @@ const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const openWhatsappBtn = document.getElementById('open-whatsapp-btn');
 const openZoomBtn = document.getElementById('open-zoom-btn');
 const openMeetBtn = document.getElementById('open-meet-btn');
+const openDashboardBtn = document.getElementById('open-dashboard-btn');
 
 // User elements
 const userName = document.getElementById('user-name');
@@ -169,6 +170,10 @@ openZoomBtn.addEventListener('click', async () => {
 openMeetBtn.addEventListener('click', async () => {
   await window.electronAPI.openMeet();
   meetStatus.textContent = 'Abrindo...';
+});
+
+openDashboardBtn.addEventListener('click', async () => {
+  await window.electronAPI.openDashboard();
 });
 
 // Update UI functions

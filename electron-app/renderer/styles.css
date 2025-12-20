@@ -292,6 +292,24 @@ body {
   gap: 12px;
 }
 
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-actions .btn-primary.btn-small {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 8px 12px;
+  width: auto;
+  margin-top: 0;
+}
+
+.user-actions .btn-primary.btn-small:hover {
+  background: var(--primary-dark);
+}
+
 .avatar {
   width: 40px;
   height: 40px;
