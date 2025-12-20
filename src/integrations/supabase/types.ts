@@ -2415,7 +2415,15 @@ export type Database = {
       client_status: "active" | "paused" | "churn_risk" | "churned"
       delivery_status: "pending" | "delivered" | "missed"
       event_modality: "online" | "presencial"
-      event_type: "live" | "material"
+      event_type:
+        | "live"
+        | "material"
+        | "mentoria"
+        | "workshop"
+        | "masterclass"
+        | "webinar"
+        | "imersao"
+        | "plantao"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
       integration_type: "zoom" | "google" | "clinica_ryka" | "pipedrive"
@@ -2617,7 +2625,16 @@ export const Constants = {
       client_status: ["active", "paused", "churn_risk", "churned"],
       delivery_status: ["pending", "delivered", "missed"],
       event_modality: ["online", "presencial"],
-      event_type: ["live", "material"],
+      event_type: [
+        "live",
+        "material",
+        "mentoria",
+        "workshop",
+        "masterclass",
+        "webinar",
+        "imersao",
+        "plantao",
+      ],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
       integration_type: ["zoom", "google", "clinica_ryka", "pipedrive"],

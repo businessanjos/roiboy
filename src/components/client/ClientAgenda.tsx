@@ -51,11 +51,13 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao";
+
 interface Event {
   id: string;
   title: string;
   description: string | null;
-  event_type: "live" | "material";
+  event_type: EventType;
   modality: "online" | "presencial";
   address: string | null;
   checkin_code: string | null;
@@ -110,7 +112,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    event_type: "live" as "live" | "material",
+    event_type: "live" as EventType,
     scheduled_at: "",
     duration_minutes: "60",
     meeting_url: "",
