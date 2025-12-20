@@ -42,8 +42,10 @@ import {
   Settings,
   FileText,
   Ban,
-  PlayCircle
+  PlayCircle,
+  Eye
 } from "lucide-react";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
 
@@ -291,7 +293,7 @@ export default function Admin() {
         </TabsContent>
 
         <TabsContent value="accounts" className="mt-0">
-          <AccountsTab accounts={accounts} plans={plans} isLoading={loadingAccounts} />
+          <AccountsTab accounts={accounts} plans={plans} allUsers={allUsers} isLoading={loadingAccounts} />
         </TabsContent>
 
         <TabsContent value="users" className="mt-0">
@@ -1065,12 +1067,35 @@ function PlansTab({ plans, isLoading }: { plans: SubscriptionPlan[]; isLoading: 
 }
 
 // Accounts Tab Component
-function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plans: SubscriptionPlan[]; isLoading: boolean }) {
+function AccountsTab({ accounts, plans, allUsers, isLoading }: { accounts: Account[]; plans: SubscriptionPlan[]; allUsers: User[]; isLoading: boolean }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { startImpersonation } = useImpersonation();
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
+  const handleImpersonate = async (accountId: string) => {
+    // Find the first user of this account
+    const accountUser = allUsers.find(u => u.account_id === accountId);
+    if (!accountUser) {
+      toast.error('Nenhum usuário encontrado nesta conta');
+      return;
+    }
+    
+    setIsImpersonating(true);
+    try {
+      await startImpersonation(accountUser.id);
+      navigate('/dashboard');
+      toast.success(`Visualizando como ${accountUser.name}`);
+    } catch (error) {
+      toast.error('Erro ao iniciar impersonação');
+    } finally {
+      setIsImpersonating(false);
+    }
+  };
   
   // Separate form states for create and edit to avoid conflicts
   const [createFormData, setCreateFormData] = useState({
@@ -1667,6 +1692,16 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-amber-600 hover:text-amber-700"
+                            onClick={() => handleImpersonate(account.id)}
+                            disabled={isImpersonating || account.user_count === 0}
+                            title="Visualizar como usuário desta conta"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
