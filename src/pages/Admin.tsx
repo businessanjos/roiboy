@@ -314,7 +314,12 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
   const cancelledAccounts = accounts.filter(a => a.subscription_status === 'cancelled').length;
   
   const totalClients = accounts.reduce((sum, a) => sum + (a.client_count || 0), 0);
-  const activePlans = plans.filter(p => p.is_active).length;
+  
+  // Separate main plans from add-ons
+  const mainPlans = plans.filter(p => p.plan_type === 'main');
+  const addonPlans = plans.filter(p => p.plan_type === 'addon');
+  const activeMainPlans = mainPlans.filter(p => p.is_active).length;
+  const activeAddons = addonPlans.filter(p => p.is_active).length;
   
   // Calculate MRR (Monthly Recurring Revenue)
   const mrr = accounts.reduce((sum, account) => {
@@ -357,7 +362,7 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
         <StatCard icon={Activity} label="Em Trial" value={trialAccounts} variant="warning" />
         <StatCard icon={Users} label="Usuários" value={users.length} />
         <StatCard icon={Users} label="Clientes" value={totalClients} />
-        <StatCard icon={Package} label="Planos Ativos" value={activePlans} />
+        <StatCard icon={Package} label="Planos Ativos" value={activeMainPlans} />
       </div>
 
       {/* Distribution Cards */}
@@ -376,22 +381,41 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
 
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base font-medium">Planos</CardTitle>
+            <CardTitle className="text-base font-medium">Planos & Add-ons</CardTitle>
           </CardHeader>
           <CardContent>
             {plans.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum plano cadastrado</p>
             ) : (
-              <div className="space-y-3">
-                {plans.filter(p => p.is_active).map(plan => {
-                  const count = accounts.filter(a => a.plan_id === plan.id).length;
-                  return (
-                    <div key={plan.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                      <span className="text-sm font-medium">{plan.name}</span>
-                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'conta' : 'contas'}</span>
-                    </div>
-                  );
-                })}
+              <div className="space-y-4">
+                {/* Main Plans */}
+                {mainPlans.filter(p => p.is_active).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Planos</p>
+                    {mainPlans.filter(p => p.is_active).map(plan => {
+                      const count = accounts.filter(a => a.plan_id === plan.id).length;
+                      return (
+                        <div key={plan.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                          <span className="text-sm font-medium">{plan.name}</span>
+                          <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'conta' : 'contas'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {/* Add-ons */}
+                {addonPlans.filter(p => p.is_active).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add-ons</p>
+                    {addonPlans.filter(p => p.is_active).map(plan => (
+                      <div key={plan.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                        <span className="text-sm font-medium">{plan.name}</span>
+                        <span className="text-sm text-muted-foreground">R$ {plan.price.toLocaleString('pt-BR')}/mês</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
