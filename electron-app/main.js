@@ -49,9 +49,6 @@ function createMainWindow() {
 const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function createWhatsAppWindow() {
-  // Use persist partition to save session/cookies
-  const ses = session.fromPartition('persist:whatsapp');
-  
   whatsappWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -59,33 +56,34 @@ function createWhatsAppWindow() {
       preload: path.join(__dirname, 'whatsapp-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      session: ses,
-      // Allow features WhatsApp needs
-      webSecurity: true,
-      allowRunningInsecureContent: false
+      // Use partition for persistent session
+      partition: 'persist:whatsapp',
+      webSecurity: true
     },
     title: 'WhatsApp Web - ROY',
     show: true
   });
 
-  // Set User-Agent before loading
-  ses.setUserAgent(CHROME_USER_AGENT);
+  // Set User-Agent to mimic Chrome
   whatsappWindow.webContents.setUserAgent(CHROME_USER_AGENT);
   
-  // Set permission handler for notifications, media, etc.
-  ses.setPermissionRequestHandler((webContents, permission, callback) => {
-    const allowedPermissions = ['notifications', 'media', 'mediaKeySystem', 'clipboard-read', 'clipboard-sanitized-write'];
-    if (allowedPermissions.includes(permission)) {
-      callback(true);
-    } else {
-      callback(false);
+  // Handle navigation errors
+  whatsappWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('[ROY] Falha ao carregar:', errorCode, errorDescription, validatedURL);
+  });
+
+  // Log console messages from WhatsApp
+  whatsappWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    if (message.includes('ROY') || level >= 2) {
+      console.log('[WhatsApp Console]', message);
     }
   });
-  
+
+  console.log('[ROY] Carregando WhatsApp Web...');
   whatsappWindow.loadURL('https://web.whatsapp.com');
   whatsappWindow.setMenuBarVisibility(false);
 
-  // Open DevTools in dev mode to see logs
+  // Open DevTools to debug
   if (process.argv.includes('--dev')) {
     whatsappWindow.webContents.openDevTools({ mode: 'detach' });
   }
@@ -97,11 +95,11 @@ function createWhatsAppWindow() {
   });
 
   whatsappWindow.webContents.on('did-finish-load', () => {
-    console.log('[ROY] WhatsApp Web carregado, verificando status...');
-    checkWhatsAppReady();
+    const url = whatsappWindow.webContents.getURL();
+    console.log('[ROY] WhatsApp Web carregado:', url);
+    setTimeout(checkWhatsAppReady, 2000);
   });
   
-  // Also check when DOM is ready
   whatsappWindow.webContents.on('dom-ready', () => {
     console.log('[ROY] WhatsApp DOM ready');
   });
