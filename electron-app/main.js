@@ -640,55 +640,107 @@ async function injectWhatsAppCaptureScript() {
         if (window.__royInjected) return;
         window.__royInjected = true;
         window.__royMessages = window.__royMessages || [];
+        window.__roySentIds = window.__roySentIds || new Set();
         
         console.log('[ROY] Script de captura injetado');
         
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-              if (node.nodeType === 1) {
-                const messages = node.querySelectorAll('[data-testid="msg-container"]');
-                messages.forEach(processMessage);
+        // Function to extract phone from chat header
+        function extractPhoneFromChat() {
+          // Try multiple selectors for WhatsApp Business
+          const selectors = [
+            'header span[dir="auto"][title]',
+            'header [data-testid="conversation-info-header"] span',
+            '#main header span[title]',
+            'header ._amig span',
+            '[data-testid="conversation-panel-wrapper"] header span[title]'
+          ];
+          
+          for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+              const text = el.getAttribute('title') || el.innerText || '';
+              // Match phone pattern
+              const phoneMatch = text.match(/\\+[0-9\\s()-]{10,20}/);
+              if (phoneMatch) {
+                return phoneMatch[0].replace(/[\\s()-]/g, '');
               }
-            });
-          });
-        });
+              // If no + sign, try to find number patterns
+              const numbersMatch = text.match(/[0-9]{10,15}/);
+              if (numbersMatch) {
+                return '+' + numbersMatch[0];
+              }
+            }
+          }
+          
+          // Try to get from contact info drawer if open
+          const contactInfo = document.querySelector('[data-testid="contact-info-drawer"] span[data-testid="cell-phone"]');
+          if (contactInfo) {
+            const phone = contactInfo.innerText.replace(/[\\s()-]/g, '');
+            return phone.startsWith('+') ? phone : '+' + phone;
+          }
+          
+          return '';
+        }
         
+        // Function to check if it's a group chat
+        function isGroupChat() {
+          const groupIndicators = [
+            '[data-testid="group-subject"]',
+            '[aria-label*="grupo"]',
+            '[aria-label*="group"]'
+          ];
+          return groupIndicators.some(sel => document.querySelector(sel));
+        }
+        
+        // Process a single message
         function processMessage(msgElement) {
           try {
-            const isOutgoing = msgElement.classList.contains('message-out');
-            const textElement = msgElement.querySelector('[data-testid="msg-text"], .selectable-text');
+            const msgId = msgElement.getAttribute('data-id') || '';
+            
+            // Skip if already processed
+            if (!msgId || window.__roySentIds.has(msgId)) return;
+            
+            const isOutgoing = msgElement.classList.contains('message-out') || 
+                              msgElement.querySelector('[data-testid="msg-check"]') !== null;
+            
+            // Get message text
+            const textElement = msgElement.querySelector('[data-testid="msg-text"]') || 
+                               msgElement.querySelector('.selectable-text') ||
+                               msgElement.querySelector('span.selectable-text');
             
             if (!textElement) return;
             
-            const text = textElement.innerText;
-            const chatHeader = document.querySelector('header [title]');
-            let phone = '';
+            const text = textElement.innerText || textElement.textContent;
+            if (!text || text.trim().length < 2) return;
             
-            if (chatHeader) {
-              const title = chatHeader.getAttribute('title');
-              const phoneMatch = title.match(/\\+?[0-9\\s-]{10,}/);
-              if (phoneMatch) {
-                phone = phoneMatch[0].replace(/[\\s-]/g, '');
-              }
+            const phone = extractPhoneFromChat();
+            const isGroup = isGroupChat();
+            
+            // Mark as sent to avoid duplicates
+            window.__roySentIds.add(msgId);
+            
+            // Clean up old entries
+            if (window.__roySentIds.size > 2000) {
+              const arr = Array.from(window.__roySentIds);
+              window.__roySentIds = new Set(arr.slice(-1000));
             }
             
-            const msgId = msgElement.getAttribute('data-id') || Date.now().toString();
-            
-            if (window.__royMessages.includes(msgId)) return;
-            window.__royMessages.push(msgId);
-            
-            if (window.__royMessages.length > 1000) {
-              window.__royMessages = window.__royMessages.slice(-500);
-            }
+            console.log('[ROY] Capturando mensagem:', { 
+              id: msgId, 
+              phone, 
+              direction: isOutgoing ? 'out' : 'in',
+              textLength: text.length,
+              isGroup
+            });
             
             window.electronAPI.capturedMessage({
               platform: 'whatsapp',
               id: msgId,
-              text: text,
+              text: text.trim(),
               direction: isOutgoing ? 'team_to_client' : 'client_to_team',
               timestamp: new Date().toISOString(),
-              phone: phone
+              phone: phone,
+              isGroup: isGroup
             });
             
           } catch (e) {
@@ -696,10 +748,55 @@ async function injectWhatsAppCaptureScript() {
           }
         }
         
-        const chatContainer = document.querySelector('#main');
-        if (chatContainer) {
-          observer.observe(chatContainer, { childList: true, subtree: true });
+        // Scan existing messages in current chat
+        function scanCurrentChat() {
+          const messages = document.querySelectorAll('[data-testid="msg-container"]');
+          console.log('[ROY] Escaneando', messages.length, 'mensagens existentes');
+          messages.forEach(processMessage);
         }
+        
+        // Set up mutation observer for new messages
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeType === 1) {
+                // Check if node itself is a message
+                if (node.getAttribute && node.getAttribute('data-testid') === 'msg-container') {
+                  processMessage(node);
+                }
+                // Check for nested messages
+                const messages = node.querySelectorAll ? node.querySelectorAll('[data-testid="msg-container"]') : [];
+                messages.forEach(processMessage);
+              }
+            });
+          });
+        });
+        
+        // Start observing
+        function startObserving() {
+          const chatContainer = document.querySelector('#main') || document.querySelector('[data-testid="conversation-panel-wrapper"]');
+          if (chatContainer) {
+            observer.observe(chatContainer, { childList: true, subtree: true });
+            console.log('[ROY] Observer ativo no chat');
+            scanCurrentChat();
+          } else {
+            setTimeout(startObserving, 2000);
+          }
+        }
+        
+        startObserving();
+        
+        // Re-scan when chat changes
+        let lastChatPhone = '';
+        setInterval(() => {
+          const currentPhone = extractPhoneFromChat();
+          if (currentPhone && currentPhone !== lastChatPhone) {
+            lastChatPhone = currentPhone;
+            console.log('[ROY] Chat mudou para:', currentPhone);
+            setTimeout(scanCurrentChat, 500);
+          }
+        }, 2000);
+        
       })()
     `);
   } catch (error) {
