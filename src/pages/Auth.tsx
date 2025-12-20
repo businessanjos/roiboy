@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Navigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useLoginSecurity } from "@/hooks/useLoginSecurity";
+import { useSecurityAudit } from "@/hooks/useSecurityAudit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, Loader2, AlertCircle, Info, ArrowLeft, CheckCircle, CreditCard, Phone } from "lucide-react";
+import { TrendingUp, Loader2, AlertCircle, Info, ArrowLeft, CheckCircle, CreditCard, Phone, ShieldAlert, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,17 +62,53 @@ export default function Auth() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // Security hooks
+  const { checkAccountLock, recordLoginAttempt, isCheckingLock } = useLoginSecurity();
+  const { logLoginSuccess, logLoginFailure, logLoginBlocked, logSignupSuccess } = useSecurityAudit();
+  const [isAccountLocked, setIsAccountLocked] = useState(false);
+  const [lockoutMinutes, setLockoutMinutes] = useState(0);
+  const [remainingAttempts, setRemainingAttempts] = useState(5);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
+    // Check if account is locked
+    const lockStatus = await checkAccountLock(loginEmail);
+    if (lockStatus.isLocked) {
+      setIsAccountLocked(true);
+      setLockoutMinutes(lockStatus.lockoutMinutes);
+      setError(`Conta bloqueada temporariamente. Tente novamente em ${lockStatus.lockoutMinutes} minutos.`);
+      logLoginBlocked(loginEmail);
+      setIsSubmitting(false);
+      return;
+    }
+
+    setRemainingAttempts(lockStatus.remainingAttempts);
+
     const { error } = await signIn(loginEmail, loginPassword);
 
     if (error) {
-      setError("Email ou senha incorretos. Tente novamente.");
+      await recordLoginAttempt(loginEmail, false);
+      logLoginFailure(error.message);
+      
+      const newRemainingAttempts = remainingAttempts - 1;
+      setRemainingAttempts(newRemainingAttempts);
+      
+      if (newRemainingAttempts <= 2 && newRemainingAttempts > 0) {
+        setError(`Email ou senha incorretos. ${newRemainingAttempts} ${newRemainingAttempts === 1 ? 'tentativa restante' : 'tentativas restantes'}.`);
+      } else if (newRemainingAttempts <= 0) {
+        setIsAccountLocked(true);
+        setLockoutMinutes(15);
+        setError(`Conta bloqueada por 15 minutos devido a múltiplas tentativas falhas.`);
+      } else {
+        setError("Email ou senha incorretos. Tente novamente.");
+      }
       toast.error("Falha ao fazer login");
     } else {
+      await recordLoginAttempt(loginEmail, true);
+      logLoginSuccess();
       toast.success("Login realizado com sucesso!");
     }
 

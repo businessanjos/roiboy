@@ -5,13 +5,16 @@ import { useCurrentUser } from "./useCurrentUser";
 export type SecurityEventType = 
   | 'login_success'
   | 'login_failure'
+  | 'login_blocked'
   | 'logout'
   | 'password_reset_request'
   | 'password_reset_success'
   | 'signup_success'
   | 'admin_action'
   | 'permission_denied'
-  | 'suspicious_activity';
+  | 'suspicious_activity'
+  | 'new_device_login'
+  | 'session_terminated';
 
 interface SecurityAuditDetails {
   action?: string;
@@ -91,16 +94,31 @@ export function useSecurityAudit() {
     logSecurityEvent('suspicious_activity', { description, ...details });
   }, [logSecurityEvent]);
 
+  const logLoginBlocked = useCallback((email: string) => {
+    logSecurityEvent('login_blocked', { email_domain: email.split('@')[1] });
+  }, [logSecurityEvent]);
+
+  const logNewDeviceLogin = useCallback((deviceInfo?: Record<string, unknown>) => {
+    logSecurityEvent('new_device_login', deviceInfo);
+  }, [logSecurityEvent]);
+
+  const logSessionTerminated = useCallback((sessionId: string) => {
+    logSecurityEvent('session_terminated', { session_id: sessionId });
+  }, [logSecurityEvent]);
+
   return {
     logSecurityEvent,
     logLoginSuccess,
     logLoginFailure,
+    logLoginBlocked,
     logLogout,
     logPasswordResetRequest,
     logPasswordResetSuccess,
     logSignupSuccess,
     logAdminAction,
     logPermissionDenied,
-    logSuspiciousActivity
+    logSuspiciousActivity,
+    logNewDeviceLogin,
+    logSessionTerminated
   };
 }

@@ -1647,6 +1647,33 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip_address: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       message_events: {
         Row: {
           account_id: string
@@ -2369,6 +2396,69 @@ export type Database = {
           },
         ]
       }
+      user_sessions: {
+        Row: {
+          account_id: string
+          city: string | null
+          country: string | null
+          created_at: string
+          device_fingerprint: string | null
+          expires_at: string
+          id: string
+          ip_address: string | null
+          is_trusted: boolean
+          last_active_at: string
+          session_token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          is_trusted?: boolean
+          last_active_at?: string
+          session_token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_fingerprint?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          is_trusted?: boolean
+          last_active_at?: string
+          session_token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           account_id: string
@@ -2531,12 +2621,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
       generate_checkin_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
       get_user_account_id: { Args: never; Returns: string }
+      is_account_locked: { Args: { p_email: string }; Returns: boolean }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
+      is_new_device: {
+        Args: { p_device_fingerprint: string; p_user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      record_login_attempt: {
+        Args: {
+          p_email: string
+          p_ip_address: string
+          p_success: boolean
+          p_user_agent: string
+        }
+        Returns: undefined
+      }
       record_rate_limit_hit: {
         Args: { p_action: string; p_identifier: string }
         Returns: undefined
