@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StatusBar, StatCard } from "@/components/admin";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -2493,23 +2493,67 @@ function PaymentsTab() {
 // AI Costs Tab Component
 function AICostsTab({ accounts }: { accounts: Account[] }) {
   const [selectedPeriod, setSelectedPeriod] = useState('30');
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
+  const [isCustomOpen, setIsCustomOpen] = useState(false);
   
+  const getDateRange = () => {
+    if (selectedPeriod === 'custom' && customStartDate && customEndDate) {
+      return {
+        start: startOfDay(customStartDate),
+        end: endOfDay(customEndDate)
+      };
+    }
+    
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - parseInt(selectedPeriod === 'custom' ? '30' : selectedPeriod));
+    return { start, end };
+  };
+
   const { data: aiUsageLogs = [], isLoading } = useQuery({
-    queryKey: ['admin-ai-usage', selectedPeriod],
+    queryKey: ['admin-ai-usage', selectedPeriod, customStartDate?.toISOString(), customEndDate?.toISOString()],
     queryFn: async () => {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - parseInt(selectedPeriod));
+      const { start, end } = getDateRange();
       
       const { data, error } = await supabase
         .from('ai_usage_logs')
         .select('*')
-        .gte('created_at', startDate.toISOString())
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     }
   });
+
+  const handlePeriodChange = (value: string) => {
+    if (value === 'custom') {
+      setIsCustomOpen(true);
+    } else {
+      setSelectedPeriod(value);
+      setCustomStartDate(undefined);
+      setCustomEndDate(undefined);
+    }
+  };
+
+  const applyCustomPeriod = () => {
+    if (customStartDate && customEndDate) {
+      setSelectedPeriod('custom');
+      setIsCustomOpen(false);
+    } else {
+      toast.error('Selecione as datas de início e fim');
+    }
+  };
+
+  const getPeriodLabel = () => {
+    if (selectedPeriod === 'custom' && customStartDate && customEndDate) {
+      return `${format(customStartDate, 'dd/MM/yyyy')} - ${format(customEndDate, 'dd/MM/yyyy')}`;
+    }
+    if (selectedPeriod === '1') return 'Hoje';
+    return `Últimos ${selectedPeriod} dias`;
+  };
 
   // Calculate costs per model (approximate pricing in USD per 1M tokens, converted to BRL)
   const modelCosts: Record<string, { input: number; output: number }> = {
@@ -2584,16 +2628,57 @@ function AICostsTab({ accounts }: { accounts: Account[] }) {
           <h3 className="text-lg font-semibold">Custos de IA</h3>
           <p className="text-sm text-muted-foreground">Monitoramento de uso e custos com modelos de IA</p>
         </div>
-        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Últimos 7 dias</SelectItem>
-            <SelectItem value="30">Últimos 30 dias</SelectItem>
-            <SelectItem value="90">Últimos 90 dias</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Período">
+                {getPeriodLabel()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Hoje</SelectItem>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+              <SelectItem value="custom">Período personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {/* Custom Period Dialog */}
+          <Dialog open={isCustomOpen} onOpenChange={setIsCustomOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Período Personalizado</DialogTitle>
+                <DialogDescription>Selecione o intervalo de datas para análise</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Data Inicial</Label>
+                  <Input
+                    type="date"
+                    value={customStartDate ? format(customStartDate, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setCustomStartDate(e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined)}
+                    max={format(new Date(), 'yyyy-MM-dd')}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Data Final</Label>
+                  <Input
+                    type="date"
+                    value={customEndDate ? format(customEndDate, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setCustomEndDate(e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined)}
+                    max={format(new Date(), 'yyyy-MM-dd')}
+                    min={customStartDate ? format(customStartDate, 'yyyy-MM-dd') : undefined}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCustomOpen(false)}>Cancelar</Button>
+                <Button onClick={applyCustomPeriod}>Aplicar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -2607,7 +2692,7 @@ function AICostsTab({ accounts }: { accounts: Account[] }) {
               <div>
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Custo Total</p>
                 <p className="text-2xl font-semibold">R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-muted-foreground">{selectedPeriod} dias</p>
+                <p className="text-xs text-muted-foreground">{getPeriodLabel()}</p>
               </div>
             </div>
           </CardContent>
