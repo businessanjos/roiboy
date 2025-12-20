@@ -5,6 +5,7 @@ import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { Loader2 } from "lucide-react";
 import { GlobalSearch, useGlobalSearch } from "@/components/ui/global-search";
 import { KeyboardShortcutsHelp, useKeyboardShortcuts } from "@/components/ui/keyboard-shortcuts";
+import { TrialBanner } from "@/components/subscription/TrialBanner";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -31,6 +32,7 @@ export function AppLayout() {
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-background">
+      <TrialBanner />
       <MobileHeader />
       <div className="flex flex-1 w-full">
         <Sidebar />
