@@ -64,6 +64,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AttendanceReport from "@/components/events/AttendanceReport";
+import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 
 interface Attendance {
   id: string;
@@ -125,6 +126,11 @@ export default function Events() {
   const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<EventWithProducts | null>(null);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+  
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterEventType, setFilterEventType] = useState<string>("all");
+  const [filterModality, setFilterModality] = useState<string>("all");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -412,6 +418,25 @@ export default function Events() {
     );
   };
 
+  // Filter events based on search and filters
+  const filteredEvents = events.filter((event) => {
+    const matchesSearch = 
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = filterEventType === "all" || event.event_type === filterEventType;
+    const matchesModality = filterModality === "all" || event.modality === filterModality;
+    
+    return matchesSearch && matchesType && matchesModality;
+  });
+
+  const hasActiveFilters = filterEventType !== "all" || filterModality !== "all";
+
+  const clearFilters = () => {
+    setFilterEventType("all");
+    setFilterModality("all");
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -436,16 +461,57 @@ export default function Events() {
         </TabsList>
 
         <TabsContent value="eventos" className="space-y-6">
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Evento
-            </Button>
-          </DialogTrigger>
+          {/* Filter Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <FilterBar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar por título ou descrição..."
+              filtersActive={hasActiveFilters}
+              onClearFilters={clearFilters}
+            >
+              <FilterItem>
+                <Select value={filterEventType} onValueChange={setFilterEventType}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-10">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    <SelectItem value="live">Live</SelectItem>
+                    <SelectItem value="mentoria">Mentoria</SelectItem>
+                    <SelectItem value="workshop">Workshop</SelectItem>
+                    <SelectItem value="masterclass">Masterclass</SelectItem>
+                    <SelectItem value="webinar">Webinar</SelectItem>
+                    <SelectItem value="imersao">Imersão</SelectItem>
+                    <SelectItem value="plantao">Plantão</SelectItem>
+                    <SelectItem value="material">Material</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FilterItem>
+              <FilterItem>
+                <Select value={filterModality} onValueChange={setFilterModality}>
+                  <SelectTrigger className="w-full sm:w-[140px] h-10">
+                    <SelectValue placeholder="Modalidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="presencial">Presencial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FilterItem>
+            </FilterBar>
+            
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 shrink-0">
+                  <Plus className="h-4 w-4" />
+                  Novo Evento
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -671,7 +737,9 @@ export default function Events() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+            </Dialog>
+          </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -683,13 +751,16 @@ export default function Events() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+            {loading ? (
             <div className="text-center py-8 text-muted-foreground">
               Carregando eventos...
             </div>
-          ) : events.length === 0 ? (
+          ) : filteredEvents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhum evento cadastrado ainda.
+              {events.length === 0 
+                ? "Nenhum evento cadastrado ainda."
+                : "Nenhum evento encontrado com os filtros selecionados."
+              }
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -705,7 +776,7 @@ export default function Events() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {events.map((event) => (
+                  {filteredEvents.map((event) => (
                     <TableRow key={event.id}>
                       <TableCell>
                         <div className="font-medium">{event.title}</div>

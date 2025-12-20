@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -66,6 +65,7 @@ import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { TaskKanban } from "@/components/tasks/TaskKanban";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
+import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -628,60 +628,61 @@ export default function Tasks() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por título, descrição ou cliente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filterUser} onValueChange={setFilterUser}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Responsável" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="mine">
+      <FilterBar
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Buscar por título, descrição ou cliente..."
+        filtersActive={filterUser !== "all"}
+        onClearFilters={() => setFilterUser("all")}
+      >
+        <FilterItem>
+          <Select value={filterUser} onValueChange={setFilterUser}>
+            <SelectTrigger className="w-full sm:w-[180px] h-10">
               <div className="flex items-center gap-2">
-                <span>🎯</span>
-                <span>Minhas tarefas</span>
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Responsável" />
               </div>
-            </SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.id} value={user.id}>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="mine">
                 <div className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={user.avatar_url || undefined} />
-                    <AvatarFallback className="text-[9px]">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{user.name}</span>
+                  <span>🎯</span>
+                  <span>Minhas tarefas</span>
                 </div>
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-          <SelectTrigger className="w-full sm:w-[160px]">
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Ordenar por" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="priority">Prioridade</SelectItem>
-            <SelectItem value="due_date">Data de entrega</SelectItem>
-            <SelectItem value="created_at">Data de criação</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarFallback className="text-[9px]">
+                        {getInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{user.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterItem>
+        <FilterItem>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-full sm:w-[160px] h-10">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Ordenar por" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="priority">Prioridade</SelectItem>
+              <SelectItem value="due_date">Data de entrega</SelectItem>
+              <SelectItem value="created_at">Data de criação</SelectItem>
+            </SelectContent>
+          </Select>
+        </FilterItem>
+      </FilterBar>
 
       {/* Content based on view mode */}
       {viewMode === "kanban" ? (
