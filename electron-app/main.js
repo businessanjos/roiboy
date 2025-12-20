@@ -466,29 +466,51 @@ async function sendToAPI(endpoint, data) {
 }
 
 async function sendWhatsAppMessageToAPI(messageData) {
-  if (!authData || !authData.apiKey) return;
+  if (!authData) return;
+
+  // Use session_token (JWT) for authentication - it's more reliable
+  const authToken = authData.session_token || authData.apiKey;
+  if (!authToken) return;
 
   try {
+    // Format phone to E.164
+    let phoneE164 = messageData.phone || '';
+    if (phoneE164 && !phoneE164.startsWith('+')) {
+      phoneE164 = '+' + phoneE164.replace(/\D/g, '');
+    }
+
+    // Map direction values
+    const direction = messageData.direction === 'team_to_client' 
+      ? 'team_to_client' 
+      : 'client_to_team';
+
     const payload = {
-      phone: messageData.phone,
-      content: messageData.text,
-      direction: messageData.direction,
-      sent_at: messageData.timestamp,
-      thread_id: messageData.chatName || 'default'
+      phone_e164: phoneE164,
+      content_text: messageData.text,
+      direction: direction,
+      sent_at: messageData.timestamp || new Date().toISOString(),
+      source: 'extension'
     };
+
+    console.log('[ROY] Enviando mensagem:', { phone: phoneE164, direction });
 
     const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': authData.apiKey
+        'x-api-key': authToken
       },
       body: JSON.stringify(payload)
     });
 
+    const result = await response.json();
+
     if (response.ok) {
       captureState.whatsapp.messagesSent++;
       updateStats();
+      console.log('[ROY] Mensagem enviada com sucesso:', result);
+    } else {
+      console.error('[ROY] Erro da API:', result);
     }
   } catch (error) {
     console.error('[ROY] Erro ao enviar mensagem:', error);
@@ -524,9 +546,15 @@ ipcMain.handle('login', async (event, { email, password }) => {
 
     const data = await response.json();
 
-    if (response.ok && data.apiKey) {
-      authData = data;
+    if (response.ok && (data.apiKey || data.session_token)) {
+      // Store both apiKey and session_token for authentication
+      authData = {
+        ...data,
+        apiKey: data.apiKey || data.api_key,
+        session_token: data.session_token
+      };
       store.set('authData', authData);
+      console.log('[ROY] Login bem-sucedido, token armazenado');
       return { success: true, user: data.user };
     } else {
       return { success: false, error: data.error || 'Credenciais inválidas' };
