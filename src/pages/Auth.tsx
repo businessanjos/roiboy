@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, Loader2, AlertCircle, Info, ArrowLeft, CheckCircle, CreditCard, Phone, ShieldAlert, Lock } from "lucide-react";
+import { Loader2, AlertCircle, Info, ArrowLeft, CheckCircle, CreditCard, Phone, ShieldAlert, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PasswordStrength, validatePassword, usePasswordStrength } from "@/components/ui/password-strength";
+import royLogo from "@/assets/roy-logo.png";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
@@ -212,9 +213,7 @@ export default function Auth() {
 
         <div className="relative z-10 w-full max-w-md animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-hero shadow-lg">
-              <TrendingUp className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src={royLogo} alt="ROY" className="h-12 w-12 object-contain" />
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY</h1>
               <p className="text-sm text-muted-foreground">Recuperar senha</p>
@@ -318,9 +317,7 @@ export default function Auth() {
 
         <div className="relative z-10 w-full max-w-md animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-hero shadow-lg">
-              <TrendingUp className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src={royLogo} alt="ROY" className="h-12 w-12 object-contain" />
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY</h1>
               <p className="text-sm text-muted-foreground">Redefinir senha</p>
@@ -421,9 +418,7 @@ export default function Auth() {
       <div className="relative z-10 w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-hero shadow-lg">
-            <TrendingUp className="h-6 w-6 text-primary-foreground" />
-          </div>
+          <img src={royLogo} alt="ROY" className="h-12 w-12 object-contain" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY</h1>
             <p className="text-sm text-muted-foreground">Sua plataforma de encantamento</p>

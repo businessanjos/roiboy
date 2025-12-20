@@ -8,7 +8,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
   UserCircle,
   Package,
   Menu,
@@ -68,6 +67,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import royLogo from "@/assets/roy-logo.png";
 
 interface NavItem {
   to: string;
@@ -368,9 +368,7 @@ export function MobileHeader() {
   return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
       <NavLink to="/dashboard" className="flex items-center gap-2">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-hero">
-          <TrendingUp className="h-4 w-4 text-primary-foreground" />
-        </div>
+        <img src={royLogo} alt="ROY" className="h-8 w-8 object-contain" />
         <span className="font-semibold text-lg tracking-tight text-foreground">
           ROY
         </span>
@@ -384,12 +382,9 @@ export function MobileHeader() {
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex flex-col h-full">
-            {/* Logo with close button */}
             <div className="flex items-center justify-between h-14 px-4 border-b border-border">
               <NavLink to="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-hero">
-                  <TrendingUp className="h-4 w-4 text-primary-foreground" />
-                </div>
+                <img src={royLogo} alt="ROY" className="h-8 w-8 object-contain" />
                 <span className="font-semibold text-lg tracking-tight text-foreground">
                   ROY
                 </span>
@@ -426,9 +421,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-border">
         <NavLink to="/dashboard" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-hero">
-            <TrendingUp className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img src={royLogo} alt="ROY" className="h-8 w-8 object-contain" />
           {!collapsed && (
             <span className="font-semibold text-lg tracking-tight text-foreground">
               ROY
