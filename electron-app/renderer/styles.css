@@ -7,6 +7,9 @@
 :root {
   --primary: #10b981;
   --primary-dark: #059669;
+  --whatsapp: #25D366;
+  --zoom: #2D8CFF;
+  --meet: #00897B;
   --danger: #ef4444;
   --warning: #f59e0b;
   --bg: #0f172a;
@@ -31,7 +34,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 20px;
+  padding: 16px;
 }
 
 /* Header */
@@ -39,8 +42,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 0;
-  margin-bottom: 24px;
+  padding: 12px 0;
+  margin-bottom: 16px;
 }
 
 .logo {
@@ -50,14 +53,16 @@ body {
 }
 
 .logo-text h1 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text);
 }
 
 .logo-text span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Views */
@@ -145,14 +150,15 @@ body {
   background: var(--primary-dark);
 }
 
-.btn-secondary {
+.btn-small {
   background: var(--bg-input);
   color: var(--text);
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.btn-secondary:hover {
+.btn-small:hover {
   background: var(--border);
 }
 
@@ -164,10 +170,6 @@ body {
 
 .btn-ghost:hover {
   color: var(--danger);
-}
-
-.btn-loading {
-  display: inline-flex;
 }
 
 .spinner {
@@ -196,7 +198,7 @@ body {
   justify-content: space-between;
   background: var(--bg-card);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 12px 16px;
   margin-bottom: 16px;
   border: 1px solid var(--border);
 }
@@ -208,8 +210,8 @@ body {
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--primary);
   color: white;
@@ -217,7 +219,7 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .user-details {
@@ -227,82 +229,87 @@ body {
 
 .user-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .user-email {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
-/* Status Section */
-.status-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
+/* Platforms Section */
+.platforms-section {
+  margin-bottom: 16px;
 }
 
-.status-card {
+.platforms-section h3 {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.platform-card {
   display: flex;
   align-items: center;
   gap: 12px;
   background: var(--bg-card);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 12px 16px;
   border: 1px solid var(--border);
+  margin-bottom: 8px;
 }
 
-.status-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--primary);
+.platform-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.status-icon.inactive {
-  background: rgba(148, 163, 184, 0.15);
-  color: var(--text-muted);
+.platform-icon.whatsapp {
+  background: rgba(37, 211, 102, 0.15);
+  color: var(--whatsapp);
 }
 
-.status-icon.active {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--primary);
+.platform-icon.zoom {
+  background: rgba(45, 140, 255, 0.15);
+  color: var(--zoom);
 }
 
-.status-icon.warning {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--warning);
+.platform-icon.meet {
+  background: rgba(0, 137, 123, 0.15);
+  color: var(--meet);
 }
 
-.status-info {
+.platform-info {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.status-label {
-  font-size: 12px;
+.platform-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.platform-status {
+  font-size: 11px;
   color: var(--text-muted);
 }
 
-.status-value {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.capture-indicator {
-  width: 12px;
-  height: 12px;
+.platform-indicator {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--text-muted);
+  margin-right: 8px;
 }
 
-.capture-indicator.active {
+.platform-indicator.active {
   background: var(--primary);
   animation: pulse 2s infinite;
 }
@@ -314,64 +321,121 @@ body {
 
 /* Stats Section */
 .stats-section {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .stats-section h3 {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .stat-card {
   background: var(--bg-card);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 12px;
   text-align: center;
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon.whatsapp {
+  background: rgba(37, 211, 102, 0.15);
+  color: var(--whatsapp);
+}
+
+.stat-icon.zoom {
+  background: rgba(45, 140, 255, 0.15);
+  color: var(--zoom);
+}
+
+.stat-icon.meet {
+  background: rgba(0, 137, 123, 0.15);
+  color: var(--meet);
 }
 
 .stat-value {
-  display: block;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 4px;
+  color: var(--text);
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.last-sync {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.last-sync strong {
+  color: var(--primary);
 }
 
 /* Instructions */
 .instructions {
   background: var(--bg-card);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 14px;
   border: 1px solid var(--border);
 }
 
 .instructions h3 {
-  font-size: 14px;
-  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
 }
 
 .instructions ol {
-  padding-left: 20px;
+  padding-left: 18px;
+  margin-bottom: 10px;
 }
 
 .instructions li {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   line-height: 1.4;
+}
+
+.instructions li strong {
+  color: var(--text);
+}
+
+.instructions .tip {
+  font-size: 11px;
+  color: var(--primary);
+  background: rgba(16, 185, 129, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 0;
 }
 
 /* Footer */
@@ -380,7 +444,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 16px;
-  font-size: 12px;
+  padding: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }

@@ -4,19 +4,26 @@ const Store = require('electron-store');
 
 const store = new Store();
 
-// API Configuration - ROI Boy Backend
+// API Configuration - ROY Backend
 const API_BASE_URL = 'https://mtzoavtbtqflufyccern.supabase.co/functions/v1';
 
 let mainWindow = null;
 let whatsappWindow = null;
-let isCapturing = false;
-let captureInterval = null;
+let zoomWindow = null;
+let meetWindow = null;
 let authData = null;
+
+// Capture states
+let captureState = {
+  whatsapp: { isCapturing: false, interval: null, messagesSent: 0 },
+  zoom: { isCapturing: false, interval: null, participantsDetected: 0 },
+  meet: { isCapturing: false, interval: null, participantsDetected: 0 }
+};
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 420,
-    height: 600,
+    width: 450,
+    height: 700,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -24,13 +31,14 @@ function createMainWindow() {
       nodeIntegration: false
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
-    title: 'ROI Boy WhatsApp'
+    title: 'ROY Desktop'
   });
 
   mainWindow.loadFile('renderer/index.html');
   mainWindow.setMenuBarVisibility(false);
 }
 
+// ============= WhatsApp Window =============
 function createWhatsAppWindow() {
   whatsappWindow = new BrowserWindow({
     width: 1200,
@@ -40,7 +48,7 @@ function createWhatsAppWindow() {
       contextIsolation: true,
       nodeIntegration: false
     },
-    title: 'WhatsApp Web - ROI Boy',
+    title: 'WhatsApp Web - ROY',
     show: true
   });
 
@@ -49,13 +57,10 @@ function createWhatsAppWindow() {
 
   whatsappWindow.on('closed', () => {
     whatsappWindow = null;
-    stopCapture();
-    if (mainWindow) {
-      mainWindow.webContents.send('whatsapp-status', { connected: false });
-    }
+    stopCapture('whatsapp');
+    updateMainWindow('whatsapp-status', { connected: false });
   });
 
-  // Detectar quando WhatsApp está pronto
   whatsappWindow.webContents.on('did-finish-load', () => {
     checkWhatsAppReady();
   });
@@ -67,83 +72,199 @@ async function checkWhatsAppReady() {
   try {
     const isReady = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
-        // Check if WhatsApp is loaded and user is logged in
-        const appElement = document.querySelector('#app');
         const mainPanel = document.querySelector('[data-testid="chat-list"]');
         return !!mainPanel;
       })()
     `);
 
-    if (mainWindow) {
-      mainWindow.webContents.send('whatsapp-status', { 
-        connected: isReady,
-        message: isReady ? 'WhatsApp conectado!' : 'Aguardando login no WhatsApp...'
-      });
-    }
+    updateMainWindow('whatsapp-status', { 
+      connected: isReady,
+      message: isReady ? 'Conectado' : 'Aguardando login...'
+    });
 
-    if (isReady && !isCapturing) {
-      startCapture();
+    if (isReady && !captureState.whatsapp.isCapturing) {
+      startCapture('whatsapp');
     } else if (!isReady) {
-      // Check again in 3 seconds
       setTimeout(checkWhatsAppReady, 3000);
     }
   } catch (error) {
-    console.error('Erro ao verificar WhatsApp:', error);
+    console.error('[ROY] Erro ao verificar WhatsApp:', error);
     setTimeout(checkWhatsAppReady, 5000);
   }
 }
 
-function startCapture() {
-  if (isCapturing || !whatsappWindow || !authData) return;
+// ============= Zoom Window =============
+function createZoomWindow() {
+  zoomWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join(__dirname, 'zoom-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    title: 'Zoom - ROY',
+    show: true
+  });
 
-  isCapturing = true;
-  console.log('Iniciando captura de mensagens...');
+  zoomWindow.loadURL('https://zoom.us/wc');
+  zoomWindow.setMenuBarVisibility(false);
 
-  if (mainWindow) {
-    mainWindow.webContents.send('capture-status', { 
-      capturing: true,
-      message: 'Capturando mensagens...'
-    });
-  }
+  zoomWindow.on('closed', () => {
+    zoomWindow = null;
+    stopCapture('zoom');
+    updateMainWindow('zoom-status', { connected: false });
+  });
 
-  // Injeta o script de captura
-  injectCaptureScript();
-
-  // Verifica periodicamente por novas mensagens
-  captureInterval = setInterval(() => {
-    extractAndSendMessages();
-  }, 5000); // A cada 5 segundos
+  zoomWindow.webContents.on('did-finish-load', () => {
+    checkZoomReady();
+  });
 }
 
-function stopCapture() {
-  isCapturing = false;
-  if (captureInterval) {
-    clearInterval(captureInterval);
-    captureInterval = null;
-  }
+async function checkZoomReady() {
+  if (!zoomWindow) return;
 
-  if (mainWindow) {
-    mainWindow.webContents.send('capture-status', { 
-      capturing: false,
-      message: 'Captura pausada'
+  try {
+    const isInMeeting = await zoomWindow.webContents.executeJavaScript(`
+      (function() {
+        // Check if in meeting by looking for participant list or meeting controls
+        const meetingControls = document.querySelector('[class*="meeting-control"]') || 
+                               document.querySelector('[class*="participants"]') ||
+                               document.querySelector('[aria-label*="participant"]');
+        return !!meetingControls;
+      })()
+    `);
+
+    updateMainWindow('zoom-status', { 
+      connected: isInMeeting,
+      message: isInMeeting ? 'Em reunião' : 'Aguardando reunião...'
     });
+
+    if (isInMeeting && !captureState.zoom.isCapturing) {
+      startCapture('zoom');
+    }
+
+    // Keep checking
+    setTimeout(checkZoomReady, 5000);
+  } catch (error) {
+    console.error('[ROY] Erro ao verificar Zoom:', error);
+    setTimeout(checkZoomReady, 5000);
   }
 }
 
-async function injectCaptureScript() {
+// ============= Google Meet Window =============
+function createMeetWindow() {
+  meetWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join(__dirname, 'meet-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    title: 'Google Meet - ROY',
+    show: true
+  });
+
+  meetWindow.loadURL('https://meet.google.com');
+  meetWindow.setMenuBarVisibility(false);
+
+  meetWindow.on('closed', () => {
+    meetWindow = null;
+    stopCapture('meet');
+    updateMainWindow('meet-status', { connected: false });
+  });
+
+  meetWindow.webContents.on('did-finish-load', () => {
+    checkMeetReady();
+  });
+}
+
+async function checkMeetReady() {
+  if (!meetWindow) return;
+
+  try {
+    const isInMeeting = await meetWindow.webContents.executeJavaScript(`
+      (function() {
+        // Check if in meeting by looking for specific elements
+        const meetingLayout = document.querySelector('[data-meeting-code]') || 
+                             document.querySelector('[data-participant-id]') ||
+                             document.querySelector('[jscontroller="kAPMuc"]');
+        return !!meetingLayout;
+      })()
+    `);
+
+    updateMainWindow('meet-status', { 
+      connected: isInMeeting,
+      message: isInMeeting ? 'Em reunião' : 'Aguardando reunião...'
+    });
+
+    if (isInMeeting && !captureState.meet.isCapturing) {
+      startCapture('meet');
+    }
+
+    // Keep checking
+    setTimeout(checkMeetReady, 5000);
+  } catch (error) {
+    console.error('[ROY] Erro ao verificar Meet:', error);
+    setTimeout(checkMeetReady, 5000);
+  }
+}
+
+// ============= Capture Functions =============
+function startCapture(platform) {
+  if (captureState[platform].isCapturing || !authData) return;
+
+  captureState[platform].isCapturing = true;
+  console.log(`[ROY] Iniciando captura ${platform}...`);
+
+  updateMainWindow(`${platform}-capture`, { 
+    capturing: true,
+    message: 'Capturando...'
+  });
+
+  if (platform === 'whatsapp') {
+    injectWhatsAppCaptureScript();
+    captureState.whatsapp.interval = setInterval(() => {
+      injectWhatsAppCaptureScript();
+    }, 5000);
+  } else if (platform === 'zoom') {
+    captureState.zoom.interval = setInterval(() => {
+      extractZoomParticipants();
+    }, 10000);
+  } else if (platform === 'meet') {
+    captureState.meet.interval = setInterval(() => {
+      extractMeetParticipants();
+    }, 10000);
+  }
+}
+
+function stopCapture(platform) {
+  captureState[platform].isCapturing = false;
+  if (captureState[platform].interval) {
+    clearInterval(captureState[platform].interval);
+    captureState[platform].interval = null;
+  }
+
+  updateMainWindow(`${platform}-capture`, { 
+    capturing: false,
+    message: 'Parado'
+  });
+}
+
+// ============= WhatsApp Capture =============
+async function injectWhatsAppCaptureScript() {
   if (!whatsappWindow) return;
 
   try {
     await whatsappWindow.webContents.executeJavaScript(`
       (function() {
-        if (window.__roiboyInjected) return;
-        window.__roiboyInjected = true;
-        window.__roiboyMessages = window.__roiboyMessages || [];
-        window.__roiboyLastCheck = window.__roiboyLastCheck || Date.now();
+        if (window.__royInjected) return;
+        window.__royInjected = true;
+        window.__royMessages = window.__royMessages || [];
         
-        console.log('[ROI Boy] Script de captura injetado');
+        console.log('[ROY] Script de captura injetado');
         
-        // Observer para detectar novas mensagens
         const observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             mutation.addedNodes.forEach((node) => {
@@ -159,23 +280,13 @@ async function injectCaptureScript() {
           try {
             const isOutgoing = msgElement.classList.contains('message-out');
             const textElement = msgElement.querySelector('[data-testid="msg-text"], .selectable-text');
-            const timeElement = msgElement.querySelector('[data-testid="msg-meta"] span');
             
             if (!textElement) return;
             
             const text = textElement.innerText;
-            const time = timeElement ? timeElement.innerText : '';
-            
-            // Get current chat info
-            const headerElement = document.querySelector('[data-testid="conversation-info-header"]');
-            const chatName = headerElement ? headerElement.innerText : '';
-            
-            // Get phone from header or contact info
-            const phoneElement = document.querySelector('[data-testid="conversation-info-header"] span');
+            const chatHeader = document.querySelector('header [title]');
             let phone = '';
             
-            // Try to extract phone from various places
-            const chatHeader = document.querySelector('header [title]');
             if (chatHeader) {
               const title = chatHeader.getAttribute('title');
               const phoneMatch = title.match(/\\+?[0-9\\s-]{10,}/);
@@ -186,64 +297,174 @@ async function injectCaptureScript() {
             
             const msgId = msgElement.getAttribute('data-id') || Date.now().toString();
             
-            // Check if already processed
-            if (window.__roiboyMessages.includes(msgId)) return;
-            window.__roiboyMessages.push(msgId);
+            if (window.__royMessages.includes(msgId)) return;
+            window.__royMessages.push(msgId);
             
-            // Keep only last 1000 message IDs
-            if (window.__roiboyMessages.length > 1000) {
-              window.__roiboyMessages = window.__roiboyMessages.slice(-500);
+            if (window.__royMessages.length > 1000) {
+              window.__royMessages = window.__royMessages.slice(-500);
             }
             
-            // Send to main process
             window.electronAPI.capturedMessage({
+              platform: 'whatsapp',
               id: msgId,
               text: text,
               direction: isOutgoing ? 'team_to_client' : 'client_to_team',
               timestamp: new Date().toISOString(),
-              chatName: chatName,
               phone: phone
             });
             
           } catch (e) {
-            console.error('[ROI Boy] Erro ao processar mensagem:', e);
+            console.error('[ROY] Erro ao processar mensagem:', e);
           }
         }
         
-        // Start observing
         const chatContainer = document.querySelector('#main');
         if (chatContainer) {
           observer.observe(chatContainer, { childList: true, subtree: true });
-          console.log('[ROI Boy] Observer iniciado');
         }
-        
-        // Process existing messages
-        const existingMessages = document.querySelectorAll('[data-testid="msg-container"]');
-        console.log('[ROI Boy] Mensagens existentes:', existingMessages.length);
       })()
     `);
   } catch (error) {
-    console.error('Erro ao injetar script:', error);
+    console.error('[ROY] Erro ao injetar script WhatsApp:', error);
   }
 }
 
-async function extractAndSendMessages() {
-  if (!whatsappWindow || !authData) return;
+// ============= Zoom Capture =============
+async function extractZoomParticipants() {
+  if (!zoomWindow || !authData) return;
 
   try {
-    // O script injetado envia mensagens via IPC, não precisamos fazer nada aqui
-    // Apenas re-injetamos caso a página tenha recarregado
-    await injectCaptureScript();
+    const participants = await zoomWindow.webContents.executeJavaScript(`
+      (function() {
+        const participants = [];
+        
+        // Try different selectors for participant list
+        const participantElements = document.querySelectorAll('[class*="participant-item"]') ||
+                                   document.querySelectorAll('[aria-label*="participant"]');
+        
+        participantElements.forEach(el => {
+          const nameEl = el.querySelector('[class*="name"]') || el;
+          const name = nameEl.innerText || nameEl.textContent;
+          if (name && name.trim()) {
+            participants.push({
+              name: name.trim(),
+              joinTime: new Date().toISOString()
+            });
+          }
+        });
+        
+        return participants;
+      })()
+    `);
+
+    if (participants.length > 0) {
+      // Get meeting info
+      const meetingInfo = await zoomWindow.webContents.executeJavaScript(`
+        (function() {
+          const meetingId = document.querySelector('[class*="meeting-id"]')?.innerText || 'unknown';
+          const title = document.title || 'Zoom Meeting';
+          return { meetingId, title };
+        })()
+      `);
+
+      await sendToAPI('zoom-participants', {
+        platform: 'zoom',
+        meetingId: meetingInfo.meetingId,
+        title: meetingInfo.title,
+        participants: participants
+      });
+
+      captureState.zoom.participantsDetected += participants.length;
+      updateStats();
+    }
   } catch (error) {
-    console.error('Erro ao extrair mensagens:', error);
+    console.error('[ROY] Erro ao extrair participantes Zoom:', error);
   }
 }
 
-async function sendMessageToAPI(messageData) {
+// ============= Meet Capture =============
+async function extractMeetParticipants() {
+  if (!meetWindow || !authData) return;
+
+  try {
+    const participants = await meetWindow.webContents.executeJavaScript(`
+      (function() {
+        const participants = [];
+        
+        // Try different selectors for participant list
+        const participantElements = document.querySelectorAll('[data-participant-id]') ||
+                                   document.querySelectorAll('[jscontroller="ES310d"]');
+        
+        participantElements.forEach(el => {
+          const nameEl = el.querySelector('[class*="name"]') || el;
+          const name = nameEl.innerText || nameEl.textContent;
+          if (name && name.trim()) {
+            participants.push({
+              name: name.trim(),
+              joinTime: new Date().toISOString()
+            });
+          }
+        });
+        
+        return participants;
+      })()
+    `);
+
+    if (participants.length > 0) {
+      // Get meeting info from URL
+      const meetingCode = await meetWindow.webContents.executeJavaScript(`
+        window.location.pathname.split('/').pop() || 'unknown'
+      `);
+
+      await sendToAPI('meet-participants', {
+        platform: 'meet',
+        meetingId: meetingCode,
+        title: 'Google Meet',
+        participants: participants
+      });
+
+      captureState.meet.participantsDetected += participants.length;
+      updateStats();
+    }
+  } catch (error) {
+    console.error('[ROY] Erro ao extrair participantes Meet:', error);
+  }
+}
+
+// ============= API Functions =============
+async function sendToAPI(endpoint, data) {
   if (!authData || !authData.apiKey) {
-    console.error('Não autenticado');
+    console.error('[ROY] Não autenticado');
     return;
   }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': authData.apiKey
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      console.log(`[ROY] Dados enviados para ${endpoint}:`, result);
+    } else {
+      console.error(`[ROY] Erro ao enviar para ${endpoint}:`, result);
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`[ROY] Erro de rede (${endpoint}):`, error);
+    throw error;
+  }
+}
+
+async function sendWhatsAppMessageToAPI(messageData) {
+  if (!authData || !authData.apiKey) return;
 
   try {
     const payload = {
@@ -263,42 +484,39 @@ async function sendMessageToAPI(messageData) {
       body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
-
     if (response.ok) {
-      console.log('[ROI Boy] Mensagem enviada:', result);
+      captureState.whatsapp.messagesSent++;
       updateStats();
-    } else {
-      console.error('[ROI Boy] Erro ao enviar:', result);
     }
-
-    return result;
   } catch (error) {
-    console.error('[ROI Boy] Erro de rede:', error);
-    throw error;
+    console.error('[ROY] Erro ao enviar mensagem:', error);
   }
 }
 
-let messagesSentCount = 0;
+// ============= UI Helpers =============
+function updateMainWindow(channel, data) {
+  if (mainWindow) {
+    mainWindow.webContents.send(channel, data);
+  }
+}
 
 function updateStats() {
-  messagesSentCount++;
   if (mainWindow) {
     mainWindow.webContents.send('stats-update', {
-      messagesSent: messagesSentCount,
+      whatsappMessages: captureState.whatsapp.messagesSent,
+      zoomParticipants: captureState.zoom.participantsDetected,
+      meetParticipants: captureState.meet.participantsDetected,
       lastSync: new Date().toLocaleTimeString()
     });
   }
 }
 
-// IPC Handlers
+// ============= IPC Handlers =============
 ipcMain.handle('login', async (event, { email, password }) => {
   try {
     const response = await fetch(`${API_BASE_URL}/extension-auth`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
 
@@ -312,7 +530,7 @@ ipcMain.handle('login', async (event, { email, password }) => {
       return { success: false, error: data.error || 'Credenciais inválidas' };
     }
   } catch (error) {
-    console.error('Erro de login:', error);
+    console.error('[ROY] Erro de login:', error);
     return { success: false, error: 'Erro de conexão' };
   }
 });
@@ -329,10 +547,12 @@ ipcMain.handle('check-auth', async () => {
 ipcMain.handle('logout', async () => {
   authData = null;
   store.delete('authData');
-  stopCapture();
-  if (whatsappWindow) {
-    whatsappWindow.close();
-  }
+  stopCapture('whatsapp');
+  stopCapture('zoom');
+  stopCapture('meet');
+  if (whatsappWindow) whatsappWindow.close();
+  if (zoomWindow) zoomWindow.close();
+  if (meetWindow) meetWindow.close();
   return { success: true };
 });
 
@@ -345,28 +565,33 @@ ipcMain.handle('open-whatsapp', async () => {
   return { success: true };
 });
 
-ipcMain.handle('toggle-capture', async () => {
-  if (isCapturing) {
-    stopCapture();
+ipcMain.handle('open-zoom', async () => {
+  if (zoomWindow) {
+    zoomWindow.focus();
   } else {
-    startCapture();
+    createZoomWindow();
   }
-  return { capturing: isCapturing };
+  return { success: true };
+});
+
+ipcMain.handle('open-meet', async () => {
+  if (meetWindow) {
+    meetWindow.focus();
+  } else {
+    createMeetWindow();
+  }
+  return { success: true };
 });
 
 ipcMain.on('captured-message', async (event, messageData) => {
-  console.log('[ROI Boy] Mensagem capturada:', messageData);
+  console.log('[ROY] Mensagem capturada:', messageData);
   
-  if (messageData.phone && messageData.text) {
-    try {
-      await sendMessageToAPI(messageData);
-    } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-    }
+  if (messageData.platform === 'whatsapp' && messageData.phone && messageData.text) {
+    await sendWhatsAppMessageToAPI(messageData);
   }
 });
 
-// App lifecycle
+// ============= App Lifecycle =============
 app.whenReady().then(() => {
   createMainWindow();
 
@@ -384,5 +609,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  stopCapture();
+  stopCapture('whatsapp');
+  stopCapture('zoom');
+  stopCapture('meet');
 });
