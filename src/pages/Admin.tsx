@@ -43,7 +43,9 @@ import {
   FileText,
   Ban,
   PlayCircle,
-  Eye
+  Eye,
+  DollarSign,
+  Cpu
 } from "lucide-react";
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
@@ -282,6 +284,10 @@ export default function Admin() {
             <FileText className="h-4 w-4" />
             Auditoria
           </TabsTrigger>
+          <TabsTrigger value="costs" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Cpu className="h-4 w-4" />
+            Custos IA
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -306,6 +312,10 @@ export default function Admin() {
 
         <TabsContent value="audit" className="mt-0">
           <AuditLogViewer />
+        </TabsContent>
+
+        <TabsContent value="costs" className="mt-0">
+          <AICostsTab accounts={accounts} />
         </TabsContent>
       </Tabs>
     </div>
@@ -2474,6 +2484,323 @@ function PaymentsTab() {
               Conectado
             </Badge>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// AI Costs Tab Component
+function AICostsTab({ accounts }: { accounts: Account[] }) {
+  const [selectedPeriod, setSelectedPeriod] = useState('30');
+  
+  const { data: aiUsageLogs = [], isLoading } = useQuery({
+    queryKey: ['admin-ai-usage', selectedPeriod],
+    queryFn: async () => {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - parseInt(selectedPeriod));
+      
+      const { data, error } = await supabase
+        .from('ai_usage_logs')
+        .select('*')
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Calculate costs per model (approximate pricing in USD per 1M tokens, converted to BRL)
+  const modelCosts: Record<string, { input: number; output: number }> = {
+    'google/gemini-2.5-flash': { input: 0.075, output: 0.30 },
+    'google/gemini-2.5-flash-lite': { input: 0.02, output: 0.08 },
+    'google/gemini-2.5-pro': { input: 1.25, output: 5.0 },
+    'google/gemini-3-pro-preview': { input: 1.25, output: 5.0 },
+    'openai/gpt-5': { input: 5.0, output: 15.0 },
+    'openai/gpt-5-mini': { input: 0.15, output: 0.60 },
+    'openai/gpt-5-nano': { input: 0.05, output: 0.20 },
+  };
+
+  const usdToBrl = 5.5; // Approximate exchange rate
+
+  // Calculate total costs
+  const calculateCost = (log: any) => {
+    const costs = modelCosts[log.model] || { input: 0.5, output: 1.5 };
+    const inputCost = (log.input_tokens / 1_000_000) * costs.input * usdToBrl;
+    const outputCost = (log.output_tokens / 1_000_000) * costs.output * usdToBrl;
+    return inputCost + outputCost;
+  };
+
+  const totalCost = aiUsageLogs.reduce((sum, log) => sum + calculateCost(log), 0);
+  const totalInputTokens = aiUsageLogs.reduce((sum, log) => sum + log.input_tokens, 0);
+  const totalOutputTokens = aiUsageLogs.reduce((sum, log) => sum + log.output_tokens, 0);
+  const totalAnalyses = aiUsageLogs.length;
+
+  // Group by model
+  const costsByModel = aiUsageLogs.reduce((acc, log) => {
+    const model = log.model || 'unknown';
+    if (!acc[model]) {
+      acc[model] = { count: 0, inputTokens: 0, outputTokens: 0, cost: 0 };
+    }
+    acc[model].count++;
+    acc[model].inputTokens += log.input_tokens;
+    acc[model].outputTokens += log.output_tokens;
+    acc[model].cost += calculateCost(log);
+    return acc;
+  }, {} as Record<string, { count: number; inputTokens: number; outputTokens: number; cost: number }>);
+
+  // Group by account
+  const costsByAccount = aiUsageLogs.reduce((acc, log) => {
+    const accountId = log.account_id;
+    if (!acc[accountId]) {
+      acc[accountId] = { count: 0, inputTokens: 0, outputTokens: 0, cost: 0 };
+    }
+    acc[accountId].count++;
+    acc[accountId].inputTokens += log.input_tokens;
+    acc[accountId].outputTokens += log.output_tokens;
+    acc[accountId].cost += calculateCost(log);
+    return acc;
+  }, {} as Record<string, { count: number; inputTokens: number; outputTokens: number; cost: number }>);
+
+  // Group by day for chart
+  const costsByDay = aiUsageLogs.reduce((acc, log) => {
+    const date = format(new Date(log.created_at), 'dd/MM', { locale: ptBR });
+    if (!acc[date]) {
+      acc[date] = { date, cost: 0, analyses: 0 };
+    }
+    acc[date].cost += calculateCost(log);
+    acc[date].analyses++;
+    return acc;
+  }, {} as Record<string, { date: string; cost: number; analyses: number }>);
+
+  const chartData = Object.values(costsByDay).reverse().slice(-30);
+
+  return (
+    <div className="space-y-6">
+      {/* Header with period selector */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Custos de IA</h3>
+          <p className="text-sm text-muted-foreground">Monitoramento de uso e custos com modelos de IA</p>
+        </div>
+        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">Últimos 7 dias</SelectItem>
+            <SelectItem value="30">Últimos 30 dias</SelectItem>
+            <SelectItem value="90">Últimos 90 dias</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 rounded-lg bg-emerald-500/10">
+                <DollarSign className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Custo Total</p>
+                <p className="text-2xl font-semibold">R$ {totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-muted-foreground">{selectedPeriod} dias</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 rounded-lg bg-muted">
+                <Activity className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total de Análises</p>
+                <p className="text-2xl font-semibold">{totalAnalyses.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-muted-foreground">Chamadas à IA</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 rounded-lg bg-blue-500/10">
+                <Cpu className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Tokens de Entrada</p>
+                <p className="text-2xl font-semibold">{(totalInputTokens / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}K</p>
+                <p className="text-xs text-muted-foreground">Input tokens</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 rounded-lg bg-purple-500/10">
+                <Cpu className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Tokens de Saída</p>
+                <p className="text-2xl font-semibold">{(totalOutputTokens / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}K</p>
+                <p className="text-xs text-muted-foreground">Output tokens</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Chart */}
+      {chartData.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Custos Diários</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-xs" />
+                  <YAxis 
+                    tickFormatter={(v) => `R$${v.toFixed(2)}`}
+                    className="text-xs"
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [`R$ ${value.toFixed(4)}`, 'Custo']}
+                    labelFormatter={(label) => `Data: ${label}`}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="cost" 
+                    stroke="hsl(var(--primary))" 
+                    fill="hsl(var(--primary) / 0.2)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Costs by Model */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium">Custos por Modelo</CardTitle>
+          <CardDescription className="text-sm">Breakdown de uso por modelo de IA</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : Object.keys(costsByModel).length === 0 ? (
+            <div className="text-center py-8">
+              <Cpu className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">Nenhum uso de IA registrado no período</p>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="font-medium">Modelo</TableHead>
+                    <TableHead className="font-medium text-center">Análises</TableHead>
+                    <TableHead className="font-medium text-right">Input Tokens</TableHead>
+                    <TableHead className="font-medium text-right">Output Tokens</TableHead>
+                    <TableHead className="font-medium text-right">Custo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(costsByModel)
+                    .sort((a, b) => b[1].cost - a[1].cost)
+                    .map(([model, data]) => (
+                      <TableRow key={model}>
+                        <TableCell className="font-medium">
+                          <Badge variant="outline" className="text-xs font-mono">
+                            {model.split('/').pop()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center text-sm">{data.count.toLocaleString('pt-BR')}</TableCell>
+                        <TableCell className="text-right text-sm">
+                          {(data.inputTokens / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}K
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
+                          {(data.outputTokens / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}K
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          R$ {data.cost.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Costs by Account */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium">Custos por Conta</CardTitle>
+          <CardDescription className="text-sm">Top contas por consumo de IA</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : Object.keys(costsByAccount).length === 0 ? (
+            <div className="text-center py-8">
+              <Building2 className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground">Nenhum uso registrado</p>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="font-medium">Conta</TableHead>
+                    <TableHead className="font-medium text-center">Análises</TableHead>
+                    <TableHead className="font-medium text-right">Tokens Totais</TableHead>
+                    <TableHead className="font-medium text-right">Custo</TableHead>
+                    <TableHead className="font-medium text-right">% do Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(costsByAccount)
+                    .sort((a, b) => b[1].cost - a[1].cost)
+                    .slice(0, 15)
+                    .map(([accountId, data]) => {
+                      const account = accounts.find(a => a.id === accountId);
+                      const percentage = totalCost > 0 ? (data.cost / totalCost) * 100 : 0;
+                      return (
+                        <TableRow key={accountId}>
+                          <TableCell className="font-medium">{account?.name || accountId.slice(0, 8)}</TableCell>
+                          <TableCell className="text-center text-sm">{data.count.toLocaleString('pt-BR')}</TableCell>
+                          <TableCell className="text-right text-sm">
+                            {((data.inputTokens + data.outputTokens) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}K
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            R$ {data.cost.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                          </TableCell>
+                          <TableCell className="text-right text-sm text-muted-foreground">
+                            {percentage.toFixed(1)}%
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
