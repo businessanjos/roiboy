@@ -4,28 +4,30 @@ const Store = require('electron-store');
 
 const store = new Store();
 
-// IMPORTANT: Prevent WhatsApp protocol from opening external apps
-app.on('ready', () => {
-  // Remove whatsapp as external protocol handler
-  protocol.registerHttpProtocol('whatsapp', (request, callback) => {
-    console.log('[ROY] Bloqueando protocolo whatsapp://');
-    // Don't do anything - just block it
-  });
+// CRITICAL: Remove our app as handler for whatsapp:// protocol
+// This prevents macOS from auto-opening WhatsApp Business
+app.removeAsDefaultProtocolClient('whatsapp');
+
+// Prevent ANY external URL handler for whatsapp
+app.on('open-url', (event, url) => {
+  if (url.startsWith('whatsapp:')) {
+    console.log('[ROY] Interceptando open-url whatsapp:', url);
+    event.preventDefault();
+  }
 });
 
-// Prevent the app from opening external protocols
+// Block external protocol execution globally
 app.on('web-contents-created', (event, contents) => {
   contents.on('will-navigate', (event, url) => {
     if (url.startsWith('whatsapp:')) {
-      console.log('[ROY] Bloqueando navegação externa:', url);
+      console.log('[ROY] Bloqueando navegação global:', url);
       event.preventDefault();
     }
   });
   
-  // Block new window requests that try to open whatsapp://
   contents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('whatsapp:')) {
-      console.log('[ROY] Bloqueando abertura externa:', url);
+      console.log('[ROY] Bloqueando window global:', url);
       return { action: 'deny' };
     }
     return { action: 'allow' };
@@ -77,6 +79,22 @@ function createMainWindow() {
 const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function createWhatsAppWindow() {
+  // Create session and block whatsapp:// protocol at the request level
+  const whatsappSession = session.fromPartition('persist:whatsapp');
+  
+  // CRITICAL: Block ALL requests to whatsapp:// protocol
+  whatsappSession.webRequest.onBeforeRequest({ urls: ['whatsapp://*', 'whatsapp:*'] }, (details, callback) => {
+    console.log('[ROY] BLOQUEADO request para:', details.url);
+    callback({ cancel: true });
+  });
+
+  // Also intercept redirects
+  whatsappSession.webRequest.onBeforeRedirect((details) => {
+    if (details.redirectURL && details.redirectURL.startsWith('whatsapp:')) {
+      console.log('[ROY] BLOQUEADO redirect para:', details.redirectURL);
+    }
+  });
+
   whatsappWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -84,71 +102,92 @@ function createWhatsAppWindow() {
       preload: path.join(__dirname, 'whatsapp-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      partition: 'persist:whatsapp',
+      session: whatsappSession,
       webSecurity: true
     },
     title: 'WhatsApp Web - ROY',
     show: true
   });
 
-  // Set User-Agent to mimic Chrome browser (not Electron)
+  // Set User-Agent to mimic Chrome browser
   whatsappWindow.webContents.setUserAgent(CHROME_USER_AGENT);
   
-  // IMPORTANT: Block redirects to WhatsApp desktop app
+  // Block ALL attempts to open whatsapp:// URLs
   whatsappWindow.webContents.setWindowOpenHandler(({ url }) => {
-    // Block whatsapp:// protocol that opens desktop app
-    if (url.startsWith('whatsapp://') || url.startsWith('whatsapp:')) {
-      console.log('[ROY] Bloqueando redirect para app desktop:', url);
+    if (url.startsWith('whatsapp:')) {
+      console.log('[ROY] Bloqueando window.open:', url);
       return { action: 'deny' };
     }
     return { action: 'allow' };
   });
 
-  // Block navigation to whatsapp:// protocol
+  // Block navigation
   whatsappWindow.webContents.on('will-navigate', (event, url) => {
-    if (url.startsWith('whatsapp://') || url.startsWith('whatsapp:')) {
-      console.log('[ROY] Bloqueando navegação para app desktop:', url);
+    if (url.startsWith('whatsapp:')) {
+      console.log('[ROY] Bloqueando navegação:', url);
       event.preventDefault();
     }
   });
 
-  // Handle navigation errors
+  // Handle errors
   whatsappWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     console.error('[ROY] Falha ao carregar:', errorCode, errorDescription, validatedURL);
-  });
-
-  // Log console messages from WhatsApp
-  whatsappWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    if (message.includes('ROY') || level >= 2) {
-      console.log('[WhatsApp Console]', message);
-    }
   });
 
   console.log('[ROY] Carregando WhatsApp Web...');
   whatsappWindow.loadURL('https://web.whatsapp.com');
   whatsappWindow.setMenuBarVisibility(false);
 
-  // Inject script to prevent desktop app detection BEFORE page runs its scripts
-  whatsappWindow.webContents.on('did-start-loading', () => {
+  // CRITICAL: Inject blocker IMMEDIATELY when page starts loading
+  whatsappWindow.webContents.on('dom-ready', () => {
     whatsappWindow.webContents.executeJavaScript(`
-      // Override location.href setter to block whatsapp:// redirects
-      const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
-      
-      // Block window.open for whatsapp:// URLs
-      const originalOpen = window.open;
-      window.open = function(url, ...args) {
-        if (url && url.toString().startsWith('whatsapp:')) {
-          console.log('[ROY] Blocked window.open to whatsapp://');
-          return null;
-        }
-        return originalOpen.call(this, url, ...args);
-      };
-      
-      console.log('[ROY] Proteção contra redirect ativada');
-    `).catch(() => {});
+      // Block ALL whatsapp:// protocol attempts
+      (function() {
+        // Override createElement to block iframes with whatsapp://
+        const originalCreateElement = document.createElement.bind(document);
+        document.createElement = function(tagName, options) {
+          const element = originalCreateElement(tagName, options);
+          if (tagName.toLowerCase() === 'a') {
+            const originalSetAttribute = element.setAttribute.bind(element);
+            element.setAttribute = function(name, value) {
+              if (name === 'href' && value && value.toString().startsWith('whatsapp:')) {
+                console.log('[ROY] Blocked href to whatsapp://');
+                return;
+              }
+              return originalSetAttribute(name, value);
+            };
+          }
+          return element;
+        };
+        
+        // Override window.open
+        const originalOpen = window.open;
+        window.open = function(url, ...args) {
+          if (url && url.toString().startsWith('whatsapp:')) {
+            console.log('[ROY] Blocked window.open to whatsapp://');
+            return null;
+          }
+          return originalOpen.apply(this, [url, ...args]);
+        };
+        
+        // Override location
+        Object.defineProperty(window, 'location', {
+          ...Object.getOwnPropertyDescriptor(window, 'location'),
+          set: function(url) {
+            if (url && url.toString().startsWith('whatsapp:')) {
+              console.log('[ROY] Blocked location set to whatsapp://');
+              return;
+            }
+            window.location.href = url;
+          }
+        });
+        
+        console.log('[ROY] Proteções anti-redirect ativadas');
+      })();
+    `).catch(err => console.error('[ROY] Erro ao injetar script:', err));
   });
 
-  // Open DevTools to debug
+  // Debug mode
   if (process.argv.includes('--dev')) {
     whatsappWindow.webContents.openDevTools({ mode: 'detach' });
   }
@@ -163,10 +202,6 @@ function createWhatsAppWindow() {
     const url = whatsappWindow.webContents.getURL();
     console.log('[ROY] WhatsApp Web carregado:', url);
     setTimeout(checkWhatsAppReady, 2000);
-  });
-  
-  whatsappWindow.webContents.on('dom-ready', () => {
-    console.log('[ROY] WhatsApp DOM ready');
   });
 }
 
