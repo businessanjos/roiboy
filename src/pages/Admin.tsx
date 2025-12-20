@@ -15,9 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StatusBar, StatCard } from "@/components/admin";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { 
   Building2, 
   Users, 
@@ -421,6 +422,133 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
           </CardContent>
         </Card>
       </div>
+
+      {/* Growth Chart */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium">Crescimento de Assinaturas</CardTitle>
+          <CardDescription className="text-sm">Evolução das contas nos últimos 6 meses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SubscriptionGrowthChart accounts={accounts} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Subscription Growth Chart Component
+function SubscriptionGrowthChart({ accounts }: { accounts: Account[] }) {
+  // Generate last 6 months
+  const now = new Date();
+  const months = eachMonthOfInterval({
+    start: subMonths(startOfMonth(now), 5),
+    end: endOfMonth(now)
+  });
+
+  // Calculate cumulative accounts per month
+  const chartData = months.map((month, index) => {
+    const monthEnd = endOfMonth(month);
+    
+    // Count accounts created up to this month
+    const totalAccounts = accounts.filter(a => new Date(a.created_at) <= monthEnd).length;
+    
+    // Count active accounts at end of this month
+    const activeAccounts = accounts.filter(a => {
+      const createdAt = new Date(a.created_at);
+      return createdAt <= monthEnd && 
+        (a.subscription_status === 'active' || a.subscription_status === 'trial');
+    }).length;
+
+    // New accounts in this specific month
+    const newAccounts = accounts.filter(a => {
+      const createdAt = new Date(a.created_at);
+      return createdAt >= startOfMonth(month) && createdAt <= monthEnd;
+    }).length;
+
+    return {
+      month: format(month, "MMM", { locale: ptBR }),
+      fullMonth: format(month, "MMMM yyyy", { locale: ptBR }),
+      total: totalAccounts,
+      ativos: activeAccounts,
+      novos: newAccounts
+    };
+  });
+
+  return (
+    <div className="h-[280px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="colorAtivos" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis 
+            dataKey="month" 
+            axisLine={false} 
+            tickLine={false}
+            className="text-xs fill-muted-foreground"
+          />
+          <YAxis 
+            axisLine={false} 
+            tickLine={false}
+            className="text-xs fill-muted-foreground"
+            allowDecimals={false}
+          />
+          <Tooltip 
+            content={({ active, payload, label }) => {
+              if (active && payload && payload.length) {
+                const data = payload[0].payload;
+                return (
+                  <div className="rounded-lg border bg-background p-3 shadow-md">
+                    <p className="text-sm font-medium capitalize mb-2">{data.fullMonth}</p>
+                    <div className="space-y-1 text-xs">
+                      <p className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Total acumulado:</span>
+                        <span className="font-medium">{data.total}</span>
+                      </p>
+                      <p className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Ativos/Trial:</span>
+                        <span className="font-medium text-emerald-500">{data.ativos}</span>
+                      </p>
+                      <p className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Novos no mês:</span>
+                        <span className="font-medium text-primary">{data.novos}</span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="total" 
+            stroke="hsl(var(--primary))" 
+            strokeWidth={2}
+            fillOpacity={1} 
+            fill="url(#colorTotal)" 
+            name="Total"
+          />
+          <Area 
+            type="monotone" 
+            dataKey="ativos" 
+            stroke="#22c55e" 
+            strokeWidth={2}
+            fillOpacity={1} 
+            fill="url(#colorAtivos)" 
+            name="Ativos"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }
