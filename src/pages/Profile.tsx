@@ -389,6 +389,10 @@ export default function Profile() {
             <Building2 className="h-4 w-4" />
             Conta
           </TabsTrigger>
+          <TabsTrigger value="usage" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Uso do Plano
+          </TabsTrigger>
           <TabsTrigger value="subscription" className="gap-2">
             <CreditCard className="h-4 w-4" />
             Assinatura
@@ -478,11 +482,13 @@ export default function Profile() {
           </Card>
         </TabsContent>
 
+        {/* Usage Tab */}
+        <TabsContent value="usage" className="space-y-6">
+          <PlanUsageCard />
+        </TabsContent>
+
         {/* Account Tab */}
         <TabsContent value="account" className="space-y-6">
-          {/* Plan Usage Card - moved from Dashboard */}
-          <PlanUsageCard />
-          
           {account && (
             <>
               {/* Identification Card */}
