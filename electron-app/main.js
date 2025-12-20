@@ -314,93 +314,56 @@ async function checkWhatsAppReady() {
   }
 
   try {
-    // Enhanced detection for WhatsApp Business Web
-    const result = await whatsappWindow.webContents.executeJavaScript(`
+    // Get raw page info first
+    const pageInfo = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
-        try {
-          // Simple check: if we can see any chat content, we're logged in
-          const mainPanel = document.getElementById('main') || document.querySelector('[data-testid="conversation-panel-wrapper"]');
-          const hasMainPanel = !!mainPanel;
-          
-          // Check for conversation list - this is the key indicator
-          const paneLeft = document.getElementById('pane-side') || document.querySelector('[id*="pane"]');
-          const hasPaneLeft = !!paneLeft;
-          
-          // Check for any chat items visible in the left sidebar
-          const chatItems = document.querySelectorAll('[role="row"], [role="listitem"], [data-testid="cell-frame-container"]');
-          const hasChatItems = chatItems.length > 0;
-          
-          // Check for the search box (only visible when logged in)
-          const searchBox = document.querySelector('[data-testid="chat-list-search"]') ||
-                           document.querySelector('div[contenteditable="true"][data-tab="3"]') ||
-                           document.querySelector('[role="textbox"]');
-          const hasSearchBox = !!searchBox;
-          
-          // Check for header elements (user avatar, menu, etc)
-          const headerElements = document.querySelectorAll('header button, header span, [data-testid="menu"]');
-          const hasHeader = headerElements.length > 5;
-          
-          // Check for QR code (if visible, NOT logged in)
-          const qrCanvas = document.querySelector('canvas[aria-label*="QR"]') || 
-                          document.querySelector('[data-ref]') ||
-                          document.querySelector('canvas[height="264"]');
-          const hasQR = !!qrCanvas;
-          
-          // Check for startup loading screen
-          const loadingScreen = document.querySelector('[data-testid="startup"]') ||
-                               document.querySelector('[class*="landing"]');
-          const isLoading = !!loadingScreen;
-          
-          // Check total divs - logged in page has 500+ divs typically
-          const divCount = document.querySelectorAll('div').length;
-          const hasManyDivs = divCount > 200;
-          
-          // Check for text that appears only when logged in
-          const bodyText = document.body?.innerText || '';
-          const hasLoggedInText = bodyText.includes('Arquivadas') || 
-                                 bodyText.includes('Archived') ||
-                                 bodyText.includes('Nova conversa') ||
-                                 bodyText.includes('New chat');
-          
-          const debug = {
-            hasMainPanel,
-            hasPaneLeft,
-            hasChatItems,
-            chatItemCount: chatItems.length,
-            hasSearchBox,
-            hasHeader,
-            headerCount: headerElements.length,
-            hasQR,
-            isLoading,
-            divCount,
-            hasManyDivs,
-            hasLoggedInText,
-            url: window.location.href
-          };
-          
-          console.log('[ROY Debug]', JSON.stringify(debug));
-          
-          // Consider logged in if:
-          // 1. Has chat items OR
-          // 2. Has pane-side AND no QR AND not loading OR
-          // 3. Has many divs AND no QR AND not loading OR
-          // 4. Has logged in specific text
-          const isLoggedIn = hasChatItems || 
-                            hasLoggedInText ||
-                            (hasPaneLeft && !hasQR && !isLoading) ||
-                            (hasManyDivs && !hasQR && !isLoading && hasHeader);
-          
-          return { ready: isLoggedIn, debug: debug };
-        } catch(e) {
-          console.error('[ROY] Detection error:', e);
-          return { ready: false, error: e.message };
-        }
+        const html = document.documentElement.outerHTML;
+        const bodyText = document.body?.innerText || '';
+        return {
+          url: window.location.href,
+          title: document.title,
+          divCount: document.querySelectorAll('div').length,
+          spanCount: document.querySelectorAll('span').length,
+          hasCanvas: !!document.querySelector('canvas'),
+          bodyLength: bodyText.length,
+          // Look for WhatsApp Business specific elements
+          hasAppWrapper: !!document.getElementById('app'),
+          hasSidePanel: !!document.querySelector('[data-testid="side"]') || !!document.getElementById('side'),
+          hasMainPanel: !!document.getElementById('main'),
+          hasChatList: !!document.querySelector('[aria-label*="Chat list"]') || 
+                       !!document.querySelector('[aria-label*="Lista de conversas"]') ||
+                       !!document.querySelector('[role="grid"]') ||
+                       !!document.querySelector('[role="list"]'),
+          hasInputBox: !!document.querySelector('[contenteditable="true"]'),
+          hasMenuBtn: !!document.querySelector('[data-testid="menu"]') || 
+                      !!document.querySelector('[aria-label*="Menu"]'),
+          // Check for QR code indicators
+          hasQrCode: !!document.querySelector('canvas') && bodyText.includes('QR'),
+          hasLinkText: bodyText.includes('Link a device') || bodyText.includes('Vincular'),
+          // Check for logged-in indicators
+          hasArchived: bodyText.includes('Arquivada') || bodyText.includes('Archived'),
+          hasNewChat: bodyText.includes('Nova conversa') || bodyText.includes('New chat'),
+          hasChats: bodyText.includes('conversas') || bodyText.includes('chats'),
+          sample: bodyText.substring(0, 500)
+        };
       })()
     `);
 
-    console.log('[ROY] WhatsApp check result:', JSON.stringify(result));
+    console.log('[ROY] WhatsApp page info:', JSON.stringify(pageInfo, null, 2));
 
-    const isReady = result && result.ready;
+    // Determine if logged in based on multiple signals
+    const notLoggedInSignals = pageInfo.hasQrCode || pageInfo.hasLinkText;
+    const loggedInSignals = pageInfo.hasSidePanel || 
+                           pageInfo.hasMainPanel || 
+                           pageInfo.hasChatList ||
+                           pageInfo.hasArchived ||
+                           pageInfo.hasNewChat ||
+                           pageInfo.hasInputBox ||
+                           (pageInfo.divCount > 300 && pageInfo.spanCount > 100);
+
+    const isReady = loggedInSignals && !notLoggedInSignals;
+    
+    console.log('[ROY] Detection result:', { isReady, loggedInSignals, notLoggedInSignals });
 
     updateMainWindow('whatsapp-status', { 
       connected: isReady,
@@ -412,10 +375,11 @@ async function checkWhatsAppReady() {
       startCapture('whatsapp');
     }
     
-    // Keep checking - more frequently when not connected
-    setTimeout(checkWhatsAppReady, isReady ? 10000 : 2000);
+    // Keep checking
+    setTimeout(checkWhatsAppReady, isReady ? 10000 : 3000);
   } catch (error) {
     console.error('[ROY] Erro ao verificar WhatsApp:', error.message);
+    // Try to force connection after several failures
     setTimeout(checkWhatsAppReady, 3000);
   }
 }
