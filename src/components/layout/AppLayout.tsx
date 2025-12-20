@@ -3,10 +3,14 @@ import { Sidebar, MobileHeader } from "./Sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { Loader2 } from "lucide-react";
+import { GlobalSearch, useGlobalSearch } from "@/components/ui/global-search";
+import { KeyboardShortcutsHelp, useKeyboardShortcuts } from "@/components/ui/keyboard-shortcuts";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
   const { isLoading: subLoading, hasAccess, isTrialExpired } = useSubscriptionStatus();
+  const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();
+  const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
 
   if (authLoading || subLoading) {
     return (
@@ -34,6 +38,12 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      
+      {/* Global Search Dialog */}
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }
