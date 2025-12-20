@@ -5,4 +5,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   capturedMessage: (data) => ipcRenderer.send('captured-message', data)
 });
 
-console.log('[ROI Boy] WhatsApp preload carregado');
+console.log('[ROY] WhatsApp preload carregado');

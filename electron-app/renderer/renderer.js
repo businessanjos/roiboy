@@ -5,7 +5,11 @@ const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
 const loginError = document.getElementById('login-error');
 const logoutBtn = document.getElementById('logout-btn');
+
+// Platform buttons
 const openWhatsappBtn = document.getElementById('open-whatsapp-btn');
+const openZoomBtn = document.getElementById('open-zoom-btn');
+const openMeetBtn = document.getElementById('open-meet-btn');
 
 // User elements
 const userName = document.getElementById('user-name');
@@ -14,14 +18,18 @@ const userAvatar = document.getElementById('user-avatar');
 
 // Status elements
 const whatsappStatus = document.getElementById('whatsapp-status');
-const whatsappIcon = document.getElementById('whatsapp-icon');
-const whatsappCard = document.getElementById('whatsapp-card');
-const captureStatus = document.getElementById('capture-status');
-const captureIcon = document.getElementById('capture-icon');
-const captureIndicator = document.getElementById('capture-indicator');
+const zoomStatus = document.getElementById('zoom-status');
+const meetStatus = document.getElementById('meet-status');
+
+// Indicator elements
+const whatsappIndicator = document.getElementById('whatsapp-indicator');
+const zoomIndicator = document.getElementById('zoom-indicator');
+const meetIndicator = document.getElementById('meet-indicator');
 
 // Stats elements
-const messagesSent = document.getElementById('messages-sent');
+const whatsappMessages = document.getElementById('whatsapp-messages');
+const zoomParticipants = document.getElementById('zoom-participants');
+const meetParticipants = document.getElementById('meet-participants');
 const lastSync = document.getElementById('last-sync');
 
 // Initialize app
@@ -104,49 +112,59 @@ logoutBtn.addEventListener('click', async () => {
   showLoginView();
   
   // Reset stats
-  messagesSent.textContent = '0';
+  whatsappMessages.textContent = '0';
+  zoomParticipants.textContent = '0';
+  meetParticipants.textContent = '0';
   lastSync.textContent = '--:--';
-  updateWhatsAppStatus({ connected: false });
-  updateCaptureStatus({ capturing: false });
+  
+  // Reset statuses
+  updatePlatformStatus('whatsapp', { connected: false });
+  updatePlatformStatus('zoom', { connected: false });
+  updatePlatformStatus('meet', { connected: false });
 });
 
+// Platform buttons
 openWhatsappBtn.addEventListener('click', async () => {
   await window.electronAPI.openWhatsApp();
   whatsappStatus.textContent = 'Abrindo...';
 });
 
-// Update UI functions
-function updateWhatsAppStatus(data) {
-  if (data.connected) {
-    whatsappStatus.textContent = 'Conectado';
-    whatsappIcon.classList.remove('inactive', 'warning');
-    whatsappIcon.classList.add('active');
-    openWhatsappBtn.textContent = 'Abrir';
-  } else {
-    whatsappStatus.textContent = data.message || 'Desconectado';
-    whatsappIcon.classList.remove('active');
-    whatsappIcon.classList.add('inactive');
-    openWhatsappBtn.textContent = 'Conectar';
-  }
-}
+openZoomBtn.addEventListener('click', async () => {
+  await window.electronAPI.openZoom();
+  zoomStatus.textContent = 'Abrindo...';
+});
 
-function updateCaptureStatus(data) {
-  if (data.capturing) {
-    captureStatus.textContent = data.message || 'Ativa';
-    captureIcon.classList.remove('inactive');
-    captureIcon.classList.add('active');
-    captureIndicator.classList.add('active');
+openMeetBtn.addEventListener('click', async () => {
+  await window.electronAPI.openMeet();
+  meetStatus.textContent = 'Abrindo...';
+});
+
+// Update UI functions
+function updatePlatformStatus(platform, data) {
+  const statusEl = document.getElementById(`${platform}-status`);
+  const indicatorEl = document.getElementById(`${platform}-indicator`);
+  const btnEl = document.getElementById(`open-${platform}-btn`);
+  
+  if (data.connected) {
+    statusEl.textContent = data.message || 'Conectado';
+    indicatorEl.classList.add('active');
+    if (btnEl) btnEl.textContent = 'Abrir';
   } else {
-    captureStatus.textContent = data.message || 'Inativa';
-    captureIcon.classList.remove('active');
-    captureIcon.classList.add('inactive');
-    captureIndicator.classList.remove('active');
+    statusEl.textContent = data.message || 'Desconectado';
+    indicatorEl.classList.remove('active');
+    if (btnEl) btnEl.textContent = 'Conectar';
   }
 }
 
 function updateStats(data) {
-  if (data.messagesSent !== undefined) {
-    messagesSent.textContent = data.messagesSent;
+  if (data.whatsappMessages !== undefined) {
+    whatsappMessages.textContent = data.whatsappMessages;
+  }
+  if (data.zoomParticipants !== undefined) {
+    zoomParticipants.textContent = data.zoomParticipants;
+  }
+  if (data.meetParticipants !== undefined) {
+    meetParticipants.textContent = data.meetParticipants;
   }
   if (data.lastSync) {
     lastSync.textContent = data.lastSync;
@@ -154,8 +172,28 @@ function updateStats(data) {
 }
 
 // IPC Event Listeners
-window.electronAPI.onWhatsAppStatus(updateWhatsAppStatus);
-window.electronAPI.onCaptureStatus(updateCaptureStatus);
+window.electronAPI.onWhatsAppStatus((data) => updatePlatformStatus('whatsapp', data));
+window.electronAPI.onZoomStatus((data) => updatePlatformStatus('zoom', data));
+window.electronAPI.onMeetStatus((data) => updatePlatformStatus('meet', data));
+
+window.electronAPI.onWhatsAppCapture((data) => {
+  if (data.capturing) {
+    document.getElementById('whatsapp-indicator').classList.add('active');
+  }
+});
+
+window.electronAPI.onZoomCapture((data) => {
+  if (data.capturing) {
+    document.getElementById('zoom-indicator').classList.add('active');
+  }
+});
+
+window.electronAPI.onMeetCapture((data) => {
+  if (data.capturing) {
+    document.getElementById('meet-indicator').classList.add('active');
+  }
+});
+
 window.electronAPI.onStatsUpdate(updateStats);
 
 // Initialize

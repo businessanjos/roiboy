@@ -1,16 +1,17 @@
 {
-  "name": "roiboy-whatsapp-capture",
+  "name": "roy-desktop",
   "version": "1.0.0",
-  "description": "App desktop para captura automática de mensagens WhatsApp para ROI Boy",
+  "description": "App desktop ROY para captura automática de WhatsApp, Zoom e Google Meet",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dev": "electron . --dev",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux"
   },
-  "author": "ROI Boy",
+  "author": "ROY Platform",
   "license": "MIT",
   "devDependencies": {
     "electron": "^28.0.0",
@@ -20,8 +21,8 @@
     "electron-store": "^8.1.0"
   },
   "build": {
-    "appId": "com.roiboy.whatsapp-capture",
-    "productName": "ROI Boy WhatsApp",
+    "appId": "com.roy.desktop",
+    "productName": "ROY Desktop",
     "directories": {
       "output": "dist"
     },
@@ -35,11 +36,32 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
     },
     "linux": {
       "target": "AppImage",
       "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   }
 }

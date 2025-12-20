@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ROI Boy WhatsApp</title>
+  <title>ROY Desktop</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,13 +11,19 @@
     <!-- Header -->
     <header class="header">
       <div class="logo">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-          <circle cx="20" cy="20" r="18" fill="#10b981" stroke="#059669" stroke-width="2"/>
-          <path d="M12 20L18 26L28 14" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+          <defs>
+            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#10b981"/>
+              <stop offset="100%" style="stop-color:#059669"/>
+            </linearGradient>
+          </defs>
+          <circle cx="22" cy="22" r="20" fill="url(#logoGradient)"/>
+          <text x="22" y="28" text-anchor="middle" fill="white" font-size="16" font-weight="bold" font-family="system-ui">ROY</text>
         </svg>
         <div class="logo-text">
-          <h1>ROI Boy</h1>
-          <span>WhatsApp Capture</span>
+          <h1>ROY Desktop</h1>
+          <span>Captura Integrada</span>
         </div>
       </div>
     </header>
@@ -26,7 +32,7 @@
     <div id="login-view" class="view">
       <div class="card">
         <h2>Entrar</h2>
-        <p class="subtitle">Use suas credenciais do ROI Boy</p>
+        <p class="subtitle">Use suas credenciais do ROY</p>
         
         <form id="login-form">
           <div class="form-group">
@@ -73,65 +79,102 @@
         </button>
       </div>
 
-      <!-- Status Cards -->
-      <div class="status-section">
-        <!-- WhatsApp Status -->
-        <div class="status-card" id="whatsapp-card">
-          <div class="status-icon" id="whatsapp-icon">
+      <!-- Platform Cards -->
+      <div class="platforms-section">
+        <h3>Plataformas</h3>
+        
+        <!-- WhatsApp Card -->
+        <div class="platform-card" id="whatsapp-card">
+          <div class="platform-icon whatsapp">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
           </div>
-          <div class="status-info">
-            <span class="status-label">WhatsApp</span>
-            <span class="status-value" id="whatsapp-status">Desconectado</span>
+          <div class="platform-info">
+            <span class="platform-name">WhatsApp</span>
+            <span class="platform-status" id="whatsapp-status">Desconectado</span>
           </div>
-          <button class="btn btn-secondary" id="open-whatsapp-btn">
-            Conectar
-          </button>
+          <div class="platform-indicator" id="whatsapp-indicator"></div>
+          <button class="btn btn-small" id="open-whatsapp-btn">Conectar</button>
         </div>
 
-        <!-- Capture Status -->
-        <div class="status-card" id="capture-card">
-          <div class="status-icon inactive" id="capture-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+        <!-- Zoom Card -->
+        <div class="platform-card" id="zoom-card">
+          <div class="platform-icon zoom">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4.585 4.585A2 2 0 0 0 3 6.5V17.5a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-3l4.5 3V6.5l-4.5 3V6.5a2 2 0 0 0-2-2h-9z"/>
             </svg>
           </div>
-          <div class="status-info">
-            <span class="status-label">Captura</span>
-            <span class="status-value" id="capture-status">Inativa</span>
+          <div class="platform-info">
+            <span class="platform-name">Zoom</span>
+            <span class="platform-status" id="zoom-status">Desconectado</span>
           </div>
-          <div class="capture-indicator" id="capture-indicator"></div>
+          <div class="platform-indicator" id="zoom-indicator"></div>
+          <button class="btn btn-small" id="open-zoom-btn">Conectar</button>
+        </div>
+
+        <!-- Google Meet Card -->
+        <div class="platform-card" id="meet-card">
+          <div class="platform-icon meet">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <div class="platform-info">
+            <span class="platform-name">Google Meet</span>
+            <span class="platform-status" id="meet-status">Desconectado</span>
+          </div>
+          <div class="platform-indicator" id="meet-indicator"></div>
+          <button class="btn btn-small" id="open-meet-btn">Conectar</button>
         </div>
       </div>
 
       <!-- Stats -->
       <div class="stats-section">
-        <h3>Estatísticas</h3>
+        <h3>Estatísticas da Sessão</h3>
         <div class="stats-grid">
           <div class="stat-card">
-            <span class="stat-value" id="messages-sent">0</span>
-            <span class="stat-label">Mensagens Enviadas</span>
+            <div class="stat-icon whatsapp">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+              </svg>
+            </div>
+            <span class="stat-value" id="whatsapp-messages">0</span>
+            <span class="stat-label">Mensagens</span>
           </div>
           <div class="stat-card">
-            <span class="stat-value" id="last-sync">--:--</span>
-            <span class="stat-label">Última Sincronização</span>
+            <div class="stat-icon zoom">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+              </svg>
+            </div>
+            <span class="stat-value" id="zoom-participants">0</span>
+            <span class="stat-label">Zoom</span>
           </div>
+          <div class="stat-card">
+            <div class="stat-icon meet">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+              </svg>
+            </div>
+            <span class="stat-value" id="meet-participants">0</span>
+            <span class="stat-label">Meet</span>
+          </div>
+        </div>
+        <div class="last-sync">
+          <span>Última sincronização: <strong id="last-sync">--:--</strong></span>
         </div>
       </div>
 
       <!-- Instructions -->
       <div class="instructions">
-        <h3>Como funciona</h3>
+        <h3>Como usar</h3>
         <ol>
-          <li>Clique em "Conectar" para abrir o WhatsApp Web</li>
-          <li>Escaneie o QR Code com seu celular</li>
-          <li>As mensagens serão capturadas automaticamente</li>
-          <li>Os dados são enviados para o ROI Boy em tempo real</li>
+          <li><strong>WhatsApp:</strong> Conecte e escaneie o QR Code</li>
+          <li><strong>Zoom:</strong> Entre em reuniões pelo navegador</li>
+          <li><strong>Meet:</strong> Entre em reuniões do Google Meet</li>
         </ol>
+        <p class="tip">💡 Dados são capturados automaticamente e enviados para o ROY</p>
       </div>
     </div>
 
@@ -139,7 +182,7 @@
     <footer class="footer">
       <span>v1.0.0</span>
       <span>•</span>
-      <span>ROI Boy © 2024</span>
+      <span>ROY Platform © 2024</span>
     </footer>
   </div>
 
