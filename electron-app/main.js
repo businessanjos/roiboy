@@ -79,91 +79,89 @@ function createWhatsAppWindow() {
 }
 
 async function checkWhatsAppReady() {
-  if (!whatsappWindow) return;
+  if (!whatsappWindow) {
+    console.log('[ROY] WhatsApp window não existe');
+    return;
+  }
 
   try {
+    // Simple detection - just check if we're past the QR code screen
     const result = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
-        // Debug: log what we find
-        const debug = [];
-        
-        // Check for QR code first (means NOT logged in)
-        const qrSelectors = [
-          '[data-testid="qrcode"]',
-          'canvas[aria-label*="QR"]',
-          'div[data-ref]',
-          '[data-testid="intro-md-beta-logo-dark"]',
-          '[data-testid="intro-md-beta-logo-light"]'
-        ];
-        
-        for (const sel of qrSelectors) {
-          if (document.querySelector(sel)) {
-            debug.push('QR found: ' + sel);
-            return { ready: false, debug };
-          }
+        try {
+          // Method 1: Check for QR code (if visible, NOT logged in)
+          const qrCanvas = document.querySelector('canvas');
+          const qrDiv = document.querySelector('[data-ref]');
+          const hasQR = qrCanvas || qrDiv;
+          
+          // Method 2: Check for side panel (conversations list)
+          const sidePanel = document.getElementById('side') || 
+                           document.getElementById('pane-side') ||
+                           document.querySelector('#side') ||
+                           document.querySelector('[id="side"]');
+          
+          // Method 3: Check for any header with contact info
+          const header = document.querySelector('header');
+          const hasHeader = header && header.querySelector('[title]');
+          
+          // Method 4: Check URL - if we're on web.whatsapp.com without QR
+          const isWhatsApp = window.location.hostname.includes('whatsapp');
+          
+          // Method 5: Check for the app wrapper with content
+          const appDiv = document.getElementById('app');
+          const hasApp = appDiv && appDiv.children.length > 2;
+          
+          // Method 6: Check for search box (only visible when logged in)
+          const searchBox = document.querySelector('[data-testid="chat-list-search"]') ||
+                           document.querySelector('[title*="Pesquisar"]') ||
+                           document.querySelector('[title*="Search"]') ||
+                           document.querySelector('input[title]');
+          
+          // Method 7: Simple div count heuristic
+          const divCount = document.querySelectorAll('div').length;
+          const hasManyDivs = divCount > 100;
+          
+          const debug = {
+            hasQR: !!hasQR,
+            sidePanel: !!sidePanel,
+            hasHeader: !!hasHeader,
+            hasApp: !!hasApp,
+            searchBox: !!searchBox,
+            divCount: divCount,
+            hasManyDivs: hasManyDivs,
+            url: window.location.href
+          };
+          
+          console.log('[ROY Debug]', JSON.stringify(debug));
+          
+          // If we have many divs and no QR, we're probably logged in
+          const isLoggedIn = !hasQR && (sidePanel || hasHeader || searchBox || (hasManyDivs && hasApp));
+          
+          return { ready: isLoggedIn, debug: debug };
+        } catch(e) {
+          return { ready: false, error: e.message };
         }
-        
-        // Check for loading screen
-        if (document.querySelector('[data-testid="loading-screen"]')) {
-          debug.push('Loading screen visible');
-          return { ready: false, debug };
-        }
-        
-        // Multiple selectors for logged-in state
-        const loggedInSelectors = [
-          '[data-testid="chat-list"]',
-          '[data-testid="chatlist"]',
-          '#pane-side',
-          'div#side',
-          '[aria-label*="Lista de conversas"]',
-          '[aria-label*="Chat list"]',
-          '[aria-label*="lista de chats"]',
-          'div[data-testid="cell-frame-container"]',
-          'div[role="listitem"]',
-          '[data-testid="conversation-panel-wrapper"]',
-          'header span[title]',
-          '[data-testid="default-user"]'
-        ];
-        
-        for (const selector of loggedInSelectors) {
-          const element = document.querySelector(selector);
-          if (element) {
-            debug.push('Logged in via: ' + selector);
-            return { ready: true, debug };
-          }
-        }
-        
-        // Check if we have ANY app content (fallback)
-        const appWrapper = document.querySelector('#app') || document.querySelector('[id="app"]');
-        if (appWrapper) {
-          const hasContent = appWrapper.querySelector('header') || 
-                            appWrapper.querySelectorAll('div').length > 50;
-          if (hasContent) {
-            debug.push('App has content, assuming logged in');
-            return { ready: true, debug };
-          }
-        }
-        
-        debug.push('No matches found');
-        return { ready: false, debug };
       })()
     `);
 
-    console.log('[ROY] WhatsApp check:', JSON.stringify(result));
+    console.log('[ROY] WhatsApp check result:', JSON.stringify(result));
+
+    const isReady = result && result.ready;
 
     updateMainWindow('whatsapp-status', { 
-      connected: result.ready,
-      message: result.ready ? 'Conectado' : 'Aguardando login...'
+      connected: isReady,
+      message: isReady ? 'Conectado' : 'Aguardando login...'
     });
 
-    if (result.ready && !captureState.whatsapp.isCapturing) {
+    if (isReady && !captureState.whatsapp.isCapturing) {
+      console.log('[ROY] Iniciando captura WhatsApp...');
       startCapture('whatsapp');
     }
     
-    // Keep checking periodically
-    setTimeout(checkWhatsAppReady, result.ready ? 10000 : 2000);
+    // Keep checking
+    setTimeout(checkWhatsAppReady, isReady ? 10000 : 2000);
   } catch (error) {
-    console.error('[ROY] Erro ao verificar WhatsApp:', error);
+    console.error('[ROY] Erro ao verificar WhatsApp:', error.message);
     setTimeout(checkWhatsAppReady, 3000);
   }
 }
@@ -171,6 +169,8 @@ async function checkWhatsAppReady() {
 // Force WhatsApp connection status (for manual override)
 function forceWhatsAppConnected() {
   if (!whatsappWindow) return;
+  
+  console.log('[ROY] Forçando conexão WhatsApp...');
   
   updateMainWindow('whatsapp-status', { 
     connected: true,
