@@ -725,20 +725,20 @@ export default function Dashboard() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="roi" className="space-y-6">
+      <Tabs defaultValue="gestao" className="space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="roi" className="gap-2">
-              <Target className="h-4 w-4" />
-              <span className="hidden sm:inline">ROI</span>
+            <TabsTrigger value="gestao" className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Gestão</span>
             </TabsTrigger>
             <TabsTrigger value="cx" className="gap-2">
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">CX</span>
             </TabsTrigger>
-            <TabsTrigger value="gestao" className="gap-2">
-              <Settings2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Gestão</span>
+            <TabsTrigger value="roi" className="gap-2">
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">ROI</span>
             </TabsTrigger>
           </TabsList>
 
