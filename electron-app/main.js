@@ -49,23 +49,46 @@ function createMainWindow() {
 const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function createWhatsAppWindow() {
+  // Use persist partition to save session/cookies
+  const ses = session.fromPartition('persist:whatsapp');
+  
   whatsappWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'whatsapp-preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      session: ses,
+      // Allow features WhatsApp needs
+      webSecurity: true,
+      allowRunningInsecureContent: false
     },
     title: 'WhatsApp Web - ROY',
     show: true
   });
 
   // Set User-Agent before loading
+  ses.setUserAgent(CHROME_USER_AGENT);
   whatsappWindow.webContents.setUserAgent(CHROME_USER_AGENT);
+  
+  // Set permission handler for notifications, media, etc.
+  ses.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowedPermissions = ['notifications', 'media', 'mediaKeySystem', 'clipboard-read', 'clipboard-sanitized-write'];
+    if (allowedPermissions.includes(permission)) {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
   
   whatsappWindow.loadURL('https://web.whatsapp.com');
   whatsappWindow.setMenuBarVisibility(false);
+
+  // Open DevTools in dev mode to see logs
+  if (process.argv.includes('--dev')) {
+    whatsappWindow.webContents.openDevTools({ mode: 'detach' });
+  }
 
   whatsappWindow.on('closed', () => {
     whatsappWindow = null;
@@ -74,7 +97,13 @@ function createWhatsAppWindow() {
   });
 
   whatsappWindow.webContents.on('did-finish-load', () => {
+    console.log('[ROY] WhatsApp Web carregado, verificando status...');
     checkWhatsAppReady();
+  });
+  
+  // Also check when DOM is ready
+  whatsappWindow.webContents.on('dom-ready', () => {
+    console.log('[ROY] WhatsApp DOM ready');
   });
 }
 
