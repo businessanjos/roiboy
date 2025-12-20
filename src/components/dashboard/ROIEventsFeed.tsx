@@ -49,98 +49,6 @@ const IMPACT_CONFIG: Record<string, { label: string; variant: "default" | "secon
   low: { label: "Baixo", variant: "outline" },
 };
 
-// Mock data for demonstration
-const MOCK_EVENTS: ROIEvent[] = [
-  {
-    id: "mock-1",
-    client_id: "mock",
-    client_name: "Marina Costa",
-    category: "revenue",
-    roi_type: "tangible",
-    impact: "high",
-    evidence_snippet: "Cliente fechou contrato de R$ 50.000 após implementar as estratégias discutidas na mentoria",
-    happened_at: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-  },
-  {
-    id: "mock-2",
-    client_id: "mock",
-    client_name: "Roberto Almeida",
-    category: "confidence",
-    roi_type: "intangible",
-    impact: "high",
-    evidence_snippet: "Consegui apresentar para 200 pessoas sem travar! A técnica de respiração funcionou demais",
-    happened_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-  },
-  {
-    id: "mock-3",
-    client_id: "mock",
-    client_name: "Juliana Santos",
-    category: "time",
-    roi_type: "tangible",
-    impact: "medium",
-    evidence_snippet: "Reduzi meu tempo de prospecção de 4h para 1h por dia usando o novo processo",
-    happened_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-  },
-  {
-    id: "mock-4",
-    client_id: "mock",
-    client_name: "Carlos Ferreira",
-    category: "clarity",
-    roi_type: "intangible",
-    impact: "high",
-    evidence_snippet: "Finalmente entendi qual é meu diferencial no mercado. Mudou completamente minha abordagem",
-    happened_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-  },
-  {
-    id: "mock-5",
-    client_id: "mock",
-    client_name: "Tech Solutions",
-    category: "revenue",
-    roi_type: "tangible",
-    impact: "high",
-    evidence_snippet: "Batemos a meta do trimestre com 3 semanas de antecedência! Equipe toda motivada",
-    happened_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-  },
-  {
-    id: "mock-6",
-    client_id: "mock",
-    client_name: "André Lima",
-    category: "tranquility",
-    roi_type: "intangible",
-    impact: "medium",
-    evidence_snippet: "Pela primeira vez em anos consegui tirar férias sem olhar email. Voltei renovado",
-    happened_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-  },
-  {
-    id: "mock-7",
-    client_id: "mock",
-    client_name: "Patricia Mendes",
-    category: "process",
-    roi_type: "tangible",
-    impact: "medium",
-    evidence_snippet: "Automatizamos 80% do onboarding de clientes. Time comercial agora foca só em vender",
-    happened_at: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-  },
-  {
-    id: "mock-8",
-    client_id: "mock",
-    client_name: "Fernando Nascimento",
-    category: "status_direction",
-    roi_type: "intangible",
-    impact: "high",
-    evidence_snippet: "Fui convidado para palestrar no maior evento do setor. Reconhecimento que nunca imaginei",
-    happened_at: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
-  },
-];
-
 interface ROIEventsFeedProps {
   className?: string;
 }
@@ -148,7 +56,6 @@ interface ROIEventsFeedProps {
 export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
   const [events, setEvents] = useState<ROIEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [useMock, setUseMock] = useState(false);
 
   const fetchEvents = async () => {
     try {
@@ -165,16 +72,10 @@ export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
         client_name: event.clients?.full_name || "Cliente",
       }));
 
-      if (formattedEvents.length === 0) {
-        setUseMock(true);
-        setEvents(MOCK_EVENTS);
-      } else {
-        setEvents(formattedEvents);
-      }
+      setEvents(formattedEvents);
     } catch (error) {
       console.error("Error fetching ROI events:", error);
-      setUseMock(true);
-      setEvents(MOCK_EVENTS);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -252,11 +153,6 @@ export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             </div>
             <CardTitle className="text-base">Feed de ROI em Tempo Real</CardTitle>
-            {useMock && (
-              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
-                Demo
-              </Badge>
-            )}
           </div>
           <Badge variant="outline" className="gap-1">
             <Sparkles className="h-3 w-3" />
@@ -264,10 +160,7 @@ export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
           </Badge>
         </div>
         <CardDescription>
-          {useMock 
-            ? "Exemplo de como as percepções de ROI aparecerão aqui em tempo real" 
-            : "Percepções de ROI detectadas pela IA aparecem aqui instantaneamente"
-          }
+          Percepções de ROI detectadas pela IA aparecem aqui instantaneamente
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -289,21 +182,14 @@ export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
                 const Icon = categoryConfig.icon;
                 const impactConfig = IMPACT_CONFIG[event.impact] || IMPACT_CONFIG.medium;
                 const isNew = index === 0;
-                const isMockEvent = event.client_id === "mock";
-
-                const Wrapper = isMockEvent ? "div" : Link;
-                const wrapperProps = isMockEvent 
-                  ? {} 
-                  : { to: `/clients/${event.client_id}` };
 
                 return (
-                  <Wrapper
+                  <Link
                     key={event.id}
-                    {...wrapperProps as any}
+                    to={`/clients/${event.client_id}`}
                     className={cn(
                       "block p-3 rounded-lg border transition-all hover:bg-muted/50 hover:border-primary/30",
-                      isNew && "ring-2 ring-primary/20 bg-primary/5 animate-in fade-in slide-in-from-top-2 duration-300",
-                      isMockEvent && "cursor-default"
+                      isNew && "ring-2 ring-primary/20 bg-primary/5 animate-in fade-in slide-in-from-top-2 duration-300"
                     )}
                   >
                     <div className="flex items-start gap-3">
@@ -333,7 +219,7 @@ export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
                         </p>
                       </div>
                     </div>
-                  </Wrapper>
+                  </Link>
                 );
               })}
             </div>
