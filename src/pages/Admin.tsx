@@ -19,6 +19,7 @@ import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval } from
 import { ptBR } from "date-fns/locale";
 import { StatusBar, StatCard } from "@/components/admin";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Building2, 
   Users, 
@@ -39,7 +40,9 @@ import {
   CheckCircle2,
   XCircle,
   Settings,
-  FileText
+  FileText,
+  Ban,
+  PlayCircle
 } from "lucide-react";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
@@ -1067,6 +1070,7 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   
   // Separate form states for create and edit to avoid conflicts
   const [createFormData, setCreateFormData] = useState({
@@ -1252,6 +1256,61 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
       toast.error('Erro ao excluir conta: ' + error.message);
     }
   });
+
+  // Bulk actions mutations
+  const bulkSuspendMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('accounts')
+        .update({ subscription_status: 'suspended' })
+        .in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
+      toast.success(`${selectedAccounts.size} conta(s) suspensa(s)!`);
+      setSelectedAccounts(new Set());
+    },
+    onError: (error) => {
+      toast.error('Erro ao suspender contas: ' + error.message);
+    }
+  });
+
+  const bulkActivateMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('accounts')
+        .update({ subscription_status: 'active' })
+        .in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-accounts'] });
+      toast.success(`${selectedAccounts.size} conta(s) reativada(s)!`);
+      setSelectedAccounts(new Set());
+    },
+    onError: (error) => {
+      toast.error('Erro ao reativar contas: ' + error.message);
+    }
+  });
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedAccounts(new Set(filteredAccounts.map(a => a.id)));
+    } else {
+      setSelectedAccounts(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const newSet = new Set(selectedAccounts);
+    if (checked) {
+      newSet.add(id);
+    } else {
+      newSet.delete(id);
+    }
+    setSelectedAccounts(newSet);
+  };
 
   const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     trial: { label: 'Trial', variant: 'outline' },
@@ -1492,6 +1551,60 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
         </div>
       </CardHeader>
       <CardContent>
+        {/* Bulk Actions Bar */}
+        {selectedAccounts.size > 0 && (
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg border flex items-center justify-between">
+            <span className="text-sm font-medium">
+              {selectedAccounts.size} {selectedAccounts.size === 1 ? 'conta selecionada' : 'contas selecionadas'}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  if (confirm(`Suspender ${selectedAccounts.size} conta(s)?`)) {
+                    bulkSuspendMutation.mutate(Array.from(selectedAccounts));
+                  }
+                }}
+                disabled={bulkSuspendMutation.isPending}
+              >
+                {bulkSuspendMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Ban className="h-4 w-4" />
+                )}
+                Suspender
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  if (confirm(`Reativar ${selectedAccounts.size} conta(s)?`)) {
+                    bulkActivateMutation.mutate(Array.from(selectedAccounts));
+                  }
+                }}
+                disabled={bulkActivateMutation.isPending}
+              >
+                {bulkActivateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <PlayCircle className="h-4 w-4" />
+                )}
+                Reativar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedAccounts(new Set())}
+              >
+                Limpar seleção
+              </Button>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -1508,6 +1621,12 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filteredAccounts.length > 0 && selectedAccounts.size === filteredAccounts.length}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="font-medium">Nome</TableHead>
                   <TableHead className="font-medium">Plano</TableHead>
                   <TableHead className="font-medium">Status</TableHead>
@@ -1521,8 +1640,15 @@ function AccountsTab({ accounts, plans, isLoading }: { accounts: Account[]; plan
                 {filteredAccounts.map(account => {
                   const plan = plans.find(p => p.id === account.plan_id);
                   const status = statusLabels[account.subscription_status || 'trial'] || statusLabels.trial;
+                  const isSelected = selectedAccounts.has(account.id);
                   return (
-                    <TableRow key={account.id} className="group">
+                    <TableRow key={account.id} className={`group ${isSelected ? 'bg-muted/30' : ''}`}>
+                      <TableCell>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleSelectOne(account.id, checked as boolean)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{account.name}</TableCell>
                       <TableCell>
                         {plan ? (
