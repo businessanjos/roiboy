@@ -376,6 +376,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "attendance_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "attendance_live_session_id_fkey"
             columns: ["live_session_id"]
             isOneToOne: false
@@ -589,6 +596,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_event_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1204,6 +1218,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_products_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
             referencedColumns: ["id"]
           },
           {
@@ -2395,7 +2416,41 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      events_checkin_view: {
+        Row: {
+          account_id: string | null
+          address: string | null
+          id: string | null
+          modality: Database["public"]["Enums"]["event_modality"] | null
+          scheduled_at: string | null
+          title: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          address?: string | null
+          id?: string | null
+          modality?: Database["public"]["Enums"]["event_modality"] | null
+          scheduled_at?: string | null
+          title?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          address?: string | null
+          id?: string | null
+          modality?: Database["public"]["Enums"]["event_modality"] | null
+          scheduled_at?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       generate_checkin_code: { Args: never; Returns: string }
@@ -2403,6 +2458,10 @@ export type Database = {
       get_user_account_id: { Args: never; Returns: string }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      user_belongs_to_account: {
+        Args: { _account_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       billing_period:
