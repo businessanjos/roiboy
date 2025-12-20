@@ -22,9 +22,11 @@ let captureState = {
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 450,
-    height: 700,
-    resizable: false,
+    width: 520,
+    height: 820,
+    minWidth: 400,
+    minHeight: 600,
+    resizable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
