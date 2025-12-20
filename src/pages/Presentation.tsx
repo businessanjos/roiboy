@@ -608,21 +608,21 @@ export default function Presentation() {
                           <h4 className="font-semibold">Escolha seu sistema operacional:</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
-                              window.open('https://github.com/seu-usuario/roiboy-whatsapp-capture/releases', '_blank');
+                              window.open('https://github.com/businessanjos/roiboy/releases', '_blank');
                             }}>
                               <Monitor className="h-6 w-6" />
                               <span>Windows</span>
                               <span className="text-xs text-muted-foreground">.exe</span>
                             </Button>
                             <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
-                              window.open('https://github.com/seu-usuario/roiboy-whatsapp-capture/releases', '_blank');
+                              window.open('https://github.com/businessanjos/roiboy/releases', '_blank');
                             }}>
                               <Apple className="h-6 w-6" />
                               <span>macOS</span>
                               <span className="text-xs text-muted-foreground">.dmg</span>
                             </Button>
                             <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
-                              window.open('https://github.com/seu-usuario/roiboy-whatsapp-capture/releases', '_blank');
+                              window.open('https://github.com/businessanjos/roiboy/releases', '_blank');
                             }}>
                               <Terminal className="h-6 w-6" />
                               <span>Linux</span>
@@ -641,8 +641,8 @@ export default function Presentation() {
                             Clone o repositório e execute localmente:
                           </p>
                           <div className="bg-background rounded-md p-3 font-mono text-xs space-y-1">
-                            <p>git clone https://github.com/seu-usuario/roiboy-whatsapp-capture</p>
-                            <p>cd electron-app</p>
+                            <p>git clone https://github.com/businessanjos/roiboy.git</p>
+                            <p>cd roiboy/electron-app</p>
                             <p>npm install</p>
                             <p>npm start</p>
                           </div>
