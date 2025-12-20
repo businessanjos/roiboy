@@ -84,8 +84,44 @@ async function checkWhatsAppReady() {
   try {
     const isReady = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
-        const mainPanel = document.querySelector('[data-testid="chat-list"]');
-        return !!mainPanel;
+        // Multiple selectors for better detection - WhatsApp Web changes frequently
+        const selectors = [
+          '[data-testid="chat-list"]',
+          '[data-testid="chatlist"]',
+          '#pane-side',
+          '[aria-label*="Lista de conversas"]',
+          '[aria-label*="Chat list"]',
+          'div[data-testid="cell-frame-container"]',
+          'div[role="listitem"]'
+        ];
+        
+        for (const selector of selectors) {
+          const element = document.querySelector(selector);
+          if (element) {
+            console.log('[ROY] WhatsApp detectado via:', selector);
+            return true;
+          }
+        }
+        
+        // Fallback: check if QR code is NOT visible (means logged in)
+        const qrCode = document.querySelector('[data-testid="qrcode"]') || 
+                      document.querySelector('canvas[aria-label*="QR"]') ||
+                      document.querySelector('div[data-ref]');
+        if (!qrCode) {
+          // If no QR and no chat list yet, might still be loading
+          const loadingIndicator = document.querySelector('[data-testid="loading-screen"]');
+          if (!loadingIndicator) {
+            // Check for any conversation items
+            const anyConversation = document.querySelector('[data-testid*="conversation"]') ||
+                                   document.querySelector('[data-testid*="chat"]');
+            if (anyConversation) {
+              console.log('[ROY] WhatsApp detectado via conversação');
+              return true;
+            }
+          }
+        }
+        
+        return false;
       })()
     `);
 
@@ -96,9 +132,10 @@ async function checkWhatsAppReady() {
 
     if (isReady && !captureState.whatsapp.isCapturing) {
       startCapture('whatsapp');
-    } else if (!isReady) {
-      setTimeout(checkWhatsAppReady, 3000);
     }
+    
+    // Keep checking periodically (WhatsApp may reload or disconnect)
+    setTimeout(checkWhatsAppReady, isReady ? 10000 : 3000);
   } catch (error) {
     console.error('[ROY] Erro ao verificar WhatsApp:', error);
     setTimeout(checkWhatsAppReady, 5000);
