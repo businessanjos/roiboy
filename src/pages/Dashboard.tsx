@@ -53,7 +53,6 @@ import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 import { ROIEventsFeed } from "@/components/dashboard/ROIEventsFeed";
 import { LiveParticipationReport } from "@/components/dashboard/LiveParticipationReport";
-import { PlanUsageCard } from "@/components/plan";
 
 interface ContractData {
   id: string;
@@ -1302,8 +1301,6 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Plan Usage Card */}
-          <PlanUsageCard />
         </TabsContent>
       </Tabs>
     </div>

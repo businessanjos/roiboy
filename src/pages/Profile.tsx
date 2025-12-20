@@ -24,6 +24,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlanUsageCard } from "@/components/plan";
 
 interface UserProfile {
   id: string;
@@ -479,6 +480,9 @@ export default function Profile() {
 
         {/* Account Tab */}
         <TabsContent value="account" className="space-y-6">
+          {/* Plan Usage Card - moved from Dashboard */}
+          <PlanUsageCard />
+          
           {account && (
             <>
               {/* Identification Card */}
