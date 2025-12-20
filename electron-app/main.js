@@ -41,6 +41,9 @@ function createMainWindow() {
 }
 
 // ============= WhatsApp Window =============
+// Modern Chrome User-Agent to bypass WhatsApp browser check
+const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 function createWhatsAppWindow() {
   whatsappWindow = new BrowserWindow({
     width: 1200,
@@ -54,6 +57,9 @@ function createWhatsAppWindow() {
     show: true
   });
 
+  // Set User-Agent before loading
+  whatsappWindow.webContents.setUserAgent(CHROME_USER_AGENT);
+  
   whatsappWindow.loadURL('https://web.whatsapp.com');
   whatsappWindow.setMenuBarVisibility(false);
 
