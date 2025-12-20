@@ -334,27 +334,104 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
     return sum + monthlyPrice;
   }, 0);
 
+  // Calculate Churn Rate (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  // Accounts that were active 30 days ago
+  const accountsActiveThirtyDaysAgo = accounts.filter(a => {
+    const createdAt = new Date(a.created_at);
+    return createdAt <= thirtyDaysAgo && a.subscription_status !== 'trial';
+  }).length;
+  
+  // Accounts that cancelled in the last 30 days (simplified: currently cancelled accounts)
+  const recentlyChurned = accounts.filter(a => a.subscription_status === 'cancelled').length;
+  
+  const churnRate = accountsActiveThirtyDaysAgo > 0 
+    ? (recentlyChurned / accountsActiveThirtyDaysAgo) * 100 
+    : 0;
+
+  // Calculate LTV (Lifetime Value)
+  // LTV = ARPU (Average Revenue Per User) / Churn Rate
+  // Or simplified: Average monthly revenue * Average customer lifespan
+  const arpu = activeAccounts > 0 ? mrr / activeAccounts : 0;
+  
+  // Calculate average account age in months
+  const now = new Date();
+  const totalMonths = accounts.reduce((sum, account) => {
+    const createdAt = new Date(account.created_at);
+    const monthsActive = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24 * 30);
+    return sum + Math.max(1, monthsActive);
+  }, 0);
+  const avgLifespanMonths = accounts.length > 0 ? totalMonths / accounts.length : 0;
+  
+  // LTV = ARPU * Average Lifespan (in months)
+  const ltv = arpu * avgLifespanMonths;
+
   return (
     <div className="space-y-6">
-      {/* MRR Highlight */}
-      <Card className="border-0 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-sm">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Receita Mensal Recorrente (MRR)</p>
-              <p className="text-4xl font-semibold tracking-tight mt-1">
-                R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Baseado em {activeAccounts} {activeAccounts === 1 ? 'conta ativa' : 'contas ativas'}
-              </p>
+      {/* Financial Metrics */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* MRR Card */}
+        <Card className="border-0 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">MRR</p>
+                <p className="text-3xl font-semibold tracking-tight mt-1">
+                  R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {activeAccounts} {activeAccounts === 1 ? 'conta ativa' : 'contas ativas'}
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-primary/10">
+                <TrendingUp className="h-6 w-6 text-primary" />
+              </div>
             </div>
-            <div className="p-4 rounded-full bg-primary/10">
-              <TrendingUp className="h-8 w-8 text-primary" />
+          </CardContent>
+        </Card>
+
+        {/* LTV Card */}
+        <Card className="border-0 bg-gradient-to-br from-emerald-500/5 via-emerald-500/10 to-emerald-500/5 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">LTV Médio</p>
+                <p className="text-3xl font-semibold tracking-tight mt-1">
+                  R$ {ltv.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tempo médio: {avgLifespanMonths.toFixed(1)} meses
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-emerald-500/10">
+                <Wallet className="h-6 w-6 text-emerald-500" />
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Churn Card */}
+        <Card className="border-0 bg-gradient-to-br from-amber-500/5 via-amber-500/10 to-amber-500/5 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Taxa de Churn</p>
+                <p className="text-3xl font-semibold tracking-tight mt-1">
+                  {churnRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {recentlyChurned} {recentlyChurned === 1 ? 'cancelamento' : 'cancelamentos'}
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-amber-500/10">
+                <Activity className="h-6 w-6 text-amber-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
