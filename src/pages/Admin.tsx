@@ -366,6 +366,17 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
         <StatCard icon={Package} label="Planos Ativos" value={activeMainPlans} />
       </div>
 
+      {/* Growth Chart */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium">Crescimento de Assinaturas</CardTitle>
+          <CardDescription className="text-sm">Evolução das contas nos últimos 6 meses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SubscriptionGrowthChart accounts={accounts} />
+        </CardContent>
+      </Card>
+
       {/* Distribution Cards */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-0 shadow-sm">
@@ -422,17 +433,6 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
           </CardContent>
         </Card>
       </div>
-
-      {/* Growth Chart */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-medium">Crescimento de Assinaturas</CardTitle>
-          <CardDescription className="text-sm">Evolução das contas nos últimos 6 meses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SubscriptionGrowthChart accounts={accounts} />
-        </CardContent>
-      </Card>
     </div>
   );
 }
