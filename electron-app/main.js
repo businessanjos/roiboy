@@ -318,79 +318,77 @@ async function checkWhatsAppReady() {
     const result = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
         try {
-          // Check for conversation list items (most reliable indicator)
-          const chatListItems = document.querySelectorAll('[data-testid="cell-frame-container"]');
-          const hasChats = chatListItems.length > 0;
+          // Simple check: if we can see any chat content, we're logged in
+          const mainPanel = document.getElementById('main') || document.querySelector('[data-testid="conversation-panel-wrapper"]');
+          const hasMainPanel = !!mainPanel;
           
-          // Check for conversation list by aria role
-          const listbox = document.querySelector('[role="listbox"]') || 
-                         document.querySelector('[aria-label*="Lista de conversas"]') ||
-                         document.querySelector('[aria-label*="Chat list"]');
+          // Check for conversation list - this is the key indicator
+          const paneLeft = document.getElementById('pane-side') || document.querySelector('[id*="pane"]');
+          const hasPaneLeft = !!paneLeft;
           
-          // Check for side panel (conversations list) - WhatsApp Business Web
-          const sidePanel = document.getElementById('side') || 
-                           document.getElementById('pane-side') ||
-                           document.querySelector('#side') ||
-                           document.querySelector('[class*="side"]') ||
-                           document.querySelector('div[tabindex] > div > div > div'); // Generic nested structure
+          // Check for any chat items visible in the left sidebar
+          const chatItems = document.querySelectorAll('[role="row"], [role="listitem"], [data-testid="cell-frame-container"]');
+          const hasChatItems = chatItems.length > 0;
           
-          // Check for chat rows with avatars
-          const avatars = document.querySelectorAll('[data-testid="cell-frame-container"] img');
-          const hasAvatars = avatars.length > 0;
+          // Check for the search box (only visible when logged in)
+          const searchBox = document.querySelector('[data-testid="chat-list-search"]') ||
+                           document.querySelector('div[contenteditable="true"][data-tab="3"]') ||
+                           document.querySelector('[role="textbox"]');
+          const hasSearchBox = !!searchBox;
           
-          // Check for search input (visible when logged in)
-          const searchInput = document.querySelector('[data-testid="chat-list-search"]') ||
-                             document.querySelector('input[title*="Pesquisar"]') ||
-                             document.querySelector('input[title*="Search"]') ||
-                             document.querySelector('[contenteditable="true"][data-tab]') ||
-                             document.querySelector('div[contenteditable="true"]');
-          
-          // Check for header with user menu
-          const userMenu = document.querySelector('[data-testid="menu"]') ||
-                          document.querySelector('[aria-label*="Menu"]') ||
-                          document.querySelector('[title*="Menu"]');
-          
-          // Check for "Archived" text (only visible when logged in) - Portuguese and English
-          const pageText = document.body.innerText || '';
-          const hasArchivedText = pageText.includes('Arquivadas') || pageText.includes('Archived');
-          
-          // Check div count (logged in has many more elements)
-          const divCount = document.querySelectorAll('div').length;
-          const hasManyDivs = divCount > 150;
+          // Check for header elements (user avatar, menu, etc)
+          const headerElements = document.querySelectorAll('header button, header span, [data-testid="menu"]');
+          const hasHeader = headerElements.length > 5;
           
           // Check for QR code (if visible, NOT logged in)
           const qrCanvas = document.querySelector('canvas[aria-label*="QR"]') || 
-                          document.querySelector('[data-ref]');
+                          document.querySelector('[data-ref]') ||
+                          document.querySelector('canvas[height="264"]');
           const hasQR = !!qrCanvas;
           
-          // Check for WhatsApp Business specific elements
-          const businessBadge = document.querySelector('[data-testid="business-badge"]') ||
-                               pageText.includes('WhatsApp Business');
+          // Check for startup loading screen
+          const loadingScreen = document.querySelector('[data-testid="startup"]') ||
+                               document.querySelector('[class*="landing"]');
+          const isLoading = !!loadingScreen;
+          
+          // Check total divs - logged in page has 500+ divs typically
+          const divCount = document.querySelectorAll('div').length;
+          const hasManyDivs = divCount > 200;
+          
+          // Check for text that appears only when logged in
+          const bodyText = document.body?.innerText || '';
+          const hasLoggedInText = bodyText.includes('Arquivadas') || 
+                                 bodyText.includes('Archived') ||
+                                 bodyText.includes('Nova conversa') ||
+                                 bodyText.includes('New chat');
           
           const debug = {
-            hasChats: hasChats,
-            chatCount: chatListItems.length,
-            hasListbox: !!listbox,
-            sidePanel: !!sidePanel,
-            hasAvatars: hasAvatars,
-            avatarCount: avatars.length,
-            searchInput: !!searchInput,
-            userMenu: !!userMenu,
-            hasArchivedText: hasArchivedText,
-            divCount: divCount,
-            hasManyDivs: hasManyDivs,
-            hasQR: hasQR,
-            isBusiness: !!businessBadge,
+            hasMainPanel,
+            hasPaneLeft,
+            hasChatItems,
+            chatItemCount: chatItems.length,
+            hasSearchBox,
+            hasHeader,
+            headerCount: headerElements.length,
+            hasQR,
+            isLoading,
+            divCount,
+            hasManyDivs,
+            hasLoggedInText,
             url: window.location.href
           };
           
           console.log('[ROY Debug]', JSON.stringify(debug));
           
-          // Logged in if: has chats OR has avatars OR (has many divs AND no QR) OR has archived text
-          const isLoggedIn = hasChats || hasAvatars || hasArchivedText || 
-                            (hasManyDivs && !hasQR) || 
-                            (!!searchInput && !hasQR) ||
-                            (!!listbox && !hasQR);
+          // Consider logged in if:
+          // 1. Has chat items OR
+          // 2. Has pane-side AND no QR AND not loading OR
+          // 3. Has many divs AND no QR AND not loading OR
+          // 4. Has logged in specific text
+          const isLoggedIn = hasChatItems || 
+                            hasLoggedInText ||
+                            (hasPaneLeft && !hasQR && !isLoading) ||
+                            (hasManyDivs && !hasQR && !isLoading && hasHeader);
           
           return { ready: isLoggedIn, debug: debug };
         } catch(e) {
@@ -410,11 +408,11 @@ async function checkWhatsAppReady() {
     });
 
     if (isReady && !captureState.whatsapp.isCapturing) {
-      console.log('[ROY] Iniciando captura WhatsApp...');
+      console.log('[ROY] WhatsApp conectado! Iniciando captura...');
       startCapture('whatsapp');
     }
     
-    // Keep checking
+    // Keep checking - more frequently when not connected
     setTimeout(checkWhatsAppReady, isReady ? 10000 : 2000);
   } catch (error) {
     console.error('[ROY] Erro ao verificar WhatsApp:', error.message);
