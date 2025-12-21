@@ -175,6 +175,24 @@ function createWhatsAppWindow() {
   // Create session for WhatsApp
   const whatsappSession = session.fromPartition('persist:whatsapp');
   
+  // CRITICAL: Grant microphone and camera permissions for WhatsApp voice/video
+  whatsappSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowedPermissions = ['media', 'mediaKeySystem', 'geolocation', 'notifications', 'fullscreen', 'pointerLock'];
+    if (allowedPermissions.includes(permission)) {
+      console.log('[ROY] Granted permission:', permission);
+      callback(true);
+    } else {
+      console.log('[ROY] Denied permission:', permission);
+      callback(false);
+    }
+  });
+  
+  // Also handle permission checks
+  whatsappSession.setPermissionCheckHandler((webContents, permission) => {
+    const allowedPermissions = ['media', 'mediaKeySystem', 'geolocation', 'notifications', 'fullscreen', 'pointerLock'];
+    return allowedPermissions.includes(permission);
+  });
+  
   // Block whatsapp:// protocol via redirect interception (onBeforeRequest doesn't support custom schemes)
   whatsappSession.webRequest.onBeforeRedirect((details) => {
     if (details.redirectURL && details.redirectURL.startsWith('whatsapp:')) {
