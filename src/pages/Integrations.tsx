@@ -46,12 +46,19 @@ export default function Integrations() {
   const [savingOpenaiKey, setSavingOpenaiKey] = useState(false);
   const [testingOpenai, setTestingOpenai] = useState(false);
   const [savingZoomConfig, setSavingZoomConfig] = useState(false);
+  
+  // Evolution API state
+  const [evolutionApiUrl, setEvolutionApiUrl] = useState("");
+  const [evolutionApiKey, setEvolutionApiKey] = useState("");
+  const [evolutionInstanceName, setEvolutionInstanceName] = useState("");
+  const [savingEvolution, setSavingEvolution] = useState(false);
 
   const availableIntegrations = [
     { id: "openai", name: "OpenAI", description: "Conecte sua API Key para análise de IA avançada", icon: Brain, category: "IA" },
     { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video, category: "Videoconferência" },
     { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar, category: "Videoconferência" },
     { id: "whatsapp", name: "WhatsApp Web", description: "Captura de mensagens via Chrome Extension", icon: MessageSquare, category: "Comunicação" },
+    { id: "evolution", name: "Evolution API", description: "WhatsApp API estável via webhooks", icon: MessageSquare, category: "Comunicação" },
     { id: "pipedrive", name: "Pipedrive", description: "Cadastre clientes ao fechar vendas", icon: Users, category: "CRM" },
     { id: "liberty", name: "Liberty", description: "Receba mensagens WhatsApp e dados de CRM", icon: Webhook, category: "CRM" },
     { id: "ryka", name: "Clínica Ryka", description: "Receba metas e vendas automaticamente", icon: TrendingUp, category: "Vendas" },
@@ -82,6 +89,7 @@ export default function Integrations() {
   const libertyWebhookUrl = accountId 
     ? `${supabaseUrl}/functions/v1/liberty-webhook?account_id=${accountId}` 
     : `${supabaseUrl}/functions/v1/liberty-webhook`;
+  const evolutionWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook`;
 
   useEffect(() => {
     if (user) {
@@ -198,6 +206,14 @@ export default function Integrations() {
         const config = zoomInt.config as Record<string, string>;
         setZoomSecretToken(config.secret_token || "");
       }
+      // Load Evolution config if exists
+      const evolutionInt = data?.find(i => i.type === "evolution");
+      if (evolutionInt?.config && typeof evolutionInt.config === 'object') {
+        const config = evolutionInt.config as Record<string, string>;
+        setEvolutionApiUrl(config.api_url || "");
+        setEvolutionApiKey(config.api_key || "");
+        setEvolutionInstanceName(config.instance_name || "");
+      }
     }
     setLoading(false);
   };
@@ -238,6 +254,90 @@ export default function Integrations() {
         description: "Configuração do Zoom atualizada com sucesso.",
       });
       fetchIntegrations();
+    }
+  };
+
+  // Save Evolution API config
+  const saveEvolutionConfig = async () => {
+    if (!accountId) {
+      toast({
+        title: "Erro",
+        description: "Conta não encontrada. Recarregue a página.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!evolutionApiUrl || !evolutionInstanceName) {
+      toast({
+        title: "Erro",
+        description: "Preencha a URL da API e o nome da instância.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingEvolution(true);
+
+    const existingEvolution = integrations.find(i => i.type === "evolution");
+    
+    if (existingEvolution) {
+      const { error } = await supabase
+        .from("integrations")
+        .update({ 
+          config: { 
+            api_url: evolutionApiUrl,
+            api_key: evolutionApiKey,
+            instance_name: evolutionInstanceName,
+          },
+          status: "connected"
+        })
+        .eq("id", existingEvolution.id);
+
+      setSavingEvolution(false);
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível salvar a configuração.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Salvo!",
+          description: "Evolution API configurada com sucesso.",
+        });
+        fetchIntegrations();
+      }
+    } else {
+      const { error } = await supabase
+        .from("integrations")
+        .insert({
+          account_id: accountId,
+          type: "evolution" as any,
+          status: "connected",
+          config: {
+            api_url: evolutionApiUrl,
+            api_key: evolutionApiKey,
+            instance_name: evolutionInstanceName,
+          }
+        });
+
+      setSavingEvolution(false);
+
+      if (error) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível criar a integração.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Conectado!",
+          description: "Evolution API configurada com sucesso.",
+        });
+        fetchIntegrations();
+      }
     }
   };
 
@@ -420,6 +520,10 @@ export default function Integrations() {
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                 </svg>
                 <span className="hidden sm:inline">WhatsApp</span>
+              </TabsTrigger>
+              <TabsTrigger value="evolution" className="gap-2">
+                <Webhook className="h-4 w-4" />
+                <span className="hidden sm:inline">Evolution API</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1098,6 +1202,135 @@ Content-Type: application/json
                   <li>Cole a Webhook URL completa acima</li>
                   <li>Marque "Active" e salve</li>
                 </ol>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="evolution" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Webhook className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Evolution API</CardTitle>
+                    <CardDescription>
+                      Integração estável com WhatsApp via webhooks
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge variant={integrations.find(i => i.type === "evolution")?.status === "connected" ? "default" : "secondary"}>
+                  {integrations.find(i => i.type === "evolution")?.status === "connected" ? (
+                    <><CheckCircle2 className="h-3 w-3 mr-1" /> Conectado</>
+                  ) : (
+                    <><XCircle className="h-3 w-3 mr-1" /> Desconectado</>
+                  )}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                <h4 className="font-medium flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Sobre a Evolution API
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  A Evolution API é uma solução estável para integração com WhatsApp, eliminando a necessidade 
+                  de manter o Electron app rodando. As mensagens são recebidas automaticamente via webhook.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="evolution-url">URL da API</Label>
+                  <Input
+                    id="evolution-url"
+                    placeholder="https://sua-evolution-api.com"
+                    value={evolutionApiUrl}
+                    onChange={(e) => setEvolutionApiUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL base da sua instância Evolution API
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="evolution-key">API Key (opcional)</Label>
+                  <Input
+                    id="evolution-key"
+                    type="password"
+                    placeholder="Sua API Key"
+                    value={evolutionApiKey}
+                    onChange={(e) => setEvolutionApiKey(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="evolution-instance">Nome da Instância</Label>
+                  <Input
+                    id="evolution-instance"
+                    placeholder="minha-instancia"
+                    value={evolutionInstanceName}
+                    onChange={(e) => setEvolutionInstanceName(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O nome da instância configurada na Evolution API
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={saveEvolutionConfig}
+                  disabled={savingEvolution || !evolutionApiUrl || !evolutionInstanceName}
+                >
+                  {savingEvolution ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvando...</>
+                  ) : (
+                    <><CheckCircle2 className="h-4 w-4 mr-2" /> Salvar Configuração</>
+                  )}
+                </Button>
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <h4 className="font-medium">Webhook URL (configure na Evolution)</h4>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-muted p-2 rounded overflow-auto">
+                    {evolutionWebhookUrl}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(evolutionWebhookUrl, "Webhook URL")}
+                  >
+                    {copied === "Webhook URL" ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                <h4 className="font-medium flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Como configurar na Evolution API
+                </h4>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Acesse o painel da sua Evolution API</li>
+                  <li>Vá em Configurações → Webhooks</li>
+                  <li>Adicione a URL acima no evento <code className="text-xs bg-muted px-1 rounded">messages.upsert</code></li>
+                  <li>Habilite o webhook e salve</li>
+                </ol>
+              </div>
+
+              <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4">
+                <p className="text-sm text-green-700 dark:text-green-400">
+                  <strong>Vantagens:</strong> Não precisa manter app desktop rodando, recebe mensagens 24/7, 
+                  mais estável que scraping do WhatsApp Web.
+                </p>
               </div>
             </CardContent>
           </Card>
