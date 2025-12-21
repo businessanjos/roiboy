@@ -339,30 +339,33 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         throw new Error("Could not extract file path from URL");
       }
       
+      // Download the file directly using Supabase storage
       const { data, error } = await supabase.storage
         .from("contracts")
-        .createSignedUrl(decodeURIComponent(filePath), 300); // 5 minutes
+        .download(decodeURIComponent(filePath));
       
       if (error) throw error;
       
-      if (!data?.signedUrl) {
-        throw new Error("No signed URL returned");
+      if (!data) {
+        throw new Error("No file data returned");
       }
       
-      // The signedUrl from Supabase is relative, build full URL
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      let fullUrl: string;
+      // Create a blob URL and trigger download
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
       
-      if (data.signedUrl.startsWith('http')) {
-        fullUrl = data.signedUrl;
-      } else {
-        // Remove leading slash if present to avoid double slash
-        const path = data.signedUrl.startsWith('/') ? data.signedUrl.slice(1) : data.signedUrl;
-        fullUrl = `${supabaseUrl}/storage/v1/${path}`;
-      }
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = contract.file_name || 'contrato.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
-      // Open in new tab
-      window.open(fullUrl, "_blank");
+      // Clean up the blob URL
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      
+      toast.success("Download iniciado!");
     } catch (error) {
       console.error("Error downloading contract:", error);
       toast.error("Erro ao baixar o contrato. Tente novamente.");
