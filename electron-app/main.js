@@ -185,7 +185,7 @@ function createWhatsAppWindow() {
 
   // CRITICAL: Inject blocker IMMEDIATELY and EARLY
   whatsappWindow.webContents.on('did-start-loading', () => {
-    whatsappWindow.webContents.executeJavaScript(`
+    safeExecuteJS(whatsappWindow, `
       // Block whatsapp:// protocol at every level
       (function() {
         console.log('[ROY] Injetando bloqueadores EARLY...');
@@ -205,7 +205,7 @@ function createWhatsAppWindow() {
   });
 
   whatsappWindow.webContents.on('dom-ready', () => {
-    whatsappWindow.webContents.executeJavaScript(`
+    safeExecuteJS(whatsappWindow, `
       // Comprehensive whatsapp:// protocol blocker
       (function() {
         console.log('[ROY] Proteções anti-redirect DOM-READY ativadas');
@@ -460,10 +460,10 @@ function createZoomWindow() {
 }
 
 async function checkZoomReady() {
-  if (!zoomWindow) return;
+  if (!zoomWindow || zoomWindow.isDestroyed()) return;
 
   try {
-    const isInMeeting = await zoomWindow.webContents.executeJavaScript(`
+    const isInMeeting = await safeExecuteJS(zoomWindow, `
       (function() {
         // Check if in meeting by looking for participant list or meeting controls
         const meetingControls = document.querySelector('[class*="meeting-control"]') || 
@@ -519,10 +519,10 @@ function createMeetWindow() {
 }
 
 async function checkMeetReady() {
-  if (!meetWindow) return;
+  if (!meetWindow || meetWindow.isDestroyed()) return;
 
   try {
-    const isInMeeting = await meetWindow.webContents.executeJavaScript(`
+    const isInMeeting = await safeExecuteJS(meetWindow, `
       (function() {
         // Check if in meeting by looking for specific elements
         const meetingLayout = document.querySelector('[data-meeting-code]') || 
@@ -894,10 +894,10 @@ async function injectWhatsAppCaptureScript() {
 
 // ============= Zoom Capture =============
 async function extractZoomParticipants() {
-  if (!zoomWindow || !authData) return;
+  if (!zoomWindow || zoomWindow.isDestroyed() || !authData) return;
 
   try {
-    const participants = await zoomWindow.webContents.executeJavaScript(`
+    const participants = await safeExecuteJS(zoomWindow, `
       (function() {
         const participants = [];
         
@@ -920,9 +920,9 @@ async function extractZoomParticipants() {
       })()
     `);
 
-    if (participants.length > 0) {
+    if (participants && participants.length > 0) {
       // Get meeting info
-      const meetingInfo = await zoomWindow.webContents.executeJavaScript(`
+      const meetingInfo = await safeExecuteJS(zoomWindow, `
         (function() {
           const meetingId = document.querySelector('[class*="meeting-id"]')?.innerText || 'unknown';
           const title = document.title || 'Zoom Meeting';
@@ -947,10 +947,10 @@ async function extractZoomParticipants() {
 
 // ============= Meet Capture =============
 async function extractMeetParticipants() {
-  if (!meetWindow || !authData) return;
+  if (!meetWindow || meetWindow.isDestroyed() || !authData) return;
 
   try {
-    const participants = await meetWindow.webContents.executeJavaScript(`
+    const participants = await safeExecuteJS(meetWindow, `
       (function() {
         const participants = [];
         
@@ -973,9 +973,9 @@ async function extractMeetParticipants() {
       })()
     `);
 
-    if (participants.length > 0) {
+    if (participants && participants.length > 0) {
       // Get meeting info from URL
-      const meetingCode = await meetWindow.webContents.executeJavaScript(`
+      const meetingCode = await safeExecuteJS(meetWindow, `
         window.location.pathname.split('/').pop() || 'unknown'
       `);
 
