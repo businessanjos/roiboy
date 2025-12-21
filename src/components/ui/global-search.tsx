@@ -5,7 +5,9 @@ import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "./dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Input } from "./input";
 import { Button } from "./button";
 
@@ -106,7 +108,10 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden">
+      <DialogContent className="max-w-lg p-0 overflow-hidden" aria-describedby={undefined}>
+        <VisuallyHidden>
+          <DialogTitle>Busca global</DialogTitle>
+        </VisuallyHidden>
         <div className="flex items-center border-b px-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
