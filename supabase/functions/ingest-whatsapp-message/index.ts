@@ -12,7 +12,8 @@ const MAX_PHONE_LENGTH = 16;
 
 interface MessagePayload {
   api_key: string;
-  phone_e164: string;
+  phone_e164?: string;
+  contact_name?: string; // Alternative identifier when phone is not available
   direction: "client_to_team" | "team_to_client";
   content_text: string;
   sent_at: string;
@@ -119,13 +120,15 @@ serve(async (req) => {
       group_name: payload.group_name,
       hasContent: !!payload.content_text,
       source: payload.source,
-      isFromExtension
+      isFromExtension,
+      phone: payload.phone_e164,
+      contactName: payload.contact_name
     });
 
-    // Input validation
-    if (!payload.phone_e164 || !payload.direction || !payload.content_text || !payload.sent_at) {
+    // Input validation - require either phone OR contact_name
+    if ((!payload.phone_e164 && !payload.contact_name) || !payload.direction || !payload.content_text || !payload.sent_at) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields", details: { hasPhone: !!payload.phone_e164, hasContactName: !!payload.contact_name, hasDirection: !!payload.direction, hasContent: !!payload.content_text } }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -138,16 +141,15 @@ serve(async (req) => {
       );
     }
 
-    // Validate phone format and length
+    // Validate phone format and length (only if phone is provided)
     const clientPhone = payload.is_group && payload.sender_phone_e164 
       ? payload.sender_phone_e164 
       : payload.phone_e164;
 
-    if (clientPhone.length > MAX_PHONE_LENGTH || !clientPhone.match(/^\+[1-9]\d{6,14}$/)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid phone format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const hasValidPhone = clientPhone && clientPhone.length <= MAX_PHONE_LENGTH && clientPhone.match(/^\+[1-9]\d{6,14}$/);
+    
+    if (clientPhone && !hasValidPhone) {
+      console.log("Phone validation failed, will try name:", { phone: clientPhone, contactName: payload.contact_name });
     }
 
     // Validate direction enum
@@ -196,13 +198,61 @@ serve(async (req) => {
     
     console.log("Authenticated for account:", authResult.accountId);
 
-    // Find client by phone - now scoped to authenticated account
-    const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("id, account_id, full_name")
-      .eq("phone_e164", clientPhone)
-      .eq("account_id", authResult.accountId)
-      .maybeSingle();
+    // Find client by phone first, then by name as fallback
+    let client = null;
+    let clientError = null;
+    
+    // Try finding by phone first (if valid phone provided)
+    if (hasValidPhone && clientPhone) {
+      const result = await supabase
+        .from("clients")
+        .select("id, account_id, full_name, phone_e164")
+        .eq("phone_e164", clientPhone)
+        .eq("account_id", authResult.accountId)
+        .maybeSingle();
+      
+      client = result.data;
+      clientError = result.error;
+    }
+    
+    // If not found by phone, try by contact name
+    if (!client && payload.contact_name && payload.contact_name.trim()) {
+      console.log("Trying to find client by name:", payload.contact_name);
+      
+      // Try exact match first
+      const { data: clientByName, error: nameError } = await supabase
+        .from("clients")
+        .select("id, account_id, full_name, phone_e164")
+        .eq("account_id", authResult.accountId)
+        .ilike("full_name", payload.contact_name.trim())
+        .maybeSingle();
+      
+      if (clientByName) {
+        client = clientByName;
+        console.log("Found client by exact name match:", client.id, client.full_name);
+      } else {
+        // Try partial match (contact name might include company name)
+        const nameParts = payload.contact_name.trim().split(/\s+/);
+        const firstName = nameParts[0];
+        
+        if (firstName && firstName.length > 2) {
+          const { data: clientByPartialName } = await supabase
+            .from("clients")
+            .select("id, account_id, full_name, phone_e164")
+            .eq("account_id", authResult.accountId)
+            .ilike("full_name", `${firstName}%`)
+            .limit(1)
+            .maybeSingle();
+          
+          if (clientByPartialName) {
+            client = clientByPartialName;
+            console.log("Found client by partial name match:", client.id, client.full_name);
+          }
+        }
+      }
+      
+      clientError = nameError;
+    }
 
     if (clientError) {
       console.error("Database error:", clientError.code);
@@ -219,16 +269,17 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      console.log("Client not found for:", { phone: clientPhone, contactName: payload.contact_name });
       return new Response(
-        JSON.stringify({ error: "Client not found" }),
+        JSON.stringify({ error: "Client not found", phone: clientPhone, contactName: payload.contact_name }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Processing message for client:", client.id);
+    console.log("Processing message for client:", client.id, client.full_name);
 
     const threadId = payload.is_group 
-      ? `group:${payload.phone_e164}` 
+      ? `group:${payload.phone_e164 || payload.contact_name}` 
       : payload.external_thread_id;
 
     // Find or create conversation
@@ -315,6 +366,7 @@ serve(async (req) => {
         success: true, 
         message_id: messageEvent.id,
         client_id: client.id,
+        client_name: client.full_name
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
