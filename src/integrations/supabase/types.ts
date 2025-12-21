@@ -1124,6 +1124,7 @@ export type Database = {
           neighborhood: string | null
           notes: string | null
           phone_e164: string
+          responsible_user_id: string | null
           state: string | null
           status: Database["public"]["Enums"]["client_status"]
           street: string | null
@@ -1160,6 +1161,7 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           phone_e164: string
+          responsible_user_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           street?: string | null
@@ -1196,6 +1198,7 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           phone_e164?: string
+          responsible_user_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           street?: string | null
@@ -1209,6 +1212,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

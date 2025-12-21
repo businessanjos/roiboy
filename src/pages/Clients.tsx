@@ -517,6 +517,7 @@ export default function Clients() {
         contract_end_date: newClientData.contract_end_date || null,
         is_mls: newClientData.is_mls,
         mls_level: newClientData.is_mls ? (newClientData.mls_level || null) : null,
+        responsible_user_id: newClientData.responsible_user_id || null,
       }).select().single();
 
       if (error) throw error;
@@ -1184,6 +1185,7 @@ export default function Clients() {
                     onChange={setNewClientData}
                     errors={formErrors}
                     showBasicFields={true}
+                    teamUsers={teamUsers}
                   />
                   
                         {/* Product Selection */}
