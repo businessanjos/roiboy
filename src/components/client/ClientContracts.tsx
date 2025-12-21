@@ -127,6 +127,7 @@ const PAYMENT_METHODS = [
 
 const CONTRACT_TYPES = [
   { value: "compra", label: "Contrato de Compra" },
+  { value: "renovacao", label: "Renovação" },
   { value: "confissao_divida", label: "Confissão de Dívida" },
   { value: "termo_congelamento", label: "Termo de Congelamento" },
   { value: "distrato", label: "Distrato" },
