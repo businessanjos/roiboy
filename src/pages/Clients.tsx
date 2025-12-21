@@ -99,6 +99,7 @@ export default function Clients() {
   const { currentUser } = useCurrentUser();
   const [clients, setClients] = useState<any[]>([]);
   const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
+  const [scoreMap, setScoreMap] = useState<Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -194,6 +195,27 @@ export default function Clients() {
           }
         });
         setVnpsMap(vnpsGrouped);
+
+        // Fetch score snapshots (Roizômetro, E-Score)
+        const { data: scoresData } = await supabase
+          .from("score_snapshots")
+          .select("*")
+          .in("client_id", clientIds)
+          .order("computed_at", { ascending: false });
+
+        // Group by client_id and take latest
+        const scoresGrouped: Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }> = {};
+        (scoresData || []).forEach((s: any) => {
+          if (!scoresGrouped[s.client_id]) {
+            scoresGrouped[s.client_id] = {
+              escore: s.escore,
+              roizometer: s.roizometer,
+              quadrant: s.quadrant,
+              trend: s.trend,
+            };
+          }
+        });
+        setScoreMap(scoresGrouped);
         
         // Fetch WhatsApp conversations and message counts
         const { data: conversationsData } = await supabase
@@ -1574,6 +1596,8 @@ export default function Clients() {
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-medium sticky left-0 bg-muted/50 z-10 min-w-[200px]">Cliente</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">Status</TableHead>
+                    <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
+                    <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
                     <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
                     <TableHead className="font-medium text-center min-w-[120px]">Contrato</TableHead>
@@ -1703,6 +1727,62 @@ export default function Clients() {
                         </TableCell>
                         <TableCell className="text-center">
                           <StatusIndicator status={client.status} size="sm" />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {scoreMap[client.id] ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={cn(
+                                    "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
+                                    scoreMap[client.id].roizometer >= 70
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                      : scoreMap[client.id].roizometer >= 40
+                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                        : "bg-destructive/10 text-destructive"
+                                  )}>
+                                    {scoreMap[client.id].roizometer}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-xs">
+                                    <p className="font-medium">Roizômetro: {scoreMap[client.id].roizometer}%</p>
+                                    <p className="text-muted-foreground">Percepção de ROI do cliente</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {scoreMap[client.id] ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={cn(
+                                    "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
+                                    scoreMap[client.id].escore >= 70
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                      : scoreMap[client.id].escore >= 40
+                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                        : "bg-destructive/10 text-destructive"
+                                  )}>
+                                    {scoreMap[client.id].escore}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-xs">
+                                    <p className="font-medium">E-Score: {scoreMap[client.id].escore}</p>
+                                    <p className="text-muted-foreground">Engajamento do cliente</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           {(() => {
