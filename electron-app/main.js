@@ -85,6 +85,26 @@ let captureState = {
   meet: { isCapturing: false, interval: null, participantsDetected: 0 }
 };
 
+// ============= Global Safe Execute JS Helper =============
+// Helper function to safely execute JS in any BrowserWindow, handling disposed frame errors
+async function safeExecuteJS(browserWindow, script) {
+  if (!browserWindow || browserWindow.isDestroyed()) {
+    return null;
+  }
+  const webContents = browserWindow.webContents;
+  if (!webContents || webContents.isDestroyed()) {
+    return null;
+  }
+  try {
+    return await webContents.executeJavaScript(script);
+  } catch (error) {
+    if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed') || error.message.includes('Render frame'))) {
+      return null; // Silently return null for disposed/destroyed frame errors
+    }
+    throw error;
+  }
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 520,
@@ -314,8 +334,8 @@ async function checkWhatsAppReady() {
   }
 
   try {
-    // Get raw page info first
-    const pageInfo = await whatsappWindow.webContents.executeJavaScript(`
+    // Get raw page info first (using global safeExecuteJS)
+    const pageInfo = await safeExecuteJS(whatsappWindow, `
       (function() {
         const html = document.documentElement.outerHTML;
         const bodyText = document.body?.innerText || '';
@@ -348,6 +368,12 @@ async function checkWhatsAppReady() {
         };
       })()
     `);
+    
+    if (!pageInfo) {
+      // Window was disposed, try again later
+      setTimeout(checkWhatsAppReady, 3000);
+      return;
+    }
 
     console.log('[ROY] WhatsApp page info:', JSON.stringify(pageInfo, null, 2));
 
@@ -614,24 +640,9 @@ async function injectWhatsAppCaptureScript() {
     return;
   }
 
-  // Helper function to safely execute JS in WhatsApp window
-  const safeExecuteJS = async (script) => {
-    if (!whatsappWindow || whatsappWindow.isDestroyed() || !whatsappWindow.webContents) {
-      return null;
-    }
-    try {
-      return await whatsappWindow.webContents.executeJavaScript(script);
-    } catch (error) {
-      if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed'))) {
-        return null; // Silently return null for disposed frame errors
-      }
-      throw error;
-    }
-  };
-
   try {
-    // First, inject the capture script and get diagnostic info
-    const diagnostics = await safeExecuteJS(`
+    // First, inject the capture script and get diagnostic info (using global safeExecuteJS)
+    const diagnostics = await safeExecuteJS(whatsappWindow, `
       (function() {
         // Initialize message queue if not exists
         window.__royMessageQueue = window.__royMessageQueue || [];
@@ -832,8 +843,8 @@ async function injectWhatsAppCaptureScript() {
     
     console.log('[ROY] Diagnóstico captura:', diagnostics);
     
-    // Now retrieve any queued messages
-    const messages = await whatsappWindow.webContents.executeJavaScript(`
+    // Now retrieve any queued messages (using global safeExecuteJS)
+    const messages = await safeExecuteJS(whatsappWindow, `
       (function() {
         const queue = window.__royMessageQueue || [];
         window.__royMessageQueue = [];
@@ -844,6 +855,11 @@ async function injectWhatsAppCaptureScript() {
         };
       })()
     `);
+    
+    if (!messages) {
+      // Window was disposed, exit gracefully
+      return;
+    }
     
     if (messages && messages.messages && messages.messages.length > 0) {
       console.log('[ROY] Recuperando', messages.messages.length, 'mensagens da fila (IDs enviados:', messages.sentIdsSize + ')');
@@ -1081,24 +1097,9 @@ async function scanWhatsAppAudioMessages() {
     return;
   }
 
-  // Helper function to safely execute JS
-  const safeExecuteJS = async (script) => {
-    if (!whatsappWindow || whatsappWindow.isDestroyed() || !whatsappWindow.webContents) {
-      return null;
-    }
-    try {
-      return await whatsappWindow.webContents.executeJavaScript(script);
-    } catch (error) {
-      if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed'))) {
-        return null;
-      }
-      throw error;
-    }
-  };
-
   try {
-    // Safe audio detection - just collect metadata, don't interact with elements
-    const audioMessages = await safeExecuteJS(`
+    // Safe audio detection - just collect metadata, don't interact with elements (using global safeExecuteJS)
+    const audioMessages = await safeExecuteJS(whatsappWindow, `
       (function() {
         window.__royProcessedAudioIds = window.__royProcessedAudioIds || new Set();
         const audioMsgs = [];
@@ -1245,27 +1246,11 @@ async function sendWhatsAppAudioToAPI(audioData) {
       ? 'team_to_client' 
       : 'client_to_team';
 
-    // Helper function to safely execute JS in WhatsApp window
-    const safeExecuteJS = async (script) => {
-      if (!whatsappWindow || whatsappWindow.isDestroyed() || !whatsappWindow.webContents) {
-        return null;
-      }
-      try {
-        return await whatsappWindow.webContents.executeJavaScript(script);
-      } catch (error) {
-        if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed'))) {
-          return null;
-        }
-        console.error('[ROY] Erro ao executar JS:', error.message);
-        return null;
-      }
-    };
-
-    // Try to fetch the audio content if we have a URL
+    // Try to fetch the audio content if we have a URL (using global safeExecuteJS)
     let audioBase64 = null;
     if (audioData.audioSrc && audioData.audioSrc.startsWith('blob:')) {
       // For blob URLs, we need to fetch from the WhatsApp window context
-      audioBase64 = await safeExecuteJS(`
+      audioBase64 = await safeExecuteJS(whatsappWindow, `
         (async function() {
           try {
             const response = await fetch('${audioData.audioSrc}');
