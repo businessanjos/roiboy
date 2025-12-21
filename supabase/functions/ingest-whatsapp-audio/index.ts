@@ -69,62 +69,84 @@ function isValidBase64(str: string): boolean {
   return base64Regex.test(str);
 }
 
-async function transcribeAudio(audioBase64: string): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+// Process base64 in chunks to prevent memory issues
+function processBase64Chunks(base64String: string, chunkSize = 32768): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let position = 0;
   
-  if (!LOVABLE_API_KEY) {
-    throw new Error("Transcription service not configured");
+  while (position < base64String.length) {
+    const chunk = base64String.slice(position, position + chunkSize);
+    const binaryChunk = atob(chunk);
+    const bytes = new Uint8Array(binaryChunk.length);
+    
+    for (let i = 0; i < binaryChunk.length; i++) {
+      bytes[i] = binaryChunk.charCodeAt(i);
+    }
+    
+    chunks.push(bytes);
+    position += chunkSize;
   }
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return result;
+}
+
+async function transcribeAudio(audioBase64: string): Promise<string> {
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+  
+  if (!OPENAI_API_KEY) {
+    throw new Error("Transcription service not configured - OPENAI_API_KEY missing");
+  }
+
+  console.log("Starting audio transcription with OpenAI Whisper...");
+
+  // Decode base64 to binary
+  const binaryString = atob(audioBase64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  // Prepare form data for Whisper API
+  const formData = new FormData();
+  const blob = new Blob([bytes.buffer], { type: 'audio/ogg' });
+  formData.append('file', blob, 'audio.ogg');
+  formData.append('model', 'whisper-1');
+  formData.append('language', 'pt'); // Portuguese
+
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
     headers: {
-      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        {
-          role: "system",
-          content: `Você é um transcritor de áudio em português brasileiro. 
-Transcreva o áudio fornecido de forma precisa, mantendo:
-- O texto exatamente como foi falado
-- Pontuação adequada
-- Sem adicionar comentários ou explicações
-Responda APENAS com a transcrição, nada mais.`
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Transcreva este áudio:"
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:audio/webm;base64,${audioBase64}`
-              }
-            }
-          ]
-        }
-      ],
-    }),
+    body: formData,
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Whisper API error:", response.status, errorText);
+    
     if (response.status === 429) {
       throw new Error("Rate limit exceeded");
     }
     if (response.status === 402) {
       throw new Error("Service quota exceeded");
     }
-    throw new Error("Transcription failed");
+    throw new Error(`Transcription failed: ${response.status}`);
   }
 
-  const data = await response.json();
-  const transcription = data.choices?.[0]?.message?.content || "";
+  const result = await response.json();
+  const transcription = result.text || "";
+  
+  console.log("Transcription successful, length:", transcription.length);
   
   return transcription.trim();
 }
