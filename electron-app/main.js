@@ -1245,33 +1245,45 @@ async function sendWhatsAppAudioToAPI(audioData) {
       ? 'team_to_client' 
       : 'client_to_team';
 
+    // Helper function to safely execute JS in WhatsApp window
+    const safeExecuteJS = async (script) => {
+      if (!whatsappWindow || whatsappWindow.isDestroyed() || !whatsappWindow.webContents) {
+        return null;
+      }
+      try {
+        return await whatsappWindow.webContents.executeJavaScript(script);
+      } catch (error) {
+        if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed'))) {
+          return null;
+        }
+        console.error('[ROY] Erro ao executar JS:', error.message);
+        return null;
+      }
+    };
+
     // Try to fetch the audio content if we have a URL
     let audioBase64 = null;
     if (audioData.audioSrc && audioData.audioSrc.startsWith('blob:')) {
       // For blob URLs, we need to fetch from the WhatsApp window context
-      try {
-        audioBase64 = await whatsappWindow.webContents.executeJavaScript(`
-          (async function() {
-            try {
-              const response = await fetch('${audioData.audioSrc}');
-              const blob = await response.blob();
-              return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  const base64 = reader.result.split(',')[1];
-                  resolve(base64);
-                };
-                reader.readAsDataURL(blob);
-              });
-            } catch (e) {
-              console.error('[ROY] Erro ao buscar áudio:', e);
-              return null;
-            }
-          })()
-        `);
-      } catch (e) {
-        console.error('[ROY] Erro ao extrair base64 do áudio:', e);
-      }
+      audioBase64 = await safeExecuteJS(`
+        (async function() {
+          try {
+            const response = await fetch('${audioData.audioSrc}');
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+              };
+              reader.readAsDataURL(blob);
+            });
+          } catch (e) {
+            console.error('[ROY] Erro ao buscar áudio:', e);
+            return null;
+          }
+        })()
+      `);
     }
 
     if (!audioBase64) {
