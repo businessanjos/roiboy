@@ -27,6 +27,7 @@ import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
 import { ClientContracts } from "@/components/client/ClientContracts";
+import { ClientDiagnostic } from "@/components/client/ClientDiagnostic";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -1994,6 +1995,7 @@ export default function ClientDetail() {
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
             <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="cx">Momentos CX</TabsTrigger>
@@ -2007,6 +2009,10 @@ export default function ClientDetail() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="diagnostic">
+          <ClientDiagnostic clientId={id!} />
+        </TabsContent>
 
         <TabsContent value="agenda">
           <Card className="shadow-card">

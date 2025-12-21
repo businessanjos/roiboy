@@ -549,6 +549,118 @@ export type Database = {
           },
         ]
       }
+      client_diagnostics: {
+        Row: {
+          account_id: string
+          annual_revenue: number | null
+          business_sector: string | null
+          business_segment: string | null
+          client_id: string
+          company_size: string | null
+          created_at: string
+          created_by: string | null
+          current_situation: string | null
+          employee_count: number | null
+          expectations: string | null
+          has_defined_processes: boolean | null
+          has_digital_presence: boolean | null
+          has_financial_control: boolean | null
+          has_formal_structure: boolean | null
+          has_marketing_strategy: boolean | null
+          has_sales_team: boolean | null
+          id: string
+          long_term_goals: string | null
+          main_challenges: Json | null
+          notes: string | null
+          pain_points: string | null
+          previous_solutions: string | null
+          short_term_goals: string | null
+          success_criteria: string | null
+          updated_at: string
+          years_in_business: number | null
+        }
+        Insert: {
+          account_id: string
+          annual_revenue?: number | null
+          business_sector?: string | null
+          business_segment?: string | null
+          client_id: string
+          company_size?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_situation?: string | null
+          employee_count?: number | null
+          expectations?: string | null
+          has_defined_processes?: boolean | null
+          has_digital_presence?: boolean | null
+          has_financial_control?: boolean | null
+          has_formal_structure?: boolean | null
+          has_marketing_strategy?: boolean | null
+          has_sales_team?: boolean | null
+          id?: string
+          long_term_goals?: string | null
+          main_challenges?: Json | null
+          notes?: string | null
+          pain_points?: string | null
+          previous_solutions?: string | null
+          short_term_goals?: string | null
+          success_criteria?: string | null
+          updated_at?: string
+          years_in_business?: number | null
+        }
+        Update: {
+          account_id?: string
+          annual_revenue?: number | null
+          business_sector?: string | null
+          business_segment?: string | null
+          client_id?: string
+          company_size?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_situation?: string | null
+          employee_count?: number | null
+          expectations?: string | null
+          has_defined_processes?: boolean | null
+          has_digital_presence?: boolean | null
+          has_financial_control?: boolean | null
+          has_formal_structure?: boolean | null
+          has_marketing_strategy?: boolean | null
+          has_sales_team?: boolean | null
+          id?: string
+          long_term_goals?: string | null
+          main_challenges?: Json | null
+          notes?: string | null
+          pain_points?: string | null
+          previous_solutions?: string | null
+          short_term_goals?: string | null
+          success_criteria?: string | null
+          updated_at?: string
+          years_in_business?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_diagnostics_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_diagnostics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_diagnostics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_event_deliveries: {
         Row: {
           account_id: string
