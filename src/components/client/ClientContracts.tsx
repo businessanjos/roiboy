@@ -335,25 +335,38 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       if (!filePath) {
         throw new Error("Could not extract file path from URL");
       }
-      
-      // Get public URL (bucket is now public)
-      const { data } = supabase.storage
-        .from("contracts")
-        .getPublicUrl(decodeURIComponent(filePath));
-      
-      if (!data?.publicUrl) {
-        throw new Error("Could not get public URL");
+
+      // Get session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Usuário não autenticado");
       }
+
+      // Use edge function to proxy the download (bypasses browser extension blocking)
+      const response = await supabase.functions.invoke('download-contract', {
+        body: { 
+          filePath: decodeURIComponent(filePath), 
+          fileName: contract.file_name 
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      // Create blob from response and trigger download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
       
-      // Create a temporary anchor element to trigger download
       const link = document.createElement('a');
-      link.href = data.publicUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.href = blobUrl;
       link.download = contract.file_name || 'contrato.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+      toast.success("Download iniciado!");
     } catch (error) {
       console.error("Error downloading contract:", error);
       toast.error("Erro ao baixar o contrato. Tente novamente.");
