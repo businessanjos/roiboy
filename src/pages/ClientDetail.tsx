@@ -220,6 +220,9 @@ export default function ClientDetail() {
 
   // Forms for sending to client
   const [availableForms, setAvailableForms] = useState<{ id: string; title: string }[]>([]);
+  
+  // Active contract from client_contracts table
+  const [activeContract, setActiveContract] = useState<{ start_date: string; end_date: string } | null>(null);
 
   const fetchAllProducts = async () => {
     const { data, error } = await supabase
@@ -557,7 +560,17 @@ export default function ClientDetail() {
         .filter(Boolean) as ClientProduct[];
       setClientProducts(products);
 
-      // Fetch latest score
+      // Fetch active contract from client_contracts table
+      const { data: activeContractData } = await supabase
+        .from("client_contracts")
+        .select("start_date, end_date")
+        .eq("client_id", id)
+        .eq("status", "active")
+        .order("start_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      setActiveContract(activeContractData || null);
       const { data: scoreData } = await supabase
         .from("score_snapshots")
         .select("*")
@@ -1935,10 +1948,10 @@ export default function ClientDetail() {
           <CardContent className="p-5">
             <div className="flex flex-col items-center justify-center h-full gap-2">
               <p className="text-sm font-medium text-muted-foreground">Vigência</p>
-              {(client.contract_start_date || client.contract_end_date) ? (
+              {(activeContract?.start_date || activeContract?.end_date || client.contract_start_date || client.contract_end_date) ? (
                 <ContractTimer 
-                  startDate={client.contract_start_date}
-                  endDate={client.contract_end_date}
+                  startDate={activeContract?.start_date || client.contract_start_date}
+                  endDate={activeContract?.end_date || client.contract_end_date}
                   variant="compact"
                 />
               ) : (
