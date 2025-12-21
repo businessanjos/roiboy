@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
   Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye
@@ -452,11 +453,7 @@ export default function Team() {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando equipe..." fullScreen={false} />;
   }
 
   return (

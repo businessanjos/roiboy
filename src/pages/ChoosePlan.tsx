@@ -13,6 +13,7 @@ import {
   CreditCard, QrCode, FileText, ArrowRight, Shield, Zap 
 } from "lucide-react";
 import { toast } from "sonner";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { useAsaas } from "@/hooks/useAsaas";
 import { format, addMonths } from "date-fns";
 
@@ -248,11 +249,7 @@ export default function ChoosePlan() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando planos..." />;
   }
 
   return (

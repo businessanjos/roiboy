@@ -15,6 +15,7 @@ import {
   AtSign,
   ExternalLink,
 } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) {
   const navigate = useNavigate();
@@ -47,11 +48,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando notificações..." fullScreen={false} />;
   }
 
   return (

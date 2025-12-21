@@ -19,6 +19,7 @@ import {
   DollarSign,
   Award
 } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { toast } from "sonner";
 import { getMlsBadgeClasses, getMlsLevelLabel, MLS_LEVELS } from "@/lib/mls-utils";
 
@@ -180,11 +181,7 @@ export default function Products() {
   };
 
   if (loading) {
-    return (
-      <div className="p-6 lg:p-8 flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando produtos..." fullScreen={false} />;
   }
 
   return (

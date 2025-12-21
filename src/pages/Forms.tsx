@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import {
   Plus,
   MoreHorizontal,
@@ -1195,11 +1196,7 @@ export default function Forms() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando formulários..." fullScreen={false} />;
   }
 
   return (

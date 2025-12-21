@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain, Download, Upload, Shield } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -314,11 +315,7 @@ export default function Settings() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando configurações..." fullScreen={false} />;
   }
 
   return (
