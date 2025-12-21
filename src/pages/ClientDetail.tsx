@@ -18,6 +18,7 @@ import { ScoreGauge } from "@/components/ui/score-gauge";
 import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
 import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
+import { ConversationView } from "@/components/client/ConversationView";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
@@ -2009,6 +2010,7 @@ export default function ClientDetail() {
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="w-max sm:w-auto">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
             <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
             <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
@@ -2129,6 +2131,30 @@ export default function ClientDetail() {
                 clientId={id!} 
                 clientName={client?.full_name}
                 onCommentAdded={fetchData}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="whatsapp">
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Conversas WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Histórico de mensagens do WhatsApp com o cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <ConversationView 
+                messages={timeline.filter(e => 
+                  e.type === "message" && 
+                  (e.metadata?.source === "whatsapp" || 
+                   e.metadata?.source === "whatsapp_audio_transcript")
+                )} 
+                clientName={client?.full_name}
               />
             </CardContent>
           </Card>
