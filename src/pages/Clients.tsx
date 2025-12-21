@@ -100,6 +100,7 @@ export default function Clients() {
   const [clients, setClients] = useState<any[]>([]);
   const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
   const [scoreMap, setScoreMap] = useState<Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }>>({});
+  const [contractMap, setContractMap] = useState<Record<string, { status: string; start_date: string | null; end_date: string | null }>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -216,6 +217,27 @@ export default function Clients() {
           }
         });
         setScoreMap(scoresGrouped);
+
+        // Fetch active contracts for each client
+        const { data: contractsData } = await supabase
+          .from("client_contracts")
+          .select("client_id, status, start_date, end_date")
+          .in("client_id", clientIds)
+          .eq("status", "active")
+          .order("end_date", { ascending: false });
+
+        // Group by client_id and take the first (latest end_date)
+        const contractsGrouped: Record<string, { status: string; start_date: string | null; end_date: string | null }> = {};
+        (contractsData || []).forEach((c: any) => {
+          if (!contractsGrouped[c.client_id]) {
+            contractsGrouped[c.client_id] = {
+              status: c.status,
+              start_date: c.start_date,
+              end_date: c.end_date,
+            };
+          }
+        });
+        setContractMap(contractsGrouped);
         
         // Fetch WhatsApp conversations and message counts
         const { data: conversationsData } = await supabase
@@ -1596,12 +1618,11 @@ export default function Clients() {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-medium sticky left-0 bg-muted/50 z-10 min-w-[200px]">Cliente</TableHead>
-                    <TableHead className="font-medium text-center min-w-[80px]">Status</TableHead>
+                    <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
                     <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
-                    <TableHead className="font-medium text-center min-w-[120px]">Contrato</TableHead>
                     {customFields.map((field) => (
                       <TableHead key={field.id} className="font-medium text-center min-w-[120px]">
                         {field.name}
@@ -1727,7 +1748,39 @@ export default function Clients() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <StatusIndicator status={client.status} size="sm" />
+                          {contractMap[client.id] ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    <span>Ativo</span>
+                                    {contractMap[client.id].end_date && (
+                                      <span className="text-[10px] opacity-75">
+                                        até {format(new Date(contractMap[client.id].end_date!), "dd/MM/yy", { locale: ptBR })}
+                                      </span>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-xs">
+                                    <p className="font-medium text-green-600 dark:text-green-400">Contrato Ativo</p>
+                                    {contractMap[client.id].start_date && (
+                                      <p>Início: {format(new Date(contractMap[client.id].start_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                    )}
+                                    {contractMap[client.id].end_date && (
+                                      <p>Fim: {format(new Date(contractMap[client.id].end_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                              <AlertCircle className="h-3 w-3" />
+                              <span>Sem contrato</span>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           {scoreMap[client.id] ? (
@@ -1848,117 +1901,6 @@ export default function Clients() {
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              {client.contract_end_date ? (
-                                (() => {
-                                  const expiryStatus = getContractExpiryStatus(client.contract_end_date);
-                                  const endDate = new Date(client.contract_end_date).toLocaleDateString('pt-BR');
-                                  return (
-                                    <button className={cn(
-                                      "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity",
-                                      expiryStatus?.type === "expired" 
-                                        ? "bg-destructive/10 text-destructive" 
-                                        : expiryStatus?.type === "urgent"
-                                          ? "bg-destructive/10 text-destructive"
-                                          : expiryStatus?.type === "warning"
-                                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                    )}>
-                                      {expiryStatus?.type === "expired" ? (
-                                        <AlertTriangle className="h-3 w-3" />
-                                      ) : expiryStatus ? (
-                                        <Clock className="h-3 w-3" />
-                                      ) : (
-                                        <CheckCircle2 className="h-3 w-3" />
-                                      )}
-                                      {endDate}
-                                      <Pencil className="h-3 w-3 ml-1 opacity-50" />
-                                    </button>
-                                  );
-                                })()
-                              ) : (
-                                <button className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-muted/50 transition-colors cursor-pointer">
-                                  <CalendarIcon className="h-3 w-3" />
-                                  <span>Definir</span>
-                                </button>
-                              )}
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-4" align="center">
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label className="text-xs font-medium">Início do Contrato</Label>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className={cn(
-                                          "w-full justify-start text-left font-normal",
-                                          !client.contract_start_date && "text-muted-foreground"
-                                        )}
-                                      >
-                                        <CalendarIcon className="mr-2 h-3 w-3" />
-                                        {client.contract_start_date 
-                                          ? format(new Date(client.contract_start_date), "dd/MM/yyyy", { locale: ptBR })
-                                          : "Selecionar data"}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <Calendar
-                                        mode="single"
-                                        selected={client.contract_start_date ? new Date(client.contract_start_date) : undefined}
-                                        onSelect={(date) => updateContractDate(client.id, 'contract_start_date', date)}
-                                        initialFocus
-                                        className="pointer-events-auto"
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className="text-xs font-medium">Fim do Contrato</Label>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className={cn(
-                                          "w-full justify-start text-left font-normal",
-                                          !client.contract_end_date && "text-muted-foreground"
-                                        )}
-                                      >
-                                        <CalendarIcon className="mr-2 h-3 w-3" />
-                                        {client.contract_end_date 
-                                          ? format(new Date(client.contract_end_date), "dd/MM/yyyy", { locale: ptBR })
-                                          : "Selecionar data"}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <Calendar
-                                        mode="single"
-                                        selected={client.contract_end_date ? new Date(client.contract_end_date) : undefined}
-                                        onSelect={(date) => updateContractDate(client.id, 'contract_end_date', date)}
-                                        initialFocus
-                                        className="pointer-events-auto"
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                                {client.contract_end_date && (
-                                  <div className="pt-2 border-t">
-                                    <p className="text-xs text-muted-foreground">
-                                      {(() => {
-                                        const expiryStatus = getContractExpiryStatus(client.contract_end_date);
-                                        return expiryStatus ? expiryStatus.label : "Contrato ativo";
-                                      })()}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
                         </TableCell>
                         {customFields.map((field) => (
                           <TableCell key={field.id} className="text-center">
