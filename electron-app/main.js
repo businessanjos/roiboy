@@ -80,7 +80,7 @@ let authData = null;
 
 // Capture states
 let captureState = {
-  whatsapp: { isCapturing: false, interval: null, messagesSent: 0 },
+  whatsapp: { isCapturing: false, interval: null, messagesSent: 0, messagesCaptured: 0, errors: 0 },
   zoom: { isCapturing: false, interval: null, participantsDetected: 0 },
   meet: { isCapturing: false, interval: null, participantsDetected: 0 }
 };
@@ -815,6 +815,9 @@ async function injectWhatsAppCaptureScript() {
     
     if (messages && messages.messages && messages.messages.length > 0) {
       console.log('[ROY] Recuperando', messages.messages.length, 'mensagens da fila (IDs enviados:', messages.sentIdsSize + ')');
+      captureState.whatsapp.messagesCaptured += messages.messages.length;
+      updateStats();
+      
       for (const msg of messages.messages) {
         console.log('[ROY] Mensagem:', { 
           direction: msg.direction, 
@@ -1015,6 +1018,8 @@ async function sendWhatsAppMessageToAPI(messageData) {
       updateStats();
       console.log('[ROY] Mensagem enviada com sucesso:', result);
     } else {
+      captureState.whatsapp.errors++;
+      updateStats();
       console.error('[ROY] Erro da API:', result);
     }
   } catch (error) {
@@ -1033,6 +1038,8 @@ function updateStats() {
   if (mainWindow) {
     mainWindow.webContents.send('stats-update', {
       whatsappMessages: captureState.whatsapp.messagesSent,
+      whatsappCaptured: captureState.whatsapp.messagesCaptured,
+      whatsappErrors: captureState.whatsapp.errors,
       zoomParticipants: captureState.zoom.participantsDetected,
       meetParticipants: captureState.meet.participantsDetected,
       lastSync: new Date().toLocaleTimeString()
