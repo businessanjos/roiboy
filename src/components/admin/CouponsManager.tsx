@@ -58,7 +58,6 @@ interface Coupon {
   min_value: number | null;
   is_active: boolean;
   applies_to_subscriptions: boolean;
-  applies_to_contracts: boolean;
   created_at: string;
 }
 
@@ -73,7 +72,6 @@ interface CouponFormData {
   min_value: number | null;
   is_active: boolean;
   applies_to_subscriptions: boolean;
-  applies_to_contracts: boolean;
 }
 
 const defaultFormData: CouponFormData = {
@@ -87,7 +85,6 @@ const defaultFormData: CouponFormData = {
   min_value: null,
   is_active: true,
   applies_to_subscriptions: true,
-  applies_to_contracts: true,
 };
 
 export function CouponsManager() {
@@ -157,7 +154,6 @@ export function CouponsManager() {
         min_value: data.min_value,
         is_active: data.is_active,
         applies_to_subscriptions: data.applies_to_subscriptions,
-        applies_to_contracts: data.applies_to_contracts,
       });
 
       if (error) throw error;
@@ -191,7 +187,6 @@ export function CouponsManager() {
           min_value: data.min_value,
           is_active: data.is_active,
           applies_to_subscriptions: data.applies_to_subscriptions,
-          applies_to_contracts: data.applies_to_contracts,
         })
         .eq("id", id);
 
@@ -241,7 +236,6 @@ export function CouponsManager() {
       min_value: coupon.min_value,
       is_active: coupon.is_active,
       applies_to_subscriptions: coupon.applies_to_subscriptions,
-      applies_to_contracts: coupon.applies_to_contracts,
     });
     setIsDialogOpen(true);
   };
@@ -451,16 +445,6 @@ export function CouponsManager() {
                     checked={formData.applies_to_subscriptions}
                     onCheckedChange={(checked) =>
                       setFormData({ ...formData, applies_to_subscriptions: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="applies_to_contracts">Aplica em Contratos</Label>
-                  <Switch
-                    id="applies_to_contracts"
-                    checked={formData.applies_to_contracts}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, applies_to_contracts: checked })
                     }
                   />
                 </div>
