@@ -56,6 +56,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
+import { FormResponseViewer } from "@/components/forms/FormResponseViewer";
 import {
   DndContext,
   closestCenter,
@@ -616,6 +617,7 @@ export default function Forms() {
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [responses, setResponses] = useState<any[]>([]);
   const [loadingResponses, setLoadingResponses] = useState(false);
+  const [allClients, setAllClients] = useState<Array<{ id: string; full_name: string; phone_e164: string }>>([]);
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -661,8 +663,22 @@ export default function Forms() {
     if (currentUser?.account_id) {
       fetchForms();
       fetchCustomFields();
+      fetchClients();
     }
   }, [currentUser?.account_id]);
+
+  const fetchClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164")
+        .order("full_name");
+      if (error) throw error;
+      setAllClients(data || []);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    }
+  };
 
   const fetchForms = async () => {
     try {
@@ -892,7 +908,7 @@ export default function Forms() {
         .from("form_responses")
         .select(`
           *,
-          clients:client_id (full_name, phone_e164)
+          clients:client_id (id, full_name, phone_e164, avatar_url)
         `)
         .eq("form_id", form.id)
         .order("submitted_at", { ascending: false });
@@ -904,6 +920,73 @@ export default function Forms() {
       toast.error("Erro ao carregar respostas");
     } finally {
       setLoadingResponses(false);
+    }
+  };
+
+  // Save form response data to client's custom fields
+  const saveResponsesToClient = async (responseId: string, clientId: string) => {
+    const response = responses.find(r => r.id === responseId);
+    if (!response) throw new Error("Resposta não encontrada");
+
+    // Update the response to link to the client
+    const { error: updateError } = await supabase
+      .from("form_responses")
+      .update({ client_id: clientId })
+      .eq("id", responseId);
+
+    if (updateError) throw updateError;
+
+    // Save each field value to client_field_values
+    const formFieldIds = selectedForm?.fields || [];
+    const responseData = response.responses || {};
+
+    for (const fieldId of formFieldIds) {
+      const field = customFields.find(f => f.id === fieldId);
+      if (!field || responseData[fieldId] === undefined) continue;
+
+      const value = responseData[fieldId];
+
+      // Determine the correct column based on field type
+      const fieldValue: any = {
+        account_id: currentUser!.account_id,
+        client_id: clientId,
+        field_id: fieldId,
+      };
+
+      switch (field.field_type) {
+        case "boolean":
+          fieldValue.value_boolean = Boolean(value);
+          break;
+        case "number":
+        case "currency":
+        case "rating":
+          fieldValue.value_number = Number(value) || null;
+          break;
+        case "date":
+          fieldValue.value_date = value;
+          break;
+        case "multi_select":
+          fieldValue.value_json = value;
+          break;
+        default:
+          fieldValue.value_text = String(value);
+      }
+
+      // Upsert the field value
+      const { error: fieldError } = await supabase
+        .from("client_field_values")
+        .upsert(fieldValue, {
+          onConflict: "client_id,field_id",
+        });
+
+      if (fieldError) {
+        console.error("Error saving field value:", fieldError);
+      }
+    }
+
+    // Refresh responses
+    if (selectedForm) {
+      viewResponses(selectedForm);
     }
   };
 
@@ -1700,163 +1783,21 @@ export default function Forms() {
               </div>
             </TabsContent>
 
-            {/* Responses Tab - Table Style */}
+            {/* Responses Tab - New Component */}
             <TabsContent value="responses" className="flex-1 flex flex-col overflow-hidden m-0">
               {loadingResponses ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : responses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">
-                    Nenhuma resposta recebida
-                  </h3>
-                  <p className="text-muted-foreground text-sm max-w-sm">
-                    Compartilhe o link do formulário com seus clientes para começar a coletar respostas.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => {
-                      if (selectedForm) copyFormLink(selectedForm);
-                    }}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copiar Link
-                  </Button>
-                </div>
               ) : (
-                <>
-                  {/* Toolbar */}
-                  <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
-                    <div className="text-sm text-muted-foreground">
-                      {responses.length} resposta(s)
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const orderedFields = selectedForm?.fields
-                          ?.map((fId: string) => customFields.find((f) => f.id === fId))
-                          .filter(Boolean) as CustomField[] || [];
-                        const headers = ["Cliente", "Telefone", "Data", ...orderedFields.map(f => f.name)];
-                        const rows = responses.map(r => {
-                          const clientName = r.clients?.full_name || r.client_name || "Não identificado";
-                          const phone = r.clients?.phone_e164 || r.client_phone || "";
-                          const date = format(new Date(r.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR });
-                          const fieldValues = orderedFields.map(field => {
-                            const value = r.responses?.[field.id];
-                            if (value === undefined || value === null) return "";
-                            if (Array.isArray(value)) return value.map(v => getOptionLabel(field, v)).join("; ");
-                            if (field.field_type === "boolean") return value ? "Sim" : "Não";
-                            if (field.field_type === "select") return getOptionLabel(field, value);
-                            if (field.field_type === "date") return format(new Date(value), "dd/MM/yyyy");
-                            if (field.field_type === "currency") return `R$ ${Number(value).toFixed(2)}`;
-                            return String(value);
-                          });
-                          return [clientName, phone, date, ...fieldValues];
-                        });
-                        const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
-                        const blob = new Blob([csv], { type: "text/csv" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `respostas-${selectedForm?.title || "formulario"}.csv`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        toast.success("CSV exportado!");
-                      }}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar
-                    </Button>
-                  </div>
-
-                  {/* Table with horizontal scroll */}
-                  <ScrollArea className="flex-1">
-                    <div className="min-w-max">
-                      {/* Table Header */}
-                      <div className="flex border-b bg-muted/30 sticky top-0">
-                        <div className="w-10 flex-shrink-0 px-2 py-3"></div>
-                        <div className="w-[180px] flex-shrink-0 px-3 py-3 text-xs font-medium text-muted-foreground">
-                          Cliente
-                        </div>
-                        <div className="w-[100px] flex-shrink-0 px-3 py-3 text-xs font-medium text-muted-foreground">
-                          Data
-                        </div>
-                        {(selectedForm?.fields || []).map((fieldId: string) => {
-                          const field = customFields.find(f => f.id === fieldId);
-                          return (
-                            <div
-                              key={fieldId}
-                              className="w-[160px] flex-shrink-0 px-3 py-3 text-xs font-medium text-muted-foreground truncate"
-                              title={field?.name}
-                            >
-                              {field?.name || "Campo"}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Table Body */}
-                      <div className="divide-y">
-                        {responses.map((response) => {
-                          const orderedFields = selectedForm?.fields
-                            ?.map((fId: string) => customFields.find((f) => f.id === fId))
-                            .filter(Boolean) as CustomField[] || [];
-
-                          return (
-                            <div key={response.id} className="flex hover:bg-muted/50 transition-colors">
-                              <div className="w-10 flex-shrink-0 px-2 py-3 flex items-center justify-center">
-                                <Checkbox className="h-4 w-4" />
-                              </div>
-                              <div className="w-[180px] flex-shrink-0 px-3 py-3">
-                                <p className="text-sm font-medium truncate">
-                                  {response.clients?.full_name || response.client_name || "—"}
-                                </p>
-                                {(response.clients?.phone_e164 || response.client_phone) && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {response.clients?.phone_e164 || response.client_phone}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="w-[100px] flex-shrink-0 px-3 py-3">
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(response.submitted_at), "dd MMM yyyy", { locale: ptBR })}
-                                </p>
-                                <p className="text-xs text-muted-foreground/70">
-                                  {format(new Date(response.submitted_at), "HH:mm", { locale: ptBR })}
-                                </p>
-                              </div>
-                              {orderedFields.map((field) => {
-                                const value = response.responses?.[field.id];
-                                const isEmpty = value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
-
-                                return (
-                                  <div
-                                    key={field.id}
-                                    className="w-[160px] flex-shrink-0 px-3 py-3 text-sm"
-                                  >
-                                    {isEmpty ? (
-                                      <span className="text-muted-foreground/50">—</span>
-                                    ) : (
-                                      <div className="truncate" title={String(value)}>
-                                        {renderResponseValue(field, value)}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <ScrollBar orientation="horizontal" />
-                  </ScrollArea>
-                </>
+                <FormResponseViewer
+                  responses={responses}
+                  customFields={customFields}
+                  formFields={selectedForm?.fields || []}
+                  formTitle={selectedForm?.title || "Formulário"}
+                  onSaveToClient={saveResponsesToClient}
+                  clients={allClients}
+                />
               )}
             </TabsContent>
           </Tabs>
