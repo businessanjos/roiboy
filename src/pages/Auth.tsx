@@ -61,7 +61,7 @@ export default function Auth() {
   }
 
   // Security hooks
-  const { checkAccountLock, recordLoginAttempt, isCheckingLock } = useLoginSecurity();
+  const { checkAccountLock, recordLoginAttempt, registerSession, isCheckingLock } = useLoginSecurity();
   const { logLoginSuccess, logLoginFailure, logLoginBlocked, logSignupSuccess } = useSecurityAudit();
   const [isAccountLocked, setIsAccountLocked] = useState(false);
   const [lockoutMinutes, setLockoutMinutes] = useState(0);
@@ -107,6 +107,21 @@ export default function Auth() {
     } else {
       await recordLoginAttempt(loginEmail, true);
       logLoginSuccess();
+      
+      // Register session for active sessions tracking
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('id, account_id')
+          .eq('auth_user_id', session.user.id)
+          .single();
+        
+        if (userData) {
+          await registerSession(userData.id, userData.account_id, session.access_token);
+        }
+      }
+      
       toast.success("Login realizado com sucesso!");
     }
 
