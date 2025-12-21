@@ -51,6 +51,8 @@ import {
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
+import { CouponsManager } from "@/components/admin/CouponsManager";
+import { Tag } from "lucide-react";
 
 interface SubscriptionPlan {
   id: string;
@@ -285,6 +287,10 @@ export default function Admin() {
             <Cpu className="h-4 w-4" />
             Custos IA
           </TabsTrigger>
+          <TabsTrigger value="coupons" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Tag className="h-4 w-4" />
+            Cupons
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -313,6 +319,10 @@ export default function Admin() {
 
         <TabsContent value="costs" className="mt-0">
           <AICostsTab accounts={accounts} />
+        </TabsContent>
+
+        <TabsContent value="coupons" className="mt-0">
+          <CouponsManager />
         </TabsContent>
       </Tabs>
     </div>
