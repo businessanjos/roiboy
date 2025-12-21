@@ -320,18 +320,15 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     
     setDownloading(contract.id);
     try {
-      // Extract the file path from the URL - handle different URL formats
+      // Extract the file path from the URL
       let filePath = '';
-      
-      // Try to extract path after /contracts/
       const match = contract.file_url.match(/\/contracts\/(.+?)(?:\?|$)/);
       if (match) {
         filePath = match[1];
       } else {
-        // Alternative: get everything after the bucket name
         const urlParts = contract.file_url.split('/contracts/');
         if (urlParts[1]) {
-          filePath = urlParts[1].split('?')[0]; // Remove query params if any
+          filePath = urlParts[1].split('?')[0];
         }
       }
       
@@ -339,33 +336,24 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         throw new Error("Could not extract file path from URL");
       }
       
-      // Download the file directly using Supabase storage
-      const { data, error } = await supabase.storage
+      // Get public URL (bucket is now public)
+      const { data } = supabase.storage
         .from("contracts")
-        .download(decodeURIComponent(filePath));
+        .getPublicUrl(decodeURIComponent(filePath));
       
-      if (error) throw error;
-      
-      if (!data) {
-        throw new Error("No file data returned");
+      if (!data?.publicUrl) {
+        throw new Error("Could not get public URL");
       }
-      
-      // Create a blob URL and trigger download
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const blobUrl = URL.createObjectURL(blob);
       
       // Create a temporary anchor element to trigger download
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = data.publicUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       link.download = contract.file_name || 'contrato.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      // Clean up the blob URL
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-      
-      toast.success("Download iniciado!");
     } catch (error) {
       console.error("Error downloading contract:", error);
       toast.error("Erro ao baixar o contrato. Tente novamente.");
