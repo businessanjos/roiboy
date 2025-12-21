@@ -110,16 +110,10 @@ function createMainWindow() {
 const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function createWhatsAppWindow() {
-  // Create session and block whatsapp:// protocol at the request level
+  // Create session for WhatsApp
   const whatsappSession = session.fromPartition('persist:whatsapp');
   
-  // CRITICAL: Block ALL requests to whatsapp:// protocol
-  whatsappSession.webRequest.onBeforeRequest({ urls: ['whatsapp://*', 'whatsapp:*'] }, (details, callback) => {
-    console.log('[ROY] BLOQUEADO request para:', details.url);
-    callback({ cancel: true });
-  });
-
-  // Also intercept redirects
+  // Block whatsapp:// protocol via redirect interception (onBeforeRequest doesn't support custom schemes)
   whatsappSession.webRequest.onBeforeRedirect((details) => {
     if (details.redirectURL && details.redirectURL.startsWith('whatsapp:')) {
       console.log('[ROY] BLOQUEADO redirect para:', details.redirectURL);
