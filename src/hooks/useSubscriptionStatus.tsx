@@ -8,6 +8,7 @@ interface SubscriptionStatus {
   trialEndsAt: Date | null;
   subscriptionStatus: string | null;
   daysRemaining: number | null;
+  paymentMethodConfigured: boolean;
 }
 
 export function useSubscriptionStatus(): SubscriptionStatus {
@@ -18,6 +19,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
     trialEndsAt: null,
     subscriptionStatus: null,
     daysRemaining: null,
+    paymentMethodConfigured: false,
   });
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
 
         const { data: account } = await supabase
           .from("accounts")
-          .select("subscription_status, trial_ends_at, plan_id")
+          .select("subscription_status, trial_ends_at, plan_id, payment_method_configured")
           .eq("id", user.account_id)
           .maybeSingle();
 
@@ -55,13 +57,16 @@ export function useSubscriptionStatus(): SubscriptionStatus {
         }
 
         // User has access if:
-        // 1. Subscription is active/paid
-        // 2. Trial hasn't expired yet
-        // 3. Status is pending (waiting for payment but has a plan)
-        // 4. Status is cancelled but still within period (grace period handling could be added)
+        // 1. Subscription is active/paid/pending
+        // 2. Trial with payment method configured (credit card or PIX)
         const paidStatuses = ["active", "paid", "trialing", "pending"];
         const hasActiveSubscription = paidStatuses.includes(account.subscription_status || "");
-        const hasAccess = hasActiveSubscription || (account.subscription_status === "trial" && !isTrialExpired);
+        
+        // For trial users: must have payment method configured to access
+        const isInTrial = account.subscription_status === "trial" && !isTrialExpired;
+        const trialWithPayment = isInTrial && account.payment_method_configured;
+        
+        const hasAccess = hasActiveSubscription || trialWithPayment;
 
         setStatus({
           isLoading: false,
@@ -70,6 +75,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
           trialEndsAt,
           subscriptionStatus: account.subscription_status,
           daysRemaining,
+          paymentMethodConfigured: account.payment_method_configured || false,
         });
       } catch (error) {
         console.error("Error checking subscription:", error);

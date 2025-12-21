@@ -189,6 +189,12 @@ export function SubscriptionManager() {
             qrCode: pixResult.data.encodedImage,
             payload: pixResult.data.payload,
           });
+          
+          // Mark payment method as configured when PIX is generated
+          await supabase
+            .from("accounts")
+            .update({ payment_method_configured: true })
+            .eq("id", account.id);
         }
       }
 
@@ -280,6 +286,12 @@ export function SubscriptionManager() {
       if (result.error) {
         throw new Error(result.error);
       }
+
+      // Mark payment method as configured when card payment is successful
+      await supabase
+        .from("accounts")
+        .update({ payment_method_configured: true })
+        .eq("id", account.id);
 
       toast({
         title: "Pagamento realizado",
