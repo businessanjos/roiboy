@@ -591,44 +591,37 @@ async function injectWhatsAppCaptureScript() {
   if (!whatsappWindow) return;
 
   try {
-    // First, inject the capture script
-    await whatsappWindow.webContents.executeJavaScript(`
+    // First, inject the capture script and get diagnostic info
+    const diagnostics = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
         // Initialize message queue if not exists
         window.__royMessageQueue = window.__royMessageQueue || [];
         window.__roySentIds = window.__roySentIds || new Set();
         
-        if (window.__royObserverSetup) return;
-        window.__royObserverSetup = true;
+        const diag = {
+          alreadySetup: !!window.__royObserverSetup,
+          queueSize: window.__royMessageQueue.length,
+          sentIdsSize: window.__roySentIds.size
+        };
         
-        console.log('[ROY] Script de captura injetado');
+        if (window.__royObserverSetup) return diag;
+        window.__royObserverSetup = true;
         
         // Function to extract phone from chat header
         function extractPhoneFromChat() {
-          const selectors = [
-            'header span[dir="auto"][title]',
-            'header [data-testid="conversation-info-header"] span',
-            '#main header span[title]',
-            'header ._amig span',
-            '[data-testid="conversation-panel-wrapper"] header span[title]'
-          ];
-          
-          for (const selector of selectors) {
-            const el = document.querySelector(selector);
-            if (el) {
-              const text = el.getAttribute('title') || el.innerText || '';
-              const phoneMatch = text.match(/\\+[0-9\\s()-]{10,20}/);
-              if (phoneMatch) {
-                return phoneMatch[0].replace(/[\\s()-]/g, '');
-              }
-              const numbersMatch = text.match(/[0-9]{10,15}/);
-              if (numbersMatch) {
-                return '+' + numbersMatch[0];
-              }
+          // Try multiple selectors
+          const headerSpans = document.querySelectorAll('#main header span');
+          for (const span of headerSpans) {
+            const text = span.getAttribute('title') || span.innerText || '';
+            // Look for phone pattern
+            const phoneMatch = text.match(/\\+?[0-9][0-9\\s()-]{8,20}/);
+            if (phoneMatch) {
+              return phoneMatch[0].replace(/[\\s()-]/g, '');
             }
           }
           
-          const contactInfo = document.querySelector('[data-testid="contact-info-drawer"] span[data-testid="cell-phone"]');
+          // Try contact info drawer
+          const contactInfo = document.querySelector('[data-testid="drawer-right"] span[data-testid="cell-phone"]');
           if (contactInfo) {
             const phone = contactInfo.innerText.replace(/[\\s()-]/g, '');
             return phone.startsWith('+') ? phone : '+' + phone;
@@ -638,118 +631,199 @@ async function injectWhatsAppCaptureScript() {
         }
         
         function isGroupChat() {
-          const groupIndicators = [
-            '[data-testid="group-subject"]',
-            '[aria-label*="grupo"]',
-            '[aria-label*="group"]'
-          ];
-          return groupIndicators.some(sel => document.querySelector(sel));
+          const header = document.querySelector('#main header');
+          if (!header) return false;
+          // Groups typically have "clique aqui para informações" or participant count
+          const text = header.innerText || '';
+          return text.includes('participantes') || text.includes('clique aqui');
+        }
+        
+        function getContactName() {
+          const header = document.querySelector('#main header span[title]');
+          if (header) return header.getAttribute('title') || header.innerText;
+          const spans = document.querySelectorAll('#main header span');
+          for (const span of spans) {
+            const text = span.innerText || '';
+            if (text.length > 2 && !text.includes('clique') && !text.includes('digitando')) {
+              return text;
+            }
+          }
+          return '';
         }
         
         function processMessage(msgElement) {
           try {
-            const msgId = msgElement.getAttribute('data-id') || '';
-            if (!msgId || window.__roySentIds.has(msgId)) return;
+            const msgId = msgElement.getAttribute('data-id') || 
+                         msgElement.getAttribute('data-pre-plain-text') ||
+                         Math.random().toString(36).substr(2, 9);
+                         
+            if (window.__roySentIds.has(msgId)) return null;
             
+            // Check if outgoing message
             const isOutgoing = msgElement.classList.contains('message-out') || 
-                              msgElement.querySelector('[data-testid="msg-check"]') !== null;
+                              !!msgElement.querySelector('[data-icon="msg-check"]') ||
+                              !!msgElement.querySelector('[data-icon="msg-dblcheck"]') ||
+                              !!msgElement.querySelector('[data-testid="msg-check"]') ||
+                              !!msgElement.querySelector('[data-testid="msg-dblcheck"]');
             
-            const textElement = msgElement.querySelector('[data-testid="msg-text"]') || 
-                               msgElement.querySelector('.selectable-text') ||
-                               msgElement.querySelector('span.selectable-text');
+            // Find text content - try multiple selectors
+            let text = '';
+            const textSelectors = [
+              'span.selectable-text.copyable-text',
+              '[data-testid="msg-text"]',
+              '.selectable-text',
+              'span[dir="ltr"]',
+              'span[dir="rtl"]'
+            ];
             
-            if (!textElement) return;
+            for (const sel of textSelectors) {
+              const el = msgElement.querySelector(sel);
+              if (el) {
+                text = el.innerText || el.textContent || '';
+                if (text.trim()) break;
+              }
+            }
             
-            const text = textElement.innerText || textElement.textContent;
-            if (!text || text.trim().length < 2) return;
+            if (!text || text.trim().length < 2) return null;
             
             const phone = extractPhoneFromChat();
             const isGroup = isGroupChat();
+            const contactName = getContactName();
             
             window.__roySentIds.add(msgId);
             
+            // Keep set size manageable
             if (window.__roySentIds.size > 2000) {
               const arr = Array.from(window.__roySentIds);
               window.__roySentIds = new Set(arr.slice(-1000));
             }
             
-            console.log('[ROY] Mensagem encontrada:', { id: msgId, phone, isOutgoing, textLen: text.length });
-            
-            // Add to queue for retrieval by main process
-            window.__royMessageQueue.push({
+            const msgData = {
               platform: 'whatsapp',
               id: msgId,
               text: text.trim(),
               direction: isOutgoing ? 'team_to_client' : 'client_to_team',
               timestamp: new Date().toISOString(),
               phone: phone,
+              contactName: contactName,
               isGroup: isGroup
-            });
+            };
+            
+            window.__royMessageQueue.push(msgData);
+            return msgData;
             
           } catch (e) {
-            console.error('[ROY] Erro ao processar mensagem:', e);
+            return null;
           }
         }
         
         function scanCurrentChat() {
-          const messages = document.querySelectorAll('[data-testid="msg-container"]');
-          console.log('[ROY] Escaneando', messages.length, 'mensagens');
-          messages.forEach(processMessage);
+          // Try multiple selectors for message containers
+          const selectors = [
+            '[data-testid="msg-container"]',
+            '.message-in, .message-out',
+            '[class*="message-in"], [class*="message-out"]',
+            '[data-pre-plain-text]'
+          ];
+          
+          let messages = [];
+          for (const sel of selectors) {
+            messages = document.querySelectorAll(sel);
+            if (messages.length > 0) break;
+          }
+          
+          let found = 0;
+          messages.forEach(msg => {
+            const result = processMessage(msg);
+            if (result) found++;
+          });
+          
+          diag.scannedMessages = messages.length;
+          diag.foundNew = found;
+          return found;
         }
         
+        // Set up mutation observer
         const observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             mutation.addedNodes.forEach((node) => {
               if (node.nodeType === 1) {
-                if (node.getAttribute && node.getAttribute('data-testid') === 'msg-container') {
+                // Check if it's a message container
+                if (node.getAttribute && (
+                  node.getAttribute('data-testid') === 'msg-container' ||
+                  node.classList.contains('message-in') ||
+                  node.classList.contains('message-out')
+                )) {
                   processMessage(node);
                 }
-                const messages = node.querySelectorAll ? node.querySelectorAll('[data-testid="msg-container"]') : [];
-                messages.forEach(processMessage);
+                // Check children
+                if (node.querySelectorAll) {
+                  const msgs = node.querySelectorAll('[data-testid="msg-container"], .message-in, .message-out');
+                  msgs.forEach(processMessage);
+                }
               }
             });
           });
         });
         
-        function startObserving() {
-          const chatContainer = document.querySelector('#main') || document.querySelector('[data-testid="conversation-panel-wrapper"]');
-          if (chatContainer) {
-            observer.observe(chatContainer, { childList: true, subtree: true });
-            console.log('[ROY] Observer ativo');
-            scanCurrentChat();
-          } else {
-            setTimeout(startObserving, 2000);
-          }
+        // Find and observe the chat container
+        const chatContainer = document.querySelector('#main') || 
+                             document.querySelector('[data-testid="conversation-panel-wrapper"]') ||
+                             document.querySelector('[role="application"]');
+        
+        if (chatContainer) {
+          observer.observe(chatContainer, { childList: true, subtree: true });
+          diag.observerActive = true;
+          diag.containerFound = true;
+        } else {
+          diag.observerActive = false;
+          diag.containerFound = false;
         }
         
-        startObserving();
+        // Initial scan
+        const found = scanCurrentChat();
+        diag.initialScan = found;
         
-        let lastChatPhone = '';
+        // Monitor for chat changes
+        let lastChatName = '';
         setInterval(() => {
-          const currentPhone = extractPhoneFromChat();
-          if (currentPhone && currentPhone !== lastChatPhone) {
-            lastChatPhone = currentPhone;
-            console.log('[ROY] Chat mudou para:', currentPhone);
+          const currentName = getContactName();
+          if (currentName && currentName !== lastChatName) {
+            lastChatName = currentName;
             setTimeout(scanCurrentChat, 500);
           }
         }, 2000);
         
+        return diag;
       })()
     `);
+    
+    console.log('[ROY] Diagnóstico captura:', diagnostics);
     
     // Now retrieve any queued messages
     const messages = await whatsappWindow.webContents.executeJavaScript(`
       (function() {
         const queue = window.__royMessageQueue || [];
         window.__royMessageQueue = [];
-        return queue;
+        return { 
+          messages: queue,
+          queueSize: queue.length,
+          sentIdsSize: window.__roySentIds ? window.__roySentIds.size : 0
+        };
       })()
     `);
     
-    if (messages && messages.length > 0) {
-      console.log('[ROY] Recuperando', messages.length, 'mensagens da fila');
-      for (const msg of messages) {
-        if (msg.phone && msg.text) {
+    if (messages && messages.messages && messages.messages.length > 0) {
+      console.log('[ROY] Recuperando', messages.messages.length, 'mensagens da fila (IDs enviados:', messages.sentIdsSize + ')');
+      for (const msg of messages.messages) {
+        console.log('[ROY] Mensagem:', { 
+          direction: msg.direction, 
+          phone: msg.phone, 
+          contactName: msg.contactName,
+          textPreview: msg.text.substring(0, 50) + '...',
+          isGroup: msg.isGroup 
+        });
+        if (msg.text) {
           await sendWhatsAppMessageToAPI(msg);
         }
       }
