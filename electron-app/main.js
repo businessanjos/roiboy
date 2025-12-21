@@ -988,14 +988,16 @@ async function sendWhatsAppMessageToAPI(messageData) {
       : 'client_to_team';
 
     const payload = {
-      phone_e164: phoneE164,
+      phone_e164: phoneE164 || undefined,
+      contact_name: messageData.contactName || undefined, // Use name as fallback identifier
       content_text: messageData.text,
       direction: direction,
       sent_at: messageData.timestamp || new Date().toISOString(),
-      source: 'extension'
+      source: 'extension',
+      is_group: messageData.isGroup || false
     };
 
-    console.log('[ROY] Enviando mensagem:', { phone: phoneE164, direction });
+    console.log('[ROY] Enviando mensagem:', { phone: phoneE164, contactName: messageData.contactName, direction });
 
     const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-message`, {
       method: 'POST',
