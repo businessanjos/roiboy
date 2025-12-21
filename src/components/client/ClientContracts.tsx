@@ -320,36 +320,43 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     
     setDownloading(contract.id);
     try {
-      // Extract the file path from the URL
-      const url = new URL(contract.file_url);
-      const pathParts = url.pathname.split('/storage/v1/object/public/contracts/');
-      const filePath = pathParts[1] || url.pathname.split('/storage/v1/object/sign/contracts/')[1];
+      // Extract the file path from the URL - handle different URL formats
+      let filePath = '';
+      
+      // Try to extract path after /contracts/
+      const match = contract.file_url.match(/\/contracts\/(.+?)(?:\?|$)/);
+      if (match) {
+        filePath = match[1];
+      } else {
+        // Alternative: get everything after the bucket name
+        const urlParts = contract.file_url.split('/contracts/');
+        if (urlParts[1]) {
+          filePath = urlParts[1].split('?')[0]; // Remove query params if any
+        }
+      }
       
       if (!filePath) {
-        // Fallback: try to extract from different URL formats
-        const match = contract.file_url.match(/contracts\/(.+)$/);
-        if (match) {
-          const { data, error } = await supabase.storage
-            .from("contracts")
-            .createSignedUrl(match[1], 60); // 60 seconds
-          
-          if (error) throw error;
-          
-          // Open in new tab
-          window.open(data.signedUrl, "_blank");
-          return;
-        }
-        throw new Error("Could not extract file path");
+        throw new Error("Could not extract file path from URL");
       }
       
       const { data, error } = await supabase.storage
         .from("contracts")
-        .createSignedUrl(decodeURIComponent(filePath), 60); // 60 seconds
+        .createSignedUrl(decodeURIComponent(filePath), 300); // 5 minutes
       
       if (error) throw error;
       
+      if (!data?.signedUrl) {
+        throw new Error("No signed URL returned");
+      }
+      
+      // The signedUrl might be relative, so build full URL
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const fullUrl = data.signedUrl.startsWith('http') 
+        ? data.signedUrl 
+        : `${supabaseUrl}${data.signedUrl}`;
+      
       // Open in new tab
-      window.open(data.signedUrl, "_blank");
+      window.open(fullUrl, "_blank");
     } catch (error) {
       console.error("Error downloading contract:", error);
       toast.error("Erro ao baixar o contrato. Tente novamente.");
