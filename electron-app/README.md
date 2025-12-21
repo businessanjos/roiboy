@@ -1,4 +1,4 @@
-# ROY Desktop
+# ROY APP Desktop
 
 App desktop para captura automática de WhatsApp, Zoom e Google Meet.
 
