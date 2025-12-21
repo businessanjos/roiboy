@@ -77,6 +77,7 @@ interface ClientWithScore {
   vnps_score?: number;
   vnps_class?: "promoter" | "neutral" | "detractor";
   product_ids?: string[];
+  hasActiveContract?: boolean;
 }
 
 interface Product {
@@ -193,6 +194,18 @@ export default function Dashboard() {
         .from("client_products")
         .select("client_id, product_id");
 
+      // Fetch all active contracts to determine which clients have active contracts
+      const { data: activeContractsData } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("status", "active");
+
+      // Create a set of client_ids with active contracts
+      const clientsWithActiveContracts = new Set<string>();
+      (activeContractsData || []).forEach((contract: any) => {
+        clientsWithActiveContracts.add(contract.client_id);
+      });
+
       // Create a map of client_id -> product_ids
       const clientProductsMap: Record<string, string[]> = {};
       (clientProductsData || []).forEach((cp: any) => {
@@ -251,6 +264,7 @@ export default function Dashboard() {
             vnps_score: vnpsData?.vnps_score,
             vnps_class: vnpsData?.vnps_class as ClientWithScore["vnps_class"],
             product_ids: clientProductsMap[client.id] || [],
+            hasActiveContract: clientsWithActiveContracts.has(client.id),
           };
         })
       );
@@ -594,7 +608,7 @@ export default function Dashboard() {
 
   const gestaoClientStats = useMemo(() => ({
     total: gestaoFilteredClients.length,
-    active: gestaoFilteredClients.filter(c => c.status === "active").length,
+    active: gestaoFilteredClients.filter(c => c.hasActiveContract === true).length,
     churned: gestaoFilteredClients.filter(c => c.status === "churned").length,
     churnRisk: gestaoFilteredClients.filter(c => c.status === "churn_risk").length,
     paused: gestaoFilteredClients.filter(c => c.status === "paused").length,
