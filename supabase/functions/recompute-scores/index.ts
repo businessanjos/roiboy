@@ -494,19 +494,19 @@ async function calculateRoizometer(
     return 0;
   }
 
-  // Calculate tangible score (0-50)
+  // Separate tangible and intangible
   const tangibleCategories = ["revenue", "cost", "time", "process"];
-  const tangibleEvents = roiEvents.filter((e: any) => tangibleCategories.includes(e.category));
-  
-  // Calculate intangible score (0-50)
   const intangibleCategories = ["clarity", "confidence", "tranquility", "status_direction"];
+  
+  const tangibleEvents = roiEvents.filter((e: any) => tangibleCategories.includes(e.category));
   const intangibleEvents = roiEvents.filter((e: any) => intangibleCategories.includes(e.category));
 
-  // Impact score is boosted by ticket multiplier
-  const impactScore = (impact: string) => {
-    const baseScore = impact === "high" ? 3 : impact === "medium" ? 2 : 1;
-    // Higher ticket = more weight on each ROI event
-    return baseScore * ticketMultiplier;
+  // Impact points - calibrated for realistic accumulation
+  const impactPoints = (impact: string) => {
+    // Base: low=2, medium=5, high=10
+    const base = impact === "high" ? 10 : impact === "medium" ? 5 : 2;
+    // Ticket multiplier has moderate effect (sqrt to avoid extreme values)
+    return base * Math.sqrt(ticketMultiplier);
   };
 
   const sourceWeight = (source: string) => {
@@ -516,17 +516,21 @@ async function calculateRoizometer(
     return 1.0;
   };
 
-  let tangibleScore = 0;
+  // Calculate tangible score (0-50)
+  // Expectation: ~8 events with mixed impact to reach 50
+  let tangibleRaw = 0;
   for (const event of tangibleEvents) {
-    tangibleScore += impactScore(event.impact) * sourceWeight(event.source);
+    tangibleRaw += impactPoints(event.impact) * sourceWeight(event.source);
   }
-  tangibleScore = Math.min(50, Math.round(tangibleScore * 5)); // Scale to 0-50
+  // Scale: 80 raw points = 50 score (diminishing returns via log curve)
+  const tangibleScore = Math.min(50, Math.round(50 * (1 - Math.exp(-tangibleRaw / 50))));
 
-  let intangibleScore = 0;
+  // Calculate intangible score (0-50)  
+  let intangibleRaw = 0;
   for (const event of intangibleEvents) {
-    intangibleScore += impactScore(event.impact) * sourceWeight(event.source);
+    intangibleRaw += impactPoints(event.impact) * sourceWeight(event.source);
   }
-  intangibleScore = Math.min(50, Math.round(intangibleScore * 5)); // Scale to 0-50
+  const intangibleScore = Math.min(50, Math.round(50 * (1 - Math.exp(-intangibleRaw / 50))));
 
   return tangibleScore + intangibleScore;
 }
