@@ -530,7 +530,7 @@ export default function Dashboard() {
     return { rate, trend, novos, saidas, netChange };
   }, [monthlyChartData]);
 
-  // Calculate lost financial value from cancelled and churn_risk contracts
+  // Calculate lost financial value and counts from cancelled and ended contracts
   const lostFinancialValue = useMemo(() => {
     const currentMonthStart = startOfMonth(new Date());
     const currentMonthEnd = endOfMonth(new Date());
@@ -540,6 +540,8 @@ export default function Dashboard() {
     let totalLost = 0;
     let cancelamentosValue = 0;
     let demissoesValue = 0;
+    let cancelamentosCount = 0;
+    let demissoesCount = 0;
     let previousTotalLost = 0;
     
     // Use contractData instead of filtered for consistent period comparison
@@ -551,8 +553,10 @@ export default function Dashboard() {
         if (changedAt >= currentMonthStart && changedAt <= currentMonthEnd) {
           if (contract.status === "churned") {
             cancelamentosValue += contract.value || 0;
+            cancelamentosCount++;
           } else if (contract.status === "ended") {
             demissoesValue += contract.value || 0;
+            demissoesCount++;
           }
         }
         
@@ -579,7 +583,7 @@ export default function Dashboard() {
       percentChange = 100;
     }
     
-    return { totalLost, cancelamentosValue, demissoesValue, previousTotalLost, trend, percentChange };
+    return { totalLost, cancelamentosValue, demissoesValue, cancelamentosCount, demissoesCount, previousTotalLost, trend, percentChange };
   }, [contractData]);
 
   // Filter clients by gestaoProductFilter for status cards
@@ -1110,13 +1114,14 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Demissões */}
+            {/* Demissões (Encerramentos) */}
             <Card className="shadow-card border-l-4 border-l-orange-500">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Demissões</p>
-                    <p className="text-2xl font-bold text-orange-600">{gestaoClientStats.churnRisk}</p>
+                    <p className="text-xs font-medium text-muted-foreground">Encerramentos</p>
+                    <p className="text-2xl font-bold text-orange-600">{lostFinancialValue.demissoesCount}</p>
+                    <p className="text-xs text-muted-foreground">no mês atual</p>
                   </div>
                   <TrendingDown className="h-5 w-5 text-orange-500" />
                 </div>
