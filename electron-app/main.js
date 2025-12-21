@@ -762,54 +762,35 @@ async function injectWhatsAppCaptureScript() {
           return found;
         }
         
-        // Set up mutation observer
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-              if (node.nodeType === 1) {
-                // Check if it's a message container
-                if (node.getAttribute && (
-                  node.getAttribute('data-testid') === 'msg-container' ||
-                  node.classList.contains('message-in') ||
-                  node.classList.contains('message-out')
-                )) {
-                  processMessage(node);
-                }
-                // Check children
-                if (node.querySelectorAll) {
-                  const msgs = node.querySelectorAll('[data-testid="msg-container"], .message-in, .message-out');
-                  msgs.forEach(processMessage);
-                }
-              }
-            });
-          });
-        });
-        
-        // Find and observe the chat container
-        const chatContainer = document.querySelector('#main') || 
-                             document.querySelector('[data-testid="conversation-panel-wrapper"]') ||
-                             document.querySelector('[role="application"]');
-        
-        if (chatContainer) {
-          observer.observe(chatContainer, { childList: true, subtree: true });
-          diag.observerActive = true;
-          diag.containerFound = true;
-        } else {
-          diag.observerActive = false;
-          diag.containerFound = false;
-        }
+        // DISABLED MutationObserver - was causing UI crashes when clicking on audio
+        // Using polling-based approach instead for stability
+        diag.observerActive = false;
+        diag.containerFound = !!document.querySelector('#main');
         
         // Initial scan
         const found = scanCurrentChat();
         diag.initialScan = found;
         
+        // Poll for new messages more frequently since observer is disabled
+        setInterval(() => {
+          try {
+            scanCurrentChat();
+          } catch(e) {
+            // Silently ignore scan errors
+          }
+        }, 3000);
+        
         // Monitor for chat changes
         let lastChatName = '';
         setInterval(() => {
-          const currentName = getContactName();
-          if (currentName && currentName !== lastChatName) {
-            lastChatName = currentName;
-            setTimeout(scanCurrentChat, 500);
+          try {
+            const currentName = getContactName();
+            if (currentName && currentName !== lastChatName) {
+              lastChatName = currentName;
+              setTimeout(scanCurrentChat, 500);
+            }
+          } catch(e) {
+            // Silently ignore
           }
         }, 2000);
         
