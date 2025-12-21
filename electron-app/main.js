@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, protocol, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, session, protocol, shell, systemPreferences } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
@@ -8,6 +8,31 @@ const store = new Store();
 app.commandLine.appendSwitch('enable-webgl');
 app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
+
+// CRITICAL: Enable media capture for audio recording
+app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
+app.commandLine.appendSwitch('use-fake-ui-for-media-stream'); // Auto-approve media permission dialogs
+
+// Request microphone access on macOS
+async function requestMicrophoneAccess() {
+  if (process.platform === 'darwin') {
+    try {
+      const status = systemPreferences.getMediaAccessStatus('microphone');
+      console.log('[ROY] Microphone access status:', status);
+      
+      if (status !== 'granted') {
+        const granted = await systemPreferences.askForMediaAccess('microphone');
+        console.log('[ROY] Microphone access granted:', granted);
+        return granted;
+      }
+      return true;
+    } catch (error) {
+      console.error('[ROY] Error requesting microphone access:', error);
+      return false;
+    }
+  }
+  return true; // Windows/Linux handle permissions differently
+}
 
 // ============= Global Error Handlers =============
 // Prevent crashes from disposed frame errors
@@ -172,14 +197,22 @@ function createMainWindow() {
 const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 function createWhatsAppWindow() {
+  // Request microphone access FIRST on macOS
+  requestMicrophoneAccess().then(granted => {
+    console.log('[ROY] Microphone access result:', granted);
+  });
+
   // Create session for WhatsApp
   const whatsappSession = session.fromPartition('persist:whatsapp');
   
   // CRITICAL: Grant microphone and camera permissions for WhatsApp voice/video
-  whatsappSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    const allowedPermissions = ['media', 'mediaKeySystem', 'geolocation', 'notifications', 'fullscreen', 'pointerLock'];
+  whatsappSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    console.log('[ROY] Permission requested:', permission, details);
+    
+    // Always grant media-related permissions
+    const allowedPermissions = ['media', 'mediaKeySystem', 'geolocation', 'notifications', 'fullscreen', 'pointerLock', 'audioCapture', 'videoCapture'];
     if (allowedPermissions.includes(permission)) {
-      console.log('[ROY] Granted permission:', permission);
+      console.log('[ROY] GRANTED permission:', permission);
       callback(true);
     } else {
       console.log('[ROY] Denied permission:', permission);
@@ -187,10 +220,20 @@ function createWhatsAppWindow() {
     }
   });
   
-  // Also handle permission checks
-  whatsappSession.setPermissionCheckHandler((webContents, permission) => {
-    const allowedPermissions = ['media', 'mediaKeySystem', 'geolocation', 'notifications', 'fullscreen', 'pointerLock'];
-    return allowedPermissions.includes(permission);
+  // Also handle permission checks - ALWAYS return true for media
+  whatsappSession.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
+    console.log('[ROY] Permission check:', permission, requestingOrigin);
+    const allowedPermissions = ['media', 'mediaKeySystem', 'geolocation', 'notifications', 'fullscreen', 'pointerLock', 'audioCapture', 'videoCapture'];
+    const allowed = allowedPermissions.includes(permission);
+    console.log('[ROY] Permission check result:', permission, allowed);
+    return allowed;
+  });
+  
+  // Handle device permission requests (for getUserMedia)
+  whatsappSession.setDevicePermissionHandler((details) => {
+    console.log('[ROY] Device permission requested:', details.deviceType);
+    // Always allow audio and video devices
+    return true;
   });
   
   // Block whatsapp:// protocol via redirect interception (onBeforeRequest doesn't support custom schemes)
@@ -209,9 +252,12 @@ function createWhatsAppWindow() {
       nodeIntegration: false,
       session: whatsappSession,
       webSecurity: true,
-      // Enable features needed for audio/video
+      // Enable features needed for audio/video recording
       experimentalFeatures: true,
-      autoplayPolicy: 'no-user-gesture-required'
+      autoplayPolicy: 'no-user-gesture-required',
+      // Ensure media features work
+      webgl: true,
+      plugins: true
     },
     title: 'WhatsApp Web - ROY',
     show: true
