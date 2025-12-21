@@ -12,6 +12,9 @@ app.commandLine.appendSwitch('enable-gpu-rasterization');
 // CRITICAL: Enable media capture for audio recording
 app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
 app.commandLine.appendSwitch('use-fake-ui-for-media-stream'); // Auto-approve media permission dialogs
+app.commandLine.appendSwitch('enable-speech-dispatcher'); // Enable speech/audio APIs
+app.commandLine.appendSwitch('disable-features', 'AudioServiceOutOfProcess'); // Keep audio in main process to prevent crashes
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 // Request microphone access on macOS
 async function requestMicrophoneAccess() {
@@ -286,6 +289,36 @@ function createWhatsAppWindow() {
   // Handle errors
   whatsappWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     console.error('[ROY] Falha ao carregar:', errorCode, errorDescription, validatedURL);
+  });
+
+  // CRITICAL: Handle renderer crashes - this will help diagnose audio recording issues
+  whatsappWindow.webContents.on('render-process-gone', (event, details) => {
+    console.error('[ROY] RENDERER CRASH:', details.reason, details.exitCode);
+    // Try to recover by reloading
+    if (whatsappWindow && !whatsappWindow.isDestroyed()) {
+      console.log('[ROY] Tentando recuperar após crash...');
+      setTimeout(() => {
+        if (whatsappWindow && !whatsappWindow.isDestroyed()) {
+          whatsappWindow.loadURL('https://web.whatsapp.com');
+        }
+      }, 2000);
+    }
+  });
+
+  // Handle unresponsive renderer
+  whatsappWindow.webContents.on('unresponsive', () => {
+    console.error('[ROY] Renderer ficou sem resposta');
+  });
+
+  whatsappWindow.webContents.on('responsive', () => {
+    console.log('[ROY] Renderer voltou a responder');
+  });
+
+  // Log console messages from WhatsApp Web for debugging
+  whatsappWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    if (level === 2 || message.includes('error') || message.includes('Error') || message.includes('getUserMedia') || message.includes('MediaRecorder')) {
+      console.log('[ROY-WA]', message);
+    }
   });
 
   console.log('[ROY] Carregando WhatsApp Web...');
