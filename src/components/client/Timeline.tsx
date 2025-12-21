@@ -413,27 +413,8 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
   );
 }
 
-type EventFilter = "message" | "roi" | "risk" | "recommendation" | "comment" | "life_event" | "financial" | "followup" | "form_response" | "sales" | "attendance";
-type MessageSourceFilter = "direct" | "group";
-
-const filterConfig: Record<EventFilter, { label: string; color: string }> = {
-  comment: { label: "Comentários", color: "bg-primary" },
-  message: { label: "Mensagens", color: "bg-blue-500" },
-  roi: { label: "ROI", color: "bg-emerald-500" },
-  risk: { label: "Riscos", color: "bg-red-500" },
-  recommendation: { label: "Recomendações", color: "bg-violet-500" },
-  life_event: { label: "Momentos CX", color: "bg-pink-500" },
-  financial: { label: "Financeiro", color: "bg-amber-500" },
-  followup: { label: "Acompanhamento", color: "bg-cyan-500" },
-  form_response: { label: "Formulários", color: "bg-purple-500" },
-  sales: { label: "Vendas", color: "bg-green-500" },
-  attendance: { label: "Presenças", color: "bg-sky-500" },
-};
-
-const messageSourceFilterConfig: Record<MessageSourceFilter, { label: string; color: string }> = {
-  direct: { label: "Diretas", color: "bg-blue-600" },
-  group: { label: "Grupos", color: "bg-indigo-500" },
-};
+// Timeline is now focused on team comments only
+// Messages, ROI and risks have dedicated tabs
 
 export function Timeline({ events, className, clientId, clientName: propClientName, onCommentAdded }: TimelineProps) {
   const [comment, setComment] = useState("");
@@ -441,8 +422,6 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [showOlder, setShowOlder] = useState(false);
   const [clientName, setClientName] = useState<string>(propClientName || "");
-  const [activeFilters, setActiveFilters] = useState<Set<EventFilter>>(new Set());
-  const [messageSourceFilter, setMessageSourceFilter] = useState<MessageSourceFilter | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [highlightState, setHighlightState] = useState<"glow" | "fading" | null>(null);
   const location = useLocation();
@@ -586,93 +565,28 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     }
   };
 
-  const toggleFilter = (filter: EventFilter) => {
-    setActiveFilters((prev) => {
-      const next = new Set(prev);
-      if (next.has(filter)) {
-        next.delete(filter);
-      } else {
-        next.add(filter);
-      }
-      return next;
-    });
-  };
-
-  const toggleMessageSourceFilter = (filter: MessageSourceFilter) => {
-    setMessageSourceFilter((prev) => prev === filter ? null : filter);
-  };
-
   // Filter events based on active filters
-  // By default, exclude all messages (they have their own WhatsApp tab now)
-  // Timeline is now focused on team comments and system events
+  // Timeline is now focused on team comments only
+  // Messages, ROI and risks have their own dedicated tabs
+  // Timeline is now focused on team comments only
+  // Messages, ROI and risks have their own dedicated tabs
   const filteredEvents = events.filter((e) => {
-    // Always show field_change and session
-    if (e.type === "field_change" || e.type === "session") return true;
-    
-    // Exclude all messages by default (they go to the WhatsApp tab)
-    if (e.type === "message") {
-      // Only show if user explicitly filters for messages
-      if (!activeFilters.has("message")) return false;
-    }
-    
-    // Check type filters
-    if (activeFilters.size > 0 && !activeFilters.has(e.type as EventFilter)) {
+    // Exclude messages, ROI and risks - they have dedicated tabs
+    if (e.type === "message" || e.type === "roi" || e.type === "risk") {
       return false;
     }
     
-    // Check message source filter (only applies to messages)
-    if (e.type === "message" && messageSourceFilter) {
-      const isGroup = e.metadata?.is_group === true;
-      if (messageSourceFilter === "group" && !isGroup) return false;
-      if (messageSourceFilter === "direct" && isGroup) return false;
-    }
-    
+    // Show comments, followups, life_events, recommendations, etc.
     return true;
   });
 
   if (filteredEvents.length === 0 && events.length === 0) {
     return (
       <div className="space-y-4">
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2 pb-2 border-b">
-          {(Object.entries(filterConfig) as [EventFilter, { label: string; color: string }][]).map(([key, config]) => (
-            <button
-              key={key}
-              onClick={() => toggleFilter(key)}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
-                activeFilters.has(key)
-                  ? `${config.color} text-white`
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              )}
-            >
-              <div className={cn("w-2 h-2 rounded-full", activeFilters.has(key) ? "bg-white" : config.color)} />
-              {config.label}
-            </button>
-          ))}
-          {/* Message Source Filters */}
-          <div className="w-px h-5 bg-border mx-1 self-center" />
-          {(Object.entries(messageSourceFilterConfig) as [MessageSourceFilter, { label: string; color: string }][]).map(([key, config]) => (
-            <button
-              key={key}
-              onClick={() => toggleMessageSourceFilter(key)}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
-                messageSourceFilter === key
-                  ? `${config.color} text-white`
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              )}
-            >
-              <div className={cn("w-2 h-2 rounded-full", messageSourceFilter === key ? "bg-white" : config.color)} />
-              {config.label}
-            </button>
-          ))}
-        </div>
-
         <div className="text-center py-12 text-muted-foreground">
-          <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Nenhum evento na timeline ainda.</p>
-          <p className="text-sm mt-1">Interações e análises aparecerão aqui.</p>
+          <StickyNote className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>Nenhum comentário ainda.</p>
+          <p className="text-sm mt-1">Comentários da equipe aparecerão aqui.</p>
         </div>
         
         {/* Comment Input - Bottom position */}
@@ -742,68 +656,15 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Filter Buttons */}
-      <div className="flex flex-wrap gap-2 pb-2 border-b">
-        {(Object.entries(filterConfig) as [EventFilter, { label: string; color: string }][]).map(([key, config]) => (
-          <button
-            key={key}
-            onClick={() => toggleFilter(key)}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
-              activeFilters.has(key)
-                ? `${config.color} text-white`
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            )}
-          >
-            <div className={cn("w-2 h-2 rounded-full", activeFilters.has(key) ? "bg-white" : config.color)} />
-            {config.label}
-          </button>
-        ))}
-        {/* Message Source Filters */}
-        <div className="w-px h-5 bg-border mx-1 self-center" />
-        {(Object.entries(messageSourceFilterConfig) as [MessageSourceFilter, { label: string; color: string }][]).map(([key, config]) => (
-          <button
-            key={key}
-            onClick={() => toggleMessageSourceFilter(key)}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
-              messageSourceFilter === key
-                ? `${config.color} text-white`
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            )}
-          >
-            <div className={cn("w-2 h-2 rounded-full", messageSourceFilter === key ? "bg-white" : config.color)} />
-            {config.label}
-          </button>
-        ))}
-        {(activeFilters.size > 0 || messageSourceFilter) && (
-          <button
-            onClick={() => {
-              setActiveFilters(new Set());
-              setMessageSourceFilter(null);
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Limpar filtros
-          </button>
-        )}
-      </div>
-
       {/* No results message */}
       {filteredEvents.length === 0 && events.length > 0 && (
         <div className="text-center py-8 text-muted-foreground">
-          <p>Nenhum evento encontrado com os filtros selecionados.</p>
+          <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-30" />
+          <p>Nenhum comentário ainda.</p>
         </div>
       )}
 
-      {/* Check if showing only messages - use conversation view */}
-      {activeFilters.size === 1 && activeFilters.has("message") ? (
-        <ConversationView 
-          messages={filteredEvents.filter(e => e.type === "message")} 
-          clientName={clientName}
-        />
-      ) : (
-        /* Events List */
+      {/* Events List */}
         <div className="space-y-4">
           {visibleEvents.map((event, index) => (
             <div key={event.id} className="relative">
@@ -827,7 +688,6 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             </div>
           ))}
         </div>
-      )}
 
       {/* Comment Input - Bottom position like social networks */}
       {clientId && currentUser && (
