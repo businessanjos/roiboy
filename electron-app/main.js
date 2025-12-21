@@ -677,56 +677,16 @@ async function injectWhatsAppCaptureScript() {
             const isGroup = isGroupChat();
             const contactName = getContactName();
             
-            // Check for audio/voice message - simplified detection
-            const audioElement = msgElement.querySelector('audio') || 
-                                msgElement.querySelector('[data-testid="ptt"]') ||
-                                msgElement.querySelector('[data-icon="ptt"]');
+            // DISABLED: Audio detection was causing UI crashes
+            // Audio messages will be processed in a separate, safer scan
+            // Skip audio elements entirely in the main message processor
+            const hasAudioElement = msgElement.querySelector('audio') || 
+                                   msgElement.querySelector('[data-testid="ptt"]') ||
+                                   msgElement.querySelector('[data-icon="ptt"]');
             
-            if (audioElement) {
-              // It's an audio message - capture async to not block UI
-              try {
-                const audioSrc = msgElement.querySelector('audio')?.src || '';
-                
-                // Try to get duration from any span with time format
-                let durationSec = 0;
-                const spans = msgElement.querySelectorAll('span');
-                for (const span of spans) {
-                  const text = span.innerText || '';
-                  const match = text.match(/^(\\d+):(\\d+)$/);
-                  if (match) {
-                    durationSec = parseInt(match[1]) * 60 + parseInt(match[2]);
-                    break;
-                  }
-                }
-                
-                window.__roySentIds.add(msgId);
-                
-                // Keep set size manageable
-                if (window.__roySentIds.size > 2000) {
-                  const arr = Array.from(window.__roySentIds);
-                  window.__roySentIds = new Set(arr.slice(-1000));
-                }
-                
-                const audioData = {
-                  platform: 'whatsapp',
-                  id: msgId,
-                  type: 'audio',
-                  audioSrc: audioSrc,
-                  durationSec: durationSec,
-                  direction: isOutgoing ? 'team_to_client' : 'client_to_team',
-                  timestamp: new Date().toISOString(),
-                  phone: phone,
-                  contactName: contactName,
-                  isGroup: isGroup
-                };
-                
-                window.__royAudioQueue = window.__royAudioQueue || [];
-                window.__royAudioQueue.push(audioData);
-                return audioData;
-              } catch (e) {
-                // Silently fail to not break UI
-                return null;
-              }
+            if (hasAudioElement) {
+              // Skip audio messages in real-time processing to avoid crashes
+              return null;
             }
             
             // Find text content - try multiple selectors
@@ -892,31 +852,8 @@ async function injectWhatsAppCaptureScript() {
     }
     
     // Retrieve and process audio messages
-    const audioMessages = await whatsappWindow.webContents.executeJavaScript(`
-      (function() {
-        const queue = window.__royAudioQueue || [];
-        window.__royAudioQueue = [];
-        return { 
-          audioMessages: queue,
-          queueSize: queue.length
-        };
-      })()
-    `);
-    
-    if (audioMessages && audioMessages.audioMessages && audioMessages.audioMessages.length > 0) {
-      console.log('[ROY] Recuperando', audioMessages.audioMessages.length, 'áudios da fila');
-      
-      for (const audio of audioMessages.audioMessages) {
-        console.log('[ROY] Áudio encontrado:', { 
-          direction: audio.direction, 
-          phone: audio.phone, 
-          contactName: audio.contactName,
-          durationSec: audio.durationSec,
-          hasAudioSrc: !!audio.audioSrc
-        });
-        await sendWhatsAppAudioToAPI(audio);
-      }
-    }
+    // Audio processing is disabled to prevent UI crashes
+    // TODO: Implement safer audio detection in a future version
     
   } catch (error) {
     console.error('[ROY] Erro ao injetar script WhatsApp:', error);
