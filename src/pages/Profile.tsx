@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import royLogo from "@/assets/roy-logo.png";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -345,10 +346,20 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="p-6 lg:p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando perfil...</p>
+      <div className="p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <div className="relative">
+          <div className="absolute inset-0 animate-ping opacity-20">
+            <img src={royLogo} alt="" className="h-12 w-12 object-contain blur-sm" />
+          </div>
+          <img src={royLogo} alt="Roy" className="h-12 w-12 object-contain animate-pulse" />
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted-foreground">Carregando perfil...</span>
+          <span className="flex gap-0.5">
+            <span className="h-1 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="h-1 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="h-1 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+          </span>
         </div>
       </div>
     );
