@@ -673,6 +673,57 @@ async function injectWhatsAppCaptureScript() {
                               !!msgElement.querySelector('[data-testid="msg-check"]') ||
                               !!msgElement.querySelector('[data-testid="msg-dblcheck"]');
             
+            const phone = extractPhoneFromChat();
+            const isGroup = isGroupChat();
+            const contactName = getContactName();
+            
+            // Check for audio/voice message
+            const audioElement = msgElement.querySelector('audio') || 
+                                msgElement.querySelector('[data-testid="audio-play"]') ||
+                                msgElement.querySelector('[data-testid="ptt"]') ||
+                                msgElement.querySelector('[data-icon="ptt"]') ||
+                                msgElement.querySelector('[data-icon="audio-play"]');
+            
+            if (audioElement) {
+              // It's an audio message
+              const audioSrc = msgElement.querySelector('audio')?.src || '';
+              const durationEl = msgElement.querySelector('[data-testid="audio-duration"]') ||
+                                msgElement.querySelector('[class*="audio-duration"]');
+              const durationText = durationEl?.innerText || '';
+              
+              // Parse duration (format: "0:15" or "1:30")
+              let durationSec = 0;
+              const durationMatch = durationText.match(/(\\d+):(\\d+)/);
+              if (durationMatch) {
+                durationSec = parseInt(durationMatch[1]) * 60 + parseInt(durationMatch[2]);
+              }
+              
+              window.__roySentIds.add(msgId);
+              
+              // Keep set size manageable
+              if (window.__roySentIds.size > 2000) {
+                const arr = Array.from(window.__roySentIds);
+                window.__roySentIds = new Set(arr.slice(-1000));
+              }
+              
+              const audioData = {
+                platform: 'whatsapp',
+                id: msgId,
+                type: 'audio',
+                audioSrc: audioSrc,
+                durationSec: durationSec,
+                direction: isOutgoing ? 'team_to_client' : 'client_to_team',
+                timestamp: new Date().toISOString(),
+                phone: phone,
+                contactName: contactName,
+                isGroup: isGroup
+              };
+              
+              window.__royAudioQueue = window.__royAudioQueue || [];
+              window.__royAudioQueue.push(audioData);
+              return audioData;
+            }
+            
             // Find text content - try multiple selectors
             let text = '';
             const textSelectors = [
@@ -692,10 +743,6 @@ async function injectWhatsAppCaptureScript() {
             }
             
             if (!text || text.trim().length < 2) return null;
-            
-            const phone = extractPhoneFromChat();
-            const isGroup = isGroupChat();
-            const contactName = getContactName();
             
             window.__roySentIds.add(msgId);
             
@@ -836,6 +883,33 @@ async function injectWhatsAppCaptureScript() {
         if (msg.text) {
           await sendWhatsAppMessageToAPI(msg);
         }
+      }
+    }
+    
+    // Retrieve and process audio messages
+    const audioMessages = await whatsappWindow.webContents.executeJavaScript(`
+      (function() {
+        const queue = window.__royAudioQueue || [];
+        window.__royAudioQueue = [];
+        return { 
+          audioMessages: queue,
+          queueSize: queue.length
+        };
+      })()
+    `);
+    
+    if (audioMessages && audioMessages.audioMessages && audioMessages.audioMessages.length > 0) {
+      console.log('[ROY] Recuperando', audioMessages.audioMessages.length, 'áudios da fila');
+      
+      for (const audio of audioMessages.audioMessages) {
+        console.log('[ROY] Áudio encontrado:', { 
+          direction: audio.direction, 
+          phone: audio.phone, 
+          contactName: audio.contactName,
+          durationSec: audio.durationSec,
+          hasAudioSrc: !!audio.audioSrc
+        });
+        await sendWhatsAppAudioToAPI(audio);
       }
     }
     
@@ -1035,6 +1109,143 @@ async function sendWhatsAppMessageToAPI(messageData) {
     }
   } catch (error) {
     console.error('[ROY] Erro ao enviar mensagem:', error);
+  }
+}
+
+// ============= WhatsApp Audio Capture =============
+async function sendWhatsAppAudioToAPI(audioData) {
+  if (!authData) return;
+
+  const accountId = authData.account_id;
+  if (!accountId) {
+    console.error('[ROY] Sem account_id - faça login novamente');
+    return;
+  }
+
+  try {
+    // Format phone to E.164
+    let phoneE164 = audioData.phone || '';
+    if (phoneE164 && !phoneE164.startsWith('+')) {
+      phoneE164 = '+' + phoneE164.replace(/\D/g, '');
+    }
+
+    // Map direction values
+    const direction = audioData.direction === 'team_to_client' 
+      ? 'team_to_client' 
+      : 'client_to_team';
+
+    // Try to fetch the audio content if we have a URL
+    let audioBase64 = null;
+    if (audioData.audioSrc && audioData.audioSrc.startsWith('blob:')) {
+      // For blob URLs, we need to fetch from the WhatsApp window context
+      try {
+        audioBase64 = await whatsappWindow.webContents.executeJavaScript(`
+          (async function() {
+            try {
+              const response = await fetch('${audioData.audioSrc}');
+              const blob = await response.blob();
+              return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const base64 = reader.result.split(',')[1];
+                  resolve(base64);
+                };
+                reader.readAsDataURL(blob);
+              });
+            } catch (e) {
+              console.error('[ROY] Erro ao buscar áudio:', e);
+              return null;
+            }
+          })()
+        `);
+      } catch (e) {
+        console.error('[ROY] Erro ao extrair base64 do áudio:', e);
+      }
+    }
+
+    if (!audioBase64) {
+      console.log('[ROY] Áudio sem conteúdo base64, registrando apenas metadados');
+      // Even without audio content, we can log the audio message event
+      // The backend can handle messages without audio content (just metadata)
+      const payload = {
+        phone_e164: phoneE164 || undefined,
+        contact_name: audioData.contactName || undefined,
+        direction: direction,
+        sent_at: audioData.timestamp || new Date().toISOString(),
+        source: 'extension',
+        is_group: audioData.isGroup || false,
+        account_id: accountId,
+        audio_duration_sec: audioData.durationSec || 0,
+        audio_format: 'ogg',
+        has_audio_content: false
+      };
+
+      // Send to regular message endpoint as an audio placeholder
+      const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-account-id': accountId
+        },
+        body: JSON.stringify({
+          ...payload,
+          content_text: '[Áudio - ' + (audioData.durationSec || 0) + 's - sem transcrição disponível]'
+        })
+      });
+
+      if (response.ok) {
+        console.log('[ROY] Áudio (metadados) registrado com sucesso');
+      } else {
+        console.error('[ROY] Erro ao registrar áudio:', await response.text());
+      }
+      return;
+    }
+
+    const payload = {
+      phone_e164: phoneE164 || undefined,
+      contact_name: audioData.contactName || undefined,
+      direction: direction,
+      sent_at: audioData.timestamp || new Date().toISOString(),
+      source: 'extension',
+      is_group: audioData.isGroup || false,
+      account_id: accountId,
+      audio_base64: audioBase64,
+      audio_duration_sec: audioData.durationSec || 0,
+      audio_format: 'ogg'
+    };
+
+    console.log('[ROY] Enviando áudio para transcrição:', { 
+      phone: phoneE164, 
+      contactName: audioData.contactName, 
+      direction,
+      durationSec: audioData.durationSec,
+      audioSize: audioBase64.length
+    });
+
+    const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-audio`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-account-id': accountId
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      captureState.whatsapp.messagesSent++;
+      updateStats();
+      console.log('[ROY] Áudio transcrito e enviado:', result);
+    } else {
+      captureState.whatsapp.errors++;
+      updateStats();
+      console.error('[ROY] Erro na transcrição:', result);
+    }
+  } catch (error) {
+    console.error('[ROY] Erro ao enviar áudio:', error);
+    captureState.whatsapp.errors++;
+    updateStats();
   }
 }
 

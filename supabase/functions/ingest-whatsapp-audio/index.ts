@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-account-id",
 };
 
 // Security constants
@@ -13,11 +13,16 @@ const MAX_DURATION_SEC = 600; // 10 minutes max
 
 interface AudioPayload {
   api_key?: string;
-  phone_e164: string;
+  account_id?: string;
+  phone_e164?: string;
+  contact_name?: string;
   direction: "client_to_team" | "team_to_client";
   audio_base64: string;
   audio_duration_sec: number;
+  audio_format?: string;
   sent_at: string;
+  source?: string;
+  is_group?: boolean;
   external_thread_id?: string;
 }
 
@@ -158,18 +163,22 @@ serve(async (req) => {
 
   try {
     const apiKey = req.headers.get("x-api-key") || "";
+    const accountIdHeader = req.headers.get("x-account-id") || "";
     
     const payload: AudioPayload = await req.json();
     const effectiveApiKey = apiKey || payload.api_key || "";
+    const effectiveAccountId = accountIdHeader || payload.account_id || "";
     
     console.log("Received audio payload:", { 
       hasApiKey: !!effectiveApiKey,
+      hasAccountId: !!effectiveAccountId,
       duration: payload.audio_duration_sec,
-      audioSize: payload.audio_base64?.length || 0
+      audioSize: payload.audio_base64?.length || 0,
+      source: payload.source || 'api'
     });
 
-    // Input validation
-    if (!payload.phone_e164 || !payload.direction || !payload.audio_base64 || !payload.sent_at) {
+    // Input validation - phone_e164 OR contact_name is required
+    if ((!payload.phone_e164 && !payload.contact_name) || !payload.direction || !payload.audio_base64 || !payload.sent_at) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -202,8 +211,8 @@ serve(async (req) => {
       );
     }
 
-    // Validate phone format
-    if (payload.phone_e164.length > MAX_PHONE_LENGTH || !payload.phone_e164.match(/^\+[1-9]\d{6,14}$/)) {
+    // Validate phone format if provided
+    if (payload.phone_e164 && (payload.phone_e164.length > MAX_PHONE_LENGTH || !payload.phone_e164.match(/^\+[1-9]\d{6,14}$/))) {
       return new Response(
         JSON.stringify({ error: "Invalid phone format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -222,35 +231,77 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate API key
-    const authResult = await validateApiKey(supabase, effectiveApiKey);
-    if (!authResult.valid) {
-      console.log("API key validation failed");
+    // Try to authenticate via API key first, then fall back to account_id
+    let authenticatedAccountId: string | null = null;
+
+    if (effectiveApiKey) {
+      const authResult = await validateApiKey(supabase, effectiveApiKey);
+      if (authResult.valid) {
+        authenticatedAccountId = authResult.accountId || null;
+      }
+    }
+
+    // If no API key auth, try account_id (from ROY Desktop App)
+    if (!authenticatedAccountId && effectiveAccountId) {
+      // Validate the account exists
+      const { data: account, error: accountError } = await supabase
+        .from("accounts")
+        .select("id")
+        .eq("id", effectiveAccountId)
+        .maybeSingle();
+      
+      if (account && !accountError) {
+        authenticatedAccountId = account.id;
+        console.log("Authenticated via account_id:", authenticatedAccountId);
+      }
+    }
+
+    if (!authenticatedAccountId) {
+      console.log("Authentication failed - no valid API key or account_id");
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Find client by phone - scoped to authenticated account
-    const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("id, account_id, full_name")
-      .eq("phone_e164", payload.phone_e164)
-      .eq("account_id", authResult.accountId)
-      .maybeSingle();
+    // Find client by phone OR contact name - scoped to authenticated account
+    let client: { id: string; account_id: string; full_name: string } | null = null;
 
-    if (clientError) {
-      console.error("Database error:", clientError.code);
-      return new Response(
-        JSON.stringify({ error: "Internal error" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (payload.phone_e164) {
+      const { data: clientByPhone, error: phoneError } = await supabase
+        .from("clients")
+        .select("id, account_id, full_name")
+        .eq("phone_e164", payload.phone_e164)
+        .eq("account_id", authenticatedAccountId)
+        .maybeSingle();
+
+      if (phoneError) {
+        console.error("Database error:", phoneError.code);
+        return new Response(
+          JSON.stringify({ error: "Internal error" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      client = clientByPhone;
+    }
+
+    // If not found by phone, try by contact name
+    if (!client && payload.contact_name) {
+      const { data: clientByName } = await supabase
+        .from("clients")
+        .select("id, account_id, full_name")
+        .eq("account_id", authenticatedAccountId)
+        .ilike("full_name", `%${payload.contact_name}%`)
+        .limit(1)
+        .maybeSingle();
+      
+      client = clientByName;
     }
 
     if (!client) {
+      console.log("Client not found for phone:", payload.phone_e164, "or name:", payload.contact_name);
       return new Response(
-        JSON.stringify({ error: "Client not found" }),
+        JSON.stringify({ error: "Client not found", phone: payload.phone_e164, contact_name: payload.contact_name }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
