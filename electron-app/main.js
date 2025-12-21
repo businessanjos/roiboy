@@ -93,19 +93,31 @@ let captureState = {
 // ============= Global Safe Execute JS Helper =============
 // Helper function to safely execute JS in any BrowserWindow, handling disposed frame errors
 async function safeExecuteJS(browserWindow, script) {
-  if (!browserWindow || browserWindow.isDestroyed()) {
-    return null;
-  }
-  const webContents = browserWindow.webContents;
-  if (!webContents || webContents.isDestroyed()) {
-    return null;
-  }
   try {
+    if (!browserWindow || browserWindow.isDestroyed()) {
+      return null;
+    }
+    const webContents = browserWindow.webContents;
+    if (!webContents || webContents.isDestroyed()) {
+      return null;
+    }
     return await webContents.executeJavaScript(script);
   } catch (error) {
-    if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed') || error.message.includes('Render frame'))) {
-      return null; // Silently return null for disposed/destroyed frame errors
+    // Silently return null for ALL frame-related errors
+    const errorMsg = error.message || error.toString();
+    if (errorMsg.includes('disposed') || 
+        errorMsg.includes('destroyed') || 
+        errorMsg.includes('Render frame') ||
+        errorMsg.includes('WebFrameMain') ||
+        errorMsg.includes('frame was') ||
+        errorMsg.includes('webContents')) {
+      return null;
     }
+    // Log but don't throw for other errors
+    console.log('[ROY] safeExecuteJS error (non-critical):', errorMsg.substring(0, 100));
+    return null;
+  }
+}
     throw error;
   }
 }
