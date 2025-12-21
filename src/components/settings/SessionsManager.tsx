@@ -154,10 +154,15 @@ export function SessionsManager() {
   };
 
   const handleTerminateAllOthers = async () => {
+    if (!currentUser?.id) return;
+    
     const currentSession = sessions.find(s => s.device_fingerprint === currentFingerprint);
     
     try {
-      let query = supabase.from('user_sessions').delete();
+      let query = supabase
+        .from('user_sessions')
+        .delete()
+        .eq('user_id', currentUser.id);
       
       if (currentSession) {
         query = query.neq('id', currentSession.id);
