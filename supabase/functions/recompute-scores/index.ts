@@ -198,7 +198,7 @@ serve(async (req) => {
             console.log(`Processed client ${client.id}: E=${escore}, ROI=${roizometer}, Q=${quadrant}, T=${trend}, V-NPS=${vnpsResult.vnps_score}`);
 
             // Update client status based on scores (ticket affects thresholds)
-            const newStatus = determineClientStatus(escore, roizometer, settings, ticketMultiplier);
+            const newStatus = await determineClientStatus(supabase, client.id, account.id, escore, roizometer, settings, ticketMultiplier);
             if (newStatus) {
               await supabase
                 .from("clients")
@@ -723,21 +723,49 @@ function determineTrend(
 }
 
 /**
- * Determine client status based on scores
+ * Determine client status based on scores and recent positive signals
  * Ticket multiplier affects thresholds - high ticket clients enter churn_risk sooner
+ * BUT: Recent high-impact ROI events (like renewals) override churn_risk status
  */
-function determineClientStatus(
+async function determineClientStatus(
+  supabase: any,
+  clientId: string,
+  accountId: string,
   escore: number, 
   roizometer: number, 
   settings: AccountSettings,
   ticketMultiplier: number
-): string | null {
+): Promise<string | null> {
+  // Check for recent high-impact ROI events (last 7 days) - signals like renewal
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const { data: recentHighROI } = await supabase
+    .from("roi_events")
+    .select("id, impact, category")
+    .eq("client_id", clientId)
+    .eq("account_id", accountId)
+    .eq("impact", "high")
+    .gte("happened_at", sevenDaysAgo.toISOString());
+
+  const hasRecentHighROI = recentHighROI && recentHighROI.length > 0;
+  const hasRecentRevenue = recentHighROI?.some((e: any) => e.category === "revenue");
+
+  // If client has recent high-impact revenue ROI (like renewal), they should NOT be churn_risk
+  if (hasRecentRevenue) {
+    console.log(`Client ${clientId} has recent revenue ROI, marking as active despite low scores`);
+    return "active";
+  }
+
   // Adjust thresholds based on ticket
   // Higher ticket = higher thresholds (enter churn_risk earlier)
   const escoreThreshold = settings.threshold_low_escore * ticketMultiplier;
   const roiThreshold = settings.threshold_low_roizometer * ticketMultiplier;
 
-  if (escore < escoreThreshold && roizometer < roiThreshold) {
+  // If has any high-impact ROI recently, increase thresholds (less likely to be churn_risk)
+  const roiBonus = hasRecentHighROI ? 0.7 : 1.0; // 30% reduction in threshold sensitivity
+
+  if (escore < escoreThreshold * roiBonus && roizometer < roiThreshold * roiBonus) {
     return "churn_risk";
   }
   if (escore >= 50 && roizometer >= 50) {
