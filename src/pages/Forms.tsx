@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ import {
   Star,
   ThumbsUp,
   MessageSquare,
+  Lock,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -58,6 +60,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { FormResponseViewer } from "@/components/forms/FormResponseViewer";
+import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 import {
   DndContext,
   closestCenter,
@@ -610,6 +613,7 @@ const FORM_TEMPLATES: FormTemplate[] = [
 
 export default function Forms() {
   const { currentUser } = useCurrentUser();
+  const { canCreate } = usePlanLimits();
   const [forms, setForms] = useState<Form[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1209,9 +1213,13 @@ export default function Forms() {
             Crie formulários personalizados e colete respostas dos clientes
           </p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Formulário
+        <Button 
+          onClick={openCreateDialog}
+          disabled={!canCreate("forms")}
+          title={!canCreate("forms") ? "Limite de formulários atingido. Faça upgrade do plano." : undefined}
+        >
+          {!canCreate("forms") ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+          {!canCreate("forms") ? "Limite atingido" : "Novo Formulário"}
         </Button>
       </div>
 
