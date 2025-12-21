@@ -603,9 +603,19 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   };
 
   // Filter events based on active filters
+  // By default, exclude WhatsApp messages (they have their own tab now)
   const filteredEvents = events.filter((e) => {
     // Always show field_change and session
     if (e.type === "field_change" || e.type === "session") return true;
+    
+    // Exclude WhatsApp messages by default (they go to the WhatsApp tab)
+    if (e.type === "message" && 
+        (e.metadata?.source === "whatsapp" || 
+         e.metadata?.source === "whatsapp_text" ||
+         e.metadata?.source === "whatsapp_audio_transcript")) {
+      // Only show if user explicitly filters for messages
+      if (!activeFilters.has("message")) return false;
+    }
     
     // Check type filters
     if (activeFilters.size > 0 && !activeFilters.has(e.type as EventFilter)) {
