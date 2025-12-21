@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Play, Loader2, Sparkles, AlertTriangle, Heart, Lightbulb, Info } from "lucide-react";
+import { Play, Loader2, Sparkles, AlertTriangle, Heart, Info } from "lucide-react";
 
 interface AISettings {
   model: string;
@@ -37,11 +37,6 @@ interface TestResult {
     description?: string;
     event_date?: string;
     confidence?: number;
-  }>;
-  recommendations: Array<{
-    title: string;
-    action_text: string;
-    priority: string;
   }>;
   tokens_used?: {
     input: number;
@@ -151,7 +146,6 @@ export function AIPromptTest({ aiSettings }: AIPromptTestProps) {
         roi_events: [],
         risk_events: [],
         life_events: [],
-        recommendations: [],
         error: err instanceof Error ? err.message : "Erro ao testar prompt",
       });
     } finally {
@@ -165,7 +159,7 @@ export function AIPromptTest({ aiSettings }: AIPromptTestProps) {
   };
 
   const totalEvents = result 
-    ? result.roi_events.length + result.risk_events.length + result.life_events.length + result.recommendations.length
+    ? result.roi_events.length + result.risk_events.length + result.life_events.length
     : 0;
 
   return (
@@ -359,34 +353,6 @@ export function AIPromptTest({ aiSettings }: AIPromptTestProps) {
                   </div>
                 )}
 
-                {/* Recommendations */}
-                {result.recommendations.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-blue-500" />
-                      Recomendações ({result.recommendations.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {result.recommendations.map((rec, i) => (
-                        <div key={i} className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={
-                              rec.priority === "high" ? "border-red-500 text-red-500" :
-                              rec.priority === "medium" ? "border-amber-500 text-amber-500" :
-                              "border-slate-400 text-slate-400"
-                            }>
-                              {rec.priority === "high" ? "Alta" : rec.priority === "medium" ? "Média" : "Baixa"}
-                            </Badge>
-                            <span className="text-sm font-medium">{rec.title}</span>
-                          </div>
-                          <p className="text-sm mt-2 text-muted-foreground">
-                            {rec.action_text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {totalEvents === 0 && (
                   <div className="p-4 rounded-lg bg-muted/50 text-center">

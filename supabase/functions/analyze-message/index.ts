@@ -48,7 +48,7 @@ REGRAS:
 2. Só identifique risco se houver sinal claro
 3. Identifique momentos CX quando o cliente mencionar eventos de vida
 4. Extraia datas quando mencionadas (ex: "semana que vem", "dia 15")
-5. Gere recomendações práticas e específicas
+5. Seja conservador na classificação
 6. Se insuficiente, retorne arrays vazios
 7. Nunca invente - seja conservador na classificação`;
 
@@ -174,7 +174,6 @@ serve(async (req) => {
 1. Evidências de ROI percebido (tangível ou intangível) - ${aiSettings.roi_prompt}
 2. Sinais de risco - ${aiSettings.risk_prompt}
 3. Momentos CX (eventos importantes da vida do cliente) - ${aiSettings.life_events_prompt}
-4. Recomendações de ação
 
 CONTEXTO RECENTE:
 ${contextStr}
@@ -203,7 +202,7 @@ Analise e retorne os eventos identificados.`;
             type: "function",
             function: {
               name: "classify_message",
-              description: "Classifica a mensagem identificando ROI, riscos, momentos CX e recomendações",
+              description: "Classifica a mensagem identificando ROI, riscos e momentos CX",
               parameters: {
                 type: "object",
                 properties: {
@@ -301,32 +300,9 @@ Analise e retorne os eventos identificados.`;
                       },
                       required: ["event_type", "title"]
                     }
-                  },
-                  recommendations: {
-                    type: "array",
-                    description: "Lista de recomendações de ação",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { 
-                          type: "string",
-                          description: "Título curto da recomendação"
-                        },
-                        action_text: { 
-                          type: "string",
-                          description: "Ação específica recomendada"
-                        },
-                        priority: { 
-                          type: "string", 
-                          enum: ["low", "medium", "high"],
-                          description: "Prioridade da recomendação"
-                        }
-                      },
-                      required: ["title", "action_text", "priority"]
-                    }
                   }
                 },
-                required: ["roi_events", "risk_events", "life_events", "recommendations"]
+                required: ["roi_events", "risk_events", "life_events"]
               }
             }
           }
@@ -392,7 +368,7 @@ Analise e retorne os eventos identificados.`;
     console.log("Classification:", JSON.stringify(classification, null, 2));
 
     const now = new Date().toISOString();
-    const results = { roi_events: 0, risk_events: 0, life_events: 0, recommendations: 0, filtered_by_confidence: 0 };
+    const results = { roi_events: 0, risk_events: 0, life_events: 0, filtered_by_confidence: 0 };
     const confidenceThreshold = aiSettings.confidence_threshold;
 
     // Insert ROI events (filtered by confidence)
@@ -484,26 +460,8 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
-    // Insert Recommendations
-    if (classification.recommendations?.length > 0) {
-      for (const rec of classification.recommendations) {
-        const { error } = await supabase.from("recommendations").insert({
-          account_id,
-          client_id,
-          title: rec.title,
-          action_text: rec.action_text,
-          priority: rec.priority,
-          status: "open",
-        });
-        if (error) {
-          console.error("Error inserting recommendation:", error);
-        } else {
-          results.recommendations++;
-        }
-      }
-    }
 
-    console.log(`Analysis complete using ${aiSettings.model}. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life Events, ${results.recommendations} Recommendations. Filtered by confidence: ${results.filtered_by_confidence}`);
+    console.log(`Analysis complete using ${aiSettings.model}. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life Events. Filtered by confidence: ${results.filtered_by_confidence}`);
 
     // Log AI usage
     const { error: logError } = await supabase.from("ai_usage_logs").insert({
@@ -516,7 +474,7 @@ Analise e retorne os eventos identificados.`;
       roi_events_created: results.roi_events,
       risk_events_created: results.risk_events,
       life_events_created: results.life_events,
-      recommendations_created: results.recommendations,
+      recommendations_created: 0,
     });
     if (logError) {
       console.error("Error logging AI usage:", logError);
