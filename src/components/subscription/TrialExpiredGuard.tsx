@@ -1,13 +1,15 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Routes that are always accessible (even with expired trial)
 const PUBLIC_ROUTES = [
   "/auth",
   "/choose-plan",
   "/account-settings",
+  "/profile",
   "/f/",
   "/checkin/",
   "/sobre",
@@ -19,13 +21,15 @@ interface TrialExpiredGuardProps {
 }
 
 export function TrialExpiredGuard({ children }: TrialExpiredGuardProps) {
-  const { isLoading, hasAccess, isTrialExpired } = useSubscriptionStatus();
+  const { isLoading, hasAccess, isTrialExpired, subscriptionStatus, paymentMethodConfigured, daysRemaining } = useSubscriptionStatus();
   const navigate = useNavigate();
   const location = useLocation();
 
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
     location.pathname.startsWith(route)
   );
+
+  const isTrialWithoutPayment = subscriptionStatus === "trial" && !paymentMethodConfigured && !isTrialExpired;
 
   useEffect(() => {
     // Skip check for public routes
@@ -47,6 +51,35 @@ export function TrialExpiredGuard({ children }: TrialExpiredGuardProps) {
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-muted-foreground text-sm">Verificando assinatura...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Block access if trial without payment method configured
+  if (!isPublicRoute && isTrialWithoutPayment) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-6 max-w-md mx-auto p-6">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+            <CreditCard className="h-8 w-8 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Configure seu pagamento</h1>
+            <p className="text-muted-foreground">
+              Para acessar o sistema durante o período de teste
+              {daysRemaining !== null && ` (${daysRemaining} dias restantes)`}, 
+              você precisa cadastrar um cartão de crédito ou gerar um PIX.
+            </p>
+          </div>
+          <Button 
+            onClick={() => navigate("/profile?tab=subscription")} 
+            className="w-full"
+            size="lg"
+          >
+            <CreditCard className="mr-2 h-4 w-4" />
+            Configurar Pagamento
+          </Button>
         </div>
       </div>
     );

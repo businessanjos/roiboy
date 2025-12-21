@@ -185,6 +185,7 @@ export type Database = {
           id: string
           name: string
           neighborhood: string | null
+          payment_method_configured: boolean
           phone: string | null
           plan_id: string | null
           state: string | null
@@ -207,6 +208,7 @@ export type Database = {
           id?: string
           name: string
           neighborhood?: string | null
+          payment_method_configured?: boolean
           phone?: string | null
           plan_id?: string | null
           state?: string | null
@@ -229,6 +231,7 @@ export type Database = {
           id?: string
           name?: string
           neighborhood?: string | null
+          payment_method_configured?: boolean
           phone?: string | null
           plan_id?: string | null
           state?: string | null
