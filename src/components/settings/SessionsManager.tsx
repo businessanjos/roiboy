@@ -119,6 +119,7 @@ export function SessionsManager() {
       const { data, error } = await supabase
         .from('user_sessions')
         .select('*')
+        .eq('user_id', currentUser.id)
         .order('last_active_at', { ascending: false });
 
       if (error) throw error;
