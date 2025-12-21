@@ -1255,6 +1255,185 @@ export type Database = {
           },
         ]
       }
+      coupon_products: {
+        Row: {
+          account_id: string
+          coupon_id: string
+          created_at: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          account_id: string
+          coupon_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          account_id?: string
+          coupon_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_products_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_products_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_usages: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          contract_id: string | null
+          coupon_id: string
+          created_at: string
+          discount_applied: number
+          final_value: number
+          id: string
+          original_value: number
+          used_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          contract_id?: string | null
+          coupon_id: string
+          created_at?: string
+          discount_applied?: number
+          final_value?: number
+          id?: string
+          original_value?: number
+          used_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          contract_id?: string | null
+          coupon_id?: string
+          created_at?: string
+          discount_applied?: number
+          final_value?: number
+          id?: string
+          original_value?: number
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usages_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usages_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          account_id: string
+          applies_to_contracts: boolean
+          applies_to_subscriptions: boolean
+          code: string
+          created_at: string
+          current_uses: number
+          description: string | null
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          min_value: number | null
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          account_id: string
+          applies_to_contracts?: boolean
+          applies_to_subscriptions?: boolean
+          code: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_type?: Database["public"]["Enums"]["discount_type"]
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_value?: number | null
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          account_id?: string
+          applies_to_contracts?: boolean
+          applies_to_subscriptions?: boolean
+          code?: string
+          created_at?: string
+          current_uses?: number
+          description?: string | null
+          discount_type?: Database["public"]["Enums"]["discount_type"]
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          min_value?: number | null
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_fields: {
         Row: {
           account_id: string
@@ -2768,9 +2947,30 @@ export type Database = {
         Args: { p_action: string; p_identifier: string }
         Returns: undefined
       }
+      use_coupon: {
+        Args: {
+          p_account_id: string
+          p_client_id?: string
+          p_contract_id?: string
+          p_coupon_id: string
+          p_discount_applied?: number
+          p_final_value?: number
+          p_original_value?: number
+        }
+        Returns: boolean
+      }
       user_belongs_to_account: {
         Args: { _account_id: string }
         Returns: boolean
+      }
+      validate_coupon: {
+        Args: {
+          p_account_id: string
+          p_code: string
+          p_product_id?: string
+          p_value: number
+        }
+        Returns: Json
       }
     }
     Enums: {
@@ -2788,6 +2988,7 @@ export type Database = {
         | "churned"
         | "no_contract"
       delivery_status: "pending" | "delivered" | "missed"
+      discount_type: "percentage" | "fixed"
       event_modality: "online" | "presencial"
       event_type:
         | "live"
@@ -3013,6 +3214,7 @@ export const Constants = {
         "no_contract",
       ],
       delivery_status: ["pending", "delivered", "missed"],
+      discount_type: ["percentage", "fixed"],
       event_modality: ["online", "presencial"],
       event_type: [
         "live",
