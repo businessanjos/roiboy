@@ -1611,10 +1611,9 @@ export default function Clients() {
       </div>
 
       {viewMode === "table" ? (
-        <Card className="shadow-card overflow-hidden">
-          <ScrollArea className="w-full" orientation="both">
-            <div className="min-w-max">
-              <Table>
+        <Card className="shadow-card">
+          <div className="overflow-x-auto">
+            <Table className="min-w-max">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-medium sticky left-0 bg-muted z-20 min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
@@ -1960,7 +1959,6 @@ export default function Clients() {
                 </TableBody>
               </Table>
             </div>
-          </ScrollArea>
         </Card>
       ) : (
         <div className="grid gap-3">
