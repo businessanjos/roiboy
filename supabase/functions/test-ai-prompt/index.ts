@@ -64,7 +64,7 @@ REGRAS:
 2. Só identifique risco se houver sinal claro
 3. Identifique momentos CX quando o cliente mencionar eventos de vida
 4. Extraia datas quando mencionadas
-5. Gere recomendações práticas e específicas
+5. Se insuficiente, retorne arrays vazios
 6. Se insuficiente, retorne arrays vazios
 7. Nunca invente - seja conservador na classificação`;
 
@@ -72,7 +72,6 @@ REGRAS:
 1. Evidências de ROI percebido (tangível ou intangível)
 2. Sinais de risco
 3. Momentos CX (eventos importantes da vida do cliente)
-4. Recomendações de ação
 
 MENSAGEM:
 "${message}"
@@ -96,7 +95,7 @@ Analise e retorne os eventos identificados.`;
             type: "function",
             function: {
               name: "classify_message",
-              description: "Classifica a mensagem identificando ROI, riscos, momentos CX e recomendações",
+              description: "Classifica a mensagem identificando ROI, riscos e momentos CX",
               parameters: {
                 type: "object",
                 properties: {
@@ -140,21 +139,9 @@ Analise e retorne os eventos identificados.`;
                       },
                       required: ["event_type", "title"]
                     }
-                  },
-                  recommendations: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        action_text: { type: "string" },
-                        priority: { type: "string", enum: ["low", "medium", "high"] }
-                      },
-                      required: ["title", "action_text", "priority"]
-                    }
                   }
                 },
-                required: ["roi_events", "risk_events", "life_events", "recommendations"]
+                required: ["roi_events", "risk_events", "life_events"]
               }
             }
           }
@@ -195,7 +182,6 @@ Analise e retorne os eventos identificados.`;
           roi_events: [],
           risk_events: [],
           life_events: [],
-          recommendations: [],
           tokens_used: { input: inputTokens, output: outputTokens }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -222,7 +208,6 @@ Analise e retorne os eventos identificados.`;
         roi_events: filteredRoi,
         risk_events: filteredRisk,
         life_events: filteredLife,
-        recommendations: classification.recommendations || [],
         tokens_used: { input: inputTokens, output: outputTokens }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain, MessageSquare, Sparkles, AlertTriangle, Heart, Lightbulb, Coins } from "lucide-react";
+import { Brain, MessageSquare, Sparkles, AlertTriangle, Heart, Coins } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -12,7 +12,6 @@ interface AIUsageData {
   roiEventsCreated: number;
   riskEventsCreated: number;
   lifeEventsCreated: number;
-  recommendationsCreated: number;
   modelUsage: { model: string; count: number }[];
   dailyUsage: { date: string; count: number }[];
 }
@@ -57,7 +56,7 @@ export function AIUsageStats() {
       const modelCount: Record<string, number> = {};
       const dailyCount: Record<string, number> = {};
       let totalInput = 0, totalOutput = 0;
-      let roiEvents = 0, riskEvents = 0, lifeEvents = 0, recommendations = 0;
+      let roiEvents = 0, riskEvents = 0, lifeEvents = 0;
 
       (logs || []).forEach((log: any) => {
         totalInput += log.input_tokens || 0;
@@ -65,7 +64,6 @@ export function AIUsageStats() {
         roiEvents += log.roi_events_created || 0;
         riskEvents += log.risk_events_created || 0;
         lifeEvents += log.life_events_created || 0;
-        recommendations += log.recommendations_created || 0;
 
         // Model usage
         modelCount[log.model] = (modelCount[log.model] || 0) + 1;
@@ -91,7 +89,6 @@ export function AIUsageStats() {
         roiEventsCreated: roiEvents,
         riskEventsCreated: riskEvents,
         lifeEventsCreated: lifeEvents,
-        recommendationsCreated: recommendations,
         modelUsage,
         dailyUsage,
       });
@@ -219,7 +216,7 @@ export function AIUsageStats() {
         {/* Events created */}
         <div className="border-t pt-3">
           <p className="text-xs font-medium mb-2">Eventos Criados</p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-emerald-500" />
               <span className="text-muted-foreground">ROI:</span>
@@ -234,11 +231,6 @@ export function AIUsageStats() {
               <Heart className="h-3 w-3 text-pink-500" />
               <span className="text-muted-foreground">CX:</span>
               <span className="font-medium">{data.lifeEventsCreated}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Lightbulb className="h-3 w-3 text-blue-500" />
-              <span className="text-muted-foreground">Rec.:</span>
-              <span className="font-medium">{data.recommendationsCreated}</span>
             </div>
           </div>
         </div>
