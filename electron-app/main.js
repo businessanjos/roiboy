@@ -185,30 +185,27 @@ function createWhatsAppWindow() {
 
   // CRITICAL: Inject blocker IMMEDIATELY and EARLY
   whatsappWindow.webContents.on('did-start-loading', () => {
-    if (whatsappWindow && !whatsappWindow.isDestroyed()) {
-      whatsappWindow.webContents.executeJavaScript(`
-        // Block whatsapp:// protocol at every level
-        (function() {
-          console.log('[ROY] Injetando bloqueadores EARLY...');
-          
-          // Block link clicks
-          document.addEventListener('click', function(e) {
-            const target = e.target.closest('a');
-            if (target && target.href && target.href.toLowerCase().startsWith('whatsapp:')) {
-              console.log('[ROY] BLOCKED click on whatsapp link');
-              e.preventDefault();
-              e.stopPropagation();
-              return false;
-            }
-          }, true);
-        })();
-      `).catch(() => {});
-    }
+    whatsappWindow.webContents.executeJavaScript(`
+      // Block whatsapp:// protocol at every level
+      (function() {
+        console.log('[ROY] Injetando bloqueadores EARLY...');
+        
+        // Block link clicks
+        document.addEventListener('click', function(e) {
+          const target = e.target.closest('a');
+          if (target && target.href && target.href.toLowerCase().startsWith('whatsapp:')) {
+            console.log('[ROY] BLOCKED click on whatsapp link');
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }, true);
+      })();
+    `).catch(() => {});
   });
 
   whatsappWindow.webContents.on('dom-ready', () => {
-    if (whatsappWindow && !whatsappWindow.isDestroyed()) {
-      whatsappWindow.webContents.executeJavaScript(`
+    whatsappWindow.webContents.executeJavaScript(`
       // Comprehensive whatsapp:// protocol blocker
       (function() {
         console.log('[ROY] Proteções anti-redirect DOM-READY ativadas');
@@ -304,7 +301,6 @@ function createWhatsAppWindow() {
         console.log('[ROY] Todas as proteções ativadas com sucesso');
       })();
     `).catch(err => console.error('[ROY] Erro ao injetar script:', err));
-    }
   });
 
   // Debug mode
