@@ -378,6 +378,11 @@ async function checkWhatsAppReady() {
     // Keep checking
     setTimeout(checkWhatsAppReady, isReady ? 10000 : 3000);
   } catch (error) {
+    // Ignore "frame was disposed" errors - they're expected when window is closed
+    if (error.message && error.message.includes('disposed')) {
+      console.log('[ROY] WhatsApp window foi fechada durante verificação');
+      return;
+    }
     console.error('[ROY] Erro ao verificar WhatsApp:', error.message);
     // Try to force connection after several failures
     setTimeout(checkWhatsAppReady, 3000);
@@ -847,6 +852,11 @@ async function injectWhatsAppCaptureScript() {
     // Retrieve and process audio messages with safe detection
     await scanWhatsAppAudioMessages();
   } catch (error) {
+    // Ignore "frame was disposed" errors - they're expected when window is closed
+    if (error.message && error.message.includes('disposed')) {
+      console.log('[ROY] WhatsApp window foi fechada durante captura');
+      return;
+    }
     console.error('[ROY] Erro ao injetar script WhatsApp:', error);
   }
 }
@@ -1166,7 +1176,12 @@ async function scanWhatsAppAudioMessages() {
       }
     }
   } catch (error) {
-    // Silently ignore audio scan errors to prevent affecting main capture
+    // Ignore "frame was disposed" errors - they're expected when window is closed
+    if (error.message && error.message.includes('disposed')) {
+      console.log('[ROY] WhatsApp window foi fechada durante scan de áudio');
+      return;
+    }
+    // Silently ignore other audio scan errors to prevent affecting main capture
     console.log('[ROY] Audio scan info:', error.message);
   }
 }
