@@ -2673,7 +2673,16 @@ export type Database = {
         | "plantao"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
-      integration_type: "zoom" | "google" | "clinica_ryka" | "pipedrive"
+      integration_type:
+        | "zoom"
+        | "google"
+        | "clinica_ryka"
+        | "pipedrive"
+        | "whatsapp"
+        | "liberty"
+        | "ryka"
+        | "omie"
+        | "openai"
       interaction_type:
         | "chat"
         | "qna"
@@ -2884,7 +2893,17 @@ export const Constants = {
       ],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
-      integration_type: ["zoom", "google", "clinica_ryka", "pipedrive"],
+      integration_type: [
+        "zoom",
+        "google",
+        "clinica_ryka",
+        "pipedrive",
+        "whatsapp",
+        "liberty",
+        "ryka",
+        "omie",
+        "openai",
+      ],
       interaction_type: [
         "chat",
         "qna",
