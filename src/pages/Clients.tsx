@@ -1612,7 +1612,7 @@ export default function Clients() {
 
       {viewMode === "table" ? (
         <Card className="shadow-card overflow-hidden">
-          <ScrollArea className="w-full">
+          <ScrollArea className="w-full" orientation="both">
             <div className="min-w-max">
               <Table>
                 <TableHeader>
