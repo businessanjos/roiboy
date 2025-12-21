@@ -1930,30 +1930,62 @@ export default function Clients() {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {(() => {
-                            const responsible = getResponsibleUser(client);
-                            if (!responsible) return <span className="text-xs text-muted-foreground">—</span>;
-                            return (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="inline-flex items-center gap-1.5">
-                                      <Avatar className="h-6 w-6">
-                                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                          <Select
+                            value={client.responsible_user_id || "none"}
+                            onValueChange={async (value) => {
+                              const newValue = value === "none" ? null : value;
+                              try {
+                                const { error } = await supabase
+                                  .from("clients")
+                                  .update({ responsible_user_id: newValue })
+                                  .eq("id", client.id);
+                                if (error) throw error;
+                                setClients(prev => prev.map(c => 
+                                  c.id === client.id ? { ...c, responsible_user_id: newValue } : c
+                                ));
+                                toast.success("Responsável atualizado");
+                              } catch (error) {
+                                console.error("Error updating responsible:", error);
+                                toast.error("Erro ao atualizar responsável");
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-[140px] text-xs">
+                              <SelectValue>
+                                {(() => {
+                                  const responsible = getResponsibleUser(client);
+                                  if (!responsible) return <span className="text-muted-foreground">Selecionar...</span>;
+                                  return (
+                                    <div className="flex items-center gap-1.5">
+                                      <Avatar className="h-5 w-5">
+                                        <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
                                           {getInitials(responsible.name)}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <span className="text-xs font-medium truncate max-w-[80px]">{responsible.name.split(' ')[0]}</span>
+                                      <span className="truncate">{responsible.name.split(' ')[0]}</span>
                                     </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="text-xs">{responsible.name}</p>
-                                    <p className="text-xs text-muted-foreground">{responsible.email}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })()}
+                                  );
+                                })()}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">
+                                <span className="text-muted-foreground">Sem responsável</span>
+                              </SelectItem>
+                              {teamUsers.map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                                        {getInitials(user.name)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span>{user.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         {customFields.map((field) => (
                           <TableCell key={field.id} className="text-center">
