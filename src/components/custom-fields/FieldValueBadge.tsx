@@ -17,14 +17,14 @@ interface FieldValueBadgeProps {
 
 const getColorClasses = (color: string) => {
   const colorMap: Record<string, string> = {
-    green: "bg-emerald-500/20 text-emerald-700 border-emerald-500/30",
-    red: "bg-red-500/20 text-red-700 border-red-500/30",
-    yellow: "bg-amber-500/20 text-amber-700 border-amber-500/30",
-    blue: "bg-blue-500/20 text-blue-700 border-blue-500/30",
-    purple: "bg-purple-500/20 text-purple-700 border-purple-500/30",
-    pink: "bg-pink-500/20 text-pink-700 border-pink-500/30",
-    orange: "bg-orange-500/20 text-orange-700 border-orange-500/30",
-    gray: "bg-gray-500/20 text-gray-700 border-gray-500/30",
+    green: "bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 dark:border-emerald-400/50",
+    red: "bg-red-500/25 text-red-600 dark:text-red-400 border-red-500/40 dark:border-red-400/50",
+    yellow: "bg-amber-500/25 text-amber-600 dark:text-amber-400 border-amber-500/40 dark:border-amber-400/50",
+    blue: "bg-blue-500/25 text-blue-600 dark:text-blue-400 border-blue-500/40 dark:border-blue-400/50",
+    purple: "bg-purple-500/25 text-purple-600 dark:text-purple-400 border-purple-500/40 dark:border-purple-400/50",
+    pink: "bg-pink-500/25 text-pink-600 dark:text-pink-400 border-pink-500/40 dark:border-pink-400/50",
+    orange: "bg-orange-500/25 text-orange-600 dark:text-orange-400 border-orange-500/40 dark:border-orange-400/50",
+    gray: "bg-gray-500/25 text-gray-600 dark:text-gray-400 border-gray-500/40 dark:border-gray-400/50",
   };
   return colorMap[color] || colorMap.gray;
 };
@@ -37,21 +37,21 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
   if (field.field_type === "boolean") {
     if (value === true) {
       return (
-        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-emerald-500/20 text-emerald-700 ${textSize}`}>
+        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 dark:border-emerald-400/50 font-medium ${textSize}`}>
           <Check className="h-3 w-3" />
           Sim
         </span>
       );
     } else if (value === false) {
       return (
-        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-red-500/20 text-red-700 ${textSize}`}>
+        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/40 dark:border-red-400/50 font-medium ${textSize}`}>
           <X className="h-3 w-3" />
           Não
         </span>
       );
     }
     return (
-      <span className={`inline-flex items-center gap-1 ${padding} rounded bg-muted text-muted-foreground ${textSize}`}>
+      <span className={`inline-flex items-center gap-1 ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
         <Minus className="h-3 w-3" />
       </span>
     );
@@ -62,13 +62,13 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
     const option = field.options.find(opt => opt.value === value);
     if (!option) {
       return (
-        <span className={`inline-flex items-center ${padding} rounded bg-muted text-muted-foreground ${textSize}`}>
+        <span className={`inline-flex items-center ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
           —
         </span>
       );
     }
     return (
-      <span className={`inline-flex items-center ${padding} rounded border ${getColorClasses(option.color)} ${textSize}`}>
+      <span className={`inline-flex items-center ${padding} rounded border font-medium ${getColorClasses(option.color)} ${textSize}`}>
         {option.label}
       </span>
     );
@@ -79,7 +79,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
     const selectedValues = Array.isArray(value) ? value : [];
     if (selectedValues.length === 0) {
       return (
-        <span className={`inline-flex items-center ${padding} rounded bg-muted text-muted-foreground ${textSize}`}>
+        <span className={`inline-flex items-center ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
           —
         </span>
       );
@@ -90,13 +90,13 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
         {selectedOptions.slice(0, 2).map((option) => (
           <span
             key={option.value}
-            className={`inline-flex items-center ${padding} rounded border ${getColorClasses(option.color)} ${textSize}`}
+            className={`inline-flex items-center ${padding} rounded border font-medium ${getColorClasses(option.color)} ${textSize}`}
           >
             {option.label}
           </span>
         ))}
         {selectedOptions.length > 2 && (
-          <span className={`inline-flex items-center ${padding} rounded bg-muted text-muted-foreground ${textSize}`}>
+          <span className={`inline-flex items-center ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
             +{selectedOptions.length - 2}
           </span>
         )}
