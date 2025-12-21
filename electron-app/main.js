@@ -209,8 +209,9 @@ function createWhatsAppWindow() {
       nodeIntegration: false,
       session: whatsappSession,
       webSecurity: true,
-      // Enable WebGL for QR code canvas rendering
-      experimentalFeatures: true
+      // Enable features needed for audio/video
+      experimentalFeatures: true,
+      autoplayPolicy: 'no-user-gesture-required'
     },
     title: 'WhatsApp Web - ROY',
     show: true
@@ -218,34 +219,6 @@ function createWhatsAppWindow() {
 
   // Set User-Agent to mimic Chrome browser
   whatsappWindow.webContents.setUserAgent(CHROME_USER_AGENT);
-  
-  // CRITICAL: Hide Electron detection BEFORE any page loads
-  whatsappWindow.webContents.on('did-start-navigation', () => {
-    safeExecuteJS(whatsappWindow, `
-      // Hide Electron/Node.js detection
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-      Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en-US', 'en'] });
-      
-      // Hide Electron-specific properties
-      if (window.process) delete window.process;
-      if (window.require) delete window.require;
-      if (window.module) delete window.module;
-      if (window.Buffer) delete window.Buffer;
-      
-      // Fake Chrome runtime
-      if (!window.chrome) {
-        window.chrome = {
-          runtime: {},
-          loadTimes: function() {},
-          csi: function() {},
-          app: {}
-        };
-      }
-      
-      console.log('[ROY] Electron detection hidden');
-    `);
-  });
   
   // Block ALL attempts to open whatsapp:// URLs
   whatsappWindow.webContents.setWindowOpenHandler(({ url }) => {
