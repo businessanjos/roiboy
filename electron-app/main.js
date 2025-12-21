@@ -1533,6 +1533,31 @@ ipcMain.handle('force-whatsapp-connection', async () => {
   return { success: true };
 });
 
+// Clear WhatsApp cache and reload
+ipcMain.handle('clear-whatsapp-cache', async () => {
+  try {
+    const whatsappSession = session.fromPartition('persist:whatsapp');
+    await whatsappSession.clearStorageData();
+    await whatsappSession.clearCache();
+    console.log('[ROY] WhatsApp cache cleared');
+    
+    // Close and reopen WhatsApp window
+    if (whatsappWindow) {
+      whatsappWindow.close();
+      whatsappWindow = null;
+    }
+    
+    setTimeout(() => {
+      createWhatsAppWindow();
+    }, 500);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[ROY] Error clearing cache:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.on('captured-message', async (event, messageData) => {
   console.log('[ROY] Mensagem capturada:', messageData);
   
