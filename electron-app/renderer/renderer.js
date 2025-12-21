@@ -177,6 +177,30 @@ if (forceWhatsappBtn) {
   });
 }
 
+// Clear WhatsApp cache
+const clearWhatsappCacheBtn = document.getElementById('clear-whatsapp-cache-btn');
+if (clearWhatsappCacheBtn) {
+  clearWhatsappCacheBtn.addEventListener('click', async () => {
+    if (confirm('Isso vai desconectar o WhatsApp e limpar todos os dados salvos. Continuar?')) {
+      clearWhatsappCacheBtn.disabled = true;
+      clearWhatsappCacheBtn.textContent = '⏳';
+      
+      const result = await window.electronAPI.clearWhatsAppCache();
+      
+      if (result.success) {
+        whatsappStatus.textContent = 'Cache limpo!';
+        whatsappIndicator.classList.remove('active');
+        alert('Cache limpo! Abra o WhatsApp novamente para reconectar.');
+      } else {
+        alert('Erro ao limpar cache: ' + (result.error || 'Erro desconhecido'));
+      }
+      
+      clearWhatsappCacheBtn.disabled = false;
+      clearWhatsappCacheBtn.textContent = '🗑️';
+    }
+  });
+}
+
 openZoomBtn.addEventListener('click', async () => {
   await window.electronAPI.openZoom();
   zoomStatus.textContent = 'Abrindo...';
