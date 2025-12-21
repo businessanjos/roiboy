@@ -832,10 +832,8 @@ async function injectWhatsAppCaptureScript() {
       }
     }
     
-    // Retrieve and process audio messages
-    // Audio processing is disabled to prevent UI crashes
-    // TODO: Implement safer audio detection in a future version
-    
+    // Retrieve and process audio messages with safe detection
+    await scanWhatsAppAudioMessages();
   } catch (error) {
     console.error('[ROY] Erro ao injetar script WhatsApp:', error);
   }
@@ -1032,6 +1030,126 @@ async function sendWhatsAppMessageToAPI(messageData) {
     }
   } catch (error) {
     console.error('[ROY] Erro ao enviar mensagem:', error);
+  }
+}
+
+// ============= WhatsApp Audio Scan (Safe Method) =============
+// Separate scan for audio messages - runs independently to avoid UI crashes
+async function scanWhatsAppAudioMessages() {
+  if (!whatsappWindow || !authData) return;
+
+  try {
+    // Safe audio detection - just collect metadata, don't interact with elements
+    const audioMessages = await whatsappWindow.webContents.executeJavaScript(`
+      (function() {
+        window.__royProcessedAudioIds = window.__royProcessedAudioIds || new Set();
+        const audioMsgs = [];
+        
+        // Function to get chat info
+        function getChatInfo() {
+          const headerSpans = document.querySelectorAll('#main header span');
+          let phone = '';
+          let contactName = '';
+          
+          for (const span of headerSpans) {
+            const text = span.getAttribute('title') || span.innerText || '';
+            const phoneMatch = text.match(/\\+?[0-9][0-9\\s()-]{8,20}/);
+            if (phoneMatch) {
+              phone = phoneMatch[0].replace(/[\\s()-]/g, '');
+            }
+            if (text.length > 2 && !text.includes('clique') && !text.includes('digitando')) {
+              if (!contactName) contactName = text;
+            }
+          }
+          
+          const header = document.querySelector('#main header');
+          const isGroup = header && (header.innerText.includes('participantes') || header.innerText.includes('clique aqui'));
+          
+          return { phone, contactName, isGroup };
+        }
+        
+        // Find audio/voice message elements safely
+        const audioContainers = document.querySelectorAll('[data-testid="audio-play"], [data-testid="ptt-play"]');
+        
+        audioContainers.forEach(audioBtn => {
+          try {
+            // Find parent message container
+            const msgContainer = audioBtn.closest('[data-id]') || audioBtn.closest('.message-in, .message-out');
+            if (!msgContainer) return;
+            
+            const msgId = msgContainer.getAttribute('data-id') || 
+                         audioBtn.closest('[data-id]')?.getAttribute('data-id') ||
+                         'audio_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            
+            if (window.__royProcessedAudioIds.has(msgId)) return;
+            
+            // Check direction
+            const isOutgoing = msgContainer.classList.contains('message-out') || 
+                              !!msgContainer.querySelector('[data-icon="msg-check"]') ||
+                              !!msgContainer.querySelector('[data-icon="msg-dblcheck"]');
+            
+            // Try to find duration from the UI
+            let durationSec = 0;
+            const durationSpan = msgContainer.querySelector('[data-testid="audio-duration"]') ||
+                                msgContainer.querySelector('span[dir="auto"]');
+            if (durationSpan) {
+              const durationText = durationSpan.innerText || '';
+              const match = durationText.match(/(\\d+):(\\d+)/);
+              if (match) {
+                durationSec = parseInt(match[1]) * 60 + parseInt(match[2]);
+              }
+            }
+            
+            // Try to find audio element src
+            const audioEl = msgContainer.querySelector('audio');
+            const audioSrc = audioEl ? audioEl.src : null;
+            
+            const chatInfo = getChatInfo();
+            
+            window.__royProcessedAudioIds.add(msgId);
+            
+            // Keep set size manageable
+            if (window.__royProcessedAudioIds.size > 500) {
+              const arr = Array.from(window.__royProcessedAudioIds);
+              window.__royProcessedAudioIds = new Set(arr.slice(-300));
+            }
+            
+            audioMsgs.push({
+              id: msgId,
+              direction: isOutgoing ? 'team_to_client' : 'client_to_team',
+              durationSec: durationSec,
+              audioSrc: audioSrc,
+              phone: chatInfo.phone,
+              contactName: chatInfo.contactName,
+              isGroup: chatInfo.isGroup,
+              timestamp: new Date().toISOString()
+            });
+          } catch (e) {
+            // Silently ignore individual element errors
+          }
+        });
+        
+        return audioMsgs;
+      })()
+    `);
+
+    if (audioMessages && audioMessages.length > 0) {
+      console.log('[ROY] Encontradas', audioMessages.length, 'mensagens de áudio');
+      
+      for (const audioData of audioMessages) {
+        console.log('[ROY] Processando áudio:', {
+          direction: audioData.direction,
+          duration: audioData.durationSec + 's',
+          phone: audioData.phone,
+          hasAudioSrc: !!audioData.audioSrc
+        });
+        
+        await sendWhatsAppAudioToAPI(audioData);
+      }
+    }
+  } catch (error) {
+    // Silently ignore audio scan errors to prevent affecting main capture
+    console.log('[ROY] Audio scan info:', error.message);
   }
 }
 
