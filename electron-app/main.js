@@ -614,9 +614,24 @@ async function injectWhatsAppCaptureScript() {
     return;
   }
 
+  // Helper function to safely execute JS in WhatsApp window
+  const safeExecuteJS = async (script) => {
+    if (!whatsappWindow || whatsappWindow.isDestroyed() || !whatsappWindow.webContents) {
+      return null;
+    }
+    try {
+      return await whatsappWindow.webContents.executeJavaScript(script);
+    } catch (error) {
+      if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed'))) {
+        return null; // Silently return null for disposed frame errors
+      }
+      throw error;
+    }
+  };
+
   try {
     // First, inject the capture script and get diagnostic info
-    const diagnostics = await whatsappWindow.webContents.executeJavaScript(`
+    const diagnostics = await safeExecuteJS(`
       (function() {
         // Initialize message queue if not exists
         window.__royMessageQueue = window.__royMessageQueue || [];
@@ -1066,9 +1081,24 @@ async function scanWhatsAppAudioMessages() {
     return;
   }
 
+  // Helper function to safely execute JS
+  const safeExecuteJS = async (script) => {
+    if (!whatsappWindow || whatsappWindow.isDestroyed() || !whatsappWindow.webContents) {
+      return null;
+    }
+    try {
+      return await whatsappWindow.webContents.executeJavaScript(script);
+    } catch (error) {
+      if (error.message && (error.message.includes('disposed') || error.message.includes('destroyed'))) {
+        return null;
+      }
+      throw error;
+    }
+  };
+
   try {
     // Safe audio detection - just collect metadata, don't interact with elements
-    const audioMessages = await whatsappWindow.webContents.executeJavaScript(`
+    const audioMessages = await safeExecuteJS(`
       (function() {
         window.__royProcessedAudioIds = window.__royProcessedAudioIds || new Set();
         const audioMsgs = [];
