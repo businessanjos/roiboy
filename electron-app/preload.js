@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Force connection (manual override)
   forceWhatsAppConnection: () => ipcRenderer.invoke('force-whatsapp-connection'),
   
+  // Clear WhatsApp cache
+  clearWhatsAppCache: () => ipcRenderer.invoke('clear-whatsapp-cache'),
+  
   // Events
   onWhatsAppStatus: (callback) => ipcRenderer.on('whatsapp-status', (event, data) => callback(data)),
   onZoomStatus: (callback) => ipcRenderer.on('zoom-status', (event, data) => callback(data)),
