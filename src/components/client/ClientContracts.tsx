@@ -144,6 +144,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Status action dialog state
@@ -311,6 +312,49 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       return null;
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDownloadContract = async (contract: Contract) => {
+    if (!contract.file_url) return;
+    
+    setDownloading(contract.id);
+    try {
+      // Extract the file path from the URL
+      const url = new URL(contract.file_url);
+      const pathParts = url.pathname.split('/storage/v1/object/public/contracts/');
+      const filePath = pathParts[1] || url.pathname.split('/storage/v1/object/sign/contracts/')[1];
+      
+      if (!filePath) {
+        // Fallback: try to extract from different URL formats
+        const match = contract.file_url.match(/contracts\/(.+)$/);
+        if (match) {
+          const { data, error } = await supabase.storage
+            .from("contracts")
+            .createSignedUrl(match[1], 60); // 60 seconds
+          
+          if (error) throw error;
+          
+          // Open in new tab
+          window.open(data.signedUrl, "_blank");
+          return;
+        }
+        throw new Error("Could not extract file path");
+      }
+      
+      const { data, error } = await supabase.storage
+        .from("contracts")
+        .createSignedUrl(decodeURIComponent(filePath), 60); // 60 seconds
+      
+      if (error) throw error;
+      
+      // Open in new tab
+      window.open(data.signedUrl, "_blank");
+    } catch (error) {
+      console.error("Error downloading contract:", error);
+      toast.error("Erro ao baixar o contrato. Tente novamente.");
+    } finally {
+      setDownloading(null);
     }
   };
 
@@ -868,12 +912,15 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          asChild
+                          onClick={() => handleDownloadContract(contract)}
+                          disabled={downloading === contract.id}
                         >
-                          <a href={contract.file_url} target="_blank" rel="noopener noreferrer">
+                          {downloading === contract.id ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
                             <Download className="h-4 w-4 mr-1" />
-                            PDF
-                          </a>
+                          )}
+                          PDF
                         </Button>
                       ) : (
                         <span className="text-muted-foreground text-sm">-</span>
