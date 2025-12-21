@@ -23,6 +23,7 @@ import {
   UserPlus,
   Palette
 } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Switch } from "@/components/ui/switch";
 
 const TOTAL_STEPS = 4;
@@ -161,11 +162,7 @@ export default function Onboarding() {
   };
 
   if (userLoading || settingsLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingScreen message="Preparando onboarding..." />;
   }
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
