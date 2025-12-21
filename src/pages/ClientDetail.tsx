@@ -71,7 +71,7 @@ interface Client {
   id: string;
   full_name: string;
   phone_e164: string;
-  status: "active" | "paused" | "churn_risk" | "churned";
+  status: "active" | "paused" | "churn_risk" | "churned" | "no_contract";
   tags: string[];
   created_at: string;
   emails?: string[];
