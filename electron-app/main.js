@@ -98,7 +98,7 @@ function createMainWindow() {
       nodeIntegration: false
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
-    title: 'ROY Desktop'
+    title: 'ROY APP Desktop'
   });
 
   mainWindow.loadFile('renderer/index.html');
