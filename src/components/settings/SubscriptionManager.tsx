@@ -428,9 +428,9 @@ export function SubscriptionManager() {
     }
     
     return (
-      <div className="flex items-center gap-2 text-muted-foreground">
+      <div className="flex items-center gap-2 text-primary">
         <Calendar className="h-4 w-4" />
-        <span className="text-sm">
+        <span className="text-sm font-medium">
           {daysLeft === 0 
             ? "Último dia do período de teste" 
             : `${daysLeft} ${daysLeft === 1 ? "dia restante" : "dias restantes"} de teste`}
