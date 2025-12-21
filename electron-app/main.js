@@ -981,9 +981,12 @@ async function sendToAPI(endpoint, data) {
 async function sendWhatsAppMessageToAPI(messageData) {
   if (!authData) return;
 
-  // Use session_token (JWT) for authentication - it's more reliable
-  const authToken = authData.session_token || authData.apiKey;
-  if (!authToken) return;
+  // Use account_id for authentication - more reliable than JWT which expires
+  const accountId = authData.account_id;
+  if (!accountId) {
+    console.error('[ROY] Sem account_id - faça login novamente');
+    return;
+  }
 
   try {
     // Format phone to E.164
@@ -1004,7 +1007,8 @@ async function sendWhatsAppMessageToAPI(messageData) {
       direction: direction,
       sent_at: messageData.timestamp || new Date().toISOString(),
       source: 'extension',
-      is_group: messageData.isGroup || false
+      is_group: messageData.isGroup || false,
+      account_id: accountId // Send account_id in payload for authentication
     };
 
     console.log('[ROY] Enviando mensagem:', { phone: phoneE164, contactName: messageData.contactName, direction });
@@ -1013,7 +1017,7 @@ async function sendWhatsAppMessageToAPI(messageData) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': authToken
+        'x-account-id': accountId // Also send in header
       },
       body: JSON.stringify(payload)
     });
@@ -1115,15 +1119,17 @@ ipcMain.handle('login', async (event, { email, password }) => {
 
     const data = await response.json();
 
-    if (response.ok && (data.apiKey || data.session_token)) {
-      // Store both apiKey and session_token for authentication
+    if (response.ok && (data.apiKey || data.session_token || data.account)) {
+      // Store apiKey, session_token, and account_id for authentication
+      // account_id is the most reliable as it doesn't expire
       authData = {
         ...data,
         apiKey: data.apiKey || data.api_key,
-        session_token: data.session_token
+        session_token: data.session_token,
+        account_id: data.account?.id // Store account_id - most reliable auth method
       };
       store.set('authData', authData);
-      console.log('[ROY] Login bem-sucedido, token armazenado');
+      console.log('[ROY] Login bem-sucedido, account_id:', authData.account_id);
       return { success: true, user: data.user };
     } else {
       return { success: false, error: data.error || 'Credenciais inválidas' };

@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-account-id",
 };
 
 // Security constants
@@ -22,6 +22,7 @@ interface MessagePayload {
   group_name?: string;
   sender_phone_e164?: string;
   source?: string;
+  account_id?: string; // Direct account_id for Electron app
 }
 
 // Validate via JWT token (for extension auth)
@@ -54,6 +55,45 @@ async function validateJwtToken(supabase: any, token: string): Promise<{ valid: 
     return { valid: true, accountId: userData.account_id };
   } catch (err) {
     console.error("JWT validation error:", err);
+    return { valid: false };
+  }
+}
+
+// Validate account_id directly (for Electron app with stored account_id)
+async function validateAccountId(supabase: any, accountId: string): Promise<{ valid: boolean; accountId?: string }> {
+  if (!accountId || accountId.length < 30) {
+    return { valid: false };
+  }
+
+  try {
+    // Verify account exists and has an active integration
+    const { data: integration, error } = await supabase
+      .from("integrations")
+      .select("account_id")
+      .eq("account_id", accountId)
+      .in("type", ["whatsapp", "liberty"])
+      .eq("status", "connected")
+      .maybeSingle();
+
+    if (error || !integration) {
+      // Also verify the account exists even without integration
+      const { data: account, error: accError } = await supabase
+        .from("accounts")
+        .select("id")
+        .eq("id", accountId)
+        .maybeSingle();
+
+      if (accError || !account) {
+        console.log("Account validation failed:", accError?.message);
+        return { valid: false };
+      }
+      
+      return { valid: true, accountId: account.id };
+    }
+
+    return { valid: true, accountId: integration.account_id };
+  } catch (err) {
+    console.error("Account validation error:", err);
     return { valid: false };
   }
 }
@@ -107,15 +147,18 @@ serve(async (req) => {
   try {
     // Get API key from header (can be JWT token or API key)
     const apiKey = req.headers.get("x-api-key") || "";
+    const accountIdHeader = req.headers.get("x-account-id") || "";
     
     const payload: MessagePayload = await req.json();
     
     // Use API key from payload if not in header
     const effectiveApiKey = apiKey || payload.api_key || "";
+    const effectiveAccountId = accountIdHeader || payload.account_id || "";
     const isFromExtension = payload.source === "extension";
     
     console.log("Received message payload:", { 
       hasApiKey: !!effectiveApiKey,
+      hasAccountId: !!effectiveAccountId,
       is_group: payload.is_group,
       group_name: payload.group_name,
       hasContent: !!payload.content_text,
@@ -173,17 +216,23 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Try to authenticate - first try JWT (for extension), then API key (for integrations)
+    // Try to authenticate - order: account_id (Electron), JWT (extension), API key (integrations)
     let authResult: { valid: boolean; accountId?: string } = { valid: false, accountId: undefined };
     
-    // If it looks like a JWT (long token), try JWT validation first
-    if (effectiveApiKey.length > 100) {
+    // First try account_id (for Electron app) - this is the most reliable
+    if (effectiveAccountId && effectiveAccountId.length > 30) {
+      console.log("Attempting account_id validation (Electron app auth)");
+      authResult = await validateAccountId(supabase, effectiveAccountId);
+    }
+    
+    // If account_id didn't work and we have a long token, try JWT validation
+    if (!authResult.valid && effectiveApiKey.length > 100) {
       console.log("Attempting JWT validation (extension auth)");
       authResult = await validateJwtToken(supabase, effectiveApiKey);
     }
     
     // If JWT didn't work, try API key validation
-    if (!authResult.valid) {
+    if (!authResult.valid && effectiveApiKey.length >= 16 && effectiveApiKey.length <= 128) {
       console.log("Attempting API key validation (integration auth)");
       authResult = await validateApiKey(supabase, effectiveApiKey);
     }
