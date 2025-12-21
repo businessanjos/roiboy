@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -31,12 +30,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Video,
   FileText,
   Calendar,
   Clock,
   Check,
-  X,
+  Users,
+  Monitor,
   ExternalLink,
   Package,
   Plus,
@@ -44,6 +52,7 @@ import {
   Trash2,
   MapPin,
   QrCode,
+  Link as LinkIcon,
 } from "lucide-react";
 import { ClientTasks } from "./ClientTasks";
 import { format, isPast, isFuture, isToday } from "date-fns";
@@ -553,6 +562,21 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     </AlertDialog>
   );
 
+  // Helper to get event type label and icon
+  const getEventTypeInfo = (eventType: EventType) => {
+    const typeMap: Record<EventType, { label: string; icon: React.ReactNode }> = {
+      live: { label: "Live", icon: <Video className="h-3 w-3 mr-1" /> },
+      material: { label: "Material", icon: <FileText className="h-3 w-3 mr-1" /> },
+      mentoria: { label: "Mentoria", icon: <Users className="h-3 w-3 mr-1" /> },
+      workshop: { label: "Workshop", icon: <Monitor className="h-3 w-3 mr-1" /> },
+      masterclass: { label: "Masterclass", icon: <Video className="h-3 w-3 mr-1" /> },
+      webinar: { label: "Webinar", icon: <Monitor className="h-3 w-3 mr-1" /> },
+      imersao: { label: "Imersão", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      plantao: { label: "Plantão", icon: <Clock className="h-3 w-3 mr-1" /> },
+    };
+    return typeMap[eventType] || typeMap.live;
+  };
+
   if (events.length === 0) {
     return (
       <div className="space-y-4">
@@ -581,6 +605,162 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   );
   const materialsEvents = events.filter((e) => e.event_type === "material");
 
+  const renderEventTable = (eventsList: EventWithProducts[], title: string, icon: React.ReactNode, showParticipation?: boolean) => {
+    if (eventsList.length === 0) return null;
+
+    return (
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+          {icon}
+          {title}
+        </h3>
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {showParticipation && <TableHead className="w-12"></TableHead>}
+                <TableHead>Evento</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Modalidade</TableHead>
+                <TableHead>Data/Hora</TableHead>
+                {showParticipation && <TableHead>Status</TableHead>}
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {eventsList.map((event) => {
+                const delivery = getDeliveryStatus(event.id);
+                const isDelivered = delivery?.status === "delivered";
+                const attendance = getAttendanceStatus(event.id);
+                const hasCheckedIn = !!attendance;
+                const participated = isDelivered || hasCheckedIn;
+                const isPresencial = event.modality === "presencial";
+                const eventTypeInfo = getEventTypeInfo(event.event_type);
+                const isTodayEvent = event.scheduled_at && isToday(new Date(event.scheduled_at));
+
+                return (
+                  <TableRow 
+                    key={event.id}
+                    className={cn(
+                      isTodayEvent && "bg-primary/5",
+                      showParticipation && participated && "bg-emerald-500/5"
+                    )}
+                  >
+                    {showParticipation && (
+                      <TableCell>
+                        <Checkbox
+                          checked={participated}
+                          onCheckedChange={() => toggleDelivery(event.id, delivery?.status)}
+                          disabled={hasCheckedIn && !isDelivered}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{event.title}</span>
+                        {isTodayEvent && (
+                          <Badge variant="default" className="text-xs">Hoje</Badge>
+                        )}
+                      </div>
+                      {event.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {event.description}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={event.event_type === "material" ? "secondary" : "default"}>
+                        {eventTypeInfo.icon}
+                        {eventTypeInfo.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge variant="outline">
+                          {isPresencial ? (
+                            <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
+                          ) : (
+                            <><Monitor className="h-3 w-3 mr-1" /> Online</>
+                          )}
+                        </Badge>
+                        {isPresencial && event.address && (
+                          <p className="text-xs text-muted-foreground line-clamp-1 max-w-[120px]">
+                            {event.address}
+                          </p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {event.scheduled_at ? (
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock className="h-3 w-3" />
+                          {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    {showParticipation && (
+                      <TableCell>
+                        {hasCheckedIn ? (
+                          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
+                            <QrCode className="h-3 w-3 mr-1" />
+                            Check-in
+                          </Badge>
+                        ) : isDelivered ? (
+                          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
+                            <Check className="h-3 w-3 mr-1" />
+                            Participou
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Não participou
+                          </Badge>
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {(event.meeting_url || event.material_url) && (
+                          <Button variant="ghost" size="icon" asChild>
+                            <a
+                              href={event.meeting_url || event.material_url || "#"}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(event)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEventToDelete(event);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Create Button */}
@@ -593,300 +773,10 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       
       {eventDialogContent}
       {deleteDialogContent}
-      {upcomingEvents.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Próximos Eventos
-          </h3>
-          <div className="space-y-3">
-            {upcomingEvents.map((event) => {
-              const delivery = getDeliveryStatus(event.id);
-              const isDelivered = delivery?.status === "delivered";
-              const attendance = getAttendanceStatus(event.id);
-              const hasCheckedIn = !!attendance;
-              const isPresencial = event.modality === "presencial";
-
-              return (
-                <div
-                  key={event.id}
-                  className={cn(
-                    "border rounded-lg p-4 transition-all",
-                    isToday(new Date(event.scheduled_at!))
-                      ? "border-primary bg-primary/5"
-                      : "border-border"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center",
-                        isPresencial ? "bg-sky-500/10 text-sky-500" : event.event_type === "live" ? "bg-indigo-500/10 text-indigo-500" : "bg-amber-500/10 text-amber-500"
-                      )}>
-                        {isPresencial ? (
-                          <MapPin className="h-5 w-5" />
-                        ) : event.event_type === "live" ? (
-                          <Video className="h-5 w-5" />
-                        ) : (
-                          <FileText className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{event.title}</p>
-                          {isPresencial && (
-                            <Badge variant="outline" className="text-sky-600 border-sky-500/30 bg-sky-500/10 text-xs">
-                              Presencial
-                            </Badge>
-                          )}
-                        </div>
-                        {event.scheduled_at && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {format(new Date(event.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            {event.duration_minutes && ` • ${event.duration_minutes}min`}
-                          </p>
-                        )}
-                        {isPresencial && event.address && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <MapPin className="h-3 w-3" />
-                            {event.address}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                          {isToday(new Date(event.scheduled_at!)) && (
-                            <Badge variant="default">Hoje</Badge>
-                          )}
-                          {hasCheckedIn && (
-                            <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
-                              <QrCode className="h-3 w-3 mr-1" />
-                              Check-in feito
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {event.meeting_url && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={event.meeting_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            Entrar
-                          </a>
-                        </Button>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openEditDialog(event)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setEventToDelete(event);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Materials */}
-      {materialsEvents.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Materiais de Apoio
-          </h3>
-          <div className="space-y-2">
-            {materialsEvents.map((event) => {
-              const delivery = getDeliveryStatus(event.id);
-              const isDelivered = delivery?.status === "delivered";
-
-              return (
-                <div
-                  key={event.id}
-                  className={cn(
-                    "border rounded-lg p-3 flex items-center justify-between",
-                    isDelivered && "bg-muted/50"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={isDelivered}
-                      onCheckedChange={() => toggleDelivery(event.id, delivery?.status)}
-                    />
-                    <div>
-                      <p className={cn("font-medium", isDelivered && "line-through text-muted-foreground")}>
-                        {event.title}
-                      </p>
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {event.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isDelivered && delivery?.delivered_at && (
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(delivery.delivered_at), "dd/MM", { locale: ptBR })}
-                      </span>
-                    )}
-                    {event.material_url && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={event.material_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </Button>
-                    )}
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openEditDialog(event)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setEventToDelete(event);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Past Events */}
-      {pastEvents.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Eventos Passados
-          </h3>
-          <div className="space-y-2">
-            {pastEvents.map((event) => {
-              const delivery = getDeliveryStatus(event.id);
-              const isDelivered = delivery?.status === "delivered";
-              const attendance = getAttendanceStatus(event.id);
-              const hasCheckedIn = !!attendance;
-              const participated = isDelivered || hasCheckedIn;
-              const isPresencial = event.modality === "presencial";
-
-              return (
-                <div
-                  key={event.id}
-                  className={cn(
-                    "border rounded-lg p-3 flex items-center justify-between",
-                    participated ? "bg-emerald-500/5 border-emerald-500/20" : "bg-muted/30"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={participated}
-                      onCheckedChange={() => toggleDelivery(event.id, delivery?.status)}
-                      disabled={hasCheckedIn && !isDelivered}
-                    />
-                    <div className={cn(
-                      "w-8 h-8 rounded flex items-center justify-center",
-                      participated ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
-                    )}>
-                      {participated ? (
-                        hasCheckedIn ? <QrCode className="h-4 w-4" /> : <Check className="h-4 w-4" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className={cn(
-                          "font-medium",
-                          !participated && "text-muted-foreground"
-                        )}>
-                          {event.title}
-                        </p>
-                        {isPresencial && (
-                          <Badge variant="outline" className="text-sky-600 border-sky-500/30 bg-sky-500/10 text-xs">
-                            Presencial
-                          </Badge>
-                        )}
-                      </div>
-                      {event.scheduled_at && (
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(event.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {hasCheckedIn ? (
-                      <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
-                        <QrCode className="h-3 w-3 mr-1" />
-                        Check-in
-                      </Badge>
-                    ) : isDelivered ? (
-                      <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
-                        Participou
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        Não participou
-                      </Badge>
-                    )}
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openEditDialog(event)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setEventToDelete(event);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      
+      {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />)}
+      {renderEventTable(materialsEvents, "Materiais de Apoio", <FileText className="h-4 w-4" />, true)}
+      {renderEventTable(pastEvents, "Eventos Passados", <Clock className="h-4 w-4" />, true)}
 
       {/* Client Tasks Section */}
       <div className="border-t pt-6 mt-6">
