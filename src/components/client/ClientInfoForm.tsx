@@ -62,6 +62,8 @@ export interface ClientFormData {
   contract_end_date: string;
   is_mls: boolean;
   mls_level: string;
+  // Responsible user
+  responsible_user_id: string;
 }
 
 interface ClientInfoFormProps {
@@ -69,6 +71,7 @@ interface ClientInfoFormProps {
   onChange: (data: ClientFormData) => void;
   errors?: Record<string, string>;
   showBasicFields?: boolean;
+  teamUsers?: { id: string; name: string; email: string }[];
 }
 
 const BRAZILIAN_STATES = [
@@ -267,7 +270,7 @@ function BirthDateField({ value, onChange }: { value: string; onChange: (value: 
   );
 }
 
-export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true }: ClientInfoFormProps) {
+export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true, teamUsers = [] }: ClientInfoFormProps) {
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -510,6 +513,29 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               error={errors.phone_e164}
             />
           </div>
+
+          {/* Responsible User Selector */}
+          {teamUsers.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Responsável</Label>
+              <Select
+                value={data.responsible_user_id || "none"}
+                onValueChange={(value) => updateField("responsible_user_id", value === "none" ? "" : value)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Selecione um responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem responsável</SelectItem>
+                  {teamUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       )}
 
@@ -1082,4 +1108,5 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   contract_end_date: "",
   is_mls: false,
   mls_level: "",
+  responsible_user_id: "",
 });

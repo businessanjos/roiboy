@@ -103,6 +103,7 @@ interface Client {
   contract_end_date?: string | null;
   is_mls?: boolean;
   mls_level?: string | null;
+  responsible_user_id?: string | null;
 }
 
 interface ScoreSnapshot {
@@ -223,6 +224,9 @@ export default function ClientDetail() {
   // Forms for sending to client
   const [availableForms, setAvailableForms] = useState<{ id: string; title: string }[]>([]);
   
+  // Team users for responsible user selection
+  const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  
   // Active contract from client_contracts table
   const [activeContract, setActiveContract] = useState<{ start_date: string; end_date: string } | null>(null);
 
@@ -244,6 +248,17 @@ export default function ClientDetail() {
       .order("title");
     
     if (!error) setAvailableForms(data || []);
+  };
+
+  const fetchTeamUsers = async () => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email")
+      .order("name");
+    
+    if (!error && data) {
+      setTeamUsers(data);
+    }
   };
 
   const copyFormLink = async (formId: string, formTitle: string) => {
@@ -397,6 +412,7 @@ export default function ClientDetail() {
       contract_end_date: client.contract_end_date || "",
       is_mls: client.is_mls || false,
       mls_level: client.mls_level || "",
+      responsible_user_id: client.responsible_user_id || "",
     });
     setEditInfoDialogOpen(true);
   };
@@ -453,6 +469,7 @@ export default function ClientDetail() {
           contract_end_date: editFormData.contract_end_date || null,
           is_mls: editFormData.is_mls,
           mls_level: editFormData.is_mls ? (editFormData.mls_level || null) : null,
+          responsible_user_id: editFormData.responsible_user_id || null,
         })
         .eq("id", id);
 
@@ -487,6 +504,7 @@ export default function ClientDetail() {
         contract_end_date: editFormData.contract_end_date,
         is_mls: editFormData.is_mls,
         mls_level: editFormData.mls_level,
+        responsible_user_id: editFormData.responsible_user_id,
       });
 
       toast.success("Informações atualizadas!");
@@ -850,6 +868,7 @@ export default function ClientDetail() {
   useEffect(() => {
     fetchData();
     fetchAvailableForms();
+    fetchTeamUsers();
   }, [id]);
 
   // Realtime subscriptions
@@ -1516,6 +1535,7 @@ export default function ClientDetail() {
                 data={editFormData} 
                 onChange={setEditFormData}
                 showBasicFields={false}
+                teamUsers={teamUsers}
               />
             </ScrollArea>
             <DialogFooter>
