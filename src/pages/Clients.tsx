@@ -1618,6 +1618,7 @@ export default function Clients() {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-medium sticky left-0 bg-muted/50 z-10 min-w-[200px]">Cliente</TableHead>
+                    <TableHead className="font-medium text-center min-w-[120px]">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
@@ -1746,6 +1747,37 @@ export default function Clients() {
                               </TooltipProvider>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {client.client_products && client.client_products.length > 0 ? (
+                            <div className="flex flex-wrap justify-center gap-1">
+                              {client.client_products.slice(0, 2).map((cp: any) => (
+                                <Badge key={cp.product_id} variant="secondary" className="text-xs">
+                                  {cp.products?.name || "Produto"}
+                                </Badge>
+                              ))}
+                              {client.client_products.length > 2 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="text-xs">
+                                        +{client.client_products.length - 2}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <div className="text-xs">
+                                        {client.client_products.slice(2).map((cp: any) => (
+                                          <p key={cp.product_id}>{cp.products?.name}</p>
+                                        ))}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           {contractMap[client.id] ? (
