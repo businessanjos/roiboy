@@ -774,7 +774,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       {eventDialogContent}
       {deleteDialogContent}
       
-      {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />)}
+      {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />, true)}
       {renderEventTable(materialsEvents, "Materiais de Apoio", <FileText className="h-4 w-4" />, true)}
       {renderEventTable(pastEvents, "Eventos Passados", <Clock className="h-4 w-4" />, true)}
 
