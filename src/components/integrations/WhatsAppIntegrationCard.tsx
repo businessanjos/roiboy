@@ -29,7 +29,8 @@ export function WhatsAppIntegrationCard({
   copyToClipboard,
   onRefresh,
 }: WhatsAppIntegrationCardProps) {
-  const whatsappIntegration = integrations.find((i) => i.type === "whatsapp");
+  // Cast type to string for comparison since integration_type enum may not be updated yet
+  const whatsappIntegration = integrations.find((i) => (i.type as string) === "whatsapp");
   const isConnected = whatsappIntegration?.status === "connected";
   
   // Check if last heartbeat was recent (within 10 minutes)
