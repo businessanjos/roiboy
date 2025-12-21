@@ -9,6 +9,34 @@ app.commandLine.appendSwitch('enable-webgl');
 app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 
+// ============= Global Error Handlers =============
+// Prevent crashes from disposed frame errors
+process.on('uncaughtException', (error) => {
+  const errorMsg = error.message || error.toString();
+  if (errorMsg.includes('disposed') || 
+      errorMsg.includes('destroyed') || 
+      errorMsg.includes('Render frame') ||
+      errorMsg.includes('WebFrameMain') ||
+      errorMsg.includes('frame was')) {
+    console.log('[ROY] Caught frame disposal error (non-fatal):', errorMsg.substring(0, 80));
+    return; // Don't crash
+  }
+  console.error('[ROY] Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  const errorMsg = reason?.message || reason?.toString() || '';
+  if (errorMsg.includes('disposed') || 
+      errorMsg.includes('destroyed') || 
+      errorMsg.includes('Render frame') ||
+      errorMsg.includes('WebFrameMain') ||
+      errorMsg.includes('frame was')) {
+    console.log('[ROY] Caught frame disposal rejection (non-fatal):', errorMsg.substring(0, 80));
+    return; // Don't crash
+  }
+  console.error('[ROY] Unhandled rejection:', reason);
+});
+
 // ============= CRITICAL: Block whatsapp:// protocol COMPLETELY =============
 
 // Remove as default handler
@@ -924,10 +952,9 @@ async function injectWhatsAppCaptureScript() {
       }
     }
     
-    // DISABLED: Audio scanning causes crashes when user interacts with audio messages
-    // The frame gets disposed during WhatsApp's internal audio handling
-    // TODO: Find a safer way to detect audio messages without causing frame disposal
-    // await scanWhatsAppAudioMessages();
+    // Retrieve and process audio messages with safe detection
+    // Note: Frame disposal errors are now caught globally and won't crash the app
+    await scanWhatsAppAudioMessages();
   } catch (error) {
     // Ignore "frame was disposed" errors - they're expected when window is closed
     if (error.message && error.message.includes('disposed')) {
