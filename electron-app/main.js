@@ -185,7 +185,7 @@ function createWhatsAppWindow() {
 
   // CRITICAL: Inject blocker IMMEDIATELY and EARLY
   whatsappWindow.webContents.on('did-start-loading', () => {
-    whatsappWindow.webContents.executeJavaScript(`
+    safeExecuteJS(whatsappWindow, `
       // Block whatsapp:// protocol at every level
       (function() {
         console.log('[ROY] Injetando bloqueadores EARLY...');
@@ -201,11 +201,11 @@ function createWhatsAppWindow() {
           }
         }, true);
       })();
-    `).catch(() => {});
+    `);
   });
 
   whatsappWindow.webContents.on('dom-ready', () => {
-    whatsappWindow.webContents.executeJavaScript(`
+    safeExecuteJS(whatsappWindow, `
       // Comprehensive whatsapp:// protocol blocker
       (function() {
         console.log('[ROY] Proteções anti-redirect DOM-READY ativadas');
@@ -300,7 +300,7 @@ function createWhatsAppWindow() {
         
         console.log('[ROY] Todas as proteções ativadas com sucesso');
       })();
-    `).catch(err => console.error('[ROY] Erro ao injetar script:', err));
+    `);
   });
 
   // Debug mode
