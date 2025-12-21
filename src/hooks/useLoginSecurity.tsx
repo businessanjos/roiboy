@@ -106,7 +106,14 @@ export function useLoginSecurity() {
     try {
       const fingerprint = generateDeviceFingerprint();
       
-      await supabase.from('user_sessions').insert({
+      // First, clean up any existing sessions with same fingerprint for this user
+      await supabase
+        .from('user_sessions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('device_fingerprint', fingerprint);
+      
+      const { error } = await supabase.from('user_sessions').insert({
         user_id: userId,
         account_id: accountId,
         session_token: sessionToken,
@@ -116,6 +123,10 @@ export function useLoginSecurity() {
         is_trusted: false,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       });
+      
+      if (error) {
+        console.error('Error inserting session:', error);
+      }
     } catch (err) {
       console.error('Error registering session:', err);
     }
@@ -143,9 +154,9 @@ export function useLoginSecurity() {
     }
   }, []);
 
-  const terminateAllSessions = useCallback(async (exceptSessionId?: string): Promise<void> => {
+  const terminateAllSessions = useCallback(async (userId: string, exceptSessionId?: string): Promise<void> => {
     try {
-      let query = supabase.from('user_sessions').delete();
+      let query = supabase.from('user_sessions').delete().eq('user_id', userId);
       
       if (exceptSessionId) {
         query = query.neq('id', exceptSessionId);
