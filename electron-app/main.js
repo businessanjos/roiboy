@@ -307,6 +307,12 @@ async function checkWhatsAppReady() {
     return;
   }
 
+  // Check if webContents is still valid
+  if (whatsappWindow.isDestroyed() || whatsappWindow.webContents.isDestroyed()) {
+    console.log('[ROY] WhatsApp window foi destruída');
+    return;
+  }
+
   try {
     // Get raw page info first
     const pageInfo = await whatsappWindow.webContents.executeJavaScript(`
@@ -596,6 +602,12 @@ function stopCapture(platform) {
 // ============= WhatsApp Capture =============
 async function injectWhatsAppCaptureScript() {
   if (!whatsappWindow) return;
+  
+  // Check if window and webContents are still valid
+  if (whatsappWindow.isDestroyed() || whatsappWindow.webContents.isDestroyed()) {
+    console.log('[ROY] WhatsApp window foi destruída, pulando injeção');
+    return;
+  }
 
   try {
     // First, inject the capture script and get diagnostic info
@@ -1037,6 +1049,12 @@ async function sendWhatsAppMessageToAPI(messageData) {
 // Separate scan for audio messages - runs independently to avoid UI crashes
 async function scanWhatsAppAudioMessages() {
   if (!whatsappWindow || !authData) return;
+  
+  // Check if window and webContents are still valid
+  if (whatsappWindow.isDestroyed() || whatsappWindow.webContents.isDestroyed()) {
+    console.log('[ROY] WhatsApp window foi destruída, pulando scan de áudio');
+    return;
+  }
 
   try {
     // Safe audio detection - just collect metadata, don't interact with elements
