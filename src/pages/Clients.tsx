@@ -1617,7 +1617,7 @@ export default function Clients() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="font-medium sticky left-0 bg-muted/50 z-10 min-w-[200px]">Cliente</TableHead>
+                    <TableHead className="font-medium sticky left-0 bg-muted z-20 min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center min-w-[120px]">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
@@ -1648,8 +1648,8 @@ export default function Clients() {
                     </TableRow>
                   ) : (
                     filtered.map((client) => (
-                      <TableRow key={client.id} className="hover:bg-muted/30">
-                        <TableCell className="sticky left-0 bg-background z-10">
+                      <TableRow key={client.id} className="hover:bg-muted/30 group">
+                        <TableCell className="sticky left-0 bg-background group-hover:bg-muted/30 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                           <div className="min-w-[180px] flex items-center gap-2">
                             {/* Client avatar */}
                             <Avatar className="h-9 w-9 flex-shrink-0">
