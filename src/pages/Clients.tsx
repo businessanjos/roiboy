@@ -1630,6 +1630,7 @@ export default function Clients() {
                     <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
                     <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
+                    <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
                     {customFields.map((field) => (
                       <TableHead key={field.id} className="font-medium text-center min-w-[120px]">
                         {field.name}
@@ -1927,6 +1928,32 @@ export default function Clients() {
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {(() => {
+                            const responsible = getResponsibleUser(client);
+                            if (!responsible) return <span className="text-xs text-muted-foreground">—</span>;
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <Avatar className="h-6 w-6">
+                                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                          {getInitials(responsible.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-xs font-medium truncate max-w-[80px]">{responsible.name.split(' ')[0]}</span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">{responsible.name}</p>
+                                    <p className="text-xs text-muted-foreground">{responsible.email}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
                         </TableCell>
                         {customFields.map((field) => (
                           <TableCell key={field.id} className="text-center">
