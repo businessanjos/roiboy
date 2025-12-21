@@ -349,11 +349,17 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         throw new Error("No signed URL returned");
       }
       
-      // The signedUrl might be relative, so build full URL
+      // The signedUrl from Supabase is relative, build full URL
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const fullUrl = data.signedUrl.startsWith('http') 
-        ? data.signedUrl 
-        : `${supabaseUrl}${data.signedUrl}`;
+      let fullUrl: string;
+      
+      if (data.signedUrl.startsWith('http')) {
+        fullUrl = data.signedUrl;
+      } else {
+        // Remove leading slash if present to avoid double slash
+        const path = data.signedUrl.startsWith('/') ? data.signedUrl.slice(1) : data.signedUrl;
+        fullUrl = `${supabaseUrl}/storage/v1/${path}`;
+      }
       
       // Open in new tab
       window.open(fullUrl, "_blank");
