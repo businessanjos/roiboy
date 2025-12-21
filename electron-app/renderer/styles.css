@@ -245,6 +245,24 @@ body {
   border-color: var(--primary);
 }
 
+.btn-secondary {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.btn-secondary:hover {
+  opacity: 0.9;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--foreground-muted);
