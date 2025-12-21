@@ -562,6 +562,8 @@ function startCapture(platform) {
     captureState.whatsapp.interval = setInterval(() => {
       injectWhatsAppCaptureScript();
     }, 5000);
+    // Start heartbeat to notify backend we're connected
+    startHeartbeat();
   } else if (platform === 'zoom') {
     captureState.zoom.interval = setInterval(() => {
       extractZoomParticipants();
@@ -578,6 +580,11 @@ function stopCapture(platform) {
   if (captureState[platform].interval) {
     clearInterval(captureState[platform].interval);
     captureState[platform].interval = null;
+  }
+
+  // Stop heartbeat when WhatsApp capture stops
+  if (platform === 'whatsapp') {
+    stopHeartbeat();
   }
 
   updateMainWindow(`${platform}-capture`, { 
@@ -1025,6 +1032,56 @@ async function sendWhatsAppMessageToAPI(messageData) {
   } catch (error) {
     console.error('[ROY] Erro ao enviar mensagem:', error);
   }
+}
+
+// ============= Heartbeat =============
+let heartbeatInterval = null;
+
+async function sendHeartbeat(status = 'connected') {
+  if (!authData) return;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/whatsapp-heartbeat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-account-id': authData.account_id,
+        'x-session-token': authData.session_token || authData.apiKey
+      },
+      body: JSON.stringify({
+        status,
+        app_version: require('./package.json').version || '1.0.0'
+      })
+    });
+    
+    if (response.ok) {
+      console.log('[ROY] Heartbeat enviado:', status);
+    } else {
+      console.error('[ROY] Erro no heartbeat:', await response.text());
+    }
+  } catch (error) {
+    console.error('[ROY] Erro ao enviar heartbeat:', error.message);
+  }
+}
+
+function startHeartbeat() {
+  if (heartbeatInterval) return;
+  
+  // Send initial heartbeat
+  sendHeartbeat('connected');
+  
+  // Send heartbeat every 5 minutes
+  heartbeatInterval = setInterval(() => {
+    sendHeartbeat('connected');
+  }, 5 * 60 * 1000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+  sendHeartbeat('disconnected');
 }
 
 // ============= UI Helpers =============
