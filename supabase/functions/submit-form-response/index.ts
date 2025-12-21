@@ -286,6 +286,7 @@ Deno.serve(async (req) => {
     }
 
     // Create notifications for all users in the account
+    let notificationClientName = sanitizedName || "Cliente";
     try {
       // Get all users in the account
       const { data: accountUsers, error: usersError } = await supabase
@@ -295,7 +296,6 @@ Deno.serve(async (req) => {
 
       if (!usersError && accountUsers && accountUsers.length > 0) {
         // Get client name for notification
-        let notificationClientName = sanitizedName || "Cliente";
         if (resolvedClientId) {
           const { data: clientData } = await supabase
             .from("clients")
@@ -332,6 +332,57 @@ Deno.serve(async (req) => {
       }
     } catch (notifyErr) {
       console.warn(`[${clientIP}] Error creating notifications:`, notifyErr);
+    }
+
+    // Trigger AI analysis if client is linked
+    if (resolvedClientId) {
+      try {
+        // Convert form responses to readable text for AI analysis
+        const responseText = Object.entries(sanitizedResponses)
+          .map(([question, answer]) => {
+            if (Array.isArray(answer)) {
+              return `${question}: ${answer.join(", ")}`;
+            }
+            return `${question}: ${answer}`;
+          })
+          .join("\n");
+
+        const formContext = `[Resposta ao formulário "${form.title}"]\n${responseText}`;
+        
+        console.log(`[${clientIP}] Triggering AI analysis for form response from client ${resolvedClientId}`);
+
+        // Call analyze-message edge function
+        const analyzeResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-message`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              content_text: formContext,
+              client_id: resolvedClientId,
+              account_id: form.account_id,
+              source: "form_response",
+            }),
+          }
+        );
+
+        if (analyzeResponse.ok) {
+          const analysisResult = await analyzeResponse.json();
+          console.log(`[${clientIP}] AI analysis completed:`, {
+            roi_events: analysisResult.results?.roi_events || 0,
+            risk_events: analysisResult.results?.risk_events || 0,
+            life_events: analysisResult.results?.life_events || 0,
+          });
+        } else {
+          console.warn(`[${clientIP}] AI analysis failed:`, analyzeResponse.status);
+        }
+      } catch (aiErr) {
+        console.warn(`[${clientIP}] Error triggering AI analysis:`, aiErr);
+        // Don't fail the response if AI analysis fails
+      }
     }
 
     return new Response(
