@@ -20,6 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { StatusBar, StatCard } from "@/components/admin";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Building2, 
   Users, 
@@ -228,11 +229,7 @@ export default function Admin() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando painel admin..." fullScreen={false} />;
   }
 
   if (!isSuperAdmin) {

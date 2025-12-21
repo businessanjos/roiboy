@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle, MapPin, Calendar, AlertCircle } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,16 +129,7 @@ export default function EventCheckin() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-0 shadow-xl">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Carregando evento...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingScreen message="Carregando evento..." />;
   }
 
   if (error && !event) {

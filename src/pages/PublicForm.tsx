@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Loader2, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 interface FormData {
   id: string;
@@ -335,11 +336,7 @@ export default function PublicForm() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando formulário..." />;
   }
 
   if (error) {

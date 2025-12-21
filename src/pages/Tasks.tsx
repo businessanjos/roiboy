@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -327,11 +328,7 @@ export default function Tasks() {
   const doneCount = tasks.filter(t => t.status === "done").length;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
   }
 
   const TaskTable = ({ tasks }: { tasks: Task[] }) => (
