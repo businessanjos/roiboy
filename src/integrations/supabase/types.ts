@@ -2669,7 +2669,12 @@ export type Database = {
         | "annual"
         | "one_time"
       channel_type: "whatsapp"
-      client_status: "active" | "paused" | "churn_risk" | "churned"
+      client_status:
+        | "active"
+        | "paused"
+        | "churn_risk"
+        | "churned"
+        | "no_contract"
       delivery_status: "pending" | "delivered" | "missed"
       event_modality: "online" | "presencial"
       event_type:
@@ -2888,7 +2893,13 @@ export const Constants = {
         "one_time",
       ],
       channel_type: ["whatsapp"],
-      client_status: ["active", "paused", "churn_risk", "churned"],
+      client_status: [
+        "active",
+        "paused",
+        "churn_risk",
+        "churned",
+        "no_contract",
+      ],
       delivery_status: ["pending", "delivered", "missed"],
       event_modality: ["online", "presencial"],
       event_type: [
