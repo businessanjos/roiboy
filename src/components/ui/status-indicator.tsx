@@ -25,6 +25,7 @@ interface QuadrantIndicatorProps {
   size?: "sm" | "md" | "lg";
   showLabel?: boolean;
   className?: string;
+  clientStatus?: ClientStatus; // Override display when client has positive status despite low scores
 }
 
 interface TrendIndicatorProps {
@@ -146,8 +147,23 @@ export function QuadrantIndicator({
   size = "md",
   showLabel = true,
   className,
+  clientStatus,
 }: QuadrantIndicatorProps) {
-  const config = quadrantConfig[quadrant];
+  // If client is active but quadrant shows churn risk, override the display
+  // This happens when client has recent positive ROI events
+  const shouldOverride = clientStatus === "active" && quadrant === "lowE_lowROI";
+  
+  const displayConfig = shouldOverride 
+    ? {
+        label: "Em Recuperação",
+        description: "Baixo E / Baixo ROI (com sinais positivos)",
+        icon: TrendingUp,
+        color: "text-warning",
+        bg: "bg-warning-muted",
+      }
+    : quadrantConfig[quadrant];
+    
+  const config = displayConfig;
   const sizes = sizeClasses[size];
   const Icon = config.icon;
 

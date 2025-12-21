@@ -1912,6 +1912,7 @@ export default function ClientDetail() {
               <QuadrantIndicator
                 quadrant={score?.quadrant ?? "lowE_lowROI"}
                 size="lg"
+                clientStatus={client?.status}
               />
             </div>
           </CardContent>
