@@ -591,18 +591,20 @@ async function injectWhatsAppCaptureScript() {
   if (!whatsappWindow) return;
 
   try {
+    // First, inject the capture script
     await whatsappWindow.webContents.executeJavaScript(`
       (function() {
-        if (window.__royInjected) return;
-        window.__royInjected = true;
-        window.__royMessages = window.__royMessages || [];
+        // Initialize message queue if not exists
+        window.__royMessageQueue = window.__royMessageQueue || [];
         window.__roySentIds = window.__roySentIds || new Set();
+        
+        if (window.__royObserverSetup) return;
+        window.__royObserverSetup = true;
         
         console.log('[ROY] Script de captura injetado');
         
         // Function to extract phone from chat header
         function extractPhoneFromChat() {
-          // Try multiple selectors for WhatsApp Business
           const selectors = [
             'header span[dir="auto"][title]',
             'header [data-testid="conversation-info-header"] span',
@@ -615,12 +617,10 @@ async function injectWhatsAppCaptureScript() {
             const el = document.querySelector(selector);
             if (el) {
               const text = el.getAttribute('title') || el.innerText || '';
-              // Match phone pattern
               const phoneMatch = text.match(/\\+[0-9\\s()-]{10,20}/);
               if (phoneMatch) {
                 return phoneMatch[0].replace(/[\\s()-]/g, '');
               }
-              // If no + sign, try to find number patterns
               const numbersMatch = text.match(/[0-9]{10,15}/);
               if (numbersMatch) {
                 return '+' + numbersMatch[0];
@@ -628,7 +628,6 @@ async function injectWhatsAppCaptureScript() {
             }
           }
           
-          // Try to get from contact info drawer if open
           const contactInfo = document.querySelector('[data-testid="contact-info-drawer"] span[data-testid="cell-phone"]');
           if (contactInfo) {
             const phone = contactInfo.innerText.replace(/[\\s()-]/g, '');
@@ -638,7 +637,6 @@ async function injectWhatsAppCaptureScript() {
           return '';
         }
         
-        // Function to check if it's a group chat
         function isGroupChat() {
           const groupIndicators = [
             '[data-testid="group-subject"]',
@@ -648,18 +646,14 @@ async function injectWhatsAppCaptureScript() {
           return groupIndicators.some(sel => document.querySelector(sel));
         }
         
-        // Process a single message
         function processMessage(msgElement) {
           try {
             const msgId = msgElement.getAttribute('data-id') || '';
-            
-            // Skip if already processed
             if (!msgId || window.__roySentIds.has(msgId)) return;
             
             const isOutgoing = msgElement.classList.contains('message-out') || 
                               msgElement.querySelector('[data-testid="msg-check"]') !== null;
             
-            // Get message text
             const textElement = msgElement.querySelector('[data-testid="msg-text"]') || 
                                msgElement.querySelector('.selectable-text') ||
                                msgElement.querySelector('span.selectable-text');
@@ -672,24 +666,17 @@ async function injectWhatsAppCaptureScript() {
             const phone = extractPhoneFromChat();
             const isGroup = isGroupChat();
             
-            // Mark as sent to avoid duplicates
             window.__roySentIds.add(msgId);
             
-            // Clean up old entries
             if (window.__roySentIds.size > 2000) {
               const arr = Array.from(window.__roySentIds);
               window.__roySentIds = new Set(arr.slice(-1000));
             }
             
-            console.log('[ROY] Capturando mensagem:', { 
-              id: msgId, 
-              phone, 
-              direction: isOutgoing ? 'out' : 'in',
-              textLength: text.length,
-              isGroup
-            });
+            console.log('[ROY] Mensagem encontrada:', { id: msgId, phone, isOutgoing, textLen: text.length });
             
-            window.electronAPI.capturedMessage({
+            // Add to queue for retrieval by main process
+            window.__royMessageQueue.push({
               platform: 'whatsapp',
               id: msgId,
               text: text.trim(),
@@ -704,23 +691,19 @@ async function injectWhatsAppCaptureScript() {
           }
         }
         
-        // Scan existing messages in current chat
         function scanCurrentChat() {
           const messages = document.querySelectorAll('[data-testid="msg-container"]');
-          console.log('[ROY] Escaneando', messages.length, 'mensagens existentes');
+          console.log('[ROY] Escaneando', messages.length, 'mensagens');
           messages.forEach(processMessage);
         }
         
-        // Set up mutation observer for new messages
         const observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             mutation.addedNodes.forEach((node) => {
               if (node.nodeType === 1) {
-                // Check if node itself is a message
                 if (node.getAttribute && node.getAttribute('data-testid') === 'msg-container') {
                   processMessage(node);
                 }
-                // Check for nested messages
                 const messages = node.querySelectorAll ? node.querySelectorAll('[data-testid="msg-container"]') : [];
                 messages.forEach(processMessage);
               }
@@ -728,12 +711,11 @@ async function injectWhatsAppCaptureScript() {
           });
         });
         
-        // Start observing
         function startObserving() {
           const chatContainer = document.querySelector('#main') || document.querySelector('[data-testid="conversation-panel-wrapper"]');
           if (chatContainer) {
             observer.observe(chatContainer, { childList: true, subtree: true });
-            console.log('[ROY] Observer ativo no chat');
+            console.log('[ROY] Observer ativo');
             scanCurrentChat();
           } else {
             setTimeout(startObserving, 2000);
@@ -742,7 +724,6 @@ async function injectWhatsAppCaptureScript() {
         
         startObserving();
         
-        // Re-scan when chat changes
         let lastChatPhone = '';
         setInterval(() => {
           const currentPhone = extractPhoneFromChat();
@@ -755,6 +736,25 @@ async function injectWhatsAppCaptureScript() {
         
       })()
     `);
+    
+    // Now retrieve any queued messages
+    const messages = await whatsappWindow.webContents.executeJavaScript(`
+      (function() {
+        const queue = window.__royMessageQueue || [];
+        window.__royMessageQueue = [];
+        return queue;
+      })()
+    `);
+    
+    if (messages && messages.length > 0) {
+      console.log('[ROY] Recuperando', messages.length, 'mensagens da fila');
+      for (const msg of messages) {
+        if (msg.phone && msg.text) {
+          await sendWhatsAppMessageToAPI(msg);
+        }
+      }
+    }
+    
   } catch (error) {
     console.error('[ROY] Erro ao injetar script WhatsApp:', error);
   }
