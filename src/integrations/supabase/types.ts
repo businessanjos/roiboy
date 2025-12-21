@@ -468,6 +468,7 @@ export type Database = {
           notes: string | null
           parent_contract_id: string | null
           payment_option: string | null
+          product_id: string | null
           start_date: string
           status: string
           status_changed_at: string | null
@@ -488,6 +489,7 @@ export type Database = {
           notes?: string | null
           parent_contract_id?: string | null
           payment_option?: string | null
+          product_id?: string | null
           start_date: string
           status?: string
           status_changed_at?: string | null
@@ -508,6 +510,7 @@ export type Database = {
           notes?: string | null
           parent_contract_id?: string | null
           payment_option?: string | null
+          product_id?: string | null
           start_date?: string
           status?: string
           status_changed_at?: string | null
@@ -535,6 +538,13 @@ export type Database = {
             columns: ["parent_contract_id"]
             isOneToOne: false
             referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
