@@ -924,8 +924,10 @@ async function injectWhatsAppCaptureScript() {
       }
     }
     
-    // Retrieve and process audio messages with safe detection
-    await scanWhatsAppAudioMessages();
+    // DISABLED: Audio scanning causes crashes when user interacts with audio messages
+    // The frame gets disposed during WhatsApp's internal audio handling
+    // TODO: Find a safer way to detect audio messages without causing frame disposal
+    // await scanWhatsAppAudioMessages();
   } catch (error) {
     // Ignore "frame was disposed" errors - they're expected when window is closed
     if (error.message && error.message.includes('disposed')) {
