@@ -43,14 +43,20 @@ Identifique menções a eventos importantes na vida do cliente:
 - moving: Mudança de casa/cidade
 - other: Outros eventos significativos
 
-REGRAS:
+REGRAS IMPORTANTES:
 1. Só identifique ROI se houver evidência clara na mensagem
-2. Só identifique risco se houver sinal claro
+2. Só identifique risco se houver sinal claro E NÃO houver contraditório positivo
 3. Identifique momentos CX quando o cliente mencionar eventos de vida
 4. Extraia datas quando mencionadas (ex: "semana que vem", "dia 15")
 5. Seja conservador na classificação
 6. Se insuficiente, retorne arrays vazios
-7. Nunca invente - seja conservador na classificação`;
+7. Nunca invente - seja conservador na classificação
+
+REGRA CRÍTICA DE PRIORIDADE:
+- Se a mensagem contiver sinal de CONVERSÃO ou RENOVAÇÃO (ex: "vou fazer", "vou pagar", "vou renovar", "fechado", "combinado"), NÃO crie eventos de risco
+- Perguntas sobre valores/preços em contexto de renovação NÃO são sinais de risco
+- Um cliente que confirma pagamento ou renovação NÃO está em risco de churn
+- Quando houver conflito entre ROI e Risco na mesma mensagem, priorize o ROI e ignore o risco`;
 
 const DEFAULT_ROI_PROMPT = "Identifique menções a ganhos tangíveis (receita, economia, tempo) ou intangíveis (confiança, clareza, tranquilidade) que o cliente obteve.";
 const DEFAULT_RISK_PROMPT = "Detecte sinais de frustração, insatisfação, comparação com concorrentes, hesitação em continuar, ou mudanças de tom negativas.";
