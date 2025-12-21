@@ -273,122 +273,25 @@ function createWhatsAppWindow() {
   whatsappWindow.loadURL('https://web.whatsapp.com');
   whatsappWindow.setMenuBarVisibility(false);
 
-  // CRITICAL: Inject blocker IMMEDIATELY and EARLY
-  whatsappWindow.webContents.on('did-start-loading', () => {
-    safeExecuteJS(whatsappWindow, `
-      // Block whatsapp:// protocol at every level
-      (function() {
-        console.log('[ROY] Injetando bloqueadores EARLY...');
-        
-        // Block link clicks
-        document.addEventListener('click', function(e) {
-          const target = e.target.closest('a');
-          if (target && target.href && target.href.toLowerCase().startsWith('whatsapp:')) {
-            console.log('[ROY] BLOCKED click on whatsapp link');
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-          }
-        }, true);
-      })();
-    `);
-  });
-
+  // Simple blocker for whatsapp:// protocol - MINIMAL interference with WhatsApp functionality
   whatsappWindow.webContents.on('dom-ready', () => {
     safeExecuteJS(whatsappWindow, `
-      // Comprehensive whatsapp:// protocol blocker
+      // Simple whatsapp:// protocol blocker - does NOT interfere with audio/media
       (function() {
-        console.log('[ROY] Proteções anti-redirect DOM-READY ativadas');
+        console.log('[ROY] Proteções anti-redirect ativadas (modo simples)');
         
-        // 1. Override createElement
-        const originalCreateElement = document.createElement.bind(document);
-        document.createElement = function(tagName, options) {
-          const element = originalCreateElement(tagName, options);
-          if (tagName.toLowerCase() === 'a') {
-            const desc = Object.getOwnPropertyDescriptor(HTMLAnchorElement.prototype, 'href');
-            Object.defineProperty(element, 'href', {
-              get: desc.get,
-              set: function(value) {
-                if (value && value.toString().toLowerCase().startsWith('whatsapp:')) {
-                  console.log('[ROY] BLOCKED href set to whatsapp://');
-                  return;
-                }
-                desc.set.call(this, value);
-              },
-              configurable: true
-            });
-          }
-          return element;
-        };
-        
-        // 2. Override window.open
-        const originalOpen = window.open;
-        window.open = function(url, ...args) {
-          if (url && url.toString().toLowerCase().startsWith('whatsapp:')) {
-            console.log('[ROY] BLOCKED window.open to whatsapp://');
-            return null;
-          }
-          return originalOpen.apply(this, [url, ...args]);
-        };
-        
-        // 3. Override location.assign and location.replace
-        const originalAssign = window.location.assign.bind(window.location);
-        const originalReplace = window.location.replace.bind(window.location);
-        
-        window.location.assign = function(url) {
-          if (url && url.toString().toLowerCase().startsWith('whatsapp:')) {
-            console.log('[ROY] BLOCKED location.assign to whatsapp://');
-            return;
-          }
-          return originalAssign(url);
-        };
-        
-        window.location.replace = function(url) {
-          if (url && url.toString().toLowerCase().startsWith('whatsapp:')) {
-            console.log('[ROY] BLOCKED location.replace to whatsapp://');
-            return;
-          }
-          return originalReplace(url);
-        };
-        
-        // 4. Block all whatsapp:// links on click
+        // Only block clicks on whatsapp:// links, nothing else
         document.addEventListener('click', function(e) {
           const target = e.target.closest('a');
           if (target && target.href && target.href.toLowerCase().startsWith('whatsapp:')) {
             console.log('[ROY] BLOCKED click on whatsapp:// link');
             e.preventDefault();
             e.stopPropagation();
-            e.stopImmediatePropagation();
             return false;
           }
         }, true);
         
-        // 5. MutationObserver to remove any whatsapp:// links that appear
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-              if (node.nodeType === 1) {
-                const links = node.querySelectorAll ? node.querySelectorAll('a[href^="whatsapp:"]') : [];
-                links.forEach(link => {
-                  console.log('[ROY] REMOVED whatsapp:// link');
-                  link.removeAttribute('href');
-                  link.style.pointerEvents = 'none';
-                });
-                if (node.tagName === 'A' && node.href && node.href.toLowerCase().startsWith('whatsapp:')) {
-                  node.removeAttribute('href');
-                  node.style.pointerEvents = 'none';
-                }
-              }
-            });
-          });
-        });
-        
-        observer.observe(document.body || document.documentElement, {
-          childList: true,
-          subtree: true
-        });
-        
-        console.log('[ROY] Todas as proteções ativadas com sucesso');
+        console.log('[ROY] Proteções ativadas com sucesso');
       })();
     `);
   });
