@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-export default function Notifications() {
+const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) {
   const navigate = useNavigate();
   const { 
     notifications, 
@@ -54,7 +55,7 @@ export default function Notifications() {
   }
 
   return (
-    <div className="container max-w-3xl py-6 space-y-6">
+    <div ref={ref} className="container max-w-3xl py-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-primary" />
@@ -177,4 +178,6 @@ export default function Notifications() {
       )}
     </div>
   );
-}
+});
+
+export default Notifications;
