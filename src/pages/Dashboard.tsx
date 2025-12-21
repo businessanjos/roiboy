@@ -67,7 +67,7 @@ interface ClientWithScore {
   id: string;
   full_name: string;
   phone_e164: string;
-  status: "active" | "paused" | "churn_risk" | "churned";
+  status: "active" | "paused" | "churn_risk" | "churned" | "no_contract";
   roizometer: number;
   escore: number;
   quadrant: "highE_lowROI" | "lowE_highROI" | "lowE_lowROI" | "highE_highROI";

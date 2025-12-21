@@ -1436,6 +1436,7 @@ export default function Clients() {
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="no_contract">Sem contrato</SelectItem>
                     <SelectItem value="paused">Pausado</SelectItem>
                     <SelectItem value="churn_risk">Risco de Churn</SelectItem>
                     <SelectItem value="churned">Churned</SelectItem>
@@ -1535,7 +1536,7 @@ export default function Clients() {
                 <span className="text-xs text-muted-foreground mr-1">Filtros ativos:</span>
                 {filterStatus !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-                    Status: {filterStatus === "active" ? "Ativo" : filterStatus === "paused" ? "Pausado" : filterStatus === "churn_risk" ? "Risco" : "Churned"}
+                    Status: {filterStatus === "active" ? "Ativo" : filterStatus === "no_contract" ? "Sem contrato" : filterStatus === "paused" ? "Pausado" : filterStatus === "churn_risk" ? "Risco" : "Churned"}
                     <button onClick={() => setFilterStatus("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>

@@ -9,7 +9,7 @@ import {
   Minus,
 } from "lucide-react";
 
-type ClientStatus = "active" | "paused" | "churn_risk" | "churned";
+type ClientStatus = "active" | "paused" | "churn_risk" | "churned" | "no_contract";
 type QuadrantType = "highE_lowROI" | "lowE_highROI" | "lowE_lowROI" | "highE_highROI";
 type TrendType = "up" | "flat" | "down";
 
@@ -50,6 +50,12 @@ const statusConfig: Record<
     icon: Minus,
     color: "text-muted-foreground",
     bg: "bg-muted",
+  },
+  no_contract: {
+    label: "Sem contrato",
+    icon: AlertCircle,
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-100 dark:bg-amber-900/30",
   },
   churn_risk: {
     label: "Em Risco",
