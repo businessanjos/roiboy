@@ -1,3 +1,4 @@
+import { forwardRef, useState } from "react";
 import { 
   TrendingUp, 
   Users, 
@@ -40,7 +41,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 const features = [
@@ -109,7 +109,7 @@ const workflow = [
   { step: 5, title: "Ação", description: "Recomendações e alertas para a equipe" }
 ];
 
-export default function Presentation() {
+const Presentation = forwardRef<HTMLDivElement>(function Presentation(_, ref) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -120,7 +120,7 @@ export default function Presentation() {
   const isPublicRoute = location.pathname === "/sobre";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div ref={ref} className="min-h-screen bg-background">
       {/* Public Header */}
       {isPublicRoute && (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -1007,4 +1007,6 @@ export default function Presentation() {
       </section>
     </div>
   );
-}
+});
+
+export default Presentation;
