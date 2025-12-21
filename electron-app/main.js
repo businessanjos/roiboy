@@ -4,6 +4,11 @@ const Store = require('electron-store');
 
 const store = new Store();
 
+// Enable GPU acceleration for WebGL (needed for QR code canvas)
+app.commandLine.appendSwitch('enable-webgl');
+app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+
 // ============= CRITICAL: Block whatsapp:// protocol COMPLETELY =============
 
 // Remove as default handler
@@ -126,8 +131,8 @@ function createMainWindow() {
 }
 
 // ============= WhatsApp Window =============
-// Modern Chrome User-Agent to bypass WhatsApp browser check
-const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// Modern Chrome User-Agent to bypass WhatsApp browser check (updated Dec 2024)
+const CHROME_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 function createWhatsAppWindow() {
   // Create session for WhatsApp
@@ -148,7 +153,9 @@ function createWhatsAppWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       session: whatsappSession,
-      webSecurity: true
+      webSecurity: true,
+      // Enable WebGL for QR code canvas rendering
+      experimentalFeatures: true
     },
     title: 'WhatsApp Web - ROY',
     show: true
