@@ -105,9 +105,49 @@ export function SessionsManager() {
   const [terminating, setTerminating] = useState<string | null>(null);
   const [currentFingerprint] = useState(() => getCurrentFingerprint());
 
+  // Register current session on component mount if not exists
+  const registerCurrentSession = async () => {
+    if (!currentUser?.id || !currentUser?.account_id) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Check if current session already exists
+      const { data: existingSession } = await supabase
+        .from('user_sessions')
+        .select('id')
+        .eq('device_fingerprint', currentFingerprint)
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (!existingSession) {
+        // Register new session
+        await supabase.from('user_sessions').insert({
+          user_id: currentUser.id,
+          account_id: currentUser.account_id,
+          session_token: session.access_token,
+          ip_address: 'client-side',
+          user_agent: navigator.userAgent,
+          device_fingerprint: currentFingerprint,
+          is_trusted: false,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        });
+      } else {
+        // Update last active time
+        await supabase
+          .from('user_sessions')
+          .update({ last_active_at: new Date().toISOString() })
+          .eq('id', existingSession.id);
+      }
+    } catch (err) {
+      console.error('Error registering session:', err);
+    }
+  };
+
   useEffect(() => {
     if (currentUser?.id) {
-      fetchSessions();
+      registerCurrentSession().then(() => fetchSessions());
     }
   }, [currentUser?.id]);
 
@@ -116,10 +156,11 @@ export function SessionsManager() {
     
     setLoading(true);
     try {
+      // Query using account_id which matches RLS policies
       const { data, error } = await supabase
         .from('user_sessions')
         .select('*')
-        .eq('user_id', currentUser.id)
+        .eq('account_id', currentUser.account_id)
         .order('last_active_at', { ascending: false });
 
       if (error) throw error;
