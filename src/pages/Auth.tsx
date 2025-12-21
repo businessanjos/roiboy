@@ -213,9 +213,9 @@ export default function Auth() {
 
         <div className="relative z-10 w-full max-w-md animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <img src={royLogo} alt="ROY" className="h-12 w-12 object-contain" />
+            <img src={royLogo} alt="ROY APP" className="h-12 w-12 object-contain" />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY APP</h1>
               <p className="text-sm text-muted-foreground">Recuperar senha</p>
             </div>
           </div>
@@ -317,9 +317,9 @@ export default function Auth() {
 
         <div className="relative z-10 w-full max-w-md animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <img src={royLogo} alt="ROY" className="h-12 w-12 object-contain" />
+            <img src={royLogo} alt="ROY APP" className="h-12 w-12 object-contain" />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY APP</h1>
               <p className="text-sm text-muted-foreground">Redefinir senha</p>
             </div>
           </div>
@@ -418,9 +418,9 @@ export default function Auth() {
       <div className="relative z-10 w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <img src={royLogo} alt="ROY" className="h-12 w-12 object-contain" />
+          <img src={royLogo} alt="ROY APP" className="h-12 w-12 object-contain" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY APP</h1>
             <p className="text-sm text-muted-foreground">Sua plataforma de encantamento</p>
           </div>
         </div>

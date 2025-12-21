@@ -370,9 +370,9 @@ export function MobileHeader() {
   return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
       <NavLink to="/dashboard" className="flex items-center gap-2">
-        <img src={royLogo} alt="ROY" className="h-8 w-8 object-contain" />
+        <img src={royLogo} alt="ROY APP" className="h-8 w-8 object-contain" />
         <span className="font-semibold text-lg tracking-tight text-foreground">
-          ROY
+          ROY APP
         </span>
       </NavLink>
       
@@ -389,9 +389,9 @@ export function MobileHeader() {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between h-14 px-4 border-b border-border">
               <NavLink to="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <img src={royLogo} alt="ROY" className="h-8 w-8 object-contain" />
+                <img src={royLogo} alt="ROY APP" className="h-8 w-8 object-contain" />
                 <span className="font-semibold text-lg tracking-tight text-foreground">
-                  ROY
+                  ROY APP
                 </span>
               </NavLink>
               <SheetClose asChild>
@@ -426,10 +426,10 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-border">
         <NavLink to="/dashboard" className="flex items-center gap-2">
-          <img src={royLogo} alt="ROY" className="h-8 w-8 object-contain" />
+          <img src={royLogo} alt="ROY APP" className="h-8 w-8 object-contain" />
           {!collapsed && (
             <span className="font-semibold text-lg tracking-tight text-foreground">
-              ROY
+              ROY APP
             </span>
           )}
         </NavLink>
