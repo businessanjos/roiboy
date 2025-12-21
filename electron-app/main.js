@@ -677,93 +677,56 @@ async function injectWhatsAppCaptureScript() {
             const isGroup = isGroupChat();
             const contactName = getContactName();
             
-            // Check for audio/voice message - expanded selectors for WhatsApp Web 2024/2025
-            const audioSelectors = [
-              'audio',
-              '[data-testid="audio-play"]',
-              '[data-testid="ptt"]',
-              '[data-testid="audio-ptt"]',
-              '[data-testid="ptt-play"]',
-              '[data-icon="ptt"]',
-              '[data-icon="audio-play"]',
-              '[data-icon="ptt-play"]',
-              '[data-icon="ptt-out"]',
-              '[data-icon="ptt-in"]',
-              '[aria-label*="voice message"]',
-              '[aria-label*="áudio"]',
-              '[aria-label*="audio"]',
-              '[class*="audio-player"]',
-              '[class*="voice-message"]',
-              '[class*="ptt"]'
-            ];
-            
-            let audioElement = null;
-            for (const sel of audioSelectors) {
-              audioElement = msgElement.querySelector(sel);
-              if (audioElement) {
-                console.log('[ROY] Áudio detectado com seletor:', sel);
-                break;
-              }
-            }
+            // Check for audio/voice message - simplified detection
+            const audioElement = msgElement.querySelector('audio') || 
+                                msgElement.querySelector('[data-testid="ptt"]') ||
+                                msgElement.querySelector('[data-icon="ptt"]');
             
             if (audioElement) {
-              // It's an audio message
-              const audioSrc = msgElement.querySelector('audio')?.src || '';
-              
-              // Try multiple duration selectors
-              const durationSelectors = [
-                '[data-testid="audio-duration"]',
-                '[data-testid="ptt-duration"]',
-                '[class*="audio-duration"]',
-                '[class*="ptt-duration"]',
-                'span[dir="auto"]'
-              ];
-              
-              let durationText = '';
-              for (const sel of durationSelectors) {
-                const durationEl = msgElement.querySelector(sel);
-                if (durationEl) {
-                  const text = durationEl.innerText || '';
-                  if (text.match(/\\d+:\\d+/)) {
-                    durationText = text;
+              // It's an audio message - capture async to not block UI
+              try {
+                const audioSrc = msgElement.querySelector('audio')?.src || '';
+                
+                // Try to get duration from any span with time format
+                let durationSec = 0;
+                const spans = msgElement.querySelectorAll('span');
+                for (const span of spans) {
+                  const text = span.innerText || '';
+                  const match = text.match(/^(\\d+):(\\d+)$/);
+                  if (match) {
+                    durationSec = parseInt(match[1]) * 60 + parseInt(match[2]);
                     break;
                   }
                 }
+                
+                window.__roySentIds.add(msgId);
+                
+                // Keep set size manageable
+                if (window.__roySentIds.size > 2000) {
+                  const arr = Array.from(window.__roySentIds);
+                  window.__roySentIds = new Set(arr.slice(-1000));
+                }
+                
+                const audioData = {
+                  platform: 'whatsapp',
+                  id: msgId,
+                  type: 'audio',
+                  audioSrc: audioSrc,
+                  durationSec: durationSec,
+                  direction: isOutgoing ? 'team_to_client' : 'client_to_team',
+                  timestamp: new Date().toISOString(),
+                  phone: phone,
+                  contactName: contactName,
+                  isGroup: isGroup
+                };
+                
+                window.__royAudioQueue = window.__royAudioQueue || [];
+                window.__royAudioQueue.push(audioData);
+                return audioData;
+              } catch (e) {
+                // Silently fail to not break UI
+                return null;
               }
-              
-              // Parse duration (format: "0:15" or "1:30")
-              let durationSec = 0;
-              const durationMatch = durationText.match(/(\\d+):(\\d+)/);
-              if (durationMatch) {
-                durationSec = parseInt(durationMatch[1]) * 60 + parseInt(durationMatch[2]);
-              }
-              
-              console.log('[ROY] Processando áudio:', { audioSrc: !!audioSrc, durationSec, durationText });
-              
-              window.__roySentIds.add(msgId);
-              
-              // Keep set size manageable
-              if (window.__roySentIds.size > 2000) {
-                const arr = Array.from(window.__roySentIds);
-                window.__roySentIds = new Set(arr.slice(-1000));
-              }
-              
-              const audioData = {
-                platform: 'whatsapp',
-                id: msgId,
-                type: 'audio',
-                audioSrc: audioSrc,
-                durationSec: durationSec,
-                direction: isOutgoing ? 'team_to_client' : 'client_to_team',
-                timestamp: new Date().toISOString(),
-                phone: phone,
-                contactName: contactName,
-                isGroup: isGroup
-              };
-              
-              window.__royAudioQueue = window.__royAudioQueue || [];
-              window.__royAudioQueue.push(audioData);
-              return audioData;
             }
             
             // Find text content - try multiple selectors
