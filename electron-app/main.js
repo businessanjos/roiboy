@@ -115,11 +115,8 @@ async function safeExecuteJS(browserWindow, script) {
     }
     // Log but don't throw for other errors
     console.log('[ROY] safeExecuteJS error (non-critical):', errorMsg.substring(0, 100));
-    return null;
   }
 }
-    throw error;
-  }
 }
 
 function createMainWindow() {
