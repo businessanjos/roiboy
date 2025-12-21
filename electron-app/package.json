@@ -1,7 +1,7 @@
 {
-  "name": "roy-desktop",
+  "name": "roy-app-desktop",
   "version": "1.0.0",
-  "description": "App desktop ROY para captura automática de WhatsApp, Zoom e Google Meet",
+  "description": "ROY APP Desktop - Captura automática de WhatsApp, Zoom e Google Meet",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -11,7 +11,7 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux"
   },
-  "author": "ROY Platform",
+  "author": "ROY APP",
   "license": "MIT",
   "devDependencies": {
     "electron": "^28.0.0",
@@ -21,8 +21,8 @@
     "electron-store": "^8.1.0"
   },
   "build": {
-    "appId": "com.roy.desktop",
-    "productName": "ROY Desktop",
+    "appId": "com.royapp.desktop",
+    "productName": "ROY APP",
     "directories": {
       "output": "dist"
     },
