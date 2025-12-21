@@ -2926,6 +2926,17 @@ export type Database = {
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
       generate_checkin_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
+      get_event_for_checkin: {
+        Args: { p_checkin_code: string }
+        Returns: {
+          account_id: string
+          address: string
+          id: string
+          modality: Database["public"]["Enums"]["event_modality"]
+          scheduled_at: string
+          title: string
+        }[]
+      }
       get_user_account_id: { Args: never; Returns: string }
       is_account_locked: { Args: { p_email: string }; Returns: boolean }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
