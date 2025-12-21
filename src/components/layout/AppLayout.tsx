@@ -2,7 +2,7 @@ import { Outlet, Navigate } from "react-router-dom";
 import { Sidebar, MobileHeader } from "./Sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
-import { Loader2 } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import { GlobalSearch, useGlobalSearch } from "@/components/ui/global-search";
 import { KeyboardShortcutsHelp, useKeyboardShortcuts } from "@/components/ui/keyboard-shortcuts";
 import { TrialBanner } from "@/components/subscription/TrialBanner";
@@ -14,11 +14,7 @@ export function AppLayout() {
   const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
 
   if (authLoading || subLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando..." />;
   }
 
   if (!user) {

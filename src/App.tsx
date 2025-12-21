@@ -13,7 +13,7 @@ import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Loader2 } from "lucide-react";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 // Eager loaded pages (critical for UX)
 import Auth from "./pages/Auth";
@@ -54,11 +54,7 @@ const queryClient = new QueryClient({
 });
 
 function PageLoader() {
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  );
+  return <LoadingScreen message="Carregando..." fullScreen={false} />;
 }
 
 const App = () => (
