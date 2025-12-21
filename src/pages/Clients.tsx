@@ -801,9 +801,8 @@ export default function Clients() {
 
     // Responsible filter
     if (filterResponsible !== "all") {
-      const responsibles = getResponsibleUsers(c.id);
-      if (filterResponsible === "none" && responsibles.length > 0) return false;
-      if (filterResponsible !== "none" && !responsibles.some(r => r.id === filterResponsible)) return false;
+      if (filterResponsible === "none" && c.responsible_user_id) return false;
+      if (filterResponsible !== "none" && c.responsible_user_id !== filterResponsible) return false;
     }
 
     return true;
@@ -819,15 +818,10 @@ export default function Clients() {
     }));
   };
 
-  // Helper to get responsible users for a client
-  const getResponsibleUsers = (clientId: string) => {
-    const userField = customFields.find(f => f.field_type === "user");
-    if (!userField) return [];
-    
-    const userIds = fieldValues[clientId]?.[userField.id];
-    if (!Array.isArray(userIds) || userIds.length === 0) return [];
-    
-    return teamUsers.filter(u => userIds.includes(u.id));
+  // Helper to get responsible user for a client
+  const getResponsibleUser = (client: any) => {
+    if (!client.responsible_user_id) return null;
+    return teamUsers.find(u => u.id === client.responsible_user_id) || null;
   };
 
   // Helper to get initials from name
@@ -1676,39 +1670,27 @@ export default function Clients() {
                               <p className="font-medium truncate">{client.full_name}</p>
                               <p className="text-xs text-muted-foreground">{client.phone_e164}</p>
                             </div>
-                            {/* Responsible users avatars */}
-                            {getResponsibleUsers(client.id).length > 0 && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="flex -space-x-2">
-                                      {getResponsibleUsers(client.id).slice(0, 2).map((user) => (
-                                        <Avatar key={user.id} className="h-6 w-6 border-2 border-background">
-                                          <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                                            {getInitials(user.name)}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                      ))}
-                                      {getResponsibleUsers(client.id).length > 2 && (
-                                        <Avatar className="h-6 w-6 border-2 border-background">
-                                          <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                                            +{getResponsibleUsers(client.id).length - 2}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">
-                                      <p className="font-medium mb-1">Responsáveis:</p>
-                                      {getResponsibleUsers(client.id).map(u => (
-                                        <p key={u.id}>{u.name}</p>
-                                      ))}
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
+                            {/* Responsible user avatar */}
+                            {(() => {
+                              const responsible = getResponsibleUser(client);
+                              if (!responsible) return null;
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Avatar className="h-6 w-6 border-2 border-background flex-shrink-0">
+                                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                          {getInitials(responsible.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">Responsável: {responsible.name}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })()}
                             {/* Contract expiry alert */}
                             {(() => {
                               const expiryStatus = getContractExpiryStatus(client.contract_end_date);
@@ -1995,39 +1977,27 @@ export default function Clients() {
                       <div className="space-y-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate">{client.full_name}</p>
-                          {/* Responsible users avatars */}
-                          {getResponsibleUsers(client.id).length > 0 && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex -space-x-1.5 flex-shrink-0">
-                                    {getResponsibleUsers(client.id).slice(0, 2).map((user) => (
-                                      <Avatar key={user.id} className="h-5 w-5 border border-background">
-                                        <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
-                                          {getInitials(user.name)}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    ))}
-                                    {getResponsibleUsers(client.id).length > 2 && (
-                                      <Avatar className="h-5 w-5 border border-background">
-                                        <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
-                                          +{getResponsibleUsers(client.id).length - 2}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-xs">
-                                    <p className="font-medium mb-1">Responsáveis:</p>
-                                    {getResponsibleUsers(client.id).map(u => (
-                                      <p key={u.id}>{u.name}</p>
-                                    ))}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
+                          {/* Responsible user avatar */}
+                          {(() => {
+                            const responsible = getResponsibleUser(client);
+                            if (!responsible) return null;
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Avatar className="h-5 w-5 border border-background flex-shrink-0">
+                                      <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                                        {getInitials(responsible.name)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Responsável: {responsible.name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
                           {/* Contract expiry alert */}
                           {(() => {
                             const expiryStatus = getContractExpiryStatus(client.contract_end_date);
