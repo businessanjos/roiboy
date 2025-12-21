@@ -57,8 +57,9 @@ export function useSubscriptionStatus(): SubscriptionStatus {
         // User has access if:
         // 1. Subscription is active/paid
         // 2. Trial hasn't expired yet
-        // 3. Status is cancelled but still within period (grace period handling could be added)
-        const paidStatuses = ["active", "paid", "trialing"];
+        // 3. Status is pending (waiting for payment but has a plan)
+        // 4. Status is cancelled but still within period (grace period handling could be added)
+        const paidStatuses = ["active", "paid", "trialing", "pending"];
         const hasActiveSubscription = paidStatuses.includes(account.subscription_status || "");
         const hasAccess = hasActiveSubscription || (account.subscription_status === "trial" && !isTrialExpired);
 
