@@ -188,18 +188,6 @@ openMeetBtn.addEventListener('click', async () => {
 openDashboardBtn.addEventListener('click', async () => {
   await window.electronAPI.openDashboard();
 });
-  await window.electronAPI.openZoom();
-  zoomStatus.textContent = 'Abrindo...';
-});
-
-openMeetBtn.addEventListener('click', async () => {
-  await window.electronAPI.openMeet();
-  meetStatus.textContent = 'Abrindo...';
-});
-
-openDashboardBtn.addEventListener('click', async () => {
-  await window.electronAPI.openDashboard();
-});
 
 // Update UI functions
 function updatePlatformStatus(platform, data) {
