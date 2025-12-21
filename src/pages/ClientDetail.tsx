@@ -2094,6 +2094,7 @@ export default function ClientDetail() {
               <Timeline 
                 events={timeline} 
                 clientId={id!} 
+                clientName={client?.full_name}
                 onCommentAdded={fetchData}
               />
             </CardContent>

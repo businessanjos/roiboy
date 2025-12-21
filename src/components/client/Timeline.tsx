@@ -37,6 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ConversationView } from "./ConversationView";
 
 export interface TimelineEvent {
   id: string;
@@ -90,6 +91,7 @@ interface TimelineProps {
   events: TimelineEvent[];
   className?: string;
   clientId?: string;
+  clientName?: string;
   onCommentAdded?: () => void;
 }
 
@@ -433,12 +435,12 @@ const messageSourceFilterConfig: Record<MessageSourceFilter, { label: string; co
   group: { label: "Grupos", color: "bg-indigo-500" },
 };
 
-export function Timeline({ events, className, clientId, onCommentAdded }: TimelineProps) {
+export function Timeline({ events, className, clientId, clientName: propClientName, onCommentAdded }: TimelineProps) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [showOlder, setShowOlder] = useState(false);
-  const [clientName, setClientName] = useState<string>("");
+  const [clientName, setClientName] = useState<string>(propClientName || "");
   const [activeFilters, setActiveFilters] = useState<Set<EventFilter>>(new Set());
   const [messageSourceFilter, setMessageSourceFilter] = useState<MessageSourceFilter | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -786,30 +788,38 @@ export function Timeline({ events, className, clientId, onCommentAdded }: Timeli
         </div>
       )}
 
-      {/* Events List */}
-      <div className="space-y-4">
-        {visibleEvents.map((event, index) => (
-          <div key={event.id} className="relative">
-            {event.type === "comment" ? (
-              <CommentItem event={event} highlightState={highlightedId === event.id ? highlightState : null} />
-            ) : event.type === "field_change" ? (
-              <SystemEventItem event={event} />
-            ) : (
-              <SystemEventItem event={event} />
-            )}
-            
-            {/* Show "Mostrar X atualizações anteriores" after a few items */}
-            {index === 4 && hiddenCount > 0 && !showOlder && (
-              <button
-                onClick={() => setShowOlder(true)}
-                className="text-primary text-sm font-medium hover:underline mt-2 mb-2"
-              >
-                Mostrar {hiddenCount} atualizações anteriores
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+      {/* Check if showing only messages - use conversation view */}
+      {activeFilters.size === 1 && activeFilters.has("message") ? (
+        <ConversationView 
+          messages={filteredEvents.filter(e => e.type === "message")} 
+          clientName={clientName}
+        />
+      ) : (
+        /* Events List */
+        <div className="space-y-4">
+          {visibleEvents.map((event, index) => (
+            <div key={event.id} className="relative">
+              {event.type === "comment" ? (
+                <CommentItem event={event} highlightState={highlightedId === event.id ? highlightState : null} />
+              ) : event.type === "field_change" ? (
+                <SystemEventItem event={event} />
+              ) : (
+                <SystemEventItem event={event} />
+              )}
+              
+              {/* Show "Mostrar X atualizações anteriores" after a few items */}
+              {index === 4 && hiddenCount > 0 && !showOlder && (
+                <button
+                  onClick={() => setShowOlder(true)}
+                  className="text-primary text-sm font-medium hover:underline mt-2 mb-2"
+                >
+                  Mostrar {hiddenCount} atualizações anteriores
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Comment Input - Bottom position like social networks */}
       {clientId && currentUser && (
