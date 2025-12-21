@@ -53,8 +53,21 @@ export default function Auth() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
+        <div className="relative">
+          <div className="absolute inset-0 animate-ping opacity-20">
+            <img src={royLogo} alt="" className="h-16 w-16 object-contain blur-sm" />
+          </div>
+          <img src={royLogo} alt="Roy" className="h-16 w-16 object-contain animate-pulse" />
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted-foreground">Carregando...</span>
+          <span className="flex gap-0.5">
+            <span className="h-1 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="h-1 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="h-1 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+          </span>
+        </div>
       </div>
     );
   }
