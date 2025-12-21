@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +18,13 @@ import {
   Trash2,
   Loader2,
   DollarSign,
-  Award
+  Award,
+  Lock
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { toast } from "sonner";
 import { getMlsBadgeClasses, getMlsLevelLabel, MLS_LEVELS } from "@/lib/mls-utils";
+import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
 interface Product {
   id: string;
@@ -47,6 +50,7 @@ const billingPeriodLabels = {
 
 export default function Products() {
   const { currentUser } = useCurrentUser();
+  const { canCreate } = usePlanLimits();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -198,9 +202,13 @@ export default function Products() {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Produto
+            <Button 
+              onClick={() => resetForm()}
+              disabled={!canCreate("products")}
+              title={!canCreate("products") ? "Limite de produtos atingido. Faça upgrade do plano." : undefined}
+            >
+              {!canCreate("products") ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              {!canCreate("products") ? "Limite atingido" : "Novo Produto"}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">

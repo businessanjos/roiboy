@@ -40,6 +40,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { QRCodeSVG } from "qrcode.react";
 import { 
   Plus, 
@@ -58,13 +59,15 @@ import {
   Check,
   Users,
   Download,
-  BarChart3
+  BarChart3,
+  Lock
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AttendanceReport from "@/components/events/AttendanceReport";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
+import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
 interface Attendance {
   id: string;
@@ -113,6 +116,7 @@ interface EventWithProducts extends Event {
 export default function Events() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { canCreate } = usePlanLimits();
   const [events, setEvents] = useState<EventWithProducts[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -507,9 +511,13 @@ export default function Events() {
               if (!open) resetForm();
             }}>
               <DialogTrigger asChild>
-                <Button className="gap-2 shrink-0">
-                  <Plus className="h-4 w-4" />
-                  Novo Evento
+                <Button 
+                  className="gap-2 shrink-0"
+                  disabled={!canCreate("events")}
+                  title={!canCreate("events") ? "Limite de eventos atingido. Faça upgrade do plano." : undefined}
+                >
+                  {!canCreate("events") ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  {!canCreate("events") ? "Limite atingido" : "Novo Evento"}
                 </Button>
               </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">

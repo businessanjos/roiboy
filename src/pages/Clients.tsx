@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -97,6 +99,7 @@ const parseCSV = (content: string): CsvRow[] => {
 
 export default function Clients() {
   const { currentUser } = useCurrentUser();
+  const { canCreate, isNearLimit, data: planData } = usePlanLimits();
   const [clients, setClients] = useState<any[]>([]);
   const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
   const [scoreMap, setScoreMap] = useState<Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }>>({});
@@ -1053,7 +1056,15 @@ export default function Clients() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button size="sm" className="sm:size-default"><Plus className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Novo Cliente</span></Button>
+              <Button 
+                size="sm" 
+                className="sm:size-default"
+                disabled={!canCreate("clients")}
+                title={!canCreate("clients") ? "Limite de clientes atingido. Faça upgrade do plano." : undefined}
+              >
+                {!canCreate("clients") ? <Lock className="h-4 w-4 sm:mr-2" /> : <Plus className="h-4 w-4 sm:mr-2" />}
+                <span className="hidden sm:inline">{!canCreate("clients") ? "Limite atingido" : "Novo Cliente"}</span>
+              </Button>
             </DialogTrigger>
             <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh]">
               {(() => {
