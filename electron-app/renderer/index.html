@@ -160,7 +160,16 @@
               </svg>
             </div>
             <span class="stat-value" id="whatsapp-messages">0</span>
-            <span class="stat-label">Mensagens</span>
+            <span class="stat-label">Enviadas</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: var(--warning);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/>
+              </svg>
+            </div>
+            <span class="stat-value" id="whatsapp-captured">0</span>
+            <span class="stat-label">Capturadas</span>
           </div>
           <div class="stat-card">
             <div class="stat-icon zoom">
@@ -183,6 +192,7 @@
         </div>
         <div class="last-sync">
           <span>Última sincronização: <strong id="last-sync">--:--</strong></span>
+          <span id="whatsapp-errors" style="color: var(--danger); display: none;"> • Erros: <strong>0</strong></span>
         </div>
       </div>
 

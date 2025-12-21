@@ -30,6 +30,8 @@ const meetIndicator = document.getElementById('meet-indicator');
 
 // Stats elements
 const whatsappMessages = document.getElementById('whatsapp-messages');
+const whatsappCaptured = document.getElementById('whatsapp-captured');
+const whatsappErrors = document.getElementById('whatsapp-errors');
 const zoomParticipants = document.getElementById('zoom-participants');
 const meetParticipants = document.getElementById('meet-participants');
 const lastSync = document.getElementById('last-sync');
@@ -209,6 +211,15 @@ function updatePlatformStatus(platform, data) {
 function updateStats(data) {
   if (data.whatsappMessages !== undefined) {
     whatsappMessages.textContent = data.whatsappMessages;
+  }
+  if (data.whatsappCaptured !== undefined && whatsappCaptured) {
+    whatsappCaptured.textContent = data.whatsappCaptured;
+  }
+  if (data.whatsappErrors !== undefined && whatsappErrors) {
+    if (data.whatsappErrors > 0) {
+      whatsappErrors.style.display = 'inline';
+      whatsappErrors.querySelector('strong').textContent = data.whatsappErrors;
+    }
   }
   if (data.zoomParticipants !== undefined) {
     zoomParticipants.textContent = data.zoomParticipants;
