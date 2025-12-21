@@ -1096,8 +1096,15 @@ async function scanWhatsAppAudioMessages() {
           return { phone, contactName, isGroup };
         }
         
-        // Find audio/voice message elements safely
-        const audioContainers = document.querySelectorAll('[data-testid="audio-play"], [data-testid="ptt-play"]');
+        // Find audio/voice message elements safely - try multiple selectors
+        const audioContainers = document.querySelectorAll(
+          '[data-testid="audio-play"], [data-testid="ptt-play"], ' +
+          '[data-icon="audio-play"], [data-icon="ptt-play"], ' +
+          'button[aria-label*="Play"], button[aria-label*="Reproduzir"], ' +
+          '[data-testid="ptt"], audio'
+        );
+        
+        console.log('[ROY-AUDIO] Encontrados', audioContainers.length, 'elementos de áudio candidatos');
         
         audioContainers.forEach(audioBtn => {
           try {
