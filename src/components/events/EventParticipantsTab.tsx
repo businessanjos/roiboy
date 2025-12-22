@@ -42,7 +42,9 @@ import {
   Mail,
   Phone,
   MoreHorizontal,
-  Download
+  Download,
+  Link,
+  Copy
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -75,6 +77,7 @@ interface Participant {
   invited_at: string | null;
   waitlist_position: number | null;
   notes: string | null;
+  rsvp_token: string | null;
   clients?: Client;
 }
 
@@ -433,6 +436,15 @@ export default function EventParticipantsTab({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {p.rsvp_token && (
+                              <DropdownMenuItem onClick={() => {
+                                const link = `${window.location.origin}/rsvp/${p.rsvp_token}`;
+                                navigator.clipboard.writeText(link);
+                                toast({ title: "Link copiado!", description: "Envie para o convidado confirmar presença." });
+                              }}>
+                                <Link className="h-4 w-4 mr-2 text-primary" /> Copiar Link RSVP
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'confirmed')}>
                               <Check className="h-4 w-4 mr-2 text-green-600" /> Confirmar
                             </DropdownMenuItem>
