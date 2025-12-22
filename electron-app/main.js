@@ -609,12 +609,16 @@ function startCapture(platform) {
   });
 
   if (platform === 'whatsapp') {
-    injectWhatsAppCaptureScript();
-    captureState.whatsapp.interval = setInterval(() => {
-      injectWhatsAppCaptureScript();
-    }, 5000);
-    // Start heartbeat to notify backend we're connected
+    // TEMPORARILY DISABLED: Script injection was causing audio recording crashes
+    // TODO: Re-enable after fixing the root cause
+    // injectWhatsAppCaptureScript();
+    // captureState.whatsapp.interval = setInterval(() => {
+    //   injectWhatsAppCaptureScript();
+    // }, 5000);
+    
+    // Only heartbeat for now - no script injection
     startHeartbeat();
+    console.log('[ROY] WhatsApp captura DESABILITADA temporariamente para debug do áudio');
   } else if (platform === 'zoom') {
     captureState.zoom.interval = setInterval(() => {
       extractZoomParticipants();
