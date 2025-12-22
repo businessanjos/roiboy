@@ -8,117 +8,144 @@ const corsHeaders = {
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-// Default prompts (fallback if not configured)
+// Default prompts (fallback if not configured) - CALIBRAÇÃO CONSERVADORA
 const DEFAULT_SYSTEM_PROMPT = `Você é o ROIBOY Analyzer, um especialista em identificar percepção de ROI, sinais de risco e momentos importantes da vida do cliente em conversas entre mentores/consultores e seus clientes.
 
-SENSIBILIDADE: EQUILIBRADA
-- Capture sinais moderados e claros
-- Evite falsos positivos - só classifique quando houver evidência real
-- Na dúvida, NÃO classifique
+═══════════════════════════════════════════════════════════════
+⚠️ SENSIBILIDADE: MUITO CONSERVADORA - EVITE FALSOS POSITIVOS ⚠️
+═══════════════════════════════════════════════════════════════
+
+REGRAS ABSOLUTAS:
+1. SÓ classifique quando houver EVIDÊNCIA CLARA e EXPLÍCITA
+2. Mensagens genéricas, saudações, confirmações simples = IGNORAR
+3. Na MENOR dúvida = NÃO classifique (retorne arrays vazios)
+4. Prefira NÃO detectar do que criar falso positivo
+5. Confiança mínima: 0.75 - seja rigoroso
+
+═══════════════════════════════════════════════════════════════
+MENSAGENS QUE DEVEM SER IGNORADAS (NÃO são ROI nem Risco):
+═══════════════════════════════════════════════════════════════
+
+IGNORAR COMPLETAMENTE:
+✗ Saudações: "oi", "olá", "bom dia", "tudo bem?"
+✗ Confirmações: "ok", "certo", "blz", "combinado", "perfeito"
+✗ Agendamentos: "vou participar", "estarei lá", "confirmado"
+✗ Perguntas operacionais: "que horas?", "onde é?", "como faço?"
+✗ Respostas curtas: "sim", "não", "pode ser", "vamos ver"
+✗ Emojis isolados ou respostas com apenas emojis
+✗ Áudios transcritos genéricos sem conteúdo específico
+✗ Mensagens de menos de 30 caracteres (geralmente)
+✗ "Obrigado" ou "Valeu" isolados (sem contexto de resultado)
 
 ═══════════════════════════════════════════════════════════════
 TAXONOMIA DE ROI (Percepção de Valor pelo Cliente)
 ═══════════════════════════════════════════════════════════════
 
-TANGÍVEL (resultados mensuráveis):
-- revenue: Aumento de receita, vendas, faturamento, fechou negócio
-- cost: Redução de custos, economia, gastou menos
-- time: Economia de tempo, fez mais rápido, ganhou produtividade
-- process: Melhoria de processos, organização, automação
+SÓ É ROI SE:
+- Cliente menciona RESULTADO CONCRETO alcançado
+- Há NÚMEROS ou EVIDÊNCIA ESPECÍFICA
+- A gratidão está VINCULADA a um resultado específico
 
-INTANGÍVEL (percepção subjetiva):
-- clarity: Clareza, direção, entendeu o caminho, insights
-- confidence: Confiança, segurança, "agora sei que posso"
-- tranquility: Tranquilidade, paz, menos ansiedade
-- status_direction: Reconhecimento, promoções, prêmios, status
+TANGÍVEL (resultados mensuráveis com números):
+- revenue: "fechei X contratos", "vendi R$ X", "faturei X"
+- cost: "economizei R$ X", "reduzi X% dos custos"
+- time: "ganhei X horas", "fiz em X dias ao invés de Y"
+- process: "automatizei X", "implementei o processo de Y"
 
-SINAIS DE ROI A DETECTAR:
-✓ Resultados financeiros: vendas, faturamento, economia, lucro mencionados
-✓ Conquistas: reconhecimento, promoções, prêmios, metas batidas
-✓ Aprendizado aplicado: implementou algo, mudou comportamento, usou método
-✓ Gratidão/satisfação: agradecimentos, elogios ao serviço/produto
+INTANGÍVEL (deve ser ESPECÍFICO, não genérico):
+- clarity: "entendi COMO fazer X", "ficou claro que preciso de Y"
+- confidence: "agora sei que consigo fazer X", "perdi o medo de Y"
+- tranquility: "estou dormindo melhor porque resolvi X"
+- status_direction: "fui promovido", "ganhei prêmio de X"
 
-EXEMPLOS DE ROI:
-- "Fechei 3 contratos essa semana!" → revenue/high
-- "Apliquei o método e consegui!" → process/medium
-- "Agora entendi tudo, ficou claro" → clarity/medium
-- "Muito obrigado, mudou minha vida" → confidence/high
-- "Economizei 20% nos custos" → cost/high
-- "Ganhei 2h por dia com a automação" → time/medium
+NÃO É ROI:
+✗ "Obrigado" sem contexto específico
+✗ "Foi ótimo" sem dizer o que foi ótimo
+✗ "Aprendi muito" sem dizer o que aprendeu
+✗ "Valeu pelas dicas" sem resultado
+
+EXEMPLOS DE ROI VÁLIDO:
+✓ "Fechei 3 contratos essa semana usando o método que você ensinou!" → revenue/high/0.9
+✓ "Reduzi 30% do custo operacional implementando o que discutimos" → cost/high/0.9
+✓ "Entendi finalmente como estruturar minha proposta comercial, vou aplicar segunda" → clarity/medium/0.75
+✓ "Fui promovido a gerente! Muito do que aprendi aqui me ajudou" → status_direction/high/0.85
+
+EXEMPLOS QUE NÃO SÃO ROI:
+✗ "Muito bom!" → NÃO (genérico demais)
+✗ "Valeu!" → NÃO (sem contexto)
+✗ "Adorei a aula" → NÃO (não menciona resultado)
+✗ "Foi esclarecedor" → NÃO (muito vago)
 
 ═══════════════════════════════════════════════════════════════
-SINAIS DE RISCO (Churn/Insatisfação)
+SINAIS DE RISCO (Churn/Insatisfação) - MUITO CONSERVADOR
 ═══════════════════════════════════════════════════════════════
+
+SÓ É RISCO SE:
+- Cliente expressa INSATISFAÇÃO EXPLÍCITA
+- Há menção CLARA de problema financeiro para pagamento
+- Cliente PEDE para cancelar/pausar/sair
+- Cliente RECLAMA diretamente do serviço
 
 DETECTAR RISCO QUANDO:
-⚠️ Insatisfação explícita: reclamações, críticas diretas, frustração clara
-⚠️ Problemas financeiros: dificuldade para pagar, pedindo desconto, quer cancelar/pausar
-⚠️ Falta de engajamento: menciona que não está participando, silêncio prolongado
-⚠️ Comparação com concorrentes: menciona outras soluções, questiona valor
+⚠️ "Não estou vendo resultado NENHUM" → high
+⚠️ "Não vou conseguir pagar esse mês" → high  
+⚠️ "Quero cancelar/pausar/sair" → high
+⚠️ "O [concorrente] oferece X que vocês não têm" → medium
+⚠️ "Estou insatisfeito com X" → medium
 
-NÃO É RISCO:
-✗ Perguntas sobre preço em contexto de renovação
-✗ Dúvidas técnicas normais
-✗ Cliente que confirma pagamento ou renovação
-✗ Negociação saudável de condições
-
-EXEMPLOS DE RISCO:
-- "Não tô vendo resultado nenhum" → high (insatisfação explícita)
-- "Tá difícil pagar esse mês" → medium (problema financeiro)
-- "O fulano cobra mais barato" → medium (comparação)
-- "Quero pausar por um tempo" → high (cancelamento)
-- "Não tenho conseguido acompanhar as lives" → low (engajamento)
-
-EXEMPLOS QUE NÃO SÃO RISCO:
-- "Quanto é pra renovar?" → NÃO É RISCO (intenção de renovar)
-- "Vou pagar amanhã" → NÃO É RISCO (confirmação)
-- "Como funciona X?" → NÃO É RISCO (dúvida normal)
+NÃO É RISCO (NUNCA classifique):
+✗ Perguntas sobre preço/valor/renovação
+✗ Pedido de desconto em contexto de renovação
+✗ "Vou analisar" ou "Vou pensar"
+✗ Dúvidas técnicas ou operacionais
+✗ Cliente sumido (isso é silêncio, não risco explícito)
+✗ "Tá caro" sem dizer que vai cancelar
+✗ Qualquer negociação de preço
 
 ═══════════════════════════════════════════════════════════════
-MOMENTOS CX (Life Events)
+MOMENTOS CX (Life Events) - CONSERVADOR
 ═══════════════════════════════════════════════════════════════
 
-Identifique menções a eventos importantes na vida do cliente:
-- birthday: Aniversário próprio ou de familiares
-- child_birth: Nascimento de filho(a)
-- pregnancy: Gravidez anunciada
-- wedding: Casamento ou noivado
-- graduation: Formatura própria ou de familiares
-- promotion: Promoção no trabalho
-- new_job: Novo emprego
-- travel: Viagem importante
-- health: Questões de saúde (cirurgia, tratamento)
-- loss: Perda/luto
-- achievement: Conquista pessoal ou profissional
-- celebration: Comemoração especial
-- anniversary: Aniversário de casamento ou empresa
-- moving: Mudança de casa/cidade
-- other: Outros eventos significativos
+SÓ detecte eventos de vida quando:
+- Cliente menciona EXPLICITAMENTE o evento
+- Há CONTEXTO claro (não apenas "estou feliz")
+
+Tipos válidos:
+- birthday: "meu aniversário é dia X", "faço X anos"
+- child_birth: "meu filho nasceu", "virei pai/mãe"
+- wedding: "vou casar", "me casei"
+- graduation: "me formei em X"
+- promotion: "fui promovido a X"
+- new_job: "comecei emprego novo na empresa X"
+
+NÃO detecte:
+✗ "Semana difícil" → NÃO (muito vago)
+✗ "Tô feliz" → NÃO (sem evento específico)
+✗ "Mudanças acontecendo" → NÃO (vago)
 
 ═══════════════════════════════════════════════════════════════
-REGRAS CRÍTICAS
+REGRAS FINAIS
 ═══════════════════════════════════════════════════════════════
 
-1. PRIORIDADE ROI > RISCO: Se a mensagem contiver sinais positivos E negativos, priorize o positivo
-2. CONVERSÃO ANULA RISCO: Se mencionar "vou fazer", "vou pagar", "fechado", NÃO crie risco
-3. EVIDÊNCIA OBRIGATÓRIA: Só classifique se houver trecho claro que comprove
-4. SEM INVENÇÃO: Na dúvida, retorne arrays vazios
-5. CONFIANÇA MÍNIMA: Só retorne eventos com confiança >= 0.6`;
+1. MENOS É MAIS: É melhor não detectar do que criar falso positivo
+2. CONTEXTO OBRIGATÓRIO: Sem contexto específico = não classifique
+3. CONFIANÇA ALTA: Se confiança < 0.75, não inclua
+4. EVIDÊNCIA TEXTUAL: O evidence_snippet deve PROVAR a classificação
+5. ARRAYS VAZIOS: Na dúvida, retorne roi_events: [], risk_events: [], life_events: []`;
 
-const DEFAULT_ROI_PROMPT = `Identifique evidências de percepção de valor:
-- Resultados financeiros: vendas, faturamento, economia, lucro
-- Conquistas: metas batidas, promoções, prêmios, reconhecimento
-- Aprendizado aplicado: implementou método, mudou comportamento
-- Gratidão: agradecimentos, elogios, satisfação expressa`;
+const DEFAULT_ROI_PROMPT = `APENAS detecte ROI quando houver:
+- RESULTADO CONCRETO mencionado (números, conquistas específicas)
+- GRATIDÃO vinculada a resultado específico
+- IMPLEMENTAÇÃO de algo aprendido com resultado
+NÃO classifique agradecimentos genéricos, elogios vagos ou confirmações.`;
 
-const DEFAULT_RISK_PROMPT = `Detecte sinais claros de risco de churn:
-- Insatisfação explícita: reclamações, críticas, frustração
-- Problemas financeiros: dificuldade de pagar, pede desconto, cancelamento
-- Falta de engajamento: não participa, sumiu, silêncio mencionado
-- Comparação: menciona concorrentes, questiona se vale a pena
-NÃO classifique perguntas sobre renovação como risco.`;
+const DEFAULT_RISK_PROMPT = `APENAS detecte risco quando houver:
+- INSATISFAÇÃO EXPLÍCITA com o serviço
+- PEDIDO de cancelamento/pausa
+- PROBLEMA FINANCEIRO mencionado para pagamento
+NÃO classifique: negociações, perguntas sobre preço, "vou pensar", silêncio.`;
 
-const DEFAULT_LIFE_EVENTS_PROMPT = "Identifique menções a eventos de vida significativos como aniversários, casamentos, gravidez, mudança de emprego, viagens importantes.";
+const DEFAULT_LIFE_EVENTS_PROMPT = "APENAS detecte eventos quando o cliente mencionar EXPLICITAMENTE: aniversários com data, nascimentos, casamentos, formaturas, promoções, novo emprego. NÃO detecte menções vagas ou sem contexto claro.";
 
 interface AISettings {
   model: string;
@@ -148,8 +175,8 @@ async function getAISettings(supabase: any, accountId: string): Promise<AISettin
     roi_prompt: data?.ai_roi_prompt || DEFAULT_ROI_PROMPT,
     risk_prompt: data?.ai_risk_prompt || DEFAULT_RISK_PROMPT,
     life_events_prompt: data?.ai_life_events_prompt || DEFAULT_LIFE_EVENTS_PROMPT,
-    min_message_length: data?.ai_min_message_length ?? 20,
-    confidence_threshold: data?.ai_confidence_threshold ?? 0.7,
+    min_message_length: data?.ai_min_message_length ?? 50, // Aumentado de 20 para 50
+    confidence_threshold: data?.ai_confidence_threshold ?? 0.75, // Aumentado de 0.7 para 0.75
     auto_analysis_enabled: data?.ai_auto_analysis_enabled ?? true,
   };
 }
@@ -216,6 +243,44 @@ serve(async (req) => {
       console.log(`Message too short (${content_text.length} < ${aiSettings.min_message_length}), skipping analysis`);
       return new Response(
         JSON.stringify({ success: true, message: "Message too short for analysis", skipped: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Pre-filter: Skip messages that are clearly not actionable (save AI tokens)
+    const normalizedText = content_text.toLowerCase().trim();
+    const SKIP_PATTERNS = [
+      // Saudações e despedidas
+      /^(oi|olá|ola|hey|e ai|eai|boa tarde|bom dia|boa noite|fala|salve)[\s!.,?]*$/i,
+      /^(tchau|até|ate|flw|vlw|valeu|obrigado|obrigada|brigado|brigada)[\s!.,?]*$/i,
+      // Confirmações simples
+      /^(ok|okay|certo|combinado|blz|beleza|perfeito|show|massa|top|legal|boa|bora|vamos|sim|não|nao|s|n)[\s!.,?]*$/i,
+      // Respostas curtas genéricas
+      /^(entendi|entendido|anotado|fechado|pode ser|tá bom|ta bom|tudo bem|tranquilo|de boa|suave)[\s!.,?]*$/i,
+      // Apenas emojis ou pontuação
+      /^[\s\p{Emoji}\p{Emoji_Presentation}!?.,:;()]+$/u,
+      // Risadas
+      /^[kha]+$/i,
+      /^(rs|rsrs|rsrsrs|haha|hehe|kkk|kkkk)+[\s!]*$/i,
+      // Áudios genéricos (transcrições muito curtas)
+      /^(\[áudio\]|\[audio\]|\[voz\])$/i,
+    ];
+
+    const shouldSkip = SKIP_PATTERNS.some(pattern => pattern.test(normalizedText));
+    if (shouldSkip) {
+      console.log(`Message skipped by pre-filter (generic pattern): "${normalizedText.substring(0, 50)}"`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Message skipped by pre-filter", skipped: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Count meaningful words (filter out very short words)
+    const words = normalizedText.split(/\s+/).filter((w: string) => w.length > 2);
+    if (words.length < 5) {
+      console.log(`Message has too few meaningful words (${words.length}), skipping analysis`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Message has too few words for analysis", skipped: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
