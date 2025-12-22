@@ -43,6 +43,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const ChoosePlan = lazy(() => import("./pages/ChoosePlan"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Download = lazy(() => import("./pages/Download"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ const App = () => (
                           <Route path="/choose-plan" element={<ChoosePlan />} />
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
+                          <Route path="/download" element={<Download />} />
                           <Route element={<AppLayout />}>
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/clients" element={<Clients />} />
