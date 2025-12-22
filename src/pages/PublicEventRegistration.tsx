@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddressLink } from "@/components/ui/address-link";
 import { Calendar, MapPin, Monitor, CheckCircle, Clock, Users, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -174,10 +175,12 @@ export default function PublicEventRegistration() {
                 </p>
               )}
               {event.event_modality === "presencial" && event.event_address && (
-                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                  <MapPin className="w-4 h-4" />
-                  {event.event_address}
-                </p>
+                <div className="text-sm text-muted-foreground mt-1">
+                  <AddressLink 
+                    address={event.event_address} 
+                    className="text-sm text-muted-foreground hover:text-primary"
+                  />
+                </div>
               )}
               {event.event_modality === "online" && (
                 <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
@@ -228,9 +231,11 @@ export default function PublicEventRegistration() {
             )}
             
             {event.event_modality === "presencial" && event.event_address && (
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-muted-foreground" />
-                <p>{event.event_address}</p>
+              <div className="flex items-start gap-3">
+                <AddressLink 
+                  address={event.event_address} 
+                  className="text-sm"
+                />
               </div>
             )}
             
