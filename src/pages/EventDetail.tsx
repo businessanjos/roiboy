@@ -158,9 +158,9 @@ export default function EventDetail() {
       .select("*", { count: 'exact', head: true })
       .eq("event_id", id);
 
-    // Fetch attendance count
+    // Fetch participants count (from event_participants, not attendance)
     const { count: attendeesCount } = await supabase
-      .from("attendance")
+      .from("event_participants")
       .select("*", { count: 'exact', head: true })
       .eq("event_id", id);
 
