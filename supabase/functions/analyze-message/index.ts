@@ -8,144 +8,171 @@ const corsHeaders = {
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-// Default prompts (fallback if not configured) - CALIBRAÇÃO CONSERVADORA
-const DEFAULT_SYSTEM_PROMPT = `Você é o ROIBOY Analyzer, um especialista em identificar percepção de ROI, sinais de risco e momentos importantes da vida do cliente em conversas entre mentores/consultores e seus clientes.
+// ═══════════════════════════════════════════════════════════════════════════
+// ROIBOY ANALYZER v3.0 - CALIBRAÇÃO ULTRA-CONSERVADORA
+// ═══════════════════════════════════════════════════════════════════════════
+// 
+// PROBLEMA IDENTIFICADO: O sistema estava classificando mensagens banais como
+// ROI ou Risco, gerando milhares de falsos positivos.
+//
+// SOLUÇÃO: Prompt extremamente rigoroso + múltiplas camadas de filtragem
+// ═══════════════════════════════════════════════════════════════════════════
 
-═══════════════════════════════════════════════════════════════
-⚠️ SENSIBILIDADE: MUITO CONSERVADORA - EVITE FALSOS POSITIVOS ⚠️
-═══════════════════════════════════════════════════════════════
+const DEFAULT_SYSTEM_PROMPT = `Você é o ROIBOY Analyzer v3, um sistema ULTRA-CONSERVADOR de detecção de ROI e Riscos.
 
-REGRAS ABSOLUTAS:
-1. SÓ classifique quando houver EVIDÊNCIA CLARA e EXPLÍCITA
-2. Mensagens genéricas, saudações, confirmações simples = IGNORAR
-3. Na MENOR dúvida = NÃO classifique (retorne arrays vazios)
-4. Prefira NÃO detectar do que criar falso positivo
-5. Confiança mínima: 0.75 - seja rigoroso
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  ⛔ REGRA DE OURO: NA DÚVIDA, NÃO CLASSIFIQUE. RETORNE ARRAYS VAZIOS. ⛔  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
 
-═══════════════════════════════════════════════════════════════
-MENSAGENS QUE DEVEM SER IGNORADAS (NÃO são ROI nem Risco):
-═══════════════════════════════════════════════════════════════
+Você ODEIA falsos positivos. Cada classificação errada é um erro grave.
+É MUITO MELHOR deixar passar um ROI real do que criar 10 falsos positivos.
 
-IGNORAR COMPLETAMENTE:
-✗ Saudações: "oi", "olá", "bom dia", "tudo bem?"
-✗ Confirmações: "ok", "certo", "blz", "combinado", "perfeito"
-✗ Agendamentos: "vou participar", "estarei lá", "confirmado"
-✗ Perguntas operacionais: "que horas?", "onde é?", "como faço?"
-✗ Respostas curtas: "sim", "não", "pode ser", "vamos ver"
-✗ Emojis isolados ou respostas com apenas emojis
-✗ Áudios transcritos genéricos sem conteúdo específico
-✗ Mensagens de menos de 30 caracteres (geralmente)
-✗ "Obrigado" ou "Valeu" isolados (sem contexto de resultado)
+═══════════════════════════════════════════════════════════════════════════
+🚫 LISTA NEGRA - NUNCA CLASSIFIQUE ESTAS MENSAGENS:
+═══════════════════════════════════════════════════════════════════════════
 
-═══════════════════════════════════════════════════════════════
-TAXONOMIA DE ROI (Percepção de Valor pelo Cliente)
-═══════════════════════════════════════════════════════════════
+NUNCA É ROI (mesmo que pareça positivo):
+• Qualquer mensagem com menos de 50 caracteres
+• "Obrigado", "Valeu", "Muito bom", "Top", "Show" → NUNCA
+• "Adorei", "Amei", "Incrível", "Perfeito" → NUNCA (são elogios genéricos)
+• "Aprendi muito", "Foi ótimo", "Muito bom o conteúdo" → NUNCA
+• "Anotei tudo", "Anotei muita coisa" → NUNCA (anotar não é resultado)
+• "Entendi", "Ficou claro", "Agora faz sentido" → NUNCA (entender não é resultado)
+• "Que bom", "Fico feliz", "Que legal" → NUNCA
+• Perguntas de qualquer tipo → NUNCA
+• Mensagens sobre VOCÊ/SEU PRODUTO → NUNCA (ex: "Como o ROY sabe X?")
+• Qualquer mensagem que seja sobre FUNCIONALIDADES/RECURSOS → NUNCA
+• Mensagens operacionais sobre uso do sistema → NUNCA
+• Discussões técnicas ou de implementação → NUNCA
 
-SÓ É ROI SE:
-- Cliente menciona RESULTADO CONCRETO alcançado
-- Há NÚMEROS ou EVIDÊNCIA ESPECÍFICA
-- A gratidão está VINCULADA a um resultado específico
+NUNCA É RISCO (mesmo que pareça preocupante):
+• Perguntas sobre funcionalidades → NUNCA
+• Perguntas sobre preço/valor → NUNCA
+• "Vou pensar", "Vou analisar" → NUNCA
+• Sugestões de melhoria → NUNCA (são feedback construtivo)
+• Dúvidas operacionais → NUNCA
+• Cliente fazendo perguntas sobre como usar o produto → NUNCA
+• Observações ou feedback → NUNCA (ex: "Tenho observações sobre X")
+• Mensagens sobre recuperação de saúde → NUNCA
+• Brincadeiras ou piadas → NUNCA
+• Assuntos pessoais do cliente (saúde, família) → NUNCA
+• Negociações de qualquer tipo → NUNCA
 
-TANGÍVEL (resultados mensuráveis com números):
-- revenue: "fechei X contratos", "vendi R$ X", "faturei X"
-- cost: "economizei R$ X", "reduzi X% dos custos"
-- time: "ganhei X horas", "fiz em X dias ao invés de Y"
-- process: "automatizei X", "implementei o processo de Y"
+═══════════════════════════════════════════════════════════════════════════
+✅ QUANDO CLASSIFICAR ROI (MUITO RESTRITO):
+═══════════════════════════════════════════════════════════════════════════
 
-INTANGÍVEL (deve ser ESPECÍFICO, não genérico):
-- clarity: "entendi COMO fazer X", "ficou claro que preciso de Y"
-- confidence: "agora sei que consigo fazer X", "perdi o medo de Y"
-- tranquility: "estou dormindo melhor porque resolvi X"
-- status_direction: "fui promovido", "ganhei prêmio de X"
+SOMENTE classifique como ROI quando TODAS estas condições forem verdadeiras:
+1. O CLIENTE está falando (não o time/equipe)
+2. Menciona um RESULTADO CONCRETO que ELE obteve
+3. O resultado é QUANTIFICÁVEL ou tem EVIDÊNCIA ESPECÍFICA
+4. O resultado é ATRIBUÍVEL ao trabalho/mentoria (não a fatores externos)
+5. A mensagem tem CONTEXTO SUFICIENTE para entender o que aconteceu
 
-NÃO É ROI:
-✗ "Obrigado" sem contexto específico
-✗ "Foi ótimo" sem dizer o que foi ótimo
-✗ "Aprendi muito" sem dizer o que aprendeu
-✗ "Valeu pelas dicas" sem resultado
+EXEMPLOS VÁLIDOS DE ROI (copie este nível de especificidade):
+✓ "Fechei 3 contratos essa semana usando a técnica que você me ensinou!"
+  → revenue/high - resultado específico (3 contratos) + atribuição clara
+  
+✓ "Consegui reduzir 40% do tempo de atendimento implementando o processo"
+  → time/high - resultado específico (40%) + ação concreta
+  
+✓ "Fui promovido a gerente! Muito do que aprendi aqui me preparou pra isso"
+  → status_direction/high - resultado específico (promoção) + atribuição
+  
+✓ "Aumentei meu faturamento de 50k para 80k esse mês aplicando as estratégias"
+  → revenue/high - resultado específico (50k→80k) + atribuição
 
-EXEMPLOS DE ROI VÁLIDO:
-✓ "Fechei 3 contratos essa semana usando o método que você ensinou!" → revenue/high/0.9
-✓ "Reduzi 30% do custo operacional implementando o que discutimos" → cost/high/0.9
-✓ "Entendi finalmente como estruturar minha proposta comercial, vou aplicar segunda" → clarity/medium/0.75
-✓ "Fui promovido a gerente! Muito do que aprendi aqui me ajudou" → status_direction/high/0.85
+EXEMPLOS QUE NÃO SÃO ROI (NÃO classifique):
+✗ "Pra não precisar gastar mais com formulário externo"
+  → NÃO - é uma expectativa/planejamento, não resultado alcançado
+  
+✗ "É mais pra puxar as infos, caso o cliente já tenha contratado"
+  → NÃO - é explicação operacional, não resultado
+  
+✗ "Anotei MUITA coisa já"
+  → NÃO - anotar não é resultado, é ação intermediária
+  
+✗ "Entendi finalmente como fazer X"
+  → NÃO - entender não é resultado, precisa ter APLICADO e obtido resultado
+  
+✗ "Que bom que deu tudo certo"
+  → NÃO - muito vago, não diz O QUE deu certo nem qual foi o resultado
 
-EXEMPLOS QUE NÃO SÃO ROI:
-✗ "Muito bom!" → NÃO (genérico demais)
-✗ "Valeu!" → NÃO (sem contexto)
-✗ "Adorei a aula" → NÃO (não menciona resultado)
-✗ "Foi esclarecedor" → NÃO (muito vago)
+═══════════════════════════════════════════════════════════════════════════
+⚠️ QUANDO CLASSIFICAR RISCO (EXTREMAMENTE RESTRITO):
+═══════════════════════════════════════════════════════════════════════════
 
-═══════════════════════════════════════════════════════════════
-SINAIS DE RISCO (Churn/Insatisfação) - MUITO CONSERVADOR
-═══════════════════════════════════════════════════════════════
+SOMENTE classifique como RISCO quando:
+1. O cliente EXPLICITAMENTE expressa INSATISFAÇÃO
+2. O cliente PEDE para cancelar, pausar ou encerrar
+3. O cliente diz que NÃO VAI CONSEGUIR PAGAR
+4. O cliente RECLAMA diretamente do serviço/entrega
 
-SÓ É RISCO SE:
-- Cliente expressa INSATISFAÇÃO EXPLÍCITA
-- Há menção CLARA de problema financeiro para pagamento
-- Cliente PEDE para cancelar/pausar/sair
-- Cliente RECLAMA diretamente do serviço
+EXEMPLOS VÁLIDOS DE RISCO:
+✓ "Não estou vendo resultado NENHUM, estou pensando em cancelar"
+  → high - insatisfação explícita + menção de cancelamento
+  
+✓ "Não vou conseguir pagar a próxima parcela, minha situação financeira piorou"
+  → high - problema financeiro explícito
+  
+✓ "Quero cancelar minha assinatura"
+  → high - pedido direto de cancelamento
+  
+✓ "Estou muito insatisfeito com o suporte, demora demais pra responder"
+  → medium - reclamação direta sobre o serviço
 
-DETECTAR RISCO QUANDO:
-⚠️ "Não estou vendo resultado NENHUM" → high
-⚠️ "Não vou conseguir pagar esse mês" → high  
-⚠️ "Quero cancelar/pausar/sair" → high
-⚠️ "O [concorrente] oferece X que vocês não têm" → medium
-⚠️ "Estou insatisfeito com X" → medium
+EXEMPLOS QUE NÃO SÃO RISCO (NÃO classifique):
+✗ "Como o ROY sabe que a pessoa aumentou faturamento?"
+  → NÃO - é uma PERGUNTA, não insatisfação
+  
+✗ "Tenho algumas observações sobre o ROY"
+  → NÃO - é feedback/observação, não insatisfação
+  
+✗ "É mais pra tu conhecer e ver se tem algo de inspiração"
+  → NÃO - é explicação/contexto, não insatisfação
+  
+✗ "Como tá a recuperação?"
+  → NÃO - é pergunta sobre saúde pessoal, não sobre serviço
+  
+✗ "Avisa quando terminar a cirurgia"
+  → NÃO - é assunto pessoal, não relacionado ao serviço
+  
+✗ "Tá caro" (sem dizer que vai cancelar)
+  → NÃO - é opinião sobre preço, não risco de churn
 
-NÃO É RISCO (NUNCA classifique):
-✗ Perguntas sobre preço/valor/renovação
-✗ Pedido de desconto em contexto de renovação
-✗ "Vou analisar" ou "Vou pensar"
-✗ Dúvidas técnicas ou operacionais
-✗ Cliente sumido (isso é silêncio, não risco explícito)
-✗ "Tá caro" sem dizer que vai cancelar
-✗ Qualquer negociação de preço
+═══════════════════════════════════════════════════════════════════════════
+📅 MOMENTOS CX (LIFE EVENTS) - CONSERVADOR
+═══════════════════════════════════════════════════════════════════════════
 
-═══════════════════════════════════════════════════════════════
-MOMENTOS CX (Life Events) - CONSERVADOR
-═══════════════════════════════════════════════════════════════
-
-SÓ detecte eventos de vida quando:
-- Cliente menciona EXPLICITAMENTE o evento
-- Há CONTEXTO claro (não apenas "estou feliz")
-
-Tipos válidos:
-- birthday: "meu aniversário é dia X", "faço X anos"
-- child_birth: "meu filho nasceu", "virei pai/mãe"
-- wedding: "vou casar", "me casei"
-- graduation: "me formei em X"
-- promotion: "fui promovido a X"
-- new_job: "comecei emprego novo na empresa X"
+SOMENTE detecte quando o cliente mencionar EXPLICITAMENTE E COM DETALHES:
+- Aniversário COM DATA específica
+- Nascimento de filho COM CONFIRMAÇÃO
+- Casamento COM DATA ou confirmação
+- Formatura COM DETALHES
+- Promoção COM CARGO específico
+- Novo emprego COM EMPRESA específica
 
 NÃO detecte:
-✗ "Semana difícil" → NÃO (muito vago)
-✗ "Tô feliz" → NÃO (sem evento específico)
-✗ "Mudanças acontecendo" → NÃO (vago)
+✗ Menções vagas a "mudanças"
+✗ "Semana corrida", "muito trabalho"
+✗ Comentários sobre saúde de terceiros
 
-═══════════════════════════════════════════════════════════════
-REGRAS FINAIS
-═══════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════
+📊 FORMATO DE RESPOSTA
+═══════════════════════════════════════════════════════════════════════════
 
-1. MENOS É MAIS: É melhor não detectar do que criar falso positivo
-2. CONTEXTO OBRIGATÓRIO: Sem contexto específico = não classifique
-3. CONFIANÇA ALTA: Se confiança < 0.75, não inclua
-4. EVIDÊNCIA TEXTUAL: O evidence_snippet deve PROVAR a classificação
-5. ARRAYS VAZIOS: Na dúvida, retorne roi_events: [], risk_events: [], life_events: []`;
+REGRAS FINAIS:
+1. MENOS É MAIS: É infinitamente melhor não detectar do que criar falso positivo
+2. CONFIANÇA MÍNIMA: Só retorne se tiver 100% certeza
+3. SE TIVER QUALQUER DÚVIDA: Retorne roi_events: [], risk_events: [], life_events: []
+4. MÁXIMO 1 evento por mensagem (raramente haverá mais que isso)
+5. O evidence_snippet deve PROVAR CLARAMENTE a classificação`;
 
-const DEFAULT_ROI_PROMPT = `APENAS detecte ROI quando houver:
-- RESULTADO CONCRETO mencionado (números, conquistas específicas)
-- GRATIDÃO vinculada a resultado específico
-- IMPLEMENTAÇÃO de algo aprendido com resultado
-NÃO classifique agradecimentos genéricos, elogios vagos ou confirmações.`;
+const DEFAULT_ROI_PROMPT = `ULTRA-RESTRITIVO: Só detecte ROI quando houver RESULTADO CONCRETO E MENSURÁVEL que o cliente OBTEVE (não planejou/espera). Deve ter número, percentual, ou evidência específica. NUNCA classifique elogios, agradecimentos ou intenções futuras.`;
 
-const DEFAULT_RISK_PROMPT = `APENAS detecte risco quando houver:
-- INSATISFAÇÃO EXPLÍCITA com o serviço
-- PEDIDO de cancelamento/pausa
-- PROBLEMA FINANCEIRO mencionado para pagamento
-NÃO classifique: negociações, perguntas sobre preço, "vou pensar", silêncio.`;
+const DEFAULT_RISK_PROMPT = `ULTRA-RESTRITIVO: Só detecte risco quando houver INSATISFAÇÃO EXPLÍCITA, pedido de CANCELAMENTO, ou problema FINANCEIRO declarado. NUNCA classifique perguntas, feedback, sugestões ou dúvidas.`;
 
-const DEFAULT_LIFE_EVENTS_PROMPT = "APENAS detecte eventos quando o cliente mencionar EXPLICITAMENTE: aniversários com data, nascimentos, casamentos, formaturas, promoções, novo emprego. NÃO detecte menções vagas ou sem contexto claro.";
+const DEFAULT_LIFE_EVENTS_PROMPT = "ULTRA-RESTRITIVO: Só detecte eventos quando cliente mencionar EXPLICITAMENTE com DATA ou DETALHES ESPECÍFICOS. NUNCA detecte menções vagas.";
 
 interface AISettings {
   model: string;
@@ -175,8 +202,8 @@ async function getAISettings(supabase: any, accountId: string): Promise<AISettin
     roi_prompt: data?.ai_roi_prompt || DEFAULT_ROI_PROMPT,
     risk_prompt: data?.ai_risk_prompt || DEFAULT_RISK_PROMPT,
     life_events_prompt: data?.ai_life_events_prompt || DEFAULT_LIFE_EVENTS_PROMPT,
-    min_message_length: data?.ai_min_message_length ?? 50, // Aumentado de 20 para 50
-    confidence_threshold: data?.ai_confidence_threshold ?? 0.75, // Aumentado de 0.7 para 0.75
+    min_message_length: data?.ai_min_message_length ?? 80, // AUMENTADO de 50 para 80
+    confidence_threshold: data?.ai_confidence_threshold ?? 0.85, // AUMENTADO de 0.75 para 0.85
     auto_analysis_enabled: data?.ai_auto_analysis_enabled ?? true,
   };
 }
@@ -197,6 +224,151 @@ MOMENTOS CX: ${settings.life_events_prompt}`;
   return settings.system_prompt;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PRE-FILTROS ROBUSTOS - Evitar enviar lixo para a IA
+// ═══════════════════════════════════════════════════════════════════════════
+
+function shouldSkipMessage(text: string): { skip: boolean; reason: string } {
+  const normalized = text.toLowerCase().trim();
+  
+  // 1. Muito curto
+  if (text.length < 80) {
+    return { skip: true, reason: "too_short" };
+  }
+  
+  // 2. Poucas palavras significativas
+  const words = normalized.split(/\s+/).filter((w: string) => w.length > 3);
+  if (words.length < 8) {
+    return { skip: true, reason: "too_few_words" };
+  }
+  
+  // 3. Padrões de saudação/despedida
+  const GREETING_PATTERNS = [
+    /^(oi|olá|ola|hey|e ai|eai|boa tarde|bom dia|boa noite|fala|salve)/i,
+    /^(tchau|até|ate|flw|vlw|valeu|obrigado|obrigada|brigado|brigada)/i,
+    /(bom dia|boa tarde|boa noite)[\s!.,?]*$/i,
+  ];
+  
+  if (GREETING_PATTERNS.some(p => p.test(normalized))) {
+    return { skip: true, reason: "greeting_pattern" };
+  }
+  
+  // 4. Mensagens que são principalmente sobre o próprio sistema/produto
+  const PRODUCT_TALK_PATTERNS = [
+    /como (o|a|ele|ela) (roy|sistema|plataforma|app|ferramenta) (sabe|faz|funciona)/i,
+    /tenho (algumas |umas )?observa(ção|ções|coes) sobre/i,
+    /(mais pra|é pra|seria pra) (tu |você )?(conhecer|ver|testar)/i,
+    /medir (de )?engajamento/i,
+    /puxar (as )?info/i,
+    /formulário externo/i,
+    /cliente (já )?tenha contratado/i,
+  ];
+  
+  if (PRODUCT_TALK_PATTERNS.some(p => p.test(normalized))) {
+    return { skip: true, reason: "product_talk" };
+  }
+  
+  // 5. Mensagens com apenas confirmações/respostas curtas
+  const CONFIRMATION_PATTERNS = [
+    /^(ok|okay|certo|combinado|blz|beleza|perfeito|show|massa|top|legal|boa|bora|vamos|sim|não|nao|s|n)[\s!.,?]*$/i,
+    /^(entendi|entendido|anotado|fechado|pode ser|tá bom|ta bom|tudo bem|tranquilo|de boa|suave)[\s!.,?]*$/i,
+    /^(vou ver|vou analisar|depois vejo|chegando em casa|até mais|até logo)[\s!.,?]*$/i,
+  ];
+  
+  if (CONFIRMATION_PATTERNS.some(p => p.test(normalized))) {
+    return { skip: true, reason: "confirmation_pattern" };
+  }
+  
+  // 6. Apenas emojis, risadas ou pontuação
+  const NOISE_PATTERNS = [
+    /^[\s\p{Emoji}\p{Emoji_Presentation}!?.,:;()]+$/u,
+    /^[kha]+$/i,
+    /^(rs|rsrs|rsrsrs|haha|hehe|kkk|kkkk|hahaha)+[\s!]*$/i,
+    /^(\[áudio\]|\[audio\]|\[voz\]|\[imagem\]|\[foto\]|\[vídeo\]|\[video\])$/i,
+  ];
+  
+  if (NOISE_PATTERNS.some(p => p.test(normalized))) {
+    return { skip: true, reason: "noise_pattern" };
+  }
+  
+  // 7. Mensagens sobre saúde/pessoal de terceiros (não são ROI/Risco de negócio)
+  const PERSONAL_PATTERNS = [
+    /(cirurgia|anestesia|hospital|médico|doutor|recuperação|operação)/i,
+    /avisa quando terminar/i,
+    /(como (tá|está|ta) a |como (foi|foi a )?sua )(cirurgia|operação|consulta|recuperação)/i,
+    /chapado de anestesia/i,
+  ];
+  
+  if (PERSONAL_PATTERNS.some(p => p.test(normalized))) {
+    return { skip: true, reason: "personal_health" };
+  }
+  
+  // 8. Agradecimentos genéricos (sem contexto de resultado)
+  const THANKS_PATTERNS = [
+    /^(muito )?obrigad[oa][\s!.,?]*$/i,
+    /^valeu[\s!.,?]*$/i,
+    /^(muito bom|ótimo|excelente|incrível|top|show|perfeito)[\s!.,?]*$/i,
+    /que bom que deu (tudo )?certo/i,
+    /fico feliz/i,
+  ];
+  
+  if (THANKS_PATTERNS.some(p => p.test(normalized))) {
+    return { skip: true, reason: "generic_thanks" };
+  }
+  
+  // 9. Perguntas sem contexto de ROI/Risco
+  const QUESTION_PATTERNS = [
+    /^(como|quando|onde|qual|quem|porque|por que|o que|que horas)\s/i,
+    /\?[\s]*$/,
+  ];
+  
+  // Se for principalmente uma pergunta curta, pular
+  if (QUESTION_PATTERNS.some(p => p.test(normalized)) && text.length < 150) {
+    return { skip: true, reason: "short_question" };
+  }
+  
+  return { skip: false, reason: "" };
+}
+
+// Verificar se o snippet/evidência já existe (deduplicação mais robusta)
+async function checkDuplicate(
+  supabase: any,
+  table: string,
+  clientId: string,
+  field: string,
+  value: string,
+  hoursWindow: number = 24
+): Promise<boolean> {
+  const since = new Date(Date.now() - hoursWindow * 60 * 60 * 1000).toISOString();
+  
+  // Normaliza o valor para comparação
+  const normalizedValue = value.toLowerCase().trim().substring(0, 100);
+  
+  const { data, error } = await supabase
+    .from(table)
+    .select("id, " + field)
+    .eq("client_id", clientId)
+    .gte("created_at", since)
+    .limit(50);
+  
+  if (error || !data) return false;
+  
+  // Verifica se algum registro existente é similar
+  for (const record of data) {
+    const existingValue = (record[field] || "").toLowerCase().trim().substring(0, 100);
+    
+    // Similaridade exata ou muito próxima
+    if (existingValue === normalizedValue) return true;
+    
+    // Similaridade por substring (uma contém a outra)
+    if (existingValue.includes(normalizedValue) || normalizedValue.includes(existingValue)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -212,7 +384,7 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { message_event_id, content_text, client_id, account_id, source } = await req.json();
+    const { message_event_id, content_text, client_id, account_id, source, direction } = await req.json();
 
     if (!content_text || !client_id || !account_id) {
       return new Response(
@@ -221,11 +393,21 @@ serve(async (req) => {
       );
     }
 
+    // FILTRO IMPORTANTE: Só analisar mensagens DO CLIENTE, não da equipe
+    if (direction === 'team_to_client') {
+      console.log(`Skipping team message (direction: ${direction})`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Team messages are not analyzed", skipped: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Fetch AI settings for this account
     const aiSettings = await getAISettings(supabase, account_id);
     console.log(`AI Settings loaded for account ${account_id}:`, {
       model: aiSettings.model,
       min_message_length: aiSettings.min_message_length,
+      confidence_threshold: aiSettings.confidence_threshold,
       auto_analysis_enabled: aiSettings.auto_analysis_enabled,
     });
 
@@ -238,79 +420,42 @@ serve(async (req) => {
       );
     }
 
-    // Check minimum message length
-    if (content_text.length < aiSettings.min_message_length) {
-      console.log(`Message too short (${content_text.length} < ${aiSettings.min_message_length}), skipping analysis`);
+    // PRE-FILTRO ROBUSTO
+    const preFilter = shouldSkipMessage(content_text);
+    if (preFilter.skip) {
+      console.log(`Message skipped by pre-filter (${preFilter.reason}): "${content_text.substring(0, 60)}..."`);
       return new Response(
-        JSON.stringify({ success: true, message: "Message too short for analysis", skipped: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Pre-filter: Skip messages that are clearly not actionable (save AI tokens)
-    const normalizedText = content_text.toLowerCase().trim();
-    const SKIP_PATTERNS = [
-      // Saudações e despedidas
-      /^(oi|olá|ola|hey|e ai|eai|boa tarde|bom dia|boa noite|fala|salve)[\s!.,?]*$/i,
-      /^(tchau|até|ate|flw|vlw|valeu|obrigado|obrigada|brigado|brigada)[\s!.,?]*$/i,
-      // Confirmações simples
-      /^(ok|okay|certo|combinado|blz|beleza|perfeito|show|massa|top|legal|boa|bora|vamos|sim|não|nao|s|n)[\s!.,?]*$/i,
-      // Respostas curtas genéricas
-      /^(entendi|entendido|anotado|fechado|pode ser|tá bom|ta bom|tudo bem|tranquilo|de boa|suave)[\s!.,?]*$/i,
-      // Apenas emojis ou pontuação
-      /^[\s\p{Emoji}\p{Emoji_Presentation}!?.,:;()]+$/u,
-      // Risadas
-      /^[kha]+$/i,
-      /^(rs|rsrs|rsrsrs|haha|hehe|kkk|kkkk)+[\s!]*$/i,
-      // Áudios genéricos (transcrições muito curtas)
-      /^(\[áudio\]|\[audio\]|\[voz\])$/i,
-    ];
-
-    const shouldSkip = SKIP_PATTERNS.some(pattern => pattern.test(normalizedText));
-    if (shouldSkip) {
-      console.log(`Message skipped by pre-filter (generic pattern): "${normalizedText.substring(0, 50)}"`);
-      return new Response(
-        JSON.stringify({ success: true, message: "Message skipped by pre-filter", skipped: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Count meaningful words (filter out very short words)
-    const words = normalizedText.split(/\s+/).filter((w: string) => w.length > 2);
-    if (words.length < 5) {
-      console.log(`Message has too few meaningful words (${words.length}), skipping analysis`);
-      return new Response(
-        JSON.stringify({ success: true, message: "Message has too few words for analysis", skipped: true }),
+        JSON.stringify({ success: true, message: `Skipped: ${preFilter.reason}`, skipped: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Analyzing message for client ${client_id} using model ${aiSettings.model}:`, content_text.substring(0, 100));
 
-    // Get recent context from this client
+    // Get recent context from this client (apenas mensagens do cliente)
     const { data: recentMessages } = await supabase
       .from("message_events")
       .select("content_text, direction, sent_at")
       .eq("client_id", client_id)
       .order("sent_at", { ascending: false })
-      .limit(5);
+      .limit(3);
 
     const contextStr = recentMessages?.map(m => 
-      `[${m.direction === 'client_to_team' ? 'Cliente' : 'Equipe'}]: ${m.content_text?.substring(0, 200) || '(sem texto)'}`
+      `[${m.direction === 'client_to_team' ? 'Cliente' : 'Equipe'}]: ${m.content_text?.substring(0, 150) || '(sem texto)'}`
     ).join("\n") || "";
 
-    const userPrompt = `Analise a seguinte mensagem do cliente e identifique:
-1. Evidências de ROI percebido (tangível ou intangível) - ${aiSettings.roi_prompt}
-2. Sinais de risco - ${aiSettings.risk_prompt}
-3. Momentos CX (eventos importantes da vida do cliente) - ${aiSettings.life_events_prompt}
+    const userPrompt = `Analise esta mensagem DO CLIENTE e identifique APENAS eventos com ALTA CERTEZA:
 
 CONTEXTO RECENTE:
 ${contextStr}
 
-MENSAGEM ATUAL (fonte: ${source}):
+MENSAGEM ATUAL DO CLIENTE (fonte: ${source}):
 "${content_text}"
 
-Analise e retorne os eventos identificados.`;
+LEMBRE-SE:
+- MENOS É MAIS: Só retorne eventos se tiver 100% de certeza
+- Na MENOR dúvida, retorne arrays vazios
+- Elogios, agradecimentos e perguntas NÃO são ROI nem Risco`;
 
     const systemPrompt = buildSystemPrompt(aiSettings);
 
@@ -331,13 +476,13 @@ Analise e retorne os eventos identificados.`;
             type: "function",
             function: {
               name: "classify_message",
-              description: "Classifica a mensagem identificando ROI, riscos e momentos CX",
+              description: "Classifica a mensagem identificando ROI, riscos e momentos CX. SEJA MUITO CONSERVADOR - na dúvida, retorne arrays vazios.",
               parameters: {
                 type: "object",
                 properties: {
                   roi_events: {
                     type: "array",
-                    description: "Lista de eventos de ROI identificados",
+                    description: "Lista de eventos de ROI identificados. DEIXE VAZIO se não houver resultado concreto.",
                     items: {
                       type: "object",
                       properties: {
@@ -358,19 +503,19 @@ Analise e retorne os eventos identificados.`;
                         },
                         evidence_snippet: { 
                           type: "string",
-                          description: "Trecho da mensagem que evidencia o ROI"
+                          description: "Trecho EXATO da mensagem que PROVA o resultado (mínimo 30 caracteres)"
                         },
                         confidence: {
                           type: "number",
-                          description: "Nível de confiança da classificação (0-1)"
+                          description: "Nível de confiança (0-1). Só inclua se >= 0.85"
                         }
                       },
-                      required: ["roi_type", "category", "impact", "evidence_snippet"]
+                      required: ["roi_type", "category", "impact", "evidence_snippet", "confidence"]
                     }
                   },
                   risk_events: {
                     type: "array",
-                    description: "Lista de sinais de risco identificados",
+                    description: "Lista de sinais de risco. DEIXE VAZIO se não houver insatisfação explícita ou pedido de cancelamento.",
                     items: {
                       type: "object",
                       properties: {
@@ -381,23 +526,23 @@ Analise e retorne os eventos identificados.`;
                         },
                         reason: { 
                           type: "string",
-                          description: "Motivo do risco identificado (curto)"
+                          description: "Motivo ESPECÍFICO do risco (ex: 'Cliente pediu cancelamento')"
                         },
                         evidence_snippet: { 
                           type: "string",
-                          description: "Trecho que evidencia o risco"
+                          description: "Trecho EXATO que PROVA o risco (mínimo 30 caracteres)"
                         },
                         confidence: {
                           type: "number",
-                          description: "Nível de confiança da classificação (0-1)"
+                          description: "Nível de confiança (0-1). Só inclua se >= 0.85"
                         }
                       },
-                      required: ["risk_level", "reason", "evidence_snippet"]
+                      required: ["risk_level", "reason", "evidence_snippet", "confidence"]
                     }
                   },
                   life_events: {
                     type: "array",
-                    description: "Lista de momentos CX (eventos de vida) mencionados pelo cliente",
+                    description: "Lista de momentos CX. DEIXE VAZIO se não houver evento de vida EXPLÍCITO com detalhes.",
                     items: {
                       type: "object",
                       properties: {
@@ -408,26 +553,26 @@ Analise e retorne os eventos identificados.`;
                         },
                         title: { 
                           type: "string",
-                          description: "Título descritivo do evento (ex: 'Aniversário de 40 anos', 'Nascimento do filho')"
+                          description: "Título descritivo COM DETALHES ESPECÍFICOS"
                         },
                         description: { 
                           type: "string",
-                          description: "Detalhes adicionais mencionados sobre o evento"
+                          description: "Detalhes mencionados"
                         },
                         event_date: { 
                           type: "string",
-                          description: "Data do evento se mencionada (formato YYYY-MM-DD). Se for data relativa, calcule a partir de hoje."
+                          description: "Data do evento (YYYY-MM-DD) - APENAS se mencionada explicitamente"
                         },
                         is_recurring: { 
                           type: "boolean",
-                          description: "Se é um evento recorrente anual (ex: aniversário)"
+                          description: "Se é recorrente (aniversário=true)"
                         },
                         confidence: {
                           type: "number",
-                          description: "Nível de confiança da classificação (0-1)"
+                          description: "Nível de confiança (0-1). Só inclua se >= 0.85"
                         }
                       },
-                      required: ["event_type", "title"]
+                      required: ["event_type", "title", "confidence"]
                     }
                   }
                 },
@@ -461,7 +606,7 @@ Analise e retorne os eventos identificados.`;
     }
 
     const aiResponse = await response.json();
-    console.log("AI Response:", JSON.stringify(aiResponse, null, 2));
+    console.log("AI Response received");
 
     // Extract token usage from response
     const inputTokens = aiResponse.usage?.prompt_tokens || 0;
@@ -494,32 +639,36 @@ Analise e retorne os eventos identificados.`;
     }
 
     const classification = JSON.parse(toolCall.function.arguments);
-    console.log("Classification:", JSON.stringify(classification, null, 2));
+    console.log("Classification parsed:", JSON.stringify(classification, null, 2));
 
     const now = new Date().toISOString();
-    const results = { roi_events: 0, risk_events: 0, life_events: 0, filtered_by_confidence: 0 };
+    const results = { roi_events: 0, risk_events: 0, life_events: 0, filtered_by_confidence: 0, filtered_by_duplicate: 0, filtered_by_validation: 0 };
     const confidenceThreshold = aiSettings.confidence_threshold;
 
-    // Insert ROI events (filtered by confidence and duplicates)
+    // Insert ROI events (com validação rigorosa)
     if (classification.roi_events?.length > 0) {
       for (const roiEvent of classification.roi_events) {
-        // Check confidence threshold
-        if (roiEvent.confidence !== undefined && roiEvent.confidence < confidenceThreshold) {
-          console.log(`ROI event filtered: confidence ${roiEvent.confidence} < threshold ${confidenceThreshold}`);
+        // 1. Check confidence threshold (AUMENTADO)
+        const eventConfidence = roiEvent.confidence ?? 0;
+        if (eventConfidence < confidenceThreshold) {
+          console.log(`ROI event filtered: confidence ${eventConfidence} < threshold ${confidenceThreshold}`);
           results.filtered_by_confidence++;
           continue;
         }
 
-        // Check for duplicate evidence_snippet to avoid duplicates
-        const { data: existingRoi } = await supabase
-          .from("roi_events")
-          .select("id")
-          .eq("client_id", client_id)
-          .eq("evidence_snippet", roiEvent.evidence_snippet)
-          .limit(1);
-        
-        if (existingRoi && existingRoi.length > 0) {
+        // 2. Validar que evidence_snippet é significativo
+        const snippet = roiEvent.evidence_snippet || "";
+        if (snippet.length < 30) {
+          console.log(`ROI event filtered: evidence_snippet too short (${snippet.length} chars)`);
+          results.filtered_by_validation++;
+          continue;
+        }
+
+        // 3. Check for duplicate
+        const isDuplicate = await checkDuplicate(supabase, "roi_events", client_id, "evidence_snippet", snippet, 48);
+        if (isDuplicate) {
           console.log(`ROI event skipped: duplicate evidence_snippet found`);
+          results.filtered_by_duplicate++;
           continue;
         }
 
@@ -530,37 +679,42 @@ Analise e retorne os eventos identificados.`;
           roi_type: roiEvent.roi_type,
           category: roiEvent.category,
           impact: roiEvent.impact,
-          evidence_snippet: roiEvent.evidence_snippet,
+          evidence_snippet: snippet,
           happened_at: now,
         });
         if (error) {
           console.error("Error inserting roi_event:", error);
         } else {
           results.roi_events++;
+          console.log(`✅ ROI event created: ${roiEvent.category}/${roiEvent.impact} - confidence: ${eventConfidence}`);
         }
       }
     }
 
-    // Insert Risk events (filtered by confidence and duplicates)
+    // Insert Risk events (com validação rigorosa)
     if (classification.risk_events?.length > 0) {
       for (const riskEvent of classification.risk_events) {
-        // Check confidence threshold
-        if (riskEvent.confidence !== undefined && riskEvent.confidence < confidenceThreshold) {
-          console.log(`Risk event filtered: confidence ${riskEvent.confidence} < threshold ${confidenceThreshold}`);
+        // 1. Check confidence threshold
+        const eventConfidence = riskEvent.confidence ?? 0;
+        if (eventConfidence < confidenceThreshold) {
+          console.log(`Risk event filtered: confidence ${eventConfidence} < threshold ${confidenceThreshold}`);
           results.filtered_by_confidence++;
           continue;
         }
 
-        // Check for duplicate evidence_snippet to avoid duplicates
-        const { data: existingRisk } = await supabase
-          .from("risk_events")
-          .select("id")
-          .eq("client_id", client_id)
-          .eq("evidence_snippet", riskEvent.evidence_snippet)
-          .limit(1);
-        
-        if (existingRisk && existingRisk.length > 0) {
+        // 2. Validar que evidence_snippet é significativo
+        const snippet = riskEvent.evidence_snippet || "";
+        if (snippet.length < 30) {
+          console.log(`Risk event filtered: evidence_snippet too short (${snippet.length} chars)`);
+          results.filtered_by_validation++;
+          continue;
+        }
+
+        // 3. Check for duplicate
+        const isDuplicate = await checkDuplicate(supabase, "risk_events", client_id, "evidence_snippet", snippet, 48);
+        if (isDuplicate) {
           console.log(`Risk event skipped: duplicate evidence_snippet found`);
+          results.filtered_by_duplicate++;
           continue;
         }
 
@@ -570,37 +724,34 @@ Analise e retorne os eventos identificados.`;
           source: source || "whatsapp_text",
           risk_level: riskEvent.risk_level,
           reason: riskEvent.reason,
-          evidence_snippet: riskEvent.evidence_snippet,
+          evidence_snippet: snippet,
           happened_at: now,
         });
         if (error) {
           console.error("Error inserting risk_event:", error);
         } else {
           results.risk_events++;
+          console.log(`⚠️ Risk event created: ${riskEvent.risk_level} - confidence: ${eventConfidence}`);
         }
       }
     }
 
-    // Insert Life Events (Momentos CX) - filtered by confidence and duplicates
+    // Insert Life Events (com validação)
     if (classification.life_events?.length > 0) {
       for (const lifeEvent of classification.life_events) {
-        // Check confidence threshold
-        if (lifeEvent.confidence !== undefined && lifeEvent.confidence < confidenceThreshold) {
-          console.log(`Life event filtered: confidence ${lifeEvent.confidence} < threshold ${confidenceThreshold}`);
+        // 1. Check confidence threshold
+        const eventConfidence = lifeEvent.confidence ?? 0;
+        if (eventConfidence < confidenceThreshold) {
+          console.log(`Life event filtered: confidence ${eventConfidence} < threshold ${confidenceThreshold}`);
           results.filtered_by_confidence++;
           continue;
         }
 
-        // Check for duplicate title to avoid duplicates
-        const { data: existingLife } = await supabase
-          .from("client_life_events")
-          .select("id")
-          .eq("client_id", client_id)
-          .eq("title", lifeEvent.title)
-          .limit(1);
-        
-        if (existingLife && existingLife.length > 0) {
+        // 2. Check for duplicate title
+        const isDuplicate = await checkDuplicate(supabase, "client_life_events", client_id, "title", lifeEvent.title, 168); // 7 dias
+        if (isDuplicate) {
           console.log(`Life event skipped: duplicate title found`);
+          results.filtered_by_duplicate++;
           continue;
         }
 
@@ -623,13 +774,13 @@ Analise e retorne os eventos identificados.`;
           console.error("Error inserting life_event:", error);
         } else {
           results.life_events++;
-          console.log(`Life event detected: ${lifeEvent.event_type} - ${lifeEvent.title}`);
+          console.log(`📅 Life event created: ${lifeEvent.event_type} - ${lifeEvent.title}`);
         }
       }
     }
 
 
-    console.log(`Analysis complete using ${aiSettings.model}. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life Events. Filtered by confidence: ${results.filtered_by_confidence}`);
+    console.log(`Analysis complete. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life. Filtered: ${results.filtered_by_confidence} (confidence), ${results.filtered_by_duplicate} (duplicate), ${results.filtered_by_validation} (validation)`);
 
     // Log AI usage
     const { error: logError } = await supabase.from("ai_usage_logs").insert({
