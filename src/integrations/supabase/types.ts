@@ -2056,6 +2056,7 @@ export type Database = {
           notes: string | null
           rsvp_responded_at: string | null
           rsvp_status: Database["public"]["Enums"]["event_rsvp_status"]
+          rsvp_token: string | null
           updated_at: string
           waitlist_position: number | null
         }
@@ -2073,6 +2074,7 @@ export type Database = {
           notes?: string | null
           rsvp_responded_at?: string | null
           rsvp_status?: Database["public"]["Enums"]["event_rsvp_status"]
+          rsvp_token?: string | null
           updated_at?: string
           waitlist_position?: number | null
         }
@@ -2090,6 +2092,7 @@ export type Database = {
           notes?: string | null
           rsvp_responded_at?: string | null
           rsvp_status?: Database["public"]["Enums"]["event_rsvp_status"]
+          rsvp_token?: string | null
           updated_at?: string
           waitlist_position?: number | null
         }
@@ -3740,6 +3743,24 @@ export type Database = {
           title: string
         }[]
       }
+      get_participant_by_rsvp_token: {
+        Args: { p_token: string }
+        Returns: {
+          client_name: string
+          event_address: string
+          event_description: string
+          event_ends_at: string
+          event_id: string
+          event_meeting_url: string
+          event_modality: string
+          event_scheduled_at: string
+          event_title: string
+          guest_name: string
+          participant_id: string
+          rsvp_responded_at: string
+          rsvp_status: string
+        }[]
+      }
       get_related_clients: {
         Args: { p_client_id: string }
         Returns: {
@@ -3769,6 +3790,10 @@ export type Database = {
       record_rate_limit_hit: {
         Args: { p_action: string; p_identifier: string }
         Returns: undefined
+      }
+      submit_rsvp_response: {
+        Args: { p_status: string; p_token: string }
+        Returns: Json
       }
       use_coupon: {
         Args: {
