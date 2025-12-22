@@ -1558,6 +1558,319 @@ export type Database = {
           },
         ]
       }
+      event_checklist: {
+        Row: {
+          account_id: string
+          assigned_to: string | null
+          category: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          due_date: string | null
+          event_id: string
+          id: string
+          priority: string | null
+          status: Database["public"]["Enums"]["event_checklist_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assigned_to?: string | null
+          category?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          due_date?: string | null
+          event_id: string
+          id?: string
+          priority?: string | null
+          status?: Database["public"]["Enums"]["event_checklist_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assigned_to?: string | null
+          category?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          due_date?: string | null
+          event_id?: string
+          id?: string
+          priority?: string | null
+          status?: Database["public"]["Enums"]["event_checklist_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_checklist_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_checklist_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_checklist_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_checklist_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_checklist_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_costs: {
+        Row: {
+          account_id: string
+          actual_value: number | null
+          category: Database["public"]["Enums"]["event_cost_category"]
+          created_at: string
+          description: string
+          due_date: string | null
+          estimated_value: number
+          event_id: string
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          paid_at: string | null
+          receipt_url: string | null
+          status: Database["public"]["Enums"]["event_cost_status"]
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          actual_value?: number | null
+          category?: Database["public"]["Enums"]["event_cost_category"]
+          created_at?: string
+          description: string
+          due_date?: string | null
+          estimated_value?: number
+          event_id: string
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["event_cost_status"]
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          actual_value?: number | null
+          category?: Database["public"]["Enums"]["event_cost_category"]
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          estimated_value?: number
+          event_id?: string
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["event_cost_status"]
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_costs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_costs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_costs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_gifts: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          event_id: string
+          id: string
+          image_url: string | null
+          name: string
+          notes: string | null
+          quantity: number
+          quantity_distributed: number
+          status: Database["public"]["Enums"]["event_gift_status"]
+          supplier: string | null
+          total_cost: number | null
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          event_id: string
+          id?: string
+          image_url?: string | null
+          name: string
+          notes?: string | null
+          quantity?: number
+          quantity_distributed?: number
+          status?: Database["public"]["Enums"]["event_gift_status"]
+          supplier?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          event_id?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          notes?: string | null
+          quantity?: number
+          quantity_distributed?: number
+          status?: Database["public"]["Enums"]["event_gift_status"]
+          supplier?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_gifts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_gifts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_gifts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_notes: {
+        Row: {
+          account_id: string
+          content: string
+          created_at: string
+          event_id: string
+          id: string
+          is_pinned: boolean | null
+          note_type: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          content: string
+          created_at?: string
+          event_id: string
+          id?: string
+          is_pinned?: boolean | null
+          note_type?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          content?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          is_pinned?: boolean | null
+          note_type?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_notes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_products: {
         Row: {
           account_id: string
@@ -1611,58 +1924,140 @@ export type Database = {
           },
         ]
       }
+      event_schedule: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          end_time: string | null
+          event_id: string
+          id: string
+          location: string | null
+          notes: string | null
+          speaker: string | null
+          start_time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          end_time?: string | null
+          event_id: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          speaker?: string | null
+          start_time: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          end_time?: string | null
+          event_id?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          speaker?: string | null
+          start_time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_schedule_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_schedule_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_schedule_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           account_id: string
           address: string | null
+          budget: number | null
           checkin_code: string | null
+          cover_image_url: string | null
           created_at: string
           description: string | null
           duration_minutes: number | null
           ends_at: string | null
           event_type: Database["public"]["Enums"]["event_type"]
+          expected_attendees: number | null
           id: string
           is_recurring: boolean
           material_url: string | null
           meeting_url: string | null
           modality: Database["public"]["Enums"]["event_modality"]
           scheduled_at: string | null
+          status: string | null
           title: string
           updated_at: string
         }
         Insert: {
           account_id: string
           address?: string | null
+          budget?: number | null
           checkin_code?: string | null
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
           ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
+          expected_attendees?: number | null
           id?: string
           is_recurring?: boolean
           material_url?: string | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
           scheduled_at?: string | null
+          status?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           account_id?: string
           address?: string | null
+          budget?: number | null
           checkin_code?: string | null
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
           ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
+          expected_attendees?: number | null
           id?: string
           is_recurring?: boolean
           material_url?: string | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
           scheduled_at?: string | null
+          status?: string | null
           title?: string
           updated_at?: string
         }
@@ -3092,6 +3487,22 @@ export type Database = {
         | "no_contract"
       delivery_status: "pending" | "delivered" | "missed"
       discount_type: "percentage" | "fixed"
+      event_checklist_status: "pending" | "in_progress" | "done" | "cancelled"
+      event_cost_category:
+        | "venue"
+        | "catering"
+        | "equipment"
+        | "marketing"
+        | "travel"
+        | "accommodation"
+        | "speakers"
+        | "gifts"
+        | "staff"
+        | "technology"
+        | "insurance"
+        | "other"
+      event_cost_status: "estimated" | "approved" | "paid" | "cancelled"
+      event_gift_status: "planned" | "purchased" | "in_stock" | "distributed"
       event_modality: "online" | "presencial"
       event_type:
         | "live"
@@ -3326,6 +3737,23 @@ export const Constants = {
       ],
       delivery_status: ["pending", "delivered", "missed"],
       discount_type: ["percentage", "fixed"],
+      event_checklist_status: ["pending", "in_progress", "done", "cancelled"],
+      event_cost_category: [
+        "venue",
+        "catering",
+        "equipment",
+        "marketing",
+        "travel",
+        "accommodation",
+        "speakers",
+        "gifts",
+        "staff",
+        "technology",
+        "insurance",
+        "other",
+      ],
+      event_cost_status: ["estimated", "approved", "paid", "cancelled"],
+      event_gift_status: ["planned", "purchased", "in_stock", "distributed"],
       event_modality: ["online", "presencial"],
       event_type: [
         "live",
