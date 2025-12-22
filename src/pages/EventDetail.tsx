@@ -57,6 +57,7 @@ interface Event {
   checkin_code: string | null;
   budget: number | null;
   expected_attendees: number | null;
+  max_capacity: number | null;
   cover_image_url: string | null;
   status: string | null;
   created_at: string;
