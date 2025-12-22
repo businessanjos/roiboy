@@ -30,6 +30,7 @@ import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
 import { ClientContracts } from "@/components/client/ClientContracts";
 import { ClientDiagnostic } from "@/components/client/ClientDiagnostic";
+import { ClientRelationships } from "@/components/client/ClientRelationships";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -230,6 +231,9 @@ export default function ClientDetail() {
   
   // Active contract from client_contracts table
   const [activeContract, setActiveContract] = useState<{ start_date: string; end_date: string } | null>(null);
+  
+  // Account ID for relationships
+  const [accountId, setAccountId] = useState<string | null>(null);
 
   const fetchAllProducts = async () => {
     const { data, error } = await supabase
@@ -532,6 +536,7 @@ export default function ClientDetail() {
         .single();
 
       if (clientError) throw clientError;
+      setAccountId(clientData.account_id);
       setClient({
         ...clientData,
         tags: (clientData.tags as string[]) || [],
@@ -2015,6 +2020,7 @@ export default function ClientDetail() {
             <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="cx">Momentos CX</TabsTrigger>
+            <TabsTrigger value="vinculos">Vínculos</TabsTrigger>
             <TabsTrigger value="contracts">Contratos</TabsTrigger>
             <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
             <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
@@ -2065,6 +2071,12 @@ export default function ClientDetail() {
               <ClientLifeEvents clientId={id!} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="vinculos">
+          {accountId && (
+            <ClientRelationships clientId={id!} accountId={accountId} />
+          )}
         </TabsContent>
 
         <TabsContent value="contracts">
