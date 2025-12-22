@@ -71,28 +71,29 @@ export default function DownloadPage() {
               </ul>
 
               <div className="space-y-3">
-                <a 
-                  href="https://github.com/nicollaspetrworski/roiboy-app/releases/latest/download/ROY-APP-mac.dmg"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
+                <Button 
+                  className="w-full gap-2" 
+                  size="lg"
+                  disabled
                 >
-                  <Button className="w-full gap-2" size="lg">
-                    <Apple className="h-5 w-5" />
-                    Download para Mac
-                  </Button>
-                </a>
-                <a 
-                  href="https://github.com/nicollaspetrworski/roiboy-app/releases/latest/download/ROY-APP-win.exe"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
+                  <Apple className="h-5 w-5" />
+                  Mac - Em breve
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2" 
+                  size="lg"
+                  disabled
                 >
-                  <Button variant="outline" className="w-full gap-2" size="lg">
-                    <Monitor className="h-5 w-5" />
-                    Download para Windows
-                  </Button>
-                </a>
+                  <Monitor className="h-5 w-5" />
+                  Windows - Em breve
+                </Button>
+              </div>
+              
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                  O app desktop está em desenvolvimento. Use a extensão do Chrome por enquanto.
+                </p>
               </div>
 
               <p className="text-xs text-muted-foreground text-center">
@@ -137,20 +138,6 @@ export default function DownloadPage() {
                     <Chrome className="h-5 w-5" />
                     Adicionar ao Chrome
                     <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </a>
-                <p className="text-sm text-muted-foreground text-center">
-                  ou instale manualmente:
-                </p>
-                <a 
-                  href="https://github.com/nicollaspetrworski/roiboy-app/releases/latest/download/extension.zip"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button variant="outline" className="w-full gap-2" size="lg">
-                    <Download className="h-5 w-5" />
-                    Baixar Extensão (.zip)
                   </Button>
                 </a>
               </div>
