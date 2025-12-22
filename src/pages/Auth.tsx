@@ -19,6 +19,11 @@ import royLogo from "@/assets/roy-logo.png";
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const [searchParams] = useSearchParams();
+  
+  // Security hooks - MUST be called before any early returns
+  const { checkAccountLock, recordLoginAttempt, registerSession, isCheckingLock } = useLoginSecurity();
+  const { logLoginSuccess, logLoginFailure, logLoginBlocked, logSignupSuccess } = useSecurityAudit();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"auth" | "forgot" | "reset">("auth");
@@ -43,6 +48,11 @@ export default function Auth() {
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Security state
+  const [isAccountLocked, setIsAccountLocked] = useState(false);
+  const [lockoutMinutes, setLockoutMinutes] = useState(0);
+  const [remainingAttempts, setRemainingAttempts] = useState(5);
 
   // Check if user came from password reset link
   useEffect(() => {
@@ -59,13 +69,6 @@ export default function Auth() {
   if (user && view !== "reset") {
     return <Navigate to="/dashboard" replace />;
   }
-
-  // Security hooks
-  const { checkAccountLock, recordLoginAttempt, registerSession, isCheckingLock } = useLoginSecurity();
-  const { logLoginSuccess, logLoginFailure, logLoginBlocked, logSignupSuccess } = useSecurityAudit();
-  const [isAccountLocked, setIsAccountLocked] = useState(false);
-  const [lockoutMinutes, setLockoutMinutes] = useState(0);
-  const [remainingAttempts, setRemainingAttempts] = useState(5);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
