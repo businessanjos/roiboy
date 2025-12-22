@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Calendar, 
   Clock, 
-  MapPin, 
   Video, 
   Check, 
   X, 
@@ -18,6 +17,7 @@ import {
   XCircle,
   PartyPopper
 } from "lucide-react";
+import { AddressLink } from "@/components/ui/address-link";
 
 interface RSVPData {
   participant_id: string;
@@ -196,11 +196,13 @@ export default function PublicRSVP() {
                   <Video className="h-4 w-4 text-primary" />
                   <Badge variant="outline">Online</Badge>
                 </>
+              ) : data?.event_address ? (
+                <AddressLink 
+                  address={data.event_address} 
+                  className="text-sm"
+                />
               ) : (
-                <>
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <span>{data?.event_address || "Presencial"}</span>
-                </>
+                <span className="text-muted-foreground">Presencial</span>
               )}
             </div>
           </div>
