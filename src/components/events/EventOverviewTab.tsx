@@ -266,7 +266,7 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Link className="h-5 w-5" />
-            Link de Inscrição Pública
+            RSVP
           </CardTitle>
           <CardDescription>
             Compartilhe este link para que as pessoas possam se inscrever no evento
@@ -298,7 +298,7 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
           ) : (
             <div className="text-center py-6">
               <p className="text-muted-foreground mb-4">
-                Gere um código para criar um link de inscrição pública para este evento.
+                Gere um código para criar um link de RSVP para este evento.
               </p>
               <Button onClick={generateRegistrationCode} disabled={generatingCode}>
                 {generatingCode ? (
