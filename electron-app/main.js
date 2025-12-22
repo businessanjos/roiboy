@@ -1121,6 +1121,8 @@ async function sendWhatsAppMessageToAPI(messageData) {
 
 // ============= WhatsApp Audio Scan (Safe Method) =============
 // Separate scan for audio messages - runs independently to avoid UI crashes
+// IMPORTANT: This function ONLY collects metadata - it does NOT fetch audio content
+// to prevent interference with WhatsApp's audio player
 async function scanWhatsAppAudioMessages() {
   if (!whatsappWindow || !authData) return;
   
@@ -1131,7 +1133,7 @@ async function scanWhatsAppAudioMessages() {
   }
 
   try {
-    // Safe audio detection - just collect metadata, don't interact with elements (using global safeExecuteJS)
+    // Safe audio detection - ONLY collect metadata, DO NOT interact with elements or fetch blob URLs
     const audioMessages = await safeExecuteJS(whatsappWindow, `
       (function() {
         window.__royProcessedAudioIds = window.__royProcessedAudioIds || new Set();
@@ -1160,15 +1162,11 @@ async function scanWhatsAppAudioMessages() {
           return { phone, contactName, isGroup };
         }
         
-        // Find audio/voice message elements safely - try multiple selectors
+        // Find audio/voice message elements safely - MINIMAL selectors to reduce DOM interaction
+        // Only look for the most reliable audio indicators
         const audioContainers = document.querySelectorAll(
-          '[data-testid="audio-play"], [data-testid="ptt-play"], ' +
-          '[data-icon="audio-play"], [data-icon="ptt-play"], ' +
-          'button[aria-label*="Play"], button[aria-label*="Reproduzir"], ' +
-          '[data-testid="ptt"], audio'
+          '[data-testid="ptt"], [data-testid="audio-play"], [data-testid="ptt-play"]'
         );
-        
-        console.log('[ROY-AUDIO] Encontrados', audioContainers.length, 'elementos de áudio candidatos');
         
         audioContainers.forEach(audioBtn => {
           try {
@@ -1177,7 +1175,6 @@ async function scanWhatsAppAudioMessages() {
             if (!msgContainer) return;
             
             const msgId = msgContainer.getAttribute('data-id') || 
-                         audioBtn.closest('[data-id]')?.getAttribute('data-id') ||
                          'audio_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
             
             if (window.__royProcessedAudioIds.has(msgId)) return;
@@ -1187,10 +1184,9 @@ async function scanWhatsAppAudioMessages() {
                               !!msgContainer.querySelector('[data-icon="msg-check"]') ||
                               !!msgContainer.querySelector('[data-icon="msg-dblcheck"]');
             
-            // Try to find duration from the UI
+            // Try to find duration from the UI - be careful to not interfere
             let durationSec = 0;
-            const durationSpan = msgContainer.querySelector('[data-testid="audio-duration"]') ||
-                                msgContainer.querySelector('span[dir="auto"]');
+            const durationSpan = msgContainer.querySelector('[data-testid="audio-duration"]');
             if (durationSpan) {
               const durationText = durationSpan.innerText || '';
               const match = durationText.match(/(\\d+):(\\d+)/);
@@ -1199,9 +1195,7 @@ async function scanWhatsAppAudioMessages() {
               }
             }
             
-            // Try to find audio element src
-            const audioEl = msgContainer.querySelector('audio');
-            const audioSrc = audioEl ? audioEl.src : null;
+            // DO NOT access audio.src - this can interfere with playback
             
             const chatInfo = getChatInfo();
             
@@ -1217,7 +1211,6 @@ async function scanWhatsAppAudioMessages() {
               id: msgId,
               direction: isOutgoing ? 'team_to_client' : 'client_to_team',
               durationSec: durationSec,
-              audioSrc: audioSrc,
               phone: chatInfo.phone,
               contactName: chatInfo.contactName,
               isGroup: chatInfo.isGroup,
@@ -1236,11 +1229,10 @@ async function scanWhatsAppAudioMessages() {
       console.log('[ROY] Encontradas', audioMessages.length, 'mensagens de áudio');
       
       for (const audioData of audioMessages) {
-        console.log('[ROY] Processando áudio:', {
+        console.log('[ROY] Registrando áudio (metadata):', {
           direction: audioData.direction,
           duration: audioData.durationSec + 's',
-          phone: audioData.phone,
-          hasAudioSrc: !!audioData.audioSrc
+          phone: audioData.phone
         });
         
         await sendWhatsAppAudioToAPI(audioData);
@@ -1258,6 +1250,8 @@ async function scanWhatsAppAudioMessages() {
 }
 
 // ============= WhatsApp Audio Capture =============
+// NOTE: Audio content fetching is DISABLED to prevent WhatsApp UI bugs.
+// We only capture metadata (duration, direction, contact) for now.
 async function sendWhatsAppAudioToAPI(audioData) {
   if (!authData) return;
 
@@ -1279,69 +1273,7 @@ async function sendWhatsAppAudioToAPI(audioData) {
       ? 'team_to_client' 
       : 'client_to_team';
 
-    // Try to fetch the audio content if we have a URL (using global safeExecuteJS)
-    let audioBase64 = null;
-    if (audioData.audioSrc && audioData.audioSrc.startsWith('blob:')) {
-      // For blob URLs, we need to fetch from the WhatsApp window context
-      audioBase64 = await safeExecuteJS(whatsappWindow, `
-        (async function() {
-          try {
-            const response = await fetch('${audioData.audioSrc}');
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const base64 = reader.result.split(',')[1];
-                resolve(base64);
-              };
-              reader.readAsDataURL(blob);
-            });
-          } catch (e) {
-            console.error('[ROY] Erro ao buscar áudio:', e);
-            return null;
-          }
-        })()
-      `);
-    }
-
-    if (!audioBase64) {
-      console.log('[ROY] Áudio sem conteúdo base64, registrando apenas metadados');
-      // Even without audio content, we can log the audio message event
-      // The backend can handle messages without audio content (just metadata)
-      const payload = {
-        phone_e164: phoneE164 || undefined,
-        contact_name: audioData.contactName || undefined,
-        direction: direction,
-        sent_at: audioData.timestamp || new Date().toISOString(),
-        source: 'extension',
-        is_group: audioData.isGroup || false,
-        account_id: accountId,
-        audio_duration_sec: audioData.durationSec || 0,
-        audio_format: 'ogg',
-        has_audio_content: false
-      };
-
-      // Send to regular message endpoint as an audio placeholder
-      const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-account-id': accountId
-        },
-        body: JSON.stringify({
-          ...payload,
-          content_text: '[Áudio - ' + (audioData.durationSec || 0) + 's - sem transcrição disponível]'
-        })
-      });
-
-      if (response.ok) {
-        console.log('[ROY] Áudio (metadados) registrado com sucesso');
-      } else {
-        console.error('[ROY] Erro ao registrar áudio:', await response.text());
-      }
-      return;
-    }
-
+    // Only capture metadata - no audio content to prevent UI bugs
     const payload = {
       phone_e164: phoneE164 || undefined,
       contact_name: audioData.contactName || undefined,
@@ -1350,20 +1282,11 @@ async function sendWhatsAppAudioToAPI(audioData) {
       source: 'extension',
       is_group: audioData.isGroup || false,
       account_id: accountId,
-      audio_base64: audioBase64,
-      audio_duration_sec: audioData.durationSec || 0,
-      audio_format: 'ogg'
+      content_text: '[Áudio - ' + (audioData.durationSec || 0) + 's]'
     };
 
-    console.log('[ROY] Enviando áudio para transcrição:', { 
-      phone: phoneE164, 
-      contactName: audioData.contactName, 
-      direction,
-      durationSec: audioData.durationSec,
-      audioSize: audioBase64.length
-    });
-
-    const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-audio`, {
+    // Send to regular message endpoint as an audio event
+    const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1372,16 +1295,14 @@ async function sendWhatsAppAudioToAPI(audioData) {
       body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
-
     if (response.ok) {
       captureState.whatsapp.messagesSent++;
       updateStats();
-      console.log('[ROY] Áudio transcrito e enviado:', result);
+      console.log('[ROY] Áudio registrado com sucesso');
     } else {
       captureState.whatsapp.errors++;
       updateStats();
-      console.error('[ROY] Erro na transcrição:', result);
+      console.error('[ROY] Erro ao registrar áudio:', await response.text());
     }
   } catch (error) {
     console.error('[ROY] Erro ao enviar áudio:', error);
