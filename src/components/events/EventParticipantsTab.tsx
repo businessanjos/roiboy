@@ -293,6 +293,8 @@ export default function EventParticipantsTab({
     pending: participants.filter(p => p.rsvp_status === 'pending').length,
     waitlist: participants.filter(p => p.rsvp_status === 'waitlist').length,
     declined: participants.filter(p => p.rsvp_status === 'declined').length,
+    attended: participants.filter(p => p.rsvp_status === 'attended').length,
+    noShow: participants.filter(p => p.rsvp_status === 'no_show').length,
   };
 
   const filteredClients = clients.filter(c => 
@@ -303,7 +305,7 @@ export default function EventParticipantsTab({
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <Card className="p-3">
           <p className="text-2xl font-bold">{stats.total}</p>
           <p className="text-xs text-muted-foreground">Total</p>
@@ -311,6 +313,10 @@ export default function EventParticipantsTab({
         <Card className="p-3">
           <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
           <p className="text-xs text-muted-foreground">Confirmados</p>
+        </Card>
+        <Card className="p-3">
+          <p className="text-2xl font-bold text-emerald-600">{stats.attended}</p>
+          <p className="text-xs text-muted-foreground">Presentes</p>
         </Card>
         <Card className="p-3">
           <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
@@ -323,6 +329,10 @@ export default function EventParticipantsTab({
         <Card className="p-3">
           <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
           <p className="text-xs text-muted-foreground">Recusados</p>
+        </Card>
+        <Card className="p-3">
+          <p className="text-2xl font-bold text-gray-500">{stats.noShow}</p>
+          <p className="text-xs text-muted-foreground">Faltaram</p>
         </Card>
       </div>
 
