@@ -655,9 +655,44 @@ async function injectWhatsAppCaptureScript() {
   }
 
   try {
+    // CRITICAL: Check if user is recording audio BEFORE doing anything
+    // If recording, skip this entire capture cycle to avoid interference
+    const isRecording = await safeExecuteJS(whatsappWindow, `
+      (function() {
+        // Detect audio recording state - look for recording indicators
+        const recordingBtn = document.querySelector('[data-testid="ptt-release"]') ||
+                            document.querySelector('[data-testid="audio-cancel"]') ||
+                            document.querySelector('[data-icon="audio-cancel"]') ||
+                            document.querySelector('[data-testid="ptt-cancel"]') ||
+                            document.querySelector('.ptt-recording') ||
+                            document.querySelector('[class*="ptt-recording"]');
+        
+        // Also check if there's an active MediaRecorder or audio waveform
+        const hasWaveform = document.querySelector('[data-testid="ptt-waveform"]') ||
+                           document.querySelector('[class*="waveform"]');
+        
+        return !!(recordingBtn || hasWaveform);
+      })()
+    `);
+    
+    if (isRecording) {
+      console.log('[ROY] Usuário gravando áudio - pulando captura para não interferir');
+      return; // Skip entirely while recording
+    }
+
     // First, inject the capture script and get diagnostic info (using global safeExecuteJS)
     const diagnostics = await safeExecuteJS(whatsappWindow, `
       (function() {
+        // SAFETY CHECK: If any audio recording UI is visible, abort immediately
+        const recordingElements = document.querySelectorAll('[data-testid*="ptt"], [data-icon*="ptt"], [class*="ptt"]');
+        for (const el of recordingElements) {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            // PTT element is visible - likely recording or about to record
+            return { aborted: true, reason: 'ptt-visible' };
+          }
+        }
+        
         // Initialize message queue if not exists
         window.__royMessageQueue = window.__royMessageQueue || [];
         window.__roySentIds = window.__roySentIds || new Set();
@@ -836,6 +871,12 @@ async function injectWhatsAppCaptureScript() {
         return diag;
       })()
     `);
+    
+    // If aborted due to PTT visibility, skip this cycle
+    if (diagnostics && diagnostics.aborted) {
+      console.log('[ROY] Captura abortada:', diagnostics.reason);
+      return;
+    }
     
     console.log('[ROY] Diagnóstico captura:', diagnostics);
     
