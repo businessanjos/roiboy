@@ -1727,6 +1727,99 @@ export type Database = {
           },
         ]
       }
+      event_feedback: {
+        Row: {
+          account_id: string
+          additional_comments: string | null
+          client_id: string | null
+          content_rating: number | null
+          created_at: string
+          event_id: string
+          highlights: string | null
+          id: string
+          improvements: string | null
+          nps_score: number | null
+          organization_rating: number | null
+          overall_rating: number | null
+          participant_id: string | null
+          submitted_at: string
+          venue_rating: number | null
+          would_recommend: boolean | null
+        }
+        Insert: {
+          account_id: string
+          additional_comments?: string | null
+          client_id?: string | null
+          content_rating?: number | null
+          created_at?: string
+          event_id: string
+          highlights?: string | null
+          id?: string
+          improvements?: string | null
+          nps_score?: number | null
+          organization_rating?: number | null
+          overall_rating?: number | null
+          participant_id?: string | null
+          submitted_at?: string
+          venue_rating?: number | null
+          would_recommend?: boolean | null
+        }
+        Update: {
+          account_id?: string
+          additional_comments?: string | null
+          client_id?: string | null
+          content_rating?: number | null
+          created_at?: string
+          event_id?: string
+          highlights?: string | null
+          id?: string
+          improvements?: string | null
+          nps_score?: number | null
+          organization_rating?: number | null
+          overall_rating?: number | null
+          participant_id?: string | null
+          submitted_at?: string
+          venue_rating?: number | null
+          would_recommend?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_feedback_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "event_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_gifts: {
         Row: {
           account_id: string
@@ -1803,6 +1896,83 @@ export type Database = {
           },
         ]
       }
+      event_media: {
+        Row: {
+          account_id: string
+          caption: string | null
+          created_at: string
+          display_order: number | null
+          event_id: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string
+          id: string
+          is_cover: boolean
+          media_type: Database["public"]["Enums"]["event_media_type"]
+          thumbnail_url: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          account_id: string
+          caption?: string | null
+          created_at?: string
+          display_order?: number | null
+          event_id: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_cover?: boolean
+          media_type?: Database["public"]["Enums"]["event_media_type"]
+          thumbnail_url?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          caption?: string | null
+          created_at?: string
+          display_order?: number | null
+          event_id?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_cover?: boolean
+          media_type?: Database["public"]["Enums"]["event_media_type"]
+          thumbnail_url?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_media_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_notes: {
         Row: {
           account_id: string
@@ -1865,6 +2035,96 @@ export type Database = {
           {
             foreignKeyName: "event_notes_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_participants: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          created_at: string
+          event_id: string
+          guest_email: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          notes: string | null
+          rsvp_responded_at: string | null
+          rsvp_status: Database["public"]["Enums"]["event_rsvp_status"]
+          updated_at: string
+          waitlist_position: number | null
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          created_at?: string
+          event_id: string
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          notes?: string | null
+          rsvp_responded_at?: string | null
+          rsvp_status?: Database["public"]["Enums"]["event_rsvp_status"]
+          updated_at?: string
+          waitlist_position?: number | null
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          created_at?: string
+          event_id?: string
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          notes?: string | null
+          rsvp_responded_at?: string | null
+          rsvp_status?: Database["public"]["Enums"]["event_rsvp_status"]
+          updated_at?: string
+          waitlist_position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_participants_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1994,6 +2254,74 @@ export type Database = {
           },
         ]
       }
+      event_team: {
+        Row: {
+          account_id: string
+          created_at: string
+          event_id: string
+          id: string
+          is_primary: boolean
+          responsibilities: string | null
+          role: Database["public"]["Enums"]["event_team_role"]
+          role_description: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          is_primary?: boolean
+          responsibilities?: string | null
+          role?: Database["public"]["Enums"]["event_team_role"]
+          role_description?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          is_primary?: boolean
+          responsibilities?: string | null
+          role?: Database["public"]["Enums"]["event_team_role"]
+          role_description?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_team_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_team_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_team_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_team_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           account_id: string
@@ -2010,6 +2338,7 @@ export type Database = {
           id: string
           is_recurring: boolean
           material_url: string | null
+          max_capacity: number | null
           meeting_url: string | null
           modality: Database["public"]["Enums"]["event_modality"]
           scheduled_at: string | null
@@ -2032,6 +2361,7 @@ export type Database = {
           id?: string
           is_recurring?: boolean
           material_url?: string | null
+          max_capacity?: number | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
           scheduled_at?: string | null
@@ -2054,6 +2384,7 @@ export type Database = {
           id?: string
           is_recurring?: boolean
           material_url?: string | null
+          max_capacity?: number | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
           scheduled_at?: string | null
@@ -3503,7 +3834,23 @@ export type Database = {
         | "other"
       event_cost_status: "estimated" | "approved" | "paid" | "cancelled"
       event_gift_status: "planned" | "purchased" | "in_stock" | "distributed"
+      event_media_type: "photo" | "video" | "document" | "other"
       event_modality: "online" | "presencial"
+      event_rsvp_status:
+        | "pending"
+        | "confirmed"
+        | "declined"
+        | "waitlist"
+        | "attended"
+        | "no_show"
+      event_team_role:
+        | "organizer"
+        | "coordinator"
+        | "support"
+        | "speaker"
+        | "host"
+        | "photographer"
+        | "other"
       event_type:
         | "live"
         | "material"
@@ -3754,7 +4101,25 @@ export const Constants = {
       ],
       event_cost_status: ["estimated", "approved", "paid", "cancelled"],
       event_gift_status: ["planned", "purchased", "in_stock", "distributed"],
+      event_media_type: ["photo", "video", "document", "other"],
       event_modality: ["online", "presencial"],
+      event_rsvp_status: [
+        "pending",
+        "confirmed",
+        "declined",
+        "waitlist",
+        "attended",
+        "no_show",
+      ],
+      event_team_role: [
+        "organizer",
+        "coordinator",
+        "support",
+        "speaker",
+        "host",
+        "photographer",
+        "other",
+      ],
       event_type: [
         "live",
         "material",

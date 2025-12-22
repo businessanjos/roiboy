@@ -16,6 +16,7 @@ import {
   Clock, 
   MapPin, 
   Users, 
+  Users2,
   Video,
   DollarSign,
   Gift,
@@ -24,7 +25,9 @@ import {
   ListOrdered,
   Settings,
   QrCode,
-  ExternalLink
+  ExternalLink,
+  Image,
+  MessageSquare
 } from "lucide-react";
 
 import EventScheduleTab from "@/components/events/EventScheduleTab";
@@ -33,6 +36,10 @@ import EventGiftsTab from "@/components/events/EventGiftsTab";
 import EventCostsTab from "@/components/events/EventCostsTab";
 import EventNotesTab from "@/components/events/EventNotesTab";
 import EventOverviewTab from "@/components/events/EventOverviewTab";
+import EventParticipantsTab from "@/components/events/EventParticipantsTab";
+import EventTeamTab from "@/components/events/EventTeamTab";
+import EventMediaTab from "@/components/events/EventMediaTab";
+import EventFeedbackTab from "@/components/events/EventFeedbackTab";
 
 interface Event {
   id: string;
@@ -381,6 +388,22 @@ export default function EventDetail() {
             <FileText className="h-4 w-4" />
             Notas
           </TabsTrigger>
+          <TabsTrigger value="participants" className="gap-2">
+            <Users className="h-4 w-4" />
+            Participantes
+          </TabsTrigger>
+          <TabsTrigger value="team" className="gap-2">
+            <Users2 className="h-4 w-4" />
+            Equipe
+          </TabsTrigger>
+          <TabsTrigger value="media" className="gap-2">
+            <Image className="h-4 w-4" />
+            Galeria
+          </TabsTrigger>
+          <TabsTrigger value="feedback" className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Feedback
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -425,6 +448,27 @@ export default function EventDetail() {
 
         <TabsContent value="notes">
           <EventNotesTab eventId={event.id} accountId={accountId} />
+        </TabsContent>
+
+        <TabsContent value="participants">
+          <EventParticipantsTab 
+            eventId={event.id} 
+            accountId={accountId}
+            maxCapacity={event.max_capacity}
+            onUpdate={fetchStats}
+          />
+        </TabsContent>
+
+        <TabsContent value="team">
+          <EventTeamTab eventId={event.id} accountId={accountId} />
+        </TabsContent>
+
+        <TabsContent value="media">
+          <EventMediaTab eventId={event.id} accountId={accountId} />
+        </TabsContent>
+
+        <TabsContent value="feedback">
+          <EventFeedbackTab eventId={event.id} accountId={accountId} />
         </TabsContent>
       </Tabs>
     </div>
