@@ -186,12 +186,10 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
             icon={ListOrdered}
             title="Nenhuma atividade cadastrada"
             description="Adicione a programação do evento"
-            action={
-              <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Atividade
-              </Button>
-            }
+            action={{
+              label: "Adicionar Atividade",
+              onClick: () => { resetForm(); setDialogOpen(true); }
+            }}
           />
         ) : (
           <Table>

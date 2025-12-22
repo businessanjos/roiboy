@@ -232,12 +232,10 @@ export default function EventNotesTab({ eventId, accountId }: Props) {
             icon={FileText}
             title="Nenhuma nota cadastrada"
             description="Registre observações sobre o evento"
-            action={
-              <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Nota
-              </Button>
-            }
+            action={{
+              label: "Adicionar Nota",
+              onClick: () => { resetForm(); setDialogOpen(true); }
+            }}
           />
         ) : (
           <div className="space-y-4">

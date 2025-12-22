@@ -28,6 +28,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const Products = lazy(() => import("./pages/Products"));
 const Events = lazy(() => import("./pages/Events"));
+const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Team = lazy(() => import("./pages/Team"));
 const Tasks = lazy(() => import("./pages/Tasks"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -92,6 +93,7 @@ const App = () => (
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
+                            <Route path="/events/:id" element={<EventDetail />} />
                             <Route path="/tasks" element={<Tasks />} />
                             <Route path="/forms" element={<Forms />} />
                             <Route path="/integrations" element={<Integrations />} />

@@ -222,12 +222,10 @@ export default function EventGiftsTab({ eventId, accountId, onUpdate }: Props) {
             icon={Gift}
             title="Nenhum brinde cadastrado"
             description="Adicione brindes e presentes do evento"
-            action={
-              <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Brinde
-              </Button>
-            }
+            action={{
+              label: "Adicionar Brinde",
+              onClick: () => { resetForm(); setDialogOpen(true); }
+            }}
           />
         ) : (
           <Table>
