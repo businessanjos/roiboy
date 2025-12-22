@@ -284,18 +284,12 @@ function createWhatsAppWindow() {
     console.error('[ROY] Falha ao carregar:', errorCode, errorDescription, validatedURL);
   });
 
-  // CRITICAL: Handle renderer crashes - this will help diagnose audio recording issues
+  // Log renderer crashes for debugging - DO NOT auto-reload
   whatsappWindow.webContents.on('render-process-gone', (event, details) => {
-    console.error('[ROY] RENDERER CRASH:', details.reason, details.exitCode);
-    // Try to recover by reloading
-    if (whatsappWindow && !whatsappWindow.isDestroyed()) {
-      console.log('[ROY] Tentando recuperar após crash...');
-      setTimeout(() => {
-        if (whatsappWindow && !whatsappWindow.isDestroyed()) {
-          whatsappWindow.loadURL('https://web.whatsapp.com');
-        }
-      }, 2000);
-    }
+    console.error('[ROY] ⚠️ RENDERER CRASH:', details.reason, 'exitCode:', details.exitCode);
+    console.error('[ROY] Isso pode ser causado por um problema de permissão de microfone.');
+    console.error('[ROY] Verifique: Preferências do Sistema → Segurança → Privacidade → Microfone');
+    // NÃO recarregar automaticamente - deixar o usuário ver o erro
   });
 
   // Handle unresponsive renderer
