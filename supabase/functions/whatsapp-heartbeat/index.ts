@@ -39,19 +39,33 @@ serve(async (req) => {
       );
     }
 
-    // Validate session token if provided
+    // Validate account exists - don't require session_token for heartbeat
+    // This allows the desktop app to send heartbeats using just the account_id
+    const { data: accountData, error: accountError } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("id", finalAccountId)
+      .single();
+
+    if (accountError || !accountData) {
+      console.error("Account validation error:", accountError);
+      return new Response(
+        JSON.stringify({ error: "Invalid account" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Optionally validate session token if provided (for extra security, but not required)
     if (finalSessionToken) {
-      const { data: userData, error: userError } = await supabase
+      const { data: userData } = await supabase
         .from("users")
         .select("id, account_id")
         .eq("session_token", finalSessionToken)
-        .single();
+        .maybeSingle();
 
-      if (userError || !userData || userData.account_id !== finalAccountId) {
-        return new Response(
-          JSON.stringify({ error: "Invalid session" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Log if session token is invalid but don't block the request
+      if (!userData || userData.account_id !== finalAccountId) {
+        console.log("Session token invalid or expired, continuing with account_id only");
       }
     }
 
