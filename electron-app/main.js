@@ -846,28 +846,10 @@ async function injectWhatsAppCaptureScript() {
         const found = scanCurrentChat();
         diag.initialScan = found;
         
-        // Poll for new messages more frequently since observer is disabled
-        setInterval(() => {
-          try {
-            scanCurrentChat();
-          } catch(e) {
-            // Silently ignore scan errors
-          }
-        }, 3000);
-        
-        // Monitor for chat changes
-        let lastChatName = '';
-        setInterval(() => {
-          try {
-            const currentName = getContactName();
-            if (currentName && currentName !== lastChatName) {
-              lastChatName = currentName;
-              setTimeout(scanCurrentChat, 500);
-            }
-          } catch(e) {
-            // Silently ignore
-          }
-        }, 2000);
+        // DISABLED: Internal polling was causing memory leaks and white screen issues
+        // Polling is now done from Electron main process instead
+        // The main process calls injectWhatsAppCaptureScript every 5 seconds
+        // which runs scanCurrentChat() each time
         
         return diag;
       })()
@@ -912,9 +894,10 @@ async function injectWhatsAppCaptureScript() {
       }
     }
     
-    // Retrieve and process audio messages with safe detection
-    // Note: Frame disposal errors are now caught globally and won't crash the app
-    await scanWhatsAppAudioMessages();
+    // DISABLED: Audio scanning was causing white screen issues
+    // Messages are captured as text only for now
+    // Audio messages are skipped to prevent UI crashes
+    // await scanWhatsAppAudioMessages();
   } catch (error) {
     // Ignore "frame was disposed" errors - they're expected when window is closed
     if (error.message && error.message.includes('disposed')) {
