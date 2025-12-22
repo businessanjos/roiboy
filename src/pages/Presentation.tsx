@@ -1,4 +1,4 @@
-import { forwardRef, useState } from "react";
+import { useState } from "react";
 import { 
   TrendingUp, 
   Users, 
@@ -110,7 +110,7 @@ const workflow = [
   { step: 5, title: "Ação", description: "Recomendações e alertas para a equipe" }
 ];
 
-const Presentation = forwardRef<HTMLDivElement>(function Presentation(_, ref) {
+export default function Presentation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -121,7 +121,7 @@ const Presentation = forwardRef<HTMLDivElement>(function Presentation(_, ref) {
   const isPublicRoute = location.pathname === "/sobre";
 
   return (
-    <div ref={ref} className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       {/* Public Header */}
       {isPublicRoute && (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -1018,6 +1018,4 @@ const Presentation = forwardRef<HTMLDivElement>(function Presentation(_, ref) {
       </section>
     </div>
   );
-});
-
-export default Presentation;
+}
