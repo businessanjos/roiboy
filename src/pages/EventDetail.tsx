@@ -62,6 +62,7 @@ interface Event {
   status: string | null;
   created_at: string;
   account_id: string;
+  public_registration_code: string | null;
 }
 
 export default function EventDetail() {

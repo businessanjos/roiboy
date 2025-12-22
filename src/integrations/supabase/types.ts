@@ -2344,6 +2344,7 @@ export type Database = {
           max_capacity: number | null
           meeting_url: string | null
           modality: Database["public"]["Enums"]["event_modality"]
+          public_registration_code: string | null
           scheduled_at: string | null
           status: string | null
           title: string
@@ -2367,6 +2368,7 @@ export type Database = {
           max_capacity?: number | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
+          public_registration_code?: string | null
           scheduled_at?: string | null
           status?: string | null
           title: string
@@ -2390,6 +2392,7 @@ export type Database = {
           max_capacity?: number | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
+          public_registration_code?: string | null
           scheduled_at?: string | null
           status?: string | null
           title?: string
@@ -3731,7 +3734,24 @@ export type Database = {
       cleanup_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
       generate_checkin_code: { Args: never; Returns: string }
+      generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
+      get_event_by_registration_code: {
+        Args: { p_code: string }
+        Returns: {
+          account_id: string
+          current_confirmed: number
+          event_address: string
+          event_description: string
+          event_ends_at: string
+          event_id: string
+          event_modality: string
+          event_scheduled_at: string
+          event_title: string
+          has_capacity: boolean
+          max_capacity: number
+        }[]
+      }
       get_event_for_checkin: {
         Args: { p_checkin_code: string }
         Returns: {
@@ -3790,6 +3810,15 @@ export type Database = {
       record_rate_limit_hit: {
         Args: { p_action: string; p_identifier: string }
         Returns: undefined
+      }
+      register_for_event: {
+        Args: {
+          p_code: string
+          p_email?: string
+          p_name: string
+          p_phone: string
+        }
+        Returns: Json
       }
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
