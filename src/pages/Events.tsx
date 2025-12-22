@@ -138,6 +138,7 @@ export default function Events() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEventType, setFilterEventType] = useState<string>("all");
   const [filterModality, setFilterModality] = useState<string>("all");
+  const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -432,7 +433,7 @@ export default function Events() {
     );
   };
 
-  // Filter events based on search and filters
+  // Filter events based on search, filters, and modality tab
   const filteredEvents = events.filter((event) => {
     const matchesSearch = 
       event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -440,9 +441,14 @@ export default function Events() {
     
     const matchesType = filterEventType === "all" || event.event_type === filterEventType;
     const matchesModality = filterModality === "all" || event.modality === filterModality;
+    const matchesModalityTab = modalityTab === "all" || event.modality === modalityTab;
     
-    return matchesSearch && matchesType && matchesModality;
+    return matchesSearch && matchesType && matchesModality && matchesModalityTab;
   });
+
+  // Count events by modality
+  const presencialCount = events.filter(e => e.modality === "presencial").length;
+  const onlineCount = events.filter(e => e.modality === "online").length;
 
   const hasActiveFilters = filterEventType !== "all" || filterModality !== "all";
 
@@ -793,14 +799,44 @@ export default function Events() {
             </Dialog>
           </div>
 
+      {/* Sub-tabs for modality */}
+      <Tabs value={modalityTab} onValueChange={(v) => setModalityTab(v as "all" | "presencial" | "online")} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="all" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Todos
+            <Badge variant="secondary" className="ml-1">{events.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="presencial" className="gap-2">
+            <MapPin className="h-4 w-4" />
+            Presenciais
+            <Badge variant="secondary" className="ml-1">{presencialCount}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="online" className="gap-2">
+            <Monitor className="h-4 w-4" />
+            Online
+            <Badge variant="secondary" className="ml-1">{onlineCount}</Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={modalityTab} className="mt-0">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Lista de Eventos
+            {modalityTab === "presencial" ? (
+              <><MapPin className="h-5 w-5" /> Eventos Presenciais</>
+            ) : modalityTab === "online" ? (
+              <><Monitor className="h-5 w-5" /> Eventos Online</>
+            ) : (
+              <><Calendar className="h-5 w-5" /> Todos os Eventos</>
+            )}
           </CardTitle>
           <CardDescription>
-            Todos os eventos e entregáveis cadastrados
+            {modalityTab === "presencial" 
+              ? "Eventos presenciais com check-in via QR Code"
+              : modalityTab === "online"
+              ? "Lives, webinars e eventos online"
+              : "Todos os eventos e entregáveis cadastrados"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -998,6 +1034,8 @@ export default function Events() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* QR Code Dialog */}
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
