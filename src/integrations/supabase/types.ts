@@ -1619,6 +1619,7 @@ export type Database = {
           created_at: string
           description: string | null
           duration_minutes: number | null
+          ends_at: string | null
           event_type: Database["public"]["Enums"]["event_type"]
           id: string
           is_recurring: boolean
@@ -1636,6 +1637,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
+          ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           id?: string
           is_recurring?: boolean
@@ -1653,6 +1655,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
+          ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           id?: string
           is_recurring?: boolean

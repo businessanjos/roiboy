@@ -91,6 +91,7 @@ interface Event {
   modality: "online" | "presencial";
   address: string | null;
   scheduled_at: string | null;
+  ends_at: string | null;
   duration_minutes: number | null;
   meeting_url: string | null;
   material_url: string | null;
@@ -143,6 +144,8 @@ export default function Events() {
   const [modality, setModality] = useState<"online" | "presencial">("online");
   const [address, setAddress] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [isMultiDay, setIsMultiDay] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState("");
   const [meetingUrl, setMeetingUrl] = useState("");
   const [materialUrl, setMaterialUrl] = useState("");
@@ -209,6 +212,8 @@ export default function Events() {
     setModality("online");
     setAddress("");
     setScheduledAt("");
+    setEndsAt("");
+    setIsMultiDay(false);
     setDurationMinutes("");
     setMeetingUrl("");
     setMaterialUrl("");
@@ -278,6 +283,8 @@ export default function Events() {
     setModality(event.modality || "online");
     setAddress(event.address || "");
     setScheduledAt(event.scheduled_at ? event.scheduled_at.slice(0, 16) : "");
+    setEndsAt(event.ends_at ? event.ends_at.slice(0, 16) : "");
+    setIsMultiDay(!!event.ends_at);
     setDurationMinutes(event.duration_minutes?.toString() || "");
     setMeetingUrl(event.meeting_url || "");
     setMaterialUrl(event.material_url || "");
@@ -322,7 +329,8 @@ export default function Events() {
       modality: modality,
       address: modality === "presencial" ? address.trim() || null : null,
       scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-      duration_minutes: durationMinutes ? parseInt(durationMinutes) : null,
+      ends_at: isMultiDay && endsAt ? new Date(endsAt).toISOString() : null,
+      duration_minutes: !isMultiDay && durationMinutes ? parseInt(durationMinutes) : null,
       meeting_url: meetingUrl.trim() || null,
       material_url: materialUrl.trim() || null,
       is_recurring: isRecurring,
@@ -651,27 +659,62 @@ export default function Events() {
 
               {eventType === "live" && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduled_at">Data e Hora</Label>
-                      <Input
-                        id="scheduled_at"
-                        type="datetime-local"
-                        value={scheduledAt}
-                        onChange={(e) => setScheduledAt(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="duration">Duração (min)</Label>
-                      <Input
-                        id="duration"
-                        type="number"
-                        value={durationMinutes}
-                        onChange={(e) => setDurationMinutes(e.target.value)}
-                        placeholder="60"
-                      />
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="multi_day"
+                      checked={isMultiDay}
+                      onCheckedChange={(checked) => setIsMultiDay(!!checked)}
+                    />
+                    <Label htmlFor="multi_day" className="text-sm font-normal">
+                      Evento de múltiplos dias (ex: imersão de 3 dias)
+                    </Label>
                   </div>
+
+                  {isMultiDay ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="scheduled_at">Início</Label>
+                        <Input
+                          id="scheduled_at"
+                          type="datetime-local"
+                          value={scheduledAt}
+                          onChange={(e) => setScheduledAt(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ends_at">Término</Label>
+                        <Input
+                          id="ends_at"
+                          type="datetime-local"
+                          value={endsAt}
+                          onChange={(e) => setEndsAt(e.target.value)}
+                          min={scheduledAt}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="scheduled_at">Data e Hora</Label>
+                        <Input
+                          id="scheduled_at"
+                          type="datetime-local"
+                          value={scheduledAt}
+                          onChange={(e) => setScheduledAt(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="duration">Duração (min)</Label>
+                        <Input
+                          id="duration"
+                          type="number"
+                          value={durationMinutes}
+                          onChange={(e) => setDurationMinutes(e.target.value)}
+                          placeholder="60"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="meeting_url">Link da Reunião</Label>
@@ -835,9 +878,21 @@ export default function Events() {
                       </TableCell>
                       <TableCell>
                         {event.scheduled_at ? (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Clock className="h-3 w-3" />
-                            {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Clock className="h-3 w-3" />
+                              {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            </div>
+                            {event.ends_at && (
+                              <div className="text-xs text-muted-foreground">
+                                até {format(new Date(event.ends_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </div>
+                            )}
+                            {!event.ends_at && event.duration_minutes && (
+                              <div className="text-xs text-muted-foreground">
+                                {event.duration_minutes} min
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
