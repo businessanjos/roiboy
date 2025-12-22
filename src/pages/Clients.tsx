@@ -55,6 +55,20 @@ const formatPhoneE164 = (value: string): string => {
 interface CsvRow {
   full_name: string;
   phone_e164: string;
+  email?: string;
+  cpf?: string;
+  cnpj?: string;
+  birth_date?: string;
+  company_name?: string;
+  tags?: string[];
+  status?: string;
+  zip_code?: string;
+  street?: string;
+  street_number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  notes?: string;
   valid: boolean;
   error?: string;
 }
@@ -66,17 +80,103 @@ interface Product {
   is_active: boolean;
 }
 
+// Helper to find column index with multiple possible names
+const findColumnIndex = (header: string[], ...names: string[]): number => {
+  return header.findIndex(h => names.some(name => h.includes(name.toLowerCase()) || h === name.toLowerCase()));
+};
+
+// Parse date from various formats
+const parseDate = (dateStr: string): string | undefined => {
+  if (!dateStr || !dateStr.trim()) return undefined;
+  
+  // Try DD/MM/YYYY format (Brazilian)
+  const brMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (brMatch) {
+    const [, day, month, year] = brMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  // Try YYYY-MM-DD format
+  const isoMatch = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  return undefined;
+};
+
+// Format CPF (remove non-digits and validate length)
+const formatCPF = (cpf: string): string | undefined => {
+  if (!cpf) return undefined;
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return undefined;
+  return digits;
+};
+
+// Format CNPJ (remove non-digits and validate length)
+const formatCNPJ = (cnpj: string): string | undefined => {
+  if (!cnpj) return undefined;
+  const digits = cnpj.replace(/\D/g, '');
+  if (digits.length !== 14) return undefined;
+  return digits;
+};
+
+// Parse tags from comma-separated or semicolon-separated string
+const parseTags = (tagsStr: string): string[] => {
+  if (!tagsStr) return [];
+  return tagsStr.split(/[;|]/).map(t => t.trim()).filter(t => t.length > 0);
+};
+
+// Validate status
+const validateStatus = (status: string): string | undefined => {
+  const validStatuses = ['active', 'inactive', 'prospect', 'churned', 'paused'];
+  const normalized = status?.toLowerCase().trim();
+  
+  // Map Portuguese to English status
+  const statusMap: Record<string, string> = {
+    'ativo': 'active',
+    'inativo': 'inactive',
+    'prospecto': 'prospect',
+    'churn': 'churned',
+    'cancelado': 'churned',
+    'pausado': 'paused',
+  };
+  
+  if (statusMap[normalized]) return statusMap[normalized];
+  if (validStatuses.includes(normalized)) return normalized;
+  return undefined;
+};
+
 const parseCSV = (content: string): CsvRow[] => {
   const lines = content.split(/\r?\n/).filter(line => line.trim());
   if (lines.length < 2) return [];
 
   const header = lines[0].toLowerCase().split(/[,;]/).map(h => h.trim().replace(/"/g, ""));
-  const nameIndex = header.findIndex(h => h.includes("nome") || h === "name" || h === "full_name");
-  const phoneIndex = header.findIndex(h => h.includes("telefone") || h.includes("phone") || h === "phone_e164");
+  
+  // Required columns
+  const nameIndex = findColumnIndex(header, "nome", "name", "full_name", "nome completo");
+  const phoneIndex = findColumnIndex(header, "telefone", "phone", "phone_e164", "celular", "whatsapp");
 
   if (nameIndex === -1 || phoneIndex === -1) {
     return [];
   }
+  
+  // Optional columns
+  const emailIndex = findColumnIndex(header, "email", "e-mail", "email principal");
+  const cpfIndex = findColumnIndex(header, "cpf");
+  const cnpjIndex = findColumnIndex(header, "cnpj");
+  const birthDateIndex = findColumnIndex(header, "nascimento", "data_nascimento", "birth_date", "aniversário", "aniversario", "data de nascimento");
+  const companyIndex = findColumnIndex(header, "empresa", "company", "company_name", "razão social", "razao social");
+  const tagsIndex = findColumnIndex(header, "tags", "etiquetas", "categorias");
+  const statusIndex = findColumnIndex(header, "status", "situação", "situacao");
+  const zipIndex = findColumnIndex(header, "cep", "zip", "zip_code", "código postal");
+  const streetIndex = findColumnIndex(header, "rua", "street", "logradouro", "endereço", "endereco");
+  const numberIndex = findColumnIndex(header, "número", "numero", "street_number", "nº");
+  const neighborhoodIndex = findColumnIndex(header, "bairro", "neighborhood");
+  const cityIndex = findColumnIndex(header, "cidade", "city");
+  const stateIndex = findColumnIndex(header, "estado", "state", "uf");
+  const notesIndex = findColumnIndex(header, "observações", "observacoes", "notes", "notas", "anotações");
 
   return lines.slice(1).map(line => {
     const values = line.split(/[,;]/).map(v => v.trim().replace(/^"|"$/g, ""));
@@ -88,11 +188,49 @@ const parseCSV = (content: string): CsvRow[] => {
     
     const phoneValidation = validateE164(phone);
     
+    // Extract optional fields
+    const email = emailIndex !== -1 ? values[emailIndex]?.trim() : undefined;
+    const cpf = cpfIndex !== -1 ? formatCPF(values[cpfIndex]) : undefined;
+    const cnpj = cnpjIndex !== -1 ? formatCNPJ(values[cnpjIndex]) : undefined;
+    const birth_date = birthDateIndex !== -1 ? parseDate(values[birthDateIndex]) : undefined;
+    const company_name = companyIndex !== -1 ? values[companyIndex]?.trim() : undefined;
+    const tags = tagsIndex !== -1 ? parseTags(values[tagsIndex]) : undefined;
+    const status = statusIndex !== -1 ? validateStatus(values[statusIndex]) : undefined;
+    const zip_code = zipIndex !== -1 ? values[zipIndex]?.replace(/\D/g, '') : undefined;
+    const street = streetIndex !== -1 ? values[streetIndex]?.trim() : undefined;
+    const street_number = numberIndex !== -1 ? values[numberIndex]?.trim() : undefined;
+    const neighborhood = neighborhoodIndex !== -1 ? values[neighborhoodIndex]?.trim() : undefined;
+    const city = cityIndex !== -1 ? values[cityIndex]?.trim() : undefined;
+    const state = stateIndex !== -1 ? values[stateIndex]?.trim().toUpperCase() : undefined;
+    const notes = notesIndex !== -1 ? values[notesIndex]?.trim() : undefined;
+    
+    // Validate email format if provided
+    const emailValid = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    
+    const errors: string[] = [];
+    if (!name) errors.push("Nome vazio");
+    if (!phoneValidation.valid) errors.push(phoneValidation.message || "Telefone inválido");
+    if (email && !emailValid) errors.push("Email inválido");
+    
     return {
       full_name: name,
       phone_e164: phone,
-      valid: !!name && phoneValidation.valid,
-      error: !name ? "Nome vazio" : (!phoneValidation.valid ? phoneValidation.message : undefined),
+      email: emailValid ? email : undefined,
+      cpf,
+      cnpj,
+      birth_date,
+      company_name,
+      tags,
+      status,
+      zip_code,
+      street,
+      street_number,
+      neighborhood,
+      city,
+      state,
+      notes,
+      valid: errors.length === 0,
+      error: errors.length > 0 ? errors.join("; ") : undefined,
     };
   });
 };
@@ -665,13 +803,33 @@ export default function Clients() {
 
     setImporting(true);
     try {
-      const clientsToInsert = validRows.map(row => ({
-        account_id: currentUser.account_id,
-        full_name: row.full_name,
-        phone_e164: row.phone_e164,
-      }));
+      const clientsToInsert = validRows.map(row => {
+        const client: Record<string, any> = {
+          account_id: currentUser.account_id,
+          full_name: row.full_name,
+          phone_e164: row.phone_e164,
+        };
+        
+        // Add optional fields if present
+        if (row.email) client.emails = [{ email: row.email, label: 'principal' }];
+        if (row.cpf) client.cpf = row.cpf;
+        if (row.cnpj) client.cnpj = row.cnpj;
+        if (row.birth_date) client.birth_date = row.birth_date;
+        if (row.company_name) client.company_name = row.company_name;
+        if (row.tags && row.tags.length > 0) client.tags = row.tags;
+        if (row.status) client.status = row.status;
+        if (row.zip_code) client.zip_code = row.zip_code;
+        if (row.street) client.street = row.street;
+        if (row.street_number) client.street_number = row.street_number;
+        if (row.neighborhood) client.neighborhood = row.neighborhood;
+        if (row.city) client.city = row.city;
+        if (row.state) client.state = row.state;
+        if (row.notes) client.notes = row.notes;
+        
+        return client;
+      });
 
-      const { error } = await supabase.from("clients").insert(clientsToInsert);
+      const { error } = await supabase.from("clients").insert(clientsToInsert as any);
 
       if (error) throw error;
 
@@ -689,8 +847,24 @@ export default function Clients() {
   };
 
   const downloadTemplate = () => {
-    const template = "nome,telefone\nJoão Silva,+5511999999999\nMaria Santos,+5521988888888";
-    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
+    const headers = [
+      "nome", "telefone", "email", "cpf", "cnpj", "nascimento", 
+      "empresa", "tags", "status", "cep", "rua", "número", 
+      "bairro", "cidade", "estado", "observações"
+    ];
+    const example1 = [
+      "João Silva", "+5511999999999", "joao@email.com", "12345678901", "",
+      "15/03/1985", "Empresa ABC", "premium|vip", "ativo", "01310100",
+      "Av. Paulista", "1000", "Bela Vista", "São Paulo", "SP", "Cliente desde 2020"
+    ];
+    const example2 = [
+      "Maria Santos", "+5521988888888", "maria@email.com", "", "12345678000199",
+      "22/07/1990", "Santos Ltda", "novo", "prospecto", "20040020",
+      "Rua do Ouvidor", "50", "Centro", "Rio de Janeiro", "RJ", ""
+    ];
+    
+    const template = [headers.join(","), example1.join(","), example2.join(",")].join("\n");
+    const blob = new Blob(["\uFEFF" + template], { type: "text/csv;charset=utf-8;" }); // BOM for Excel
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -941,14 +1115,17 @@ export default function Clients() {
                 <span className="hidden sm:inline">Importar CSV</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[85vh]">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <FileSpreadsheet className="h-5 w-5" />
                   Importar Clientes via CSV
                 </DialogTitle>
-                <DialogDescription>
-                  Faça upload de um arquivo CSV com colunas "nome" e "telefone"
+                <DialogDescription className="space-y-2">
+                  <p>Faça upload de um arquivo CSV. Colunas obrigatórias: <strong>nome</strong> e <strong>telefone</strong>.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Colunas opcionais: email, cpf, cnpj, nascimento, empresa, tags, status, cep, rua, número, bairro, cidade, estado, observações
+                  </p>
                 </DialogDescription>
               </DialogHeader>
               
@@ -963,13 +1140,13 @@ export default function Clients() {
                   />
                   <Button variant="outline" size="sm" onClick={downloadTemplate}>
                     <Download className="h-4 w-4 mr-2" />
-                    Template
+                    Template Completo
                   </Button>
                 </div>
 
                 {csvData.length > 0 && (
                   <>
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-4 text-sm flex-wrap">
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                         {validCount} válido(s)
@@ -980,22 +1157,35 @@ export default function Clients() {
                           {invalidCount} inválido(s)
                         </Badge>
                       )}
+                      <span className="text-muted-foreground text-xs">
+                        {csvData.some(r => r.email) && "• Email "}
+                        {csvData.some(r => r.cpf) && "• CPF "}
+                        {csvData.some(r => r.cnpj) && "• CNPJ "}
+                        {csvData.some(r => r.birth_date) && "• Nascimento "}
+                        {csvData.some(r => r.company_name) && "• Empresa "}
+                        {csvData.some(r => r.tags && r.tags.length > 0) && "• Tags "}
+                        {csvData.some(r => r.city) && "• Endereço "}
+                      </span>
                     </div>
 
-                    <ScrollArea className="h-64 border rounded-lg">
+                    <ScrollArea className="h-72 border rounded-lg">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-10">Status</TableHead>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Telefone</TableHead>
-                            <TableHead>Erro</TableHead>
+                            <TableHead className="w-10 sticky left-0 bg-background">Status</TableHead>
+                            <TableHead className="min-w-[150px]">Nome</TableHead>
+                            <TableHead className="min-w-[130px]">Telefone</TableHead>
+                            <TableHead className="min-w-[150px]">Email</TableHead>
+                            <TableHead className="min-w-[100px]">Empresa</TableHead>
+                            <TableHead className="min-w-[100px]">Cidade/UF</TableHead>
+                            <TableHead className="min-w-[80px]">Tags</TableHead>
+                            <TableHead className="min-w-[150px]">Erro</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {csvData.map((row, index) => (
                             <TableRow key={index} className={!row.valid ? "bg-destructive/5" : ""}>
-                              <TableCell>
+                              <TableCell className="sticky left-0 bg-background">
                                 {row.valid ? (
                                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                 ) : (
@@ -1004,6 +1194,27 @@ export default function Clients() {
                               </TableCell>
                               <TableCell className="font-medium">{row.full_name || "-"}</TableCell>
                               <TableCell className="font-mono text-sm">{row.phone_e164 || "-"}</TableCell>
+                              <TableCell className="text-sm">{row.email || "-"}</TableCell>
+                              <TableCell className="text-sm">{row.company_name || "-"}</TableCell>
+                              <TableCell className="text-sm">
+                                {row.city && row.state ? `${row.city}/${row.state}` : (row.city || row.state || "-")}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {row.tags && row.tags.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {row.tags.slice(0, 2).map((tag, i) => (
+                                      <Badge key={i} variant="secondary" className="text-xs px-1 py-0">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {row.tags.length > 2 && (
+                                      <Badge variant="secondary" className="text-xs px-1 py-0">
+                                        +{row.tags.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : "-"}
+                              </TableCell>
                               <TableCell className="text-xs text-destructive">{row.error || "-"}</TableCell>
                             </TableRow>
                           ))}
