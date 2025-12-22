@@ -36,6 +36,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const Forms = lazy(() => import("./pages/Forms"));
 const PublicForm = lazy(() => import("./pages/PublicForm"));
 const PublicRSVP = lazy(() => import("./pages/PublicRSVP"));
+const PublicEventRegistration = lazy(() => import("./pages/PublicEventRegistration"));
 const Presentation = lazy(() => import("./pages/Presentation"));
 const ExtensionPreview = lazy(() => import("./pages/ExtensionPreview"));
 const ApiDocs = lazy(() => import("./pages/ApiDocs"));
@@ -79,8 +80,9 @@ const App = () => (
                           <Route path="/" element={<Navigate to="/dashboard" replace />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/f/:formId" element={<PublicForm />} />
-                          <Route path="/rsvp/:token" element={<PublicRSVP />} />
-                          <Route path="/checkin/:code" element={<EventCheckin />} />
+          <Route path="/rsvp/:token" element={<PublicRSVP />} />
+          <Route path="/inscricao/:code" element={<PublicEventRegistration />} />
+          <Route path="/checkin/:code" element={<EventCheckin />} />
                           <Route path="/sobre" element={<Presentation />} />
                           <Route path="/extension-preview" element={<ExtensionPreview />} />
                           <Route path="/onboarding" element={<Onboarding />} />

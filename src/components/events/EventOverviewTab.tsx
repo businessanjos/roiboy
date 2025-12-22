@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Pencil } from "lucide-react";
+import { Save, Pencil, Copy, Link, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 interface Event {
   id: string;
@@ -30,6 +31,7 @@ interface Event {
   budget: number | null;
   expected_attendees: number | null;
   status: string | null;
+  public_registration_code: string | null;
 }
 
 interface Props {
@@ -39,9 +41,10 @@ interface Props {
 }
 
 export default function EventOverviewTab({ event, accountId, onUpdate }: Props) {
-  const { toast } = useToast();
+  const { toast: hookToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
   
   const [formData, setFormData] = useState({
     title: event.title,
@@ -53,6 +56,37 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
     material_url: event.material_url || "",
     address: event.address || "",
   });
+
+  const generateRegistrationCode = async () => {
+    setGeneratingCode(true);
+    
+    try {
+      const { data: newCode, error: codeError } = await supabase.rpc("generate_registration_code");
+      
+      if (codeError) throw codeError;
+      
+      const { error } = await supabase
+        .from("events")
+        .update({ public_registration_code: newCode })
+        .eq("id", event.id);
+      
+      if (error) throw error;
+      
+      toast.success("Código de inscrição gerado com sucesso!");
+      onUpdate();
+    } catch (error) {
+      console.error("Error generating code:", error);
+      toast.error("Erro ao gerar código de inscrição");
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const copyRegistrationLink = () => {
+    const link = `${window.location.origin}/inscricao/${event.public_registration_code}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Link de inscrição copiado!");
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -72,13 +106,13 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
       .eq("id", event.id);
 
     if (error) {
-      toast({
+      hookToast({
         title: "Erro",
         description: "Não foi possível atualizar o evento",
         variant: "destructive",
       });
     } else {
-      toast({
+      hookToast({
         title: "Sucesso",
         description: "Evento atualizado com sucesso",
       });
@@ -222,6 +256,63 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
                 disabled={!editing}
                 rows={2}
               />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Public Registration Link */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link className="h-5 w-5" />
+            Link de Inscrição Pública
+          </CardTitle>
+          <CardDescription>
+            Compartilhe este link para que as pessoas possam se inscrever no evento
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {event.public_registration_code ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={`${window.location.origin}/inscricao/${event.public_registration_code}`}
+                  readOnly
+                  className="font-mono text-sm"
+                />
+                <Button variant="outline" size="icon" onClick={copyRegistrationLink}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Código: <code className="bg-muted px-2 py-1 rounded">{event.public_registration_code}</code>
+                </span>
+                <Button variant="ghost" size="sm" onClick={generateRegistrationCode} disabled={generatingCode}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${generatingCode ? "animate-spin" : ""}`} />
+                  Gerar novo código
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-muted-foreground mb-4">
+                Gere um código para criar um link de inscrição pública para este evento.
+              </p>
+              <Button onClick={generateRegistrationCode} disabled={generatingCode}>
+                {generatingCode ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Link className="h-4 w-4 mr-2" />
+                    Gerar Link de Inscrição
+                  </>
+                )}
+              </Button>
             </div>
           )}
         </CardContent>
