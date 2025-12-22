@@ -37,7 +37,15 @@
     "mac": {
       "target": "dmg",
       "icon": "assets/icon.icns",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "ROY APP precisa acessar o microfone para gravar áudios no WhatsApp.",
+        "NSCameraUsageDescription": "ROY APP precisa acessar a câmera para videochamadas."
+      }
     },
     "linux": {
       "target": "AppImage",

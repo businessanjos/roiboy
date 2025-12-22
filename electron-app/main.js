@@ -7,14 +7,11 @@ const store = new Store();
 // Enable GPU acceleration for WebGL (needed for QR code canvas)
 app.commandLine.appendSwitch('enable-webgl');
 app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
 
-// CRITICAL: Enable media capture for audio recording
-app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
-app.commandLine.appendSwitch('use-fake-ui-for-media-stream'); // Auto-approve media permission dialogs
-app.commandLine.appendSwitch('enable-speech-dispatcher'); // Enable speech/audio APIs
-app.commandLine.appendSwitch('disable-features', 'AudioServiceOutOfProcess'); // Keep audio in main process to prevent crashes
-app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// CRITICAL: Fix for audio recording in Electron
+// These flags help prevent crashes when using getUserMedia
+app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService');
+app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
 
 // Request microphone access on macOS
 async function requestMicrophoneAccess() {
@@ -255,12 +252,8 @@ function createWhatsAppWindow() {
       nodeIntegration: false,
       session: whatsappSession,
       webSecurity: true,
-      // Enable features needed for audio/video recording
-      experimentalFeatures: true,
-      autoplayPolicy: 'no-user-gesture-required',
-      // Ensure media features work
-      webgl: true,
-      plugins: true
+      // Removed experimentalFeatures - it was causing security warnings and potential crashes
+      sandbox: false // Required for some media APIs
     },
     title: 'WhatsApp Web - ROY',
     show: true
