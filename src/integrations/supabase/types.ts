@@ -1031,6 +1031,67 @@ export type Database = {
           },
         ]
       }
+      client_relationships: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          primary_client_id: string
+          related_client_id: string
+          relationship_label: string | null
+          relationship_type: Database["public"]["Enums"]["client_relationship_type"]
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          primary_client_id: string
+          related_client_id: string
+          relationship_label?: string | null
+          relationship_type?: Database["public"]["Enums"]["client_relationship_type"]
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          primary_client_id?: string
+          related_client_id?: string
+          relationship_label?: string | null
+          relationship_type?: Database["public"]["Enums"]["client_relationship_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_relationships_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_relationships_primary_client_id_fkey"
+            columns: ["primary_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_relationships_related_client_id_fkey"
+            columns: ["related_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_subscriptions: {
         Row: {
           account_id: string
@@ -2950,6 +3011,15 @@ export type Database = {
           title: string
         }[]
       }
+      get_related_clients: {
+        Args: { p_client_id: string }
+        Returns: {
+          client_id: string
+          is_primary: boolean
+          relationship_label: string
+          relationship_type: Database["public"]["Enums"]["client_relationship_type"]
+        }[]
+      }
       get_user_account_id: { Args: never; Returns: string }
       is_account_locked: { Args: { p_email: string }; Returns: boolean }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
@@ -3005,6 +3075,12 @@ export type Database = {
         | "annual"
         | "one_time"
       channel_type: "whatsapp"
+      client_relationship_type:
+        | "spouse"
+        | "partner"
+        | "dependent"
+        | "associate"
+        | "other"
       client_status:
         | "active"
         | "paused"
@@ -3231,6 +3307,13 @@ export const Constants = {
         "one_time",
       ],
       channel_type: ["whatsapp"],
+      client_relationship_type: [
+        "spouse",
+        "partner",
+        "dependent",
+        "associate",
+        "other",
+      ],
       client_status: [
         "active",
         "paused",
