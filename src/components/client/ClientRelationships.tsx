@@ -22,6 +22,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -40,10 +53,12 @@ import {
   Link2, 
   Trash2,
   ExternalLink,
-  Search
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 type RelationshipType = "spouse" | "partner" | "dependent" | "associate" | "other";
 
@@ -96,6 +111,7 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [comboboxOpen, setComboboxOpen] = useState(false);
   const [relationshipType, setRelationshipType] = useState<RelationshipType>("spouse");
   const [relationshipLabel, setRelationshipLabel] = useState("");
   const [notes, setNotes] = useState("");
@@ -203,7 +219,11 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
     setRelationshipLabel("");
     setNotes("");
     setSearchTerm("");
+    setComboboxOpen(false);
   };
+
+  const selectedClient = filteredClients?.find(c => c.id === selectedClientId) || 
+    availableClients?.find(c => c.id === selectedClientId);
 
   const getLinkedClient = (relationship: ClientRelationship): Client => {
     if (relationship.primary_client_id === clientId) {
@@ -239,41 +259,60 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>Buscar Cliente</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome ou telefone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
+                <Label>Cliente</Label>
+                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={comboboxOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {selectedClient
+                        ? `${selectedClient.full_name} (${selectedClient.phone_e164})`
+                        : "Buscar e selecionar cliente..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[350px] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Buscar por nome ou telefone..." 
+                        value={searchTerm}
+                        onValueChange={setSearchTerm}
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          {searchTerm ? "Nenhum cliente encontrado" : "Digite para buscar"}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {filteredClients?.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={client.id}
+                              onSelect={() => {
+                                setSelectedClientId(client.id);
+                                setComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedClientId === client.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{client.full_name}</span>
+                                <span className="text-xs text-muted-foreground">{client.phone_e164}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-
-              {filteredClients && filteredClients.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Selecionar Cliente</Label>
-                  <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredClients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.full_name} ({client.phone_e164})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {searchTerm && filteredClients?.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-2">
-                  Nenhum cliente encontrado
-                </p>
-              )}
 
               <div className="space-y-2">
                 <Label>Tipo de Vínculo</Label>
