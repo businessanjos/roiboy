@@ -606,28 +606,25 @@ const Presentation = forwardRef<HTMLDivElement>(function Presentation(_, ref) {
                         <div className="space-y-3">
                           <h4 className="font-semibold">Escolha seu sistema operacional:</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
-                              window.open('https://github.com/businessanjos/roiboy/releases', '_blank');
-                            }}>
+                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" disabled>
                               <Monitor className="h-6 w-6" />
                               <span>Windows</span>
-                              <span className="text-xs text-muted-foreground">.exe</span>
+                              <span className="text-xs text-muted-foreground">Em breve</span>
                             </Button>
-                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
-                              window.open('https://github.com/businessanjos/roiboy/releases', '_blank');
-                            }}>
+                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" disabled>
                               <Apple className="h-6 w-6" />
                               <span>macOS</span>
-                              <span className="text-xs text-muted-foreground">.dmg</span>
+                              <span className="text-xs text-muted-foreground">Em breve</span>
                             </Button>
-                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => {
-                              window.open('https://github.com/businessanjos/roiboy/releases', '_blank');
-                            }}>
+                            <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2" disabled>
                               <Terminal className="h-6 w-6" />
                               <span>Linux</span>
-                              <span className="text-xs text-muted-foreground">.AppImage</span>
+                              <span className="text-xs text-muted-foreground">Em breve</span>
                             </Button>
                           </div>
+                          <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                            O app desktop está em desenvolvimento. Use a extensão do Chrome por enquanto.
+                          </p>
                         </div>
 
                         {/* For Developers */}
