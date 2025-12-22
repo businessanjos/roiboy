@@ -312,28 +312,10 @@ function createWhatsAppWindow() {
   whatsappWindow.loadURL('https://web.whatsapp.com');
   whatsappWindow.setMenuBarVisibility(false);
 
-  // Simple blocker for whatsapp:// protocol - MINIMAL interference with WhatsApp functionality
-  whatsappWindow.webContents.on('dom-ready', () => {
-    safeExecuteJS(whatsappWindow, `
-      // Simple whatsapp:// protocol blocker - does NOT interfere with audio/media
-      (function() {
-        console.log('[ROY] Proteções anti-redirect ativadas (modo simples)');
-        
-        // Only block clicks on whatsapp:// links, nothing else
-        document.addEventListener('click', function(e) {
-          const target = e.target.closest('a');
-          if (target && target.href && target.href.toLowerCase().startsWith('whatsapp:')) {
-            console.log('[ROY] BLOCKED click on whatsapp:// link');
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-          }
-        }, true);
-        
-        console.log('[ROY] Proteções ativadas com sucesso');
-      })();
-    `);
-  });
+  // DISABLED: Protocol blocker was interfering with audio recording
+  // The whatsapp:// protocol is already blocked at the Electron level (lines 65-124)
+  // No need for additional DOM-level blocking that was causing audio button crashes
+  // whatsappWindow.webContents.on('dom-ready', () => { ... });
 
   // Debug mode
   if (process.argv.includes('--dev')) {
