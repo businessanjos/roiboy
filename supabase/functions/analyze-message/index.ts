@@ -435,13 +435,26 @@ Analise e retorne os eventos identificados.`;
     const results = { roi_events: 0, risk_events: 0, life_events: 0, filtered_by_confidence: 0 };
     const confidenceThreshold = aiSettings.confidence_threshold;
 
-    // Insert ROI events (filtered by confidence)
+    // Insert ROI events (filtered by confidence and duplicates)
     if (classification.roi_events?.length > 0) {
       for (const roiEvent of classification.roi_events) {
         // Check confidence threshold
         if (roiEvent.confidence !== undefined && roiEvent.confidence < confidenceThreshold) {
           console.log(`ROI event filtered: confidence ${roiEvent.confidence} < threshold ${confidenceThreshold}`);
           results.filtered_by_confidence++;
+          continue;
+        }
+
+        // Check for duplicate evidence_snippet to avoid duplicates
+        const { data: existingRoi } = await supabase
+          .from("roi_events")
+          .select("id")
+          .eq("client_id", client_id)
+          .eq("evidence_snippet", roiEvent.evidence_snippet)
+          .limit(1);
+        
+        if (existingRoi && existingRoi.length > 0) {
+          console.log(`ROI event skipped: duplicate evidence_snippet found`);
           continue;
         }
 
@@ -463,13 +476,26 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
-    // Insert Risk events (filtered by confidence)
+    // Insert Risk events (filtered by confidence and duplicates)
     if (classification.risk_events?.length > 0) {
       for (const riskEvent of classification.risk_events) {
         // Check confidence threshold
         if (riskEvent.confidence !== undefined && riskEvent.confidence < confidenceThreshold) {
           console.log(`Risk event filtered: confidence ${riskEvent.confidence} < threshold ${confidenceThreshold}`);
           results.filtered_by_confidence++;
+          continue;
+        }
+
+        // Check for duplicate evidence_snippet to avoid duplicates
+        const { data: existingRisk } = await supabase
+          .from("risk_events")
+          .select("id")
+          .eq("client_id", client_id)
+          .eq("evidence_snippet", riskEvent.evidence_snippet)
+          .limit(1);
+        
+        if (existingRisk && existingRisk.length > 0) {
+          console.log(`Risk event skipped: duplicate evidence_snippet found`);
           continue;
         }
 
@@ -490,13 +516,26 @@ Analise e retorne os eventos identificados.`;
       }
     }
 
-    // Insert Life Events (Momentos CX) - filtered by confidence
+    // Insert Life Events (Momentos CX) - filtered by confidence and duplicates
     if (classification.life_events?.length > 0) {
       for (const lifeEvent of classification.life_events) {
         // Check confidence threshold
         if (lifeEvent.confidence !== undefined && lifeEvent.confidence < confidenceThreshold) {
           console.log(`Life event filtered: confidence ${lifeEvent.confidence} < threshold ${confidenceThreshold}`);
           results.filtered_by_confidence++;
+          continue;
+        }
+
+        // Check for duplicate title to avoid duplicates
+        const { data: existingLife } = await supabase
+          .from("client_life_events")
+          .select("id")
+          .eq("client_id", client_id)
+          .eq("title", lifeEvent.title)
+          .limit(1);
+        
+        if (existingLife && existingLife.length > 0) {
+          console.log(`Life event skipped: duplicate title found`);
           continue;
         }
 
