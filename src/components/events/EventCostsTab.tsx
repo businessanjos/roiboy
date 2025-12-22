@@ -330,12 +330,10 @@ export default function EventCostsTab({ eventId, accountId, budget, onUpdate }: 
               icon={DollarSign}
               title="Nenhum custo cadastrado"
               description="Adicione os custos do evento"
-              action={
-                <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Custo
-                </Button>
-              }
+              action={{
+                label: "Adicionar Custo",
+                onClick: () => { resetForm(); setDialogOpen(true); }
+              }}
             />
           ) : (
             <Table>

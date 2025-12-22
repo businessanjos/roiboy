@@ -263,12 +263,10 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
             icon={CheckSquare}
             title="Nenhuma tarefa cadastrada"
             description="Adicione tarefas ao checklist do evento"
-            action={
-              <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Tarefa
-              </Button>
-            }
+            action={{
+              label: "Adicionar Tarefa",
+              onClick: () => { resetForm(); setDialogOpen(true); }
+            }}
           />
         ) : (
           <div className="space-y-6">
