@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +116,7 @@ interface EventWithProducts extends Event {
 }
 
 export default function Events() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const { canCreate } = usePlanLimits();
@@ -828,7 +830,11 @@ export default function Events() {
                 </TableHeader>
                 <TableBody>
                   {filteredEvents.map((event) => (
-                    <TableRow key={event.id}>
+                    <TableRow 
+                      key={event.id} 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/events/${event.id}`)}
+                    >
                       <TableCell>
                         <div className="font-medium">{event.title}</div>
                         {event.description && (
@@ -912,7 +918,7 @@ export default function Events() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
                           {event.modality === "presencial" && event.checkin_code && (
                             <>
