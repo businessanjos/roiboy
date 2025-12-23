@@ -23,12 +23,16 @@ interface ClientEnrichment {
   whatsapp?: { hasConversation: boolean; messageCount: number; lastMessageAt: string | null } | null;
 }
 
-// Fetch clients with products
-export function useClients() {
+// Fetch clients with products - with pagination support
+export function useClients(options?: { page?: number; pageSize?: number; search?: string }) {
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 500; // Default batch size
+  const search = options?.search ?? "";
+  
   return useQuery({
-    queryKey: ["clients-list"],
+    queryKey: ["clients-list", page, pageSize, search],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("clients")
         .select(`
           *,
@@ -39,11 +43,29 @@ export function useClients() {
               name
             )
           )
-        `)
+        `, { count: "exact" })
         .order("created_at", { ascending: false });
+      
+      // Apply search filter
+      if (search) {
+        query = query.or(`full_name.ilike.%${search}%,phone_e164.ilike.%${search}%,company_name.ilike.%${search}%`);
+      }
+      
+      // Apply pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
 
+      const { data, error, count } = await query;
       if (error) throw error;
-      return (data || []) as Client[];
+      
+      return {
+        clients: (data || []) as Client[],
+        totalCount: count ?? 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count ?? 0) / pageSize),
+      };
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
@@ -281,15 +303,16 @@ export function usePendingFormSends(clientIds: string[]) {
 }
 
 // Combined hook for clients page
-export function useClientsPageData() {
-  const clientsQuery = useClients();
+export function useClientsPageData(options?: { page?: number; pageSize?: number; search?: string }) {
+  const clientsQuery = useClients(options);
   const customFieldsQuery = useCustomFields();
   const productsQuery = useProducts();
   const teamUsersQuery = useTeamUsers();
 
+  const clientsData = clientsQuery.data?.clients || [];
   const clientIds = useMemo(() => 
-    (clientsQuery.data || []).map(c => c.id),
-    [clientsQuery.data]
+    clientsData.map(c => c.id),
+    [clientsData]
   );
 
   const enrichmentsQuery = useClientEnrichments(clientIds);
@@ -309,7 +332,11 @@ export function useClientsPageData() {
   };
 
   return {
-    clients: clientsQuery.data || [],
+    clients: clientsData,
+    totalCount: clientsQuery.data?.totalCount ?? 0,
+    page: clientsQuery.data?.page ?? 1,
+    pageSize: clientsQuery.data?.pageSize ?? 500,
+    totalPages: clientsQuery.data?.totalPages ?? 1,
     enrichments: enrichmentsQuery.data || {},
     customFields: customFieldsQuery.data || [],
     fieldValues: fieldValuesQuery.data || {},
