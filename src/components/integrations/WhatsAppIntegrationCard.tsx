@@ -355,19 +355,24 @@ export function WhatsAppIntegrationCard({
                     <span>Conectar via código de pareamento</span>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Número do WhatsApp (com código do país e DDD)</Label>
+                    <Label htmlFor="phone">Número do WhatsApp (com DDD)</Label>
                     <div className="flex gap-2">
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="5511999999999"
+                        placeholder="Ex: 5511987654321"
                         value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        onChange={(e) => {
+                          // Remove caracteres não numéricos
+                          const cleaned = e.target.value.replace(/\D/g, '');
+                          setPhoneNumber(cleaned);
+                        }}
+                        maxLength={13}
                         className="flex-1"
                       />
                       <Button 
                         onClick={handleGeneratePaircode}
-                        disabled={loading || !phoneNumber.trim()}
+                        disabled={loading || !phoneNumber.trim() || phoneNumber.length < 12}
                       >
                         {loading && action === "paircode" ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -380,7 +385,7 @@ export function WhatsAppIntegrationCard({
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Digite o número completo com código do país (55 para Brasil) e DDD
+                      Digite: código do país (55) + DDD + número. Ex: 5511987654321
                     </p>
                   </div>
                 </div>
