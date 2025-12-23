@@ -383,7 +383,7 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
                     <SelectItem value="team">
                       <div className="flex items-center gap-2">
                         <Mic className="h-4 w-4" />
-                        Palestrante da Equipe
+                        Mentor do Clube
                       </div>
                     </SelectItem>
                     <SelectItem value="external">
