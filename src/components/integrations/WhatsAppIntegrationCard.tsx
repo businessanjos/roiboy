@@ -83,22 +83,21 @@ export function WhatsAppIntegrationCard({
       const data = response.data;
 
       if (actionType === "create" || actionType === "connect") {
-        // Check for QR code in response
-        if (data?.data?.qrcode?.base64) {
-          setQrCode(data.data.qrcode.base64);
-          toast.info("Escaneie o QR Code com seu WhatsApp");
-        } else if (data?.data?.base64) {
-          setQrCode(data.data.base64);
+        // Check for QR code in response - can be in multiple places depending on UAZAPI version
+        const qr = data?.data?.qrcode_base64 ||
+                   data?.data?.qrcode?.base64 ||
+                   data?.data?.base64 ||
+                   data?.qrcode_base64 ||
+                   data?.qrcode?.base64 ||
+                   data?.base64;
+        
+        if (qr) {
+          setQrCode(qr);
           toast.info("Escaneie o QR Code com seu WhatsApp");
         } else {
-          // Try to get QR code
-          const qrResponse = await supabase.functions.invoke("uazapi-manager", {
-            body: { action: "qrcode" },
-          });
-          if (qrResponse.data?.data?.base64) {
-            setQrCode(qrResponse.data.data.base64);
-            toast.info("Escaneie o QR Code com seu WhatsApp");
-          }
+          console.log("Create response (no QR found):", data);
+          toast.info("Instância criada. Aguarde o QR Code ou clique em Reconectar.");
+          onRefresh();
         }
       } else if (actionType === "disconnect") {
         setQrCode(null);
