@@ -366,46 +366,46 @@ export default function EventDetail() {
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-          <TabsList className="inline-flex h-auto gap-0.5 sm:gap-1 p-0.5 sm:p-1 min-w-max">
-            <TabsTrigger value="overview" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Geral</span>
+          <TabsList className="inline-flex h-auto gap-1 p-1 min-w-max">
+            <TabsTrigger value="overview" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Settings className="h-4 w-4" />
+              Geral
             </TabsTrigger>
-            <TabsTrigger value="schedule" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <ListOrdered className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Agenda</span>
+            <TabsTrigger value="schedule" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <ListOrdered className="h-4 w-4" />
+              Agenda
             </TabsTrigger>
-            <TabsTrigger value="checklist" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Check</span>
+            <TabsTrigger value="checklist" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <CheckSquare className="h-4 w-4" />
+              Checklist
             </TabsTrigger>
-            <TabsTrigger value="gifts" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <Gift className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Brindes</span>
+            <TabsTrigger value="gifts" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Gift className="h-4 w-4" />
+              Brindes
             </TabsTrigger>
-            <TabsTrigger value="costs" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">$</span>
+            <TabsTrigger value="costs" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <DollarSign className="h-4 w-4" />
+              Custos
             </TabsTrigger>
-            <TabsTrigger value="notes" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Notas</span>
+            <TabsTrigger value="notes" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <FileText className="h-4 w-4" />
+              Notas
             </TabsTrigger>
-            <TabsTrigger value="participants" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Pessoas</span>
+            <TabsTrigger value="participants" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Users className="h-4 w-4" />
+              Participantes
             </TabsTrigger>
-            <TabsTrigger value="team" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Equipe</span>
+            <TabsTrigger value="team" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Users2 className="h-4 w-4" />
+              Equipe
             </TabsTrigger>
-            <TabsTrigger value="media" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <Image className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Mídia</span>
+            <TabsTrigger value="media" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <Image className="h-4 w-4" />
+              Mídia
             </TabsTrigger>
-            <TabsTrigger value="feedback" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Feedback</span>
+            <TabsTrigger value="feedback" className="gap-2 text-xs sm:text-sm px-3 py-2">
+              <MessageSquare className="h-4 w-4" />
+              Feedback
             </TabsTrigger>
           </TabsList>
         </div>
