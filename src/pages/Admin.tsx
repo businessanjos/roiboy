@@ -343,6 +343,38 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
   const addonPlans = plans.filter(p => p.plan_type === 'addon');
   const activeMainPlans = mainPlans.filter(p => p.is_active).length;
   const activeAddons = addonPlans.filter(p => p.is_active).length;
+
+  // ========== TRIAL CONVERSION METRICS ==========
+  // Total accounts that ever had a trial (accounts created = went through trial)
+  const totalTrialAccounts = accounts.length;
+  
+  // Accounts that converted from trial to active (have a plan and are active)
+  const convertedFromTrial = accounts.filter(a => 
+    a.subscription_status === 'active' && a.plan_id
+  ).length;
+  
+  // Accounts still in trial
+  const stillInTrial = trialAccounts;
+  
+  // Accounts that didn't convert (cancelled or expired trial without converting)
+  // This includes cancelled accounts and accounts with expired trial that never converted
+  const now = new Date();
+  const expiredTrialNotConverted = accounts.filter(a => {
+    if (a.subscription_status === 'cancelled') return true;
+    if (a.subscription_status === 'trial' && a.trial_ends_at) {
+      const trialEnd = new Date(a.trial_ends_at);
+      return trialEnd < now; // Trial expired but still marked as trial (not converted)
+    }
+    return false;
+  }).length;
+  
+  // Accounts that completed trial period (either converted or expired)
+  const completedTrialAccounts = totalTrialAccounts - stillInTrial;
+  
+  // Trial conversion rate (only from accounts that finished trial)
+  const trialConversionRate = completedTrialAccounts > 0 
+    ? (convertedFromTrial / completedTrialAccounts) * 100 
+    : 0;
   
   // Calculate MRR (Monthly Recurring Revenue)
   const mrr = accounts.reduce((sum, account) => {
@@ -379,7 +411,6 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
   const arpu = activeAccounts > 0 ? mrr / activeAccounts : 0;
   
   // Calculate average account age in months
-  const now = new Date();
   const totalMonths = accounts.reduce((sum, account) => {
     const createdAt = new Date(account.created_at);
     const monthsActive = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24 * 30);
@@ -454,6 +485,74 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
           </CardContent>
         </Card>
       </div>
+
+      {/* Trial Conversion Metrics */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <PlayCircle className="h-5 w-5 text-primary" />
+            Conversão de Trial
+          </CardTitle>
+          <CardDescription>Eficiência do período de avaliação gratuita</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Total Trials */}
+            <div className="p-4 rounded-lg bg-muted/50 text-center">
+              <p className="text-3xl font-bold">{totalTrialAccounts}</p>
+              <p className="text-sm text-muted-foreground mt-1">Total de Trials</p>
+            </div>
+            
+            {/* Still in Trial */}
+            <div className="p-4 rounded-lg bg-blue-500/10 text-center">
+              <p className="text-3xl font-bold text-blue-600">{stillInTrial}</p>
+              <p className="text-sm text-muted-foreground mt-1">Em Trial Agora</p>
+            </div>
+            
+            {/* Converted */}
+            <div className="p-4 rounded-lg bg-emerald-500/10 text-center">
+              <p className="text-3xl font-bold text-emerald-600">{convertedFromTrial}</p>
+              <p className="text-sm text-muted-foreground mt-1">Converteram</p>
+            </div>
+            
+            {/* Not Converted */}
+            <div className="p-4 rounded-lg bg-red-500/10 text-center">
+              <p className="text-3xl font-bold text-red-600">{expiredTrialNotConverted}</p>
+              <p className="text-sm text-muted-foreground mt-1">Não Converteram</p>
+            </div>
+            
+            {/* Conversion Rate */}
+            <div className="p-4 rounded-lg bg-primary/10 text-center">
+              <p className="text-3xl font-bold text-primary">{trialConversionRate.toFixed(1)}%</p>
+              <p className="text-sm text-muted-foreground mt-1">Taxa de Conversão</p>
+            </div>
+          </div>
+          
+          {/* Visual Bar */}
+          {completedTrialAccounts > 0 && (
+            <div className="mt-6">
+              <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                <span>Trials Finalizados: {completedTrialAccounts}</span>
+                <span>Conversão: {trialConversionRate.toFixed(1)}%</span>
+              </div>
+              <div className="h-4 bg-muted rounded-full overflow-hidden flex">
+                <div 
+                  className="h-full bg-emerald-500 transition-all duration-500"
+                  style={{ width: `${trialConversionRate}%` }}
+                />
+                <div 
+                  className="h-full bg-red-400 transition-all duration-500"
+                  style={{ width: `${100 - trialConversionRate}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span className="text-emerald-600">✓ Converteram ({convertedFromTrial})</span>
+                <span className="text-red-600">✗ Não converteram ({expiredTrialNotConverted})</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Stats Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
