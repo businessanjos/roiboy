@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +20,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -25,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Clock, MapPin, User, ListOrdered } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, MapPin, User, ListOrdered, Mic, Building2, Home } from "lucide-react";
 
 interface ScheduleItem {
   id: string;
@@ -39,6 +48,18 @@ interface ScheduleItem {
   display_order: number;
 }
 
+interface TeamSpeaker {
+  id: string;
+  user_id: string;
+  is_external: boolean;
+  role_description: string | null;
+  users?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  };
+}
+
 interface Props {
   eventId: string;
   accountId: string | null;
@@ -47,9 +68,13 @@ interface Props {
 export default function EventScheduleTab({ eventId, accountId }: Props) {
   const { toast } = useToast();
   const [items, setItems] = useState<ScheduleItem[]>([]);
+  const [speakers, setSpeakers] = useState<TeamSpeaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | null>(null);
+  
+  const [speakerMode, setSpeakerMode] = useState<"team" | "external">("team");
+  const [selectedSpeakerId, setSelectedSpeakerId] = useState<string>("");
   
   const [formData, setFormData] = useState({
     title: "",
@@ -81,6 +106,29 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
     setLoading(false);
   };
 
+  const fetchSpeakers = async () => {
+    const { data, error } = await supabase
+      .from("event_team")
+      .select(`
+        id,
+        user_id,
+        is_external,
+        role_description,
+        users (id, name, avatar_url)
+      `)
+      .eq("event_id", eventId)
+      .eq("role", "speaker");
+
+    if (!error && data) {
+      setSpeakers(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchItems();
+    fetchSpeakers();
+  }, [eventId]);
+
   const resetForm = () => {
     setFormData({
       title: "",
@@ -92,10 +140,23 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
       notes: "",
     });
     setEditingItem(null);
+    setSpeakerMode("team");
+    setSelectedSpeakerId("");
   };
 
   const openEditDialog = (item: ScheduleItem) => {
     setEditingItem(item);
+    
+    // Check if speaker matches a team member
+    const matchingSpeaker = speakers.find(s => s.users?.name === item.speaker);
+    if (matchingSpeaker) {
+      setSpeakerMode("team");
+      setSelectedSpeakerId(matchingSpeaker.id);
+    } else {
+      setSpeakerMode(item.speaker ? "external" : "team");
+      setSelectedSpeakerId("");
+    }
+    
     setFormData({
       title: item.title,
       description: item.description || "",
@@ -108,6 +169,14 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
     setDialogOpen(true);
   };
 
+  const getSpeakerName = (): string | null => {
+    if (speakerMode === "team" && selectedSpeakerId) {
+      const speaker = speakers.find(s => s.id === selectedSpeakerId);
+      return speaker?.users?.name || null;
+    }
+    return formData.speaker.trim() || null;
+  };
+
   const handleSubmit = async () => {
     if (!formData.title.trim() || !formData.start_time || !accountId) {
       toast({
@@ -118,6 +187,8 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
       return;
     }
 
+    const speakerName = getSpeakerName();
+
     const itemData = {
       event_id: eventId,
       account_id: accountId,
@@ -126,7 +197,7 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
       start_time: new Date(formData.start_time).toISOString(),
       end_time: formData.end_time ? new Date(formData.end_time).toISOString() : null,
       location: formData.location.trim() || null,
-      speaker: formData.speaker.trim() || null,
+      speaker: speakerName,
       notes: formData.notes.trim() || null,
     };
 
@@ -294,25 +365,84 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="speaker">Palestrante</Label>
-                <Input
-                  id="speaker"
-                  value={formData.speaker}
-                  onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
-                  placeholder="Nome do palestrante"
-                />
+            <div className="space-y-2">
+              <Label>Palestrante</Label>
+              <div className="space-y-3">
+                <Select value={speakerMode} onValueChange={(v: "team" | "external") => {
+                  setSpeakerMode(v);
+                  if (v === "team") {
+                    setFormData({ ...formData, speaker: "" });
+                  } else {
+                    setSelectedSpeakerId("");
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="team">
+                      <div className="flex items-center gap-2">
+                        <Mic className="h-4 w-4" />
+                        Palestrante da Equipe
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="external">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Palestrante Externo / Digitar
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {speakerMode === "team" ? (
+                  speakers.length > 0 ? (
+                    <Select value={selectedSpeakerId} onValueChange={setSelectedSpeakerId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um palestrante..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {speakers.map((speaker) => (
+                          <SelectItem key={speaker.id} value={speaker.id}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={speaker.users?.avatar_url || undefined} />
+                                <AvatarFallback>
+                                  {speaker.users?.name?.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{speaker.users?.name}</span>
+                              <Badge variant="outline" className={`text-xs ${speaker.is_external ? "border-orange-500 text-orange-600" : "border-blue-500 text-blue-600"}`}>
+                                {speaker.is_external ? "Externo" : "Interno"}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum palestrante cadastrado na equipe. Cadastre na aba "Equipe" ou digite o nome abaixo.
+                    </p>
+                  )
+                ) : (
+                  <Input
+                    value={formData.speaker}
+                    onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
+                    placeholder="Digite o nome do palestrante externo"
+                  />
+                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Local</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="Sala, auditório..."
-                />
-              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Local</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="Sala, auditório..."
+              />
             </div>
 
             <div className="space-y-2">
