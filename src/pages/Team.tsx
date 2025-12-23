@@ -51,6 +51,7 @@ interface TeamUser {
   avatar_url: string | null;
   team_role_id: string | null;
   team_role?: TeamRole;
+  is_also_admin?: boolean;
 }
 
 const PERMISSION_LABELS: Record<string, { label: string; category: string }> = {
@@ -104,6 +105,7 @@ export default function Team() {
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formRoleId, setFormRoleId] = useState<string>("");
+  const [formIsAlsoAdmin, setFormIsAlsoAdmin] = useState(false);
   const [formAvatarUrl, setFormAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -203,6 +205,7 @@ export default function Team() {
         role: "mentor",
         account_id: currentUser.account_id,
         team_role_id: formRoleId || null,
+        is_also_admin: formIsAlsoAdmin,
       });
 
       if (error) throw error;
@@ -227,6 +230,7 @@ export default function Team() {
           name: formName, 
           email: formEmail,
           team_role_id: formRoleId || null,
+          is_also_admin: formIsAlsoAdmin,
         })
         .eq("id", selectedUser.id);
 
@@ -247,6 +251,7 @@ export default function Team() {
     setFormName("");
     setFormEmail("");
     setFormRoleId("");
+    setFormIsAlsoAdmin(false);
     setFormAvatarUrl(null);
   };
 
@@ -255,6 +260,7 @@ export default function Team() {
     setFormName(user.name);
     setFormEmail(user.email);
     setFormRoleId(user.team_role_id || "");
+    setFormIsAlsoAdmin(user.is_also_admin || false);
     setFormAvatarUrl(user.avatar_url);
     setIsEditDialogOpen(true);
   };
@@ -601,6 +607,11 @@ export default function Team() {
                             {user.team_role.name}
                           </Badge>
                         )}
+                        {user.is_also_admin && (
+                          <Badge variant="destructive" className="mt-2 text-xs font-medium ml-1">
+                            Admin
+                          </Badge>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
@@ -653,6 +664,11 @@ export default function Team() {
                           }}
                         >
                           {user.team_role.name}
+                        </Badge>
+                      )}
+                      {user.is_also_admin && (
+                        <Badge variant="destructive" className="text-xs font-medium hidden sm:inline-flex">
+                          Admin
                         </Badge>
                       )}
                       <Button
@@ -984,6 +1000,23 @@ export default function Team() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Also Admin Checkbox */}
+            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
+              <Checkbox
+                id="is-also-admin"
+                checked={formIsAlsoAdmin}
+                onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="is-also-admin" className="font-medium cursor-pointer">
+                  Também é Admin
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Pode visualizar e editar tudo no sistema
+                </p>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -1075,6 +1108,23 @@ export default function Team() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            
+            {/* Also Admin Checkbox */}
+            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
+              <Checkbox
+                id="edit-is-also-admin"
+                checked={formIsAlsoAdmin}
+                onCheckedChange={(checked) => setFormIsAlsoAdmin(checked === true)}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="edit-is-also-admin" className="font-medium cursor-pointer">
+                  Também é Admin
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Pode visualizar e editar tudo no sistema
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>
