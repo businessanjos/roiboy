@@ -243,7 +243,7 @@ serve(async (req) => {
       // Build dynamic links
       const linkRsvp = rsvpToken ? `${appUrl}/rsvp/${rsvpToken}` : `${appUrl}/rsvp/invalid`;
       const linkCheckin = event.checkin_code ? `${appUrl}/checkin/${event.checkin_code}` : `${appUrl}/checkin/code`;
-      const linkFeedback = `${appUrl}/feedback/${event_id}`;
+      const linkFeedback = `${appUrl}/feedback/${event_id}?p=${participant.participant_id}`;
 
       // Personalize message
       const personalizedMessage = message_template

@@ -100,6 +100,33 @@ interface ClientAttendance {
   join_time: string;
 }
 
+interface ClientEventParticipation {
+  id: string;
+  event_id: string;
+  rsvp_status: string;
+  rsvp_responded_at: string | null;
+  invited_at: string | null;
+  events: {
+    id: string;
+    title: string;
+    scheduled_at: string | null;
+    modality: string;
+  } | null;
+}
+
+interface ClientEventFeedback {
+  id: string;
+  event_id: string;
+  nps_score: number | null;
+  overall_rating: number | null;
+  submitted_at: string;
+  events: {
+    id: string;
+    title: string;
+    scheduled_at: string | null;
+  } | null;
+}
+
 interface ClientAgendaProps {
   clientId: string;
   clientProductIds: string[];
@@ -109,6 +136,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [events, setEvents] = useState<EventWithProducts[]>([]);
   const [deliveries, setDeliveries] = useState<ClientDelivery[]>([]);
   const [attendances, setAttendances] = useState<ClientAttendance[]>([]);
+  const [participations, setParticipations] = useState<ClientEventParticipation[]>([]);
+  const [feedbacks, setFeedbacks] = useState<ClientEventFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -137,8 +166,10 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       fetchEvents();
       fetchDeliveries();
       fetchAttendances();
+      fetchParticipations();
+      fetchFeedbacks();
     }
-  }, [accountId, clientProductIds]);
+  }, [accountId, clientProductIds, clientId]);
 
   const fetchAccountId = async () => {
     const { data } = await supabase
@@ -199,6 +230,44 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
 
     if (!error) {
       setAttendances((data || []) as ClientAttendance[]);
+    }
+  };
+
+  const fetchParticipations = async () => {
+    const { data, error } = await supabase
+      .from("event_participants")
+      .select(`
+        id,
+        event_id,
+        rsvp_status,
+        rsvp_responded_at,
+        invited_at,
+        events (id, title, scheduled_at, modality)
+      `)
+      .eq("client_id", clientId)
+      .order("invited_at", { ascending: false });
+
+    if (!error) {
+      setParticipations((data || []) as ClientEventParticipation[]);
+    }
+  };
+
+  const fetchFeedbacks = async () => {
+    const { data, error } = await supabase
+      .from("event_feedback")
+      .select(`
+        id,
+        event_id,
+        nps_score,
+        overall_rating,
+        submitted_at,
+        events (id, title, scheduled_at)
+      `)
+      .eq("client_id", clientId)
+      .order("submitted_at", { ascending: false });
+
+    if (!error) {
+      setFeedbacks((data || []) as ClientEventFeedback[]);
     }
   };
 
@@ -777,6 +846,99 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />, true)}
       {renderEventTable(materialsEvents, "Materiais de Apoio", <FileText className="h-4 w-4" />, true)}
       {renderEventTable(pastEvents, "Eventos Passados", <Clock className="h-4 w-4" />, true)}
+
+      {/* Client Event Participations (RSVPs) */}
+      {participations.length > 0 && (
+        <div className="border-t pt-6 mt-6">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Participações em Eventos (RSVPs)
+          </h3>
+          <div className="grid gap-3">
+            {participations.map((p) => {
+              const statusColors: Record<string, string> = {
+                confirmed: "bg-green-500/10 text-green-600 border-green-500/30",
+                declined: "bg-red-500/10 text-red-600 border-red-500/30",
+                pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
+                attended: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+                no_show: "bg-gray-500/10 text-gray-500 border-gray-500/30",
+                waitlist: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+              };
+              const statusLabels: Record<string, string> = {
+                confirmed: "Confirmado",
+                declined: "Recusado",
+                pending: "Pendente",
+                attended: "Presente",
+                no_show: "Não Compareceu",
+                waitlist: "Lista de Espera",
+              };
+              return (
+                <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                  <div>
+                    <p className="font-medium">{p.events?.title || "Evento"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {p.events?.scheduled_at 
+                        ? format(new Date(p.events.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                        : "Data não definida"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={statusColors[p.rsvp_status] || "bg-muted"}>
+                      {statusLabels[p.rsvp_status] || p.rsvp_status}
+                    </Badge>
+                    {p.rsvp_responded_at && (
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(p.rsvp_responded_at), "dd/MM", { locale: ptBR })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Client Feedbacks */}
+      {feedbacks.length > 0 && (
+        <div className="border-t pt-6 mt-6">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Feedbacks Enviados
+          </h3>
+          <div className="grid gap-3">
+            {feedbacks.map((f) => (
+              <div key={f.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                <div>
+                  <p className="font-medium">{f.events?.title || "Evento"}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Enviado em {format(new Date(f.submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {f.nps_score !== null && (
+                    <div className="text-center">
+                      <p className={cn(
+                        "text-lg font-bold",
+                        f.nps_score >= 9 ? "text-green-600" : f.nps_score >= 7 ? "text-yellow-600" : "text-red-600"
+                      )}>
+                        {f.nps_score}
+                      </p>
+                      <p className="text-xs text-muted-foreground">NPS</p>
+                    </div>
+                  )}
+                  {f.overall_rating !== null && (
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-primary">{f.overall_rating}★</p>
+                      <p className="text-xs text-muted-foreground">Avaliação</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Client Tasks Section */}
       <div className="border-t pt-6 mt-6">

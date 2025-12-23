@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,11 +43,15 @@ const DEFAULT_QUESTIONS: Omit<FeedbackQuestion, "id">[] = [
 
 export default function PublicEventFeedback() {
   const { eventId } = useParams<{ eventId: string }>();
+  const [searchParams] = useSearchParams();
+  const participantId = searchParams.get("p");
+  
   const [event, setEvent] = useState<EventInfo | null>(null);
   const [questions, setQuestions] = useState<FeedbackQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [participantClientId, setParticipantClientId] = useState<string | null>(null);
   
   // Form state
   const [responses, setResponses] = useState<Record<string, any>>({});
@@ -58,6 +62,25 @@ export default function PublicEventFeedback() {
       fetchEventAndQuestions();
     }
   }, [eventId]);
+
+  // Fetch participant's client_id if participant_id is provided
+  useEffect(() => {
+    if (participantId) {
+      fetchParticipantClient();
+    }
+  }, [participantId]);
+
+  const fetchParticipantClient = async () => {
+    const { data } = await supabase
+      .from("event_participants")
+      .select("client_id")
+      .eq("id", participantId)
+      .single();
+    
+    if (data?.client_id) {
+      setParticipantClientId(data.client_id);
+    }
+  };
 
   const fetchEventAndQuestions = async () => {
     try {
@@ -189,13 +212,17 @@ export default function PublicEventFeedback() {
         }
       });
 
+      // Use participant's client_id if available, otherwise the one found by phone
+      const finalClientId = participantClientId || clientId;
+
       // Insert main feedback
       const { data: feedbackData, error: feedbackError } = await supabase
         .from("event_feedback")
         .insert({
           event_id: eventId!,
           account_id: event!.account_id,
-          client_id: clientId,
+          client_id: finalClientId,
+          participant_id: participantId || null,
           ...legacyData,
         })
         .select()
