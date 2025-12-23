@@ -8,12 +8,20 @@ const corsHeaders = {
 };
 
 // UAZAPI sends messages in this format (from actual webhook payload)
+interface UazapiInstance {
+  name?: string;
+  status?: string;
+  lastDisconnect?: string;
+  lastDisconnectReason?: string;
+}
+
 interface UazapiWebhookPayload {
   BaseUrl?: string;
   EventType?: string;
+  instanceName?: string;
   // Alternative formats
   event?: string;
-  instance?: string;
+  instance?: string | UazapiInstance;
   // Chat info - UAZAPI uses 'phone' or extracts from 'id'
   chat?: {
     id?: string;
@@ -103,21 +111,26 @@ serve(async (req) => {
 
     // Extract instance from BaseUrl (e.g., https://cxroycom.uazapi.com -> find integration by account)
     const baseUrl = payload.BaseUrl || "";
-    const instance = payload.instance;
+    const rawInstance = payload.instance;
     
-    console.log(`BaseUrl: ${baseUrl}, instance: ${instance}`);
+    // Instance can be a string or an object with a 'name' property
+    const instanceName = typeof rawInstance === 'string' 
+      ? rawInstance 
+      : (rawInstance?.name || payload.instanceName || "");
+    
+    console.log(`BaseUrl: ${baseUrl}, instanceName: ${instanceName}`);
 
     // Find account - try different methods
     let integration = null;
     
     // Method 1: Find by instance name if provided
-    if (instance) {
+    if (instanceName) {
       const possibleNames = [
-        instance,
-        instance.replace(/_/g, "-"),
-        instance.replace(/-/g, "_"),
-        instance.split("_").slice(0, 2).join("-"),
-        instance.split("_").slice(0, 2).join("_"),
+        instanceName,
+        instanceName.replace(/_/g, "-"),
+        instanceName.replace(/-/g, "_"),
+        instanceName.split("_").slice(0, 2).join("-"),
+        instanceName.split("_").slice(0, 2).join("_"),
       ];
       
       for (const tryName of possibleNames) {
