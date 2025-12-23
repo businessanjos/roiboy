@@ -172,13 +172,13 @@ serve(async (req) => {
         // Try to get QR code from create response first
         let qrcodeBase64 = responseData.qrcode || responseData.instance?.qrcode || "";
         
-        // If no QR code in create response, try using the instance token with /connect endpoint
-        if (!qrcodeBase64 && instanceToken) {
-          // Try /connect endpoint with instance token
+        // If no QR code in create response, call /instance/connect/{instanceName} with admintoken
+        // This is the correct way to get QR code in UAZAPI/Evolution API
+        if (!qrcodeBase64) {
           try {
-            console.log("Trying /connect with instance token");
-            const connectResult = await uazapiInstanceRequest("/connect", "GET", instanceToken);
-            console.log("Connect with token result:", JSON.stringify(connectResult));
+            console.log(`Calling /instance/connect/${instanceName} with admintoken`);
+            const connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
+            console.log("Connect result:", JSON.stringify(connectResult));
             
             const connectData = connectResult as {
               base64?: string;
@@ -191,44 +191,37 @@ serve(async (req) => {
                            (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
                            connectData.code || 
                            connectData.pairingCode || "";
+                           
+            if (qrcodeBase64) {
+              console.log("Got QR code from /instance/connect endpoint");
+            }
           } catch (err) {
-            console.log("/connect with token failed:", (err as Error).message);
+            console.log("/instance/connect failed:", (err as Error).message);
           }
         }
-
-        // If still no QR code, try other endpoints with instance token
-        if (!qrcodeBase64 && instanceToken) {
-          const qrEndpoints = [
-            "/qrcode",
-            "/instance/qrcode",
-            "/status",
-          ];
-          
-          for (const endpoint of qrEndpoints) {
-            try {
-              console.log(`Trying endpoint ${endpoint} with instance token`);
-              const qrResult = await uazapiInstanceRequest(endpoint, "GET", instanceToken);
-              console.log(`${endpoint} result:`, JSON.stringify(qrResult));
-              
-              const qrData = qrResult as {
-                base64?: string;
-                qrcode?: string | { base64?: string };
-                code?: string;
-                pairingCode?: string;
-              };
-              
-              qrcodeBase64 = qrData.base64 || 
-                             (typeof qrData.qrcode === 'string' ? qrData.qrcode : qrData.qrcode?.base64) ||
-                             qrData.code || 
-                             qrData.pairingCode || "";
-              
-              if (qrcodeBase64) {
-                console.log("Found QR code from endpoint:", endpoint);
-                break;
-              }
-            } catch (qrErr) {
-              console.log(`Endpoint ${endpoint} failed:`, (qrErr as Error).message);
+        
+        // Fallback: try /instance/qrcode/{instanceName} with admintoken
+        if (!qrcodeBase64) {
+          try {
+            console.log(`Calling /instance/qrcode/${instanceName} with admintoken`);
+            const qrResult = await uazapiAdminRequest(`/instance/qrcode/${instanceName}`, "GET");
+            console.log("QRcode result:", JSON.stringify(qrResult));
+            
+            const qrData = qrResult as {
+              base64?: string;
+              qrcode?: string | { base64?: string };
+              code?: string;
+            };
+            
+            qrcodeBase64 = qrData.base64 || 
+                           (typeof qrData.qrcode === 'string' ? qrData.qrcode : qrData.qrcode?.base64) ||
+                           qrData.code || "";
+                           
+            if (qrcodeBase64) {
+              console.log("Got QR code from /instance/qrcode endpoint");
             }
+          } catch (err) {
+            console.log("/instance/qrcode failed:", (err as Error).message);
           }
         }
 
