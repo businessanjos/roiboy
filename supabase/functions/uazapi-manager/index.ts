@@ -606,9 +606,55 @@ serve(async (req) => {
       }
 
       case "disconnect": {
-        // Disconnect/logout the instance
-        result = await uazapiAdminRequest(`/instance/logout/${instanceName}`, "DELETE");
+        // Disconnect/logout the instance - try multiple endpoints and methods
+        const savedToken = (existingWhatsapp?.config as { instance_token?: string })?.instance_token;
+        let disconnected = false;
         
+        // Try instance token endpoints first
+        if (savedToken) {
+          const instanceLogoutEndpoints = [
+            { url: `/logout`, method: "POST" },
+            { url: `/logout`, method: "DELETE" },
+            { url: `/instance/logout`, method: "POST" },
+            { url: `/instance/logout`, method: "DELETE" },
+          ];
+          
+          for (const endpoint of instanceLogoutEndpoints) {
+            try {
+              console.log(`Trying instance logout: ${endpoint.method} ${endpoint.url}`);
+              result = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedToken);
+              console.log(`Logout successful via instance ${endpoint.url}`);
+              disconnected = true;
+              break;
+            } catch (err) {
+              console.log(`Instance logout ${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+        
+        // Try admin endpoints if instance logout failed
+        if (!disconnected) {
+          const adminLogoutEndpoints = [
+            { url: `/instance/logout/${instanceName}`, method: "POST" },
+            { url: `/instance/logout/${instanceName}`, method: "DELETE" },
+            { url: `/logout/${instanceName}`, method: "POST" },
+            { url: `/logout/${instanceName}`, method: "DELETE" },
+          ];
+          
+          for (const endpoint of adminLogoutEndpoints) {
+            try {
+              console.log(`Trying admin logout: ${endpoint.method} ${endpoint.url}`);
+              result = await uazapiAdminRequest(endpoint.url, endpoint.method);
+              console.log(`Logout successful via admin ${endpoint.url}`);
+              disconnected = true;
+              break;
+            } catch (err) {
+              console.log(`Admin logout ${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+        
+        // Even if logout API failed, update local status
         // Update integration status
         await supabase
           .from("integrations")
@@ -622,6 +668,11 @@ serve(async (req) => {
           })
           .eq("account_id", accountId)
           .eq("type", "whatsapp");
+        
+        if (!disconnected) {
+          console.log("Could not logout via API, but local status updated");
+          result = { message: "Integração desconectada localmente" };
+        }
           
         break;
       }
