@@ -21,6 +21,14 @@ async function uazapiRequest(endpoint: string, method: string, body?: unknown) {
   const url = `${UAZAPI_URL}${endpoint}`;
   console.log(`UAZAPI Request: ${method} ${url}`);
   
+  if (!UAZAPI_URL) {
+    throw new Error("UAZAPI_URL não configurada. Adicione a secret nas configurações.");
+  }
+  
+  if (!UAZAPI_ADMIN_TOKEN) {
+    throw new Error("UAZAPI_ADMIN_TOKEN não configurado. Adicione a secret nas configurações.");
+  }
+  
   const response = await fetch(url, {
     method,
     headers: {
@@ -30,11 +38,23 @@ async function uazapiRequest(endpoint: string, method: string, body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await response.json();
-  console.log(`UAZAPI Response:`, data);
+  // Get response as text first to handle non-JSON responses
+  const responseText = await response.text();
+  console.log(`UAZAPI Response (${response.status}):`, responseText);
+  
+  let data: unknown;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    // If response is not JSON, wrap the text in an error object
+    throw new Error(`UAZAPI retornou resposta inválida: ${responseText.slice(0, 200)}`);
+  }
   
   if (!response.ok) {
-    throw new Error(data.message || `UAZAPI error: ${response.status}`);
+    const errorMsg = (data as { message?: string })?.message || 
+                     (data as { error?: string })?.error || 
+                     `UAZAPI error: ${response.status}`;
+    throw new Error(errorMsg);
   }
   
   return data;
