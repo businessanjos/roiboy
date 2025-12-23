@@ -241,9 +241,7 @@ serve(async (req) => {
 
         console.log(`Processing message from ${phone} (${contactName}): ${content.substring(0, 50)}...`);
 
-        // Find or create client
-        let clientId: string | null = null;
-        
+        // Find existing client only (do NOT create new clients)
         const { data: existingClient } = await supabase
           .from("clients")
           .select("id")
@@ -251,35 +249,16 @@ serve(async (req) => {
           .eq("phone_e164", phone)
           .maybeSingle();
 
-        if (existingClient) {
-          clientId = existingClient.id;
-          console.log(`Found existing client: ${clientId}`);
-        } else {
-          const { data: newClient, error: createError } = await supabase
-            .from("clients")
-            .insert({
-              account_id: accountId,
-              phone_e164: phone,
-              full_name: contactName,
-              status: "no_contract",
-            })
-            .select("id")
-            .single();
-
-          if (newClient) {
-            clientId = newClient.id;
-            console.log(`Created new client: ${clientId} for ${phone}`);
-          } else if (createError) {
-            console.error("Error creating client:", createError);
-          }
+        if (!existingClient) {
+          console.log(`Ignoring message from unregistered phone: ${phone}`);
+          return new Response(
+            JSON.stringify({ success: true, skipped: true, reason: "phone_not_registered" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
 
-        if (!clientId) {
-          console.log("Could not find or create client");
-          return new Response(JSON.stringify({ error: "client_creation_failed" }), { 
-            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          });
-        }
+        const clientId = existingClient.id;
+        console.log(`Found existing client: ${clientId}`);
 
         // Find or create conversation
         let conversationId: string | null = null;
@@ -383,9 +362,7 @@ serve(async (req) => {
 
           console.log(`Processing alt format message from ${phone}: ${content.substring(0, 50)}...`);
 
-          // Find or create client
-          let clientId: string | null = null;
-          
+          // Find existing client only (do NOT create new clients)
           const { data: existingClient } = await supabase
             .from("clients")
             .select("id")
@@ -393,24 +370,12 @@ serve(async (req) => {
             .eq("phone_e164", phone)
             .maybeSingle();
 
-          if (existingClient) {
-            clientId = existingClient.id;
-          } else {
-            const { data: newClient } = await supabase
-              .from("clients")
-              .insert({
-                account_id: accountId,
-                phone_e164: phone,
-                full_name: contactName,
-                status: "no_contract",
-              })
-              .select("id")
-              .single();
-
-            if (newClient) clientId = newClient.id;
+          if (!existingClient) {
+            console.log(`Ignoring message from unregistered phone: ${phone}`);
+            continue;
           }
 
-          if (!clientId) continue;
+          const clientId = existingClient.id;
 
           // Find or create conversation
           let conversationId: string | null = null;
