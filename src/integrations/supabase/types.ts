@@ -3940,6 +3940,7 @@ export type Database = {
           max_products: number | null
           max_storage_mb: number | null
           max_users: number | null
+          max_whatsapp_connections: number | null
           name: string
           plan_type: string
           price: number
@@ -3960,6 +3961,7 @@ export type Database = {
           max_products?: number | null
           max_storage_mb?: number | null
           max_users?: number | null
+          max_whatsapp_connections?: number | null
           name: string
           plan_type?: string
           price?: number
@@ -3980,6 +3982,7 @@ export type Database = {
           max_products?: number | null
           max_storage_mb?: number | null
           max_users?: number | null
+          max_whatsapp_connections?: number | null
           name?: string
           plan_type?: string
           price?: number
