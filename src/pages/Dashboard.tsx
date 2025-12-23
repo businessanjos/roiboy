@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,17 +130,23 @@ const EVENT_TYPE_ICONS: Record<string, any> = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
-  const [clients, setClients] = useState<ClientWithScore[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use optimized hook for all dashboard data
+  const { 
+    products, 
+    clients, 
+    upcomingEvents, 
+    roiStats, 
+    riskStats, 
+    contractData, 
+    isLoading: loading, 
+    refetchAll 
+  } = useDashboardData();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [quadrantFilter, setQuadrantFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<LifeEvent[]>([]);
-  const [roiStats, setROIStats] = useState<ROIStats | null>(null);
-  const [riskStats, setRiskStats] = useState<RiskStats | null>(null);
-  const [contractData, setContractData] = useState<ContractData[]>([]);
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
@@ -154,7 +161,7 @@ export default function Dashboard() {
         .from("account_settings")
         .select("onboarding_completed")
         .eq("account_id", currentUser.account_id)
-        .single();
+        .maybeSingle();
       
       if (data && !data.onboarding_completed) {
         navigate("/onboarding");
@@ -164,251 +171,6 @@ export default function Dashboard() {
     checkOnboarding();
   }, [currentUser?.account_id, navigate]);
 
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-      
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    }
-  };
-
-  const fetchClients = async () => {
-    setLoading(true);
-    try {
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (clientsError) throw clientsError;
-
-      // Fetch all client_products at once for efficiency
-      const { data: clientProductsData } = await supabase
-        .from("client_products")
-        .select("client_id, product_id");
-
-      // Fetch all active contracts to determine which clients have active contracts
-      const { data: activeContractsData } = await supabase
-        .from("client_contracts")
-        .select("client_id")
-        .eq("status", "active");
-
-      // Create a set of client_ids with active contracts
-      const clientsWithActiveContracts = new Set<string>();
-      (activeContractsData || []).forEach((contract: any) => {
-        clientsWithActiveContracts.add(contract.client_id);
-      });
-
-      // Create a map of client_id -> product_ids
-      const clientProductsMap: Record<string, string[]> = {};
-      (clientProductsData || []).forEach((cp: any) => {
-        if (!clientProductsMap[cp.client_id]) {
-          clientProductsMap[cp.client_id] = [];
-        }
-        clientProductsMap[cp.client_id].push(cp.product_id);
-      });
-
-      const clientsWithScores: ClientWithScore[] = await Promise.all(
-        (clientsData || []).map(async (client) => {
-          const { data: scoreData } = await supabase
-            .from("score_snapshots")
-            .select("*")
-            .eq("client_id", client.id)
-            .order("computed_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          const { data: vnpsData } = await supabase
-            .from("vnps_snapshots")
-            .select("vnps_score, vnps_class")
-            .eq("client_id", client.id)
-            .order("computed_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          const { data: riskData } = await supabase
-            .from("risk_events")
-            .select("reason")
-            .eq("client_id", client.id)
-            .order("happened_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          const { data: recData } = await supabase
-            .from("recommendations")
-            .select("action_text")
-            .eq("client_id", client.id)
-            .eq("status", "open")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          return {
-            id: client.id,
-            full_name: client.full_name,
-            phone_e164: client.phone_e164,
-            status: client.status as ClientWithScore["status"],
-            roizometer: scoreData?.roizometer ?? 0,
-            escore: scoreData?.escore ?? 0,
-            quadrant: (scoreData?.quadrant as ClientWithScore["quadrant"]) ?? "lowE_lowROI",
-            trend: (scoreData?.trend as ClientWithScore["trend"]) ?? "flat",
-            last_risk: riskData?.reason,
-            recommendation: recData?.action_text,
-            vnps_score: vnpsData?.vnps_score,
-            vnps_class: vnpsData?.vnps_class as ClientWithScore["vnps_class"],
-            product_ids: clientProductsMap[client.id] || [],
-            hasActiveContract: clientsWithActiveContracts.has(client.id),
-          };
-        })
-      );
-
-      setClients(clientsWithScores);
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-      toast.error("Erro ao carregar clientes");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUpcomingEvents = async () => {
-    try {
-      const { data: eventsData, error } = await supabase
-        .from("client_life_events")
-        .select("*, clients!inner(full_name)")
-        .not("event_date", "is", null)
-        .order("event_date", { ascending: true });
-
-      if (error) throw error;
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const upcoming = (eventsData || [])
-        .map((event: any) => {
-          const eventDate = new Date(event.event_date);
-          let nextDate = new Date(eventDate);
-          
-          if (event.is_recurring) {
-            nextDate.setFullYear(today.getFullYear());
-            if (isBefore(nextDate, today)) {
-              nextDate = addYears(nextDate, 1);
-            }
-          }
-          
-          const daysUntil = differenceInDays(nextDate, today);
-          
-          return {
-            ...event,
-            client_name: event.clients?.full_name || "Cliente",
-            daysUntil,
-            nextDate,
-          };
-        })
-        .filter((e: any) => e.daysUntil >= 0 && e.daysUntil <= 30)
-        .sort((a: any, b: any) => a.daysUntil - b.daysUntil)
-        .slice(0, 10);
-
-      setUpcomingEvents(upcoming);
-    } catch (error) {
-      console.error("Error fetching life events:", error);
-    }
-  };
-
-  const fetchROIStats = async () => {
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: roiEvents, error } = await supabase
-        .from("roi_events")
-        .select("roi_type, category, impact")
-        .gte("happened_at", thirtyDaysAgo.toISOString());
-
-      if (error) throw error;
-
-      const categoryCount: Record<string, number> = {};
-      let tangible = 0;
-      let intangible = 0;
-      let highImpact = 0;
-
-      (roiEvents || []).forEach((e: any) => {
-        if (e.roi_type === "tangible") tangible++;
-        else intangible++;
-        if (e.impact === "high") highImpact++;
-        categoryCount[e.category] = (categoryCount[e.category] || 0) + 1;
-      });
-
-      const recentCategories = Object.entries(categoryCount)
-        .map(([category, count]) => ({ category, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-
-      setROIStats({
-        totalROIEvents: roiEvents?.length || 0,
-        tangibleCount: tangible,
-        intangibleCount: intangible,
-        highImpactCount: highImpact,
-        recentCategories,
-      });
-    } catch (error) {
-      console.error("Error fetching ROI stats:", error);
-    }
-  };
-
-  const fetchRiskStats = async () => {
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: riskEvents, error } = await supabase
-        .from("risk_events")
-        .select("risk_level")
-        .gte("happened_at", thirtyDaysAgo.toISOString());
-
-      if (error) throw error;
-
-      let high = 0, medium = 0, low = 0;
-      (riskEvents || []).forEach((e: any) => {
-        if (e.risk_level === "high") high++;
-        else if (e.risk_level === "medium") medium++;
-        else low++;
-      });
-
-      setRiskStats({
-        totalRiskEvents: riskEvents?.length || 0,
-        highRiskCount: high,
-        mediumRiskCount: medium,
-        lowRiskCount: low,
-      });
-    } catch (error) {
-      console.error("Error fetching risk stats:", error);
-    }
-  };
-
-  const fetchContractData = async () => {
-    try {
-      const twelveMonthsAgo = subMonths(new Date(), 12);
-      
-      const { data, error } = await supabase
-        .from("client_contracts")
-        .select("id, status, status_changed_at, start_date, value, client_id")
-        .or(`start_date.gte.${format(twelveMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${twelveMonthsAgo.toISOString()}`)
-        .order("start_date", { ascending: true });
-
-      if (error) throw error;
-      setContractData(data || []);
-    } catch (error) {
-      console.error("Error fetching contract data:", error);
-    }
-  };
 
   // Get client to products mapping
   const clientProductsMap = useMemo(() => {
@@ -633,15 +395,8 @@ export default function Dashboard() {
     },
   };
 
+  // Real-time subscription for client changes
   useEffect(() => {
-    fetchProducts();
-    fetchClients();
-    fetchUpcomingEvents();
-    fetchROIStats();
-    fetchRiskStats();
-    fetchContractData();
-
-    // Real-time subscription for client changes
     const channel = supabase
       .channel("dashboard-realtime")
       .on(
@@ -652,7 +407,7 @@ export default function Dashboard() {
           table: "clients",
         },
         () => {
-          fetchClients();
+          refetchAll();
         }
       )
       .on(
@@ -663,7 +418,7 @@ export default function Dashboard() {
           table: "client_products",
         },
         () => {
-          fetchClients();
+          refetchAll();
         }
       )
       .on(
@@ -674,7 +429,7 @@ export default function Dashboard() {
           table: "client_contracts",
         },
         () => {
-          fetchContractData();
+          refetchAll();
         }
       )
       .subscribe();
@@ -682,7 +437,7 @@ export default function Dashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [refetchAll]);
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
@@ -729,7 +484,7 @@ export default function Dashboard() {
           <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => { fetchClients(); fetchUpcomingEvents(); fetchROIStats(); fetchRiskStats(); fetchContractData(); }} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={refetchAll} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline ml-2">Atualizar</span>
           </Button>
