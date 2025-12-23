@@ -33,7 +33,14 @@ import {
   LogInIcon,
   Laptop,
   Apple,
-  Terminal
+  Terminal,
+  Gift,
+  Ticket,
+  Package,
+  ClipboardList,
+  UsersRound,
+  QrCode,
+  Star
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,49 +56,49 @@ const features = [
     icon: Users,
     title: "Gestão de Clientes",
     description: "Cadastro completo com campos personalizáveis, fotos, contratos e ciclo de vida do cliente.",
-    highlights: ["Campos customizados", "Avatares e fotos", "Contratos com alertas", "Status automático"]
+    highlights: ["Campos customizados", "Avatares e logos", "Diagnóstico completo", "Relacionamentos"]
   },
   {
     icon: BarChart3,
     title: "Métricas de Engajamento",
     description: "E-Score e ROIzometer medem o engajamento e percepção de valor em tempo real.",
-    highlights: ["E-Score (WhatsApp + Lives)", "ROIzometer (tangível + intangível)", "V-NPS comportamental", "Tendências automáticas"]
+    highlights: ["E-Score (WhatsApp + Lives)", "ROIzometer (tangível + intangível)", "V-NPS comportamental", "Status MLS"]
   },
   {
     icon: MessageSquare,
     title: "Análise de WhatsApp",
-    description: "Integração com extensão Chrome para captura e análise automática de conversas.",
-    highlights: ["Transcrição de áudios", "Detecção de riscos", "Eventos de ROI", "Momentos CX"]
+    description: "App Desktop ou extensão Chrome para captura e análise automática de conversas.",
+    highlights: ["Transcrição de áudios", "Detecção de riscos", "Eventos de ROI", "Sync histórico"]
   },
   {
     icon: CalendarDays,
-    title: "Eventos e Agenda",
-    description: "Gerencie lives, materiais e entregas com check-in por QR Code e relatórios de presença.",
-    highlights: ["Check-in por QR Code", "Relatório de presença", "Webhook Zoom/Meet", "Taxa de participação"]
-  },
-  {
-    icon: FileText,
-    title: "Formulários Públicos",
-    description: "Crie formulários personalizados e compartilhe com clientes sem necessidade de login.",
-    highlights: ["Templates prontos", "Campos customizados", "Link compartilhável", "Respostas na timeline"]
+    title: "Gestão de Eventos",
+    description: "Eventos completos com check-in QR Code, feedback NPS, custos, cronograma e muito mais.",
+    highlights: ["Check-in QR Code", "Feedback e NPS", "Gestão de custos", "Cronograma e equipe"]
   },
   {
     icon: Target,
-    title: "Detecção de Riscos",
-    description: "IA identifica automaticamente sinais de insatisfação, frustração e risco de churn.",
-    highlights: ["Análise de sentimento", "Alertas automáticos", "Recomendações", "Histórico completo"]
+    title: "Tarefas e Kanban",
+    description: "Gerencie tarefas da equipe com quadro Kanban, prazos, responsáveis e subtarefas.",
+    highlights: ["Kanban drag-and-drop", "Subtarefas", "Prazos e alertas", "Filtros avançados"]
+  },
+  {
+    icon: FileText,
+    title: "Contratos e Produtos",
+    description: "Gestão de contratos com renovações, alertas e catálogo de produtos vinculados.",
+    highlights: ["Alertas de vencimento", "Histórico completo", "Catálogo de produtos", "Cupons de desconto"]
   },
   {
     icon: Heart,
     title: "Momentos CX",
     description: "Rastreie eventos importantes na vida do cliente: aniversários, casamentos, filhos.",
-    highlights: ["Detecção automática", "Lembretes", "Eventos recorrentes", "Personalização"]
+    highlights: ["Detecção por IA", "Lembretes automáticos", "Eventos recorrentes", "Personalização"]
   },
   {
     icon: Link2,
     title: "Integrações",
-    description: "Conecte com Omie, Pipedrive, Zoom, Google Meet e Clínica Ryka.",
-    highlights: ["Sync automático", "Webhooks", "Dados financeiros", "Pipeline de vendas"]
+    description: "Conecte com Omie, Pipedrive, Zoom, Google Meet, WhatsApp Evolution e mais.",
+    highlights: ["Sync automático", "Webhooks", "API completa", "Multi-plataforma"]
   }
 ];
 
@@ -99,15 +106,15 @@ const metrics = [
   { label: "E-Score", description: "Engajamento em WhatsApp e Lives", range: "0-100" },
   { label: "ROIzometer", description: "Percepção de ROI tangível + intangível", range: "0-100" },
   { label: "V-NPS", description: "NPS comportamental automático", range: "0-10" },
-  { label: "Risk Index", description: "Índice de risco de churn", range: "0-100" }
+  { label: "MLS", description: "Member Loyalty Score (Ouro, Prata, Bronze)", range: "Níveis" }
 ];
 
 const workflow = [
-  { step: 1, title: "Cadastro", description: "Cliente entra via Pipedrive ou manualmente" },
-  { step: 2, title: "Conexão", description: "WhatsApp identificado pela extensão Chrome" },
-  { step: 3, title: "Análise", description: "IA analisa mensagens e detecta eventos" },
-  { step: 4, title: "Métricas", description: "Scores calculados automaticamente" },
-  { step: 5, title: "Ação", description: "Recomendações e alertas para a equipe" }
+  { step: 1, title: "Cadastro", description: "Cliente entra via integração ou manualmente" },
+  { step: 2, title: "Captura", description: "App Desktop ou extensão captura conversas" },
+  { step: 3, title: "Análise IA", description: "IA analisa mensagens, riscos e eventos" },
+  { step: 4, title: "Métricas", description: "Scores e MLS calculados automaticamente" },
+  { step: 5, title: "Ação", description: "Tarefas, alertas e recomendações" }
 ];
 
 export default function Presentation() {
@@ -930,6 +937,102 @@ export default function Presentation() {
         </div>
       </section>
 
+      {/* Additional Features Section */}
+      <section className="p-4 sm:p-6 lg:p-8 border-t border-border bg-muted/30">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <Badge variant="secondary" className="mb-4">
+              <Star className="h-3 w-3 mr-1" />
+              Funcionalidades Extras
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Muito Mais para Sua Gestão</h2>
+            <p className="text-muted-foreground">Ferramentas completas para clubes de negócios, mentorias e comunidades</p>
+          </div>
+          
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-orange-500/10 w-fit mb-3">
+                  <Package className="h-5 w-5 text-orange-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Catálogo de Produtos</h3>
+                <p className="text-sm text-muted-foreground">Gerencie seus produtos e serviços com preços, categorias e vinculação a contratos.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-pink-500/10 w-fit mb-3">
+                  <Ticket className="h-5 w-5 text-pink-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Cupons de Desconto</h3>
+                <p className="text-sm text-muted-foreground">Crie cupons com desconto fixo ou percentual, limite de uso e validade.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-cyan-500/10 w-fit mb-3">
+                  <ClipboardList className="h-5 w-5 text-cyan-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Diagnóstico de Clientes</h3>
+                <p className="text-sm text-muted-foreground">Formulário completo para entender o negócio, desafios e objetivos do cliente.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-violet-500/10 w-fit mb-3">
+                  <UsersRound className="h-5 w-5 text-violet-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Gestão de Equipe</h3>
+                <p className="text-sm text-muted-foreground">Convide membros, defina papéis (admin, gestor, viewer) e gerencie acessos.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-emerald-500/10 w-fit mb-3">
+                  <QrCode className="h-5 w-5 text-emerald-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Check-in por QR Code</h3>
+                <p className="text-sm text-muted-foreground">Gere QR Codes únicos para eventos e faça check-in rápido de participantes.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-rose-500/10 w-fit mb-3">
+                  <Gift className="h-5 w-5 text-rose-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Gestão de Brindes</h3>
+                <p className="text-sm text-muted-foreground">Controle estoque de brindes, custo unitário e distribuição em eventos.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-blue-500/10 w-fit mb-3">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Formulários Públicos</h3>
+                <p className="text-sm text-muted-foreground">Crie formulários personalizados e compartilhe via link sem necessidade de login.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="group hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="p-2 rounded-lg bg-amber-500/10 w-fit mb-3">
+                  <Link2 className="h-5 w-5 text-amber-600" />
+                </div>
+                <h3 className="font-semibold mb-1">Relacionamentos</h3>
+                <p className="text-sm text-muted-foreground">Vincule clientes como sócios, cônjuges, indicações ou dependentes.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Integrations Section */}
       <section className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
@@ -938,9 +1041,9 @@ export default function Presentation() {
             <p className="text-muted-foreground">Conecte suas ferramentas favoritas</p>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-            {["Zoom", "Google Meet", "Omie", "Pipedrive", "Clínica Ryka"].map((integration) => (
-              <Card key={integration} className="text-center py-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+            {["Zoom", "Google Meet", "Omie", "Pipedrive", "WhatsApp Evolution", "Asaas"].map((integration) => (
+              <Card key={integration} className="text-center py-4 hover:shadow-md transition-shadow">
                 <CardContent className="p-0">
                   <p className="font-medium text-sm">{integration}</p>
                 </CardContent>
@@ -954,7 +1057,7 @@ export default function Presentation() {
               <Code2 className="h-5 w-5 text-primary" />
               <div className="text-center">
                 <p className="font-medium">Documentação da API</p>
-                <p className="text-sm text-muted-foreground">Para desenvolvedores da extensão Chrome</p>
+                <p className="text-sm text-muted-foreground">Webhooks, endpoints e integrações customizadas</p>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </CardContent>
