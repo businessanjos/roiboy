@@ -665,7 +665,7 @@ export default function Events() {
                 </div>
               )}
 
-              {eventType === "live" && (
+              {eventType !== "material" && (
                 <>
                   <div className="flex items-center space-x-2">
                     <Checkbox
