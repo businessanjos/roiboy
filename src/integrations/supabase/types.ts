@@ -4084,6 +4084,7 @@ export type Database = {
         | "host"
         | "photographer"
         | "other"
+        | "mentor"
       event_type:
         | "live"
         | "material"
@@ -4352,6 +4353,7 @@ export const Constants = {
         "host",
         "photographer",
         "other",
+        "mentor",
       ],
       event_type: [
         "live",

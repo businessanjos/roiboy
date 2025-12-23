@@ -34,7 +34,8 @@ import {
   Headphones,
   User,
   Building2,
-  Home
+  Home,
+  GraduationCap
 } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
@@ -68,6 +69,7 @@ const roleConfig: Record<EventTeamRole, { label: string; icon: React.ElementType
   coordinator: { label: "Coordenador", icon: UserCog, color: "bg-blue-500/10 text-blue-600" },
   support: { label: "Apoio", icon: Headphones, color: "bg-green-500/10 text-green-600" },
   speaker: { label: "Palestrante", icon: Mic, color: "bg-purple-500/10 text-purple-600" },
+  mentor: { label: "Mentor", icon: GraduationCap, color: "bg-indigo-500/10 text-indigo-600" },
   host: { label: "Anfitrião", icon: User, color: "bg-pink-500/10 text-pink-600" },
   photographer: { label: "Fotógrafo", icon: Camera, color: "bg-orange-500/10 text-orange-600" },
   other: { label: "Outro", icon: User, color: "bg-gray-500/10 text-gray-600" },
