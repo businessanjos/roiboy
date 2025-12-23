@@ -7,15 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { 
   MessageSquare, 
   Star, 
   TrendingUp,
   ThumbsUp,
   ThumbsDown,
-  Download
+  Download,
+  Link2,
+  Copy,
+  Check,
+  Send
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 
 interface Client {
@@ -46,9 +52,9 @@ interface EventFeedbackTabProps {
 }
 
 export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTabProps) {
-  const { toast } = useToast();
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (eventId) {
@@ -121,6 +127,15 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
     link.click();
   };
 
+  const feedbackLink = `${window.location.origin}/feedback/${eventId}`;
+
+  const copyFeedbackLink = async () => {
+    await navigator.clipboard.writeText(feedbackLink);
+    setCopied(true);
+    toast.success("Link copiado!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const nps = calculateNPS();
   const avgOverall = calculateAverageRating('overall_rating');
   const avgContent = calculateAverageRating('content_rating');
@@ -155,6 +170,31 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
     );
   };
 
+  // Link section component
+  const FeedbackLinkSection = () => (
+    <Card className="mb-6">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Link2 className="h-5 w-5 text-primary" />
+          <h3 className="font-medium">Link para coleta de feedback</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-3">
+          Compartilhe este link com os participantes para coletar feedback sobre o evento.
+        </p>
+        <div className="flex gap-2">
+          <Input 
+            value={feedbackLink} 
+            readOnly 
+            className="font-mono text-sm bg-muted"
+          />
+          <Button onClick={copyFeedbackLink} variant="outline" className="shrink-0">
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -165,16 +205,21 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
 
   if (feedback.length === 0) {
     return (
-      <EmptyState
-        icon={MessageSquare}
-        title="Nenhum feedback recebido"
-        description="Os feedbacks dos participantes aparecerão aqui."
-      />
+      <div className="space-y-6">
+        <FeedbackLinkSection />
+        <EmptyState
+          icon={MessageSquare}
+          title="Nenhum feedback recebido"
+          description="Compartilhe o link acima com os participantes para coletar feedback sobre o evento."
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <FeedbackLinkSection />
+      
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="p-4">
