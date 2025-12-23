@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -182,7 +182,7 @@ export default function Tasks() {
     if (data) setUsers(data);
   };
 
-  const handleToggleComplete = async (task: Task) => {
+  const handleToggleComplete = useCallback(async (task: Task) => {
     const newStatus = task.status === "done" ? "pending" : "done";
     const { error } = await supabase
       .from("internal_tasks")
@@ -198,9 +198,9 @@ export default function Tasks() {
       toast.success(newStatus === "done" ? "Tarefa concluída!" : "Tarefa reaberta");
       fetchTasks();
     }
-  };
+  }, []);
 
-  const handleDeleteTask = async () => {
+  const handleDeleteTask = useCallback(async () => {
     if (!taskToDelete) return;
 
     const { error } = await supabase
@@ -216,9 +216,9 @@ export default function Tasks() {
       setTaskToDelete(null);
       fetchTasks();
     }
-  };
+  }, [taskToDelete]);
 
-  const handleStatusChange = async (taskId: string, newStatus: Task["status"]) => {
+  const handleStatusChange = useCallback(async (taskId: string, newStatus: Task["status"]) => {
     const { error } = await supabase
       .from("internal_tasks")
       .update({
@@ -233,28 +233,28 @@ export default function Tasks() {
       toast.success("Tarefa movida!");
       fetchTasks();
     }
-  };
+  }, []);
 
-  const openEditDialog = (task: Task) => {
+  const openEditDialog = useCallback((task: Task) => {
     setEditingTask(task);
     setInitialStatus(undefined);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const openNewTaskDialog = (status?: Task["status"]) => {
+  const openNewTaskDialog = useCallback((status?: Task["status"]) => {
     setEditingTask(null);
     setInitialStatus(status);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const openDeleteDialog = (task: Task) => {
+  const openDeleteDialog = useCallback((task: Task) => {
     setTaskToDelete(task);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const getInitials = (name: string) => {
+  const getInitials = useCallback((name: string) => {
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-  };
+  }, []);
 
   const getDueDateInfo = (task: Task) => {
     if (!task.due_date) return null;
@@ -286,7 +286,7 @@ export default function Tasks() {
     return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground" };
   };
 
-  const filteredTasks = tasks.filter((task) => {
+  const filteredTasks = useMemo(() => tasks.filter((task) => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -304,10 +304,10 @@ export default function Tasks() {
     }
 
     return matchesSearch && matchesUser && matchesTab;
-  });
+  }), [tasks, searchTerm, filterUser, currentUser?.id, activeTab]);
 
   // Sort tasks
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
+  const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
     if (sortBy === "priority") {
       return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
     } else if (sortBy === "due_date") {
@@ -318,14 +318,16 @@ export default function Tasks() {
     } else {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     }
-  });
+  }), [filteredTasks, sortBy]);
 
-  const pendingCount = tasks.filter(t => 
-    t.status === "pending" || t.status === "in_progress" || t.status === "overdue"
-  ).length;
-  const overdueCount = tasks.filter(t => t.status === "overdue").length;
-  const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
-  const doneCount = tasks.filter(t => t.status === "done").length;
+  const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => ({
+    pendingCount: tasks.filter(t => 
+      t.status === "pending" || t.status === "in_progress" || t.status === "overdue"
+    ).length,
+    overdueCount: tasks.filter(t => t.status === "overdue").length,
+    inProgressCount: tasks.filter(t => t.status === "in_progress").length,
+    doneCount: tasks.filter(t => t.status === "done").length,
+  }), [tasks]);
 
   if (loading) {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { Link } from "react-router-dom";
 import {
   DndContext,
@@ -356,17 +356,17 @@ export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, on
     })
   );
 
-  const tasksByStatus = COLUMNS.reduce((acc, status) => {
+  const tasksByStatus = useMemo(() => COLUMNS.reduce((acc, status) => {
     acc[status] = tasks.filter((task) => task.status === status);
     return acc;
-  }, {} as Record<TaskStatus, Task[]>);
+  }, {} as Record<TaskStatus, Task[]>), [tasks]);
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
     setActiveTask(task || null);
-  };
+  }, [tasks]);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
 
@@ -390,7 +390,7 @@ export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, on
     if (targetStatus && targetStatus !== activeTask.status) {
       await onStatusChange(activeTask.id, targetStatus);
     }
-  };
+  }, [tasks, onStatusChange]);
 
   return (
     <DndContext
