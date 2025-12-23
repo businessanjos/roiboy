@@ -190,7 +190,7 @@ export default function Presentation() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Button size="lg" onClick={handleCTA} className="gap-2 text-lg px-8 py-6">
-                Começar Grátis por 14 dias
+                Começar Grátis por 7 dias
                 <ArrowRight className="h-5 w-5" />
               </Button>
               <Button size="lg" variant="outline" onClick={handleCTA} className="gap-2 text-lg px-8 py-6">
@@ -382,7 +382,7 @@ export default function Presentation() {
             <div className="flex flex-wrap justify-center gap-6 text-muted-foreground">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-primary" />
-                14 dias grátis
+                7 dias grátis
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-primary" />
