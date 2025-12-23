@@ -179,19 +179,35 @@
         }
       }
 
-      // Prepare message data
+      // Generate unique message hash to prevent duplicates
+      const messageHash = generateMessageHash(phoneNumber, messageText, currentChatName);
+      
+      // Check if we recently processed this exact message
+      if (processedMessages.has(messageHash)) {
+        console.log('[ROI Boy] Duplicate message hash detected, skipping');
+        return;
+      }
+      
+      // Prepare message data with contact_name for better client matching
       const messageData = {
         phone: phoneNumber,
+        contactName: currentChatName, // Always send contact name for fallback matching
         senderName: senderName || currentChatName,
         content: messageText,
         isAudio: isAudio,
         isGroup: !!senderName,
         groupName: senderName ? currentChatName : null,
         timestamp: new Date().toISOString(),
-        rawTimestamp: timestamp
+        rawTimestamp: timestamp,
+        messageHash: messageHash // Send hash to backend for deduplication
       };
 
-      console.log('[ROI Boy] Captured message:', messageData);
+      console.log('[ROI Boy] Captured message:', { 
+        phone: messageData.phone, 
+        contactName: messageData.contactName,
+        contentPreview: messageData.content?.substring(0, 50),
+        hash: messageHash 
+      });
 
       // Send to background script
       chrome.runtime.sendMessage({
@@ -200,6 +216,9 @@
       }).catch(err => {
         console.error('[ROI Boy] Error sending message:', err);
       });
+      
+      // Store hash instead of generated ID for better deduplication
+      processedMessages.add(messageHash);
 
     } catch (error) {
       console.error('[ROI Boy] Error processing message:', error);
@@ -211,6 +230,24 @@
     const text = element.textContent?.substring(0, 50) || '';
     const time = Date.now();
     return `msg_${text}_${time}`;
+  }
+  
+  // Generate stable hash for message deduplication
+  function generateMessageHash(phone, content, chatName) {
+    // Create a stable hash based on message content and context
+    const normalizedContent = (content || '').trim().toLowerCase().substring(0, 200);
+    const normalizedPhone = (phone || '').replace(/\D/g, '');
+    const normalizedChat = (chatName || '').trim().toLowerCase();
+    
+    // Simple hash function
+    const str = `${normalizedPhone}|${normalizedChat}|${normalizedContent}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return `hash_${Math.abs(hash).toString(36)}`;
   }
 
   // Extract phone number from current chat

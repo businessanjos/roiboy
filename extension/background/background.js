@@ -141,15 +141,23 @@ async function handleWhatsAppMessage(payload) {
 
     const messagePayload = {
       api_key: authData.apiKey,
-      phone_e164: phoneE164,
+      phone_e164: phoneE164 || undefined,
+      contact_name: payload.contactName || payload.senderName || '', // Always send contact name for fallback matching
       direction: 'client_to_team',
       content_text: payload.content || '',
       sent_at: payload.timestamp || new Date().toISOString(),
       is_group: payload.isGroup || false,
       group_name: payload.groupName || null,
       sender_phone_e164: payload.isGroup ? phoneE164 : undefined,
-      source: 'extension'
+      source: 'extension',
+      message_hash: payload.messageHash || undefined // Send hash for deduplication
     };
+
+    // Skip if no valid identifier
+    if (!messagePayload.phone_e164 && !messagePayload.contact_name) {
+      console.warn('[ROI Boy] No phone or contact name available, skipping message');
+      return { success: false, error: 'No identifier available' };
+    }
 
     const response = await fetch(`${API_BASE_URL}/ingest-whatsapp-message`, {
       method: 'POST',
