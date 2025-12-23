@@ -18,14 +18,54 @@ import {
   TrendingDown,
   ThumbsUp,
   Quote,
-  Sparkles
+  Sparkles,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  Bell,
+  Calendar
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import royLogo from "@/assets/roy-logo.png";
+
+const tourSlides = [
+  {
+    title: "Dashboard Inteligente",
+    description: "Veja todos seus clientes em um só lugar. Métricas de engajamento, alertas de risco e oportunidades de encantamento.",
+    icon: LayoutDashboard,
+    features: ["E-Score e ROIzometer em tempo real", "Alertas automáticos de churn", "Visão 360º do cliente"]
+  },
+  {
+    title: "Análise de Conversas com IA",
+    description: "Conecte seu WhatsApp e deixe a IA analisar cada mensagem automaticamente.",
+    icon: MessageSquare,
+    features: ["Transcrição de áudios", "Detecção de sentimentos", "Identificação de riscos e oportunidades"]
+  },
+  {
+    title: "Métricas que Importam",
+    description: "Scores exclusivos calculados automaticamente a partir do comportamento real do cliente.",
+    icon: BarChart3,
+    features: ["E-Score: engajamento em WhatsApp e Lives", "ROIzometer: percepção de valor", "V-NPS: NPS comportamental automático"]
+  },
+  {
+    title: "Gestão de Eventos",
+    description: "Crie eventos, faça check-in por QR Code e colete feedback NPS automaticamente.",
+    icon: Calendar,
+    features: ["Check-in por QR Code", "Feedback pós-evento", "Relatórios de presença"]
+  },
+  {
+    title: "Alertas Proativos",
+    description: "Receba notificações antes que problemas aconteçam. Aja no momento certo.",
+    icon: Bell,
+    features: ["Alertas de risco de churn", "Lembretes de aniversários", "Oportunidades de upsell"]
+  }
+];
 
 const painPoints = [
   {
@@ -127,6 +167,8 @@ export default function Presentation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const [showTour, setShowTour] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   
   const isPublicRoute = location.pathname === "/sobre";
 
@@ -138,7 +180,103 @@ export default function Presentation() {
     navigate("/auth?tab=signup");
   };
 
+  const openTour = () => {
+    setCurrentSlide(0);
+    setShowTour(true);
+  };
+
+  const nextSlide = () => {
+    if (currentSlide < tourSlides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+    }
+  };
+
+  const prevSlide = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+    }
+  };
+
   return (
+    <>
+    {/* Product Tour Modal */}
+    <Dialog open={showTour} onOpenChange={setShowTour}>
+      <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
+        <div className="relative">
+          {/* Slide Content */}
+          <div className="p-8 pb-4">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-4 rounded-2xl bg-primary/10 text-primary">
+                {(() => {
+                  const Icon = tourSlides[currentSlide].icon;
+                  return <Icon className="h-8 w-8" />;
+                })()}
+              </div>
+              <div>
+                <Badge variant="secondary" className="mb-2">
+                  {currentSlide + 1} de {tourSlides.length}
+                </Badge>
+                <DialogTitle className="text-2xl">
+                  {tourSlides[currentSlide].title}
+                </DialogTitle>
+              </div>
+            </div>
+            
+            <p className="text-lg text-muted-foreground mb-6">
+              {tourSlides[currentSlide].description}
+            </p>
+            
+            <div className="space-y-3">
+              {tourSlides[currentSlide].features.map((feature, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Navigation */}
+          <div className="flex items-center justify-between p-6 bg-muted/30 border-t">
+            <Button
+              variant="ghost"
+              onClick={prevSlide}
+              disabled={currentSlide === 0}
+              className="gap-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            
+            {/* Dots */}
+            <div className="flex gap-2">
+              {tourSlides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                    idx === currentSlide ? "bg-primary" : "bg-muted-foreground/30"
+                  }`}
+                />
+              ))}
+            </div>
+            
+            {currentSlide === tourSlides.length - 1 ? (
+              <Button onClick={() => { setShowTour(false); handleSignup(); }} className="gap-2">
+                Começar Grátis
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={nextSlide} className="gap-2">
+                Próximo
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <div className="min-h-screen bg-background">
       {/* Header */}
       {isPublicRoute && (
@@ -197,14 +335,14 @@ export default function Presentation() {
                 Começar Grátis por 7 dias
                 <ArrowRight className="h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" onClick={handleLogin} className="gap-2 text-lg px-8 py-6">
+              <Button size="lg" variant="outline" onClick={openTour} className="gap-2 text-lg px-8 py-6">
                 <Play className="h-5 w-5" />
                 Ver como funciona
               </Button>
             </div>
             
             <p className="text-sm text-muted-foreground">
-              ✓ Sem cartão de crédito &nbsp; ✓ Setup em 5 minutos &nbsp; ✓ Cancele quando quiser
+              ✓ Cartão necessário, cancele quando quiser &nbsp; ✓ Setup em 5 minutos &nbsp; ✓ Sem cobrança nos primeiros 7 dias
             </p>
           </div>
         </div>
@@ -390,7 +528,7 @@ export default function Presentation() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-primary" />
-                Setup em 5 minutos
+                Cancele antes de cobrar
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-primary" />
@@ -421,5 +559,6 @@ export default function Presentation() {
         </div>
       </footer>
     </div>
+    </>
   );
 }
