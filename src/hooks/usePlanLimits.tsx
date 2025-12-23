@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
 
-export type ResourceType = "clients" | "users" | "events" | "products" | "forms" | "ai_analyses";
+export type ResourceType = "clients" | "users" | "events" | "products" | "forms" | "ai_analyses" | "whatsapp_connections";
 
 interface PlanLimits {
   max_clients: number;
@@ -12,6 +12,7 @@ interface PlanLimits {
   max_forms: number;
   max_ai_analyses: number;
   max_storage_mb: number;
+  max_whatsapp_connections: number;
 }
 
 interface PlanUsage {
@@ -21,6 +22,7 @@ interface PlanUsage {
   products: number;
   forms: number;
   ai_analyses: number;
+  whatsapp_connections: number;
 }
 
 interface PlanFeatures {
@@ -67,6 +69,7 @@ const DEFAULT_LIMITS: PlanLimits = {
   max_forms: 5,
   max_ai_analyses: 100,
   max_storage_mb: 500,
+  max_whatsapp_connections: 1,
 };
 
 const RESOURCE_LIMIT_MAP: Record<ResourceType, keyof PlanLimits> = {
@@ -76,6 +79,7 @@ const RESOURCE_LIMIT_MAP: Record<ResourceType, keyof PlanLimits> = {
   products: "max_products",
   forms: "max_forms",
   ai_analyses: "max_ai_analyses",
+  whatsapp_connections: "max_whatsapp_connections",
 };
 
 export function PlanLimitsProvider({ children }: { children: ReactNode }) {
@@ -125,6 +129,7 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
             max_forms: planData.max_forms ?? DEFAULT_LIMITS.max_forms,
             max_ai_analyses: planData.max_ai_analyses ?? DEFAULT_LIMITS.max_ai_analyses,
             max_storage_mb: planData.max_storage_mb ?? DEFAULT_LIMITS.max_storage_mb,
+            max_whatsapp_connections: planData.max_whatsapp_connections ?? DEFAULT_LIMITS.max_whatsapp_connections,
           };
           planFeatures = (planData.features as PlanFeatures) || {};
         }
@@ -144,6 +149,17 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
           .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
       ]);
 
+      // Count WhatsApp integrations separately (table may not be in types yet)
+      let whatsappCount = 0;
+      try {
+        const { count } = await (supabase as any).from("whatsapp_integrations")
+          .select("id", { count: "exact", head: true })
+          .eq("account_id", currentUser.account_id);
+        whatsappCount = count || 0;
+      } catch {
+        whatsappCount = 0;
+      }
+
       const usage: PlanUsage = {
         clients: clientsRes.count || 0,
         users: usersRes.count || 0,
@@ -151,6 +167,7 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
         products: productsRes.count || 0,
         forms: formsRes.count || 0,
         ai_analyses: aiRes.count || 0,
+        whatsapp_connections: whatsappCount,
       };
 
       setData({

@@ -18,6 +18,7 @@ const RESOURCE_LABELS: Record<ResourceType, { singular: string; plural: string }
   products: { singular: "produto", plural: "produtos" },
   forms: { singular: "formulário", plural: "formulários" },
   ai_analyses: { singular: "análise de IA", plural: "análises de IA" },
+  whatsapp_connections: { singular: "conexão WhatsApp", plural: "conexões WhatsApp" },
 };
 
 export function PlanLimitAlert({ resource, showProgress = true, className }: PlanLimitAlertProps) {
