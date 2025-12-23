@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,19 +121,14 @@ export default function Events() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { canCreate } = usePlanLimits();
-  const [events, setEvents] = useState<EventWithProducts[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
-  const [accountId, setAccountId] = useState<string | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [selectedEventForQr, setSelectedEventForQr] = useState<EventWithProducts | null>(null);
   const [copied, setCopied] = useState(false);
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<EventWithProducts | null>(null);
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [loadingAttendance, setLoadingAttendance] = useState(false);
   
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -158,58 +154,80 @@ export default function Events() {
   // Multi-day schedule state: { 'YYYY-MM-DD': { startTime: 'HH:mm', endTime: 'HH:mm' } }
   const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
 
-  useEffect(() => {
-    if (user) {
-      fetchAccountId();
-      fetchProducts();
-      fetchEvents();
-    }
-  }, [user]);
+  // Fetch account ID with React Query
+  const { data: accountId } = useQuery({
+    queryKey: ["user-account-id", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", user?.id)
+        .single();
+      return data?.account_id || null;
+    },
+    enabled: !!user?.id,
+    staleTime: 300000, // 5 minutes
+  });
 
-  const fetchAccountId = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("account_id")
-      .eq("auth_user_id", user?.id)
-      .single();
-    
-    if (data) {
-      setAccountId(data.account_id);
-    }
-  };
+  // Fetch products with React Query
+  const { data: products = [] } = useQuery({
+    queryKey: ["active-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data || []) as Product[];
+    },
+    staleTime: 60000,
+  });
 
-  const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("id, name")
-      .eq("is_active", true)
-      .order("name");
+  // Fetch events with React Query
+  const { data: events = [], isLoading: loading } = useQuery({
+    queryKey: ["events-with-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          *,
+          event_products (
+            product_id,
+            products (id, name)
+          )
+        `)
+        .order("scheduled_at", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data as EventWithProducts[]) || [];
+    },
+    staleTime: 30000,
+  });
 
-    if (!error && data) {
-      setProducts(data);
-    }
-  };
+  // Fetch attendance for selected event
+  const { data: attendance = [], isLoading: loadingAttendance } = useQuery({
+    queryKey: ["event-attendance", selectedEventForAttendance?.id],
+    queryFn: async () => {
+      if (!selectedEventForAttendance?.id) return [];
+      const { data, error } = await supabase
+        .from("attendance")
+        .select(`
+          id,
+          client_id,
+          join_time,
+          clients (id, full_name, phone_e164, avatar_url)
+        `)
+        .eq("event_id", selectedEventForAttendance.id)
+        .order("join_time", { ascending: true });
+      if (error) throw error;
+      return (data as Attendance[]) || [];
+    },
+    enabled: !!selectedEventForAttendance?.id,
+  });
 
-  const fetchEvents = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("events")
-      .select(`
-        *,
-        event_products (
-          product_id,
-          products (id, name)
-        )
-      `)
-      .order("scheduled_at", { ascending: true, nullsFirst: false });
-
-    if (error) {
-      console.error("Error fetching events:", error);
-    } else {
-      setEvents((data as EventWithProducts[]) || []);
-    }
-    setLoading(false);
-  };
+  const invalidateEvents = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["events-with-products"] });
+  }, [queryClient]);
 
   const resetForm = () => {
     setTitle("");
@@ -229,36 +247,9 @@ export default function Events() {
     setEditingEvent(null);
   };
 
-  const fetchAttendance = async (eventId: string) => {
-    setLoadingAttendance(true);
-    const { data, error } = await supabase
-      .from("attendance")
-      .select(`
-        id,
-        client_id,
-        join_time,
-        clients (id, full_name, phone_e164, avatar_url)
-      `)
-      .eq("event_id", eventId)
-      .order("join_time", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching attendance:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar a lista de presenças",
-        variant: "destructive",
-      });
-    } else {
-      setAttendance((data as Attendance[]) || []);
-    }
-    setLoadingAttendance(false);
-  };
-
   const openAttendanceDialog = (event: EventWithProducts) => {
     setSelectedEventForAttendance(event);
     setAttendanceDialogOpen(true);
-    fetchAttendance(event.id);
   };
 
   const exportAttendanceCSV = () => {
@@ -432,7 +423,7 @@ export default function Events() {
 
     setDialogOpen(false);
     resetForm();
-    fetchEvents();
+    invalidateEvents();
   };
 
   const handleDelete = async (id: string) => {
@@ -449,7 +440,7 @@ export default function Events() {
         title: "Evento excluído",
         description: "O evento foi removido com sucesso.",
       });
-      fetchEvents();
+      invalidateEvents();
     }
   };
 
