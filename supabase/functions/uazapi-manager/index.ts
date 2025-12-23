@@ -17,7 +17,7 @@ interface UazapiRequest {
   message?: string;
 }
 
-// Request helper for admin endpoints (using apikey header - Evolution API standard)
+// Request helper for admin endpoints (using admintoken header - UAZAPI standard)
 async function uazapiAdminRequest(endpoint: string, method: string, body?: unknown) {
   const url = `${UAZAPI_URL}${endpoint}`;
   console.log(`UAZAPI Admin Request: ${method} ${url}`);
@@ -30,12 +30,12 @@ async function uazapiAdminRequest(endpoint: string, method: string, body?: unkno
     throw new Error("UAZAPI_ADMIN_TOKEN não configurado. Adicione a secret nas configurações.");
   }
   
-  // Try with apikey header (Evolution API standard)
+  // Use admintoken header for administrative endpoints (UAZAPI docs)
   const response = await fetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
-      "apikey": UAZAPI_ADMIN_TOKEN,
+      "admintoken": UAZAPI_ADMIN_TOKEN,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -152,18 +152,41 @@ serve(async (req) => {
     switch (action) {
       case "create": {
         // Create a new instance for this account
-        // UAZAPI expects "Name" (capitalized) in the payload
+        // UAZAPI/Evolution API expects "instanceName" in the payload and qrcode: true to get QR immediately
         const createResult = await uazapiAdminRequest("/instance/create", "POST", {
-          Name: instanceName,
+          instanceName: instanceName,
           qrcode: true,
+          integration: "WHATSAPP-BAILEYS",
           webhook: {
             url: `${supabaseUrl}/functions/v1/uazapi-webhook`,
-            events: ["messages.upsert", "connection.update", "qrcode.updated"],
+            byEvents: false,
+            base64: true,
+            events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
           },
         });
 
-        // Store instance token if returned
-        const instanceToken = (createResult as { token?: string })?.token;
+        console.log("Create result:", JSON.stringify(createResult));
+
+        // Extract QR code from response - it can be in different places
+        const responseData = createResult as {
+          token?: string;
+          qrcode?: { base64?: string; code?: string };
+          instance?: { 
+            token?: string; 
+            qrcode?: string;
+            status?: string;
+          };
+          base64?: string;
+          code?: string;
+        };
+
+        const instanceToken = responseData.token || responseData.instance?.token;
+        
+        // QR code can be in different formats depending on UAZAPI version
+        let qrcodeBase64 = responseData.qrcode?.base64 || 
+                           responseData.base64 || 
+                           responseData.instance?.qrcode ||
+                           responseData.qrcode?.code;
 
         // Update integrations table
         await supabase
@@ -171,23 +194,20 @@ serve(async (req) => {
           .upsert({
             account_id: accountId,
             type: "whatsapp",
-            status: "pending",
+            status: qrcodeBase64 ? "pending" : "disconnected",
             config: {
               provider: "uazapi",
               instance_name: instanceName,
               instance_token: instanceToken,
+              qrcode_base64: qrcodeBase64,
               created_at: new Date().toISOString(),
             },
           }, { onConflict: "account_id,type" });
 
-        // Now connect the instance to get QR code
-        try {
-          const connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
-          result = { ...createResult as object, qrcode: connectResult };
-        } catch (connectErr) {
-          console.log("Connect after create failed:", connectErr);
-          result = createResult;
-        }
+        result = {
+          ...createResult as object,
+          qrcode_base64: qrcodeBase64,
+        };
 
         break;
       }
