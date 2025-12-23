@@ -49,6 +49,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Download = lazy(() => import("./pages/Download"));
 const Home = lazy(() => import("./pages/Home"));
+const Reminders = lazy(() => import("./pages/Reminders"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -112,6 +113,7 @@ const App = () => (
                             <Route path="/api-docs" element={<ApiDocs />} />
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/account-settings" element={<AccountSettings />} />
+                            <Route path="/reminders" element={<Reminders />} />
                             <Route path="/admin" element={<Admin />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />

@@ -3216,6 +3216,166 @@ export type Database = {
           },
         ]
       }
+      reminder_logs: {
+        Row: {
+          account_id: string
+          channel: string
+          client_id: string | null
+          contract_id: string | null
+          created_at: string
+          error_message: string | null
+          event_id: string | null
+          id: string
+          life_event_id: string | null
+          reminder_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          channel: string
+          client_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          id?: string
+          life_event_id?: string | null
+          reminder_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          channel?: string
+          client_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          id?: string
+          life_event_id?: string | null
+          reminder_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_life_event_id_fkey"
+            columns: ["life_event_id"]
+            isOneToOne: false
+            referencedRelation: "client_life_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_logs_reminder_id_fkey"
+            columns: ["reminder_id"]
+            isOneToOne: false
+            referencedRelation: "reminders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminders: {
+        Row: {
+          account_id: string
+          created_at: string
+          days_before: number
+          description: string | null
+          email_subject: string | null
+          email_template: string | null
+          id: string
+          is_active: boolean
+          name: string
+          reminder_type: string
+          send_email: boolean
+          send_notification: boolean
+          send_whatsapp: boolean
+          time_of_day: string
+          updated_at: string
+          whatsapp_template: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          days_before?: number
+          description?: string | null
+          email_subject?: string | null
+          email_template?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          reminder_type: string
+          send_email?: boolean
+          send_notification?: boolean
+          send_whatsapp?: boolean
+          time_of_day?: string
+          updated_at?: string
+          whatsapp_template?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          days_before?: number
+          description?: string | null
+          email_subject?: string | null
+          email_template?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          reminder_type?: string
+          send_email?: boolean
+          send_notification?: boolean
+          send_whatsapp?: boolean
+          time_of_day?: string
+          updated_at?: string
+          whatsapp_template?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_events: {
         Row: {
           account_id: string
