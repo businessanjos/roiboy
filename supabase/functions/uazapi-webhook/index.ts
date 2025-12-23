@@ -14,7 +14,7 @@ interface UazapiWebhookPayload {
   // Alternative formats
   event?: string;
   instance?: string;
-  // Chat info
+  // Chat info - UAZAPI uses 'phone' or extracts from 'id'
   chat?: {
     id?: string;
     image?: string;
@@ -22,16 +22,25 @@ interface UazapiWebhookPayload {
     name?: string;
     phone?: string;
     lead_email?: string;
+    // Additional phone fields UAZAPI might use
+    jid?: string;
+    number?: string;
   };
-  // Message data - can be in different formats
+  // Message data - UAZAPI format
   message?: {
     id?: string;
-    body?: string;
-    content?: string;
+    body?: string | Record<string, unknown>;
+    content?: string | Record<string, unknown>;
     text?: string;
     type?: string;
     fromMe?: boolean;
     timestamp?: number | string;
+    // Nested message content
+    conversation?: string;
+    extendedTextMessage?: { text?: string };
+    imageMessage?: { caption?: string };
+    videoMessage?: { caption?: string };
+    audioMessage?: { seconds?: number };
   };
   // Alternative message format
   data?: {
@@ -160,6 +169,12 @@ serve(async (req) => {
         const chat = payload.chat;
         const msg = payload.message;
         
+        // Log structure for debugging
+        console.log("Chat object keys:", Object.keys(chat));
+        console.log("Message object keys:", Object.keys(msg));
+        console.log("Chat phone:", chat.phone, "Chat jid:", chat.jid, "Chat number:", chat.number, "Chat id:", chat.id);
+        console.log("Message body type:", typeof msg.body, "Message content type:", typeof msg.content);
+        
         // Skip outgoing messages
         if (msg.fromMe) {
           console.log("Skipping outgoing message");
@@ -168,13 +183,54 @@ serve(async (req) => {
           });
         }
         
-        const phone = normalizePhone(chat.phone);
+        // Extract phone from multiple possible locations
+        let phone = normalizePhone(chat.phone) || normalizePhone(chat.jid) || normalizePhone(chat.number);
+        
+        // If still no phone, try to extract from chat.id (format: 5511999999999@s.whatsapp.net or similar)
+        if (!phone && chat.id) {
+          const idMatch = chat.id.match(/(\d{10,15})/);
+          if (idMatch) {
+            phone = `+${idMatch[1]}`;
+          }
+        }
+        
         const contactName = chat.name || "Desconhecido";
-        const content = msg.body || msg.content || msg.text || "";
+        
+        // Extract content from various formats
+        let content = "";
+        if (typeof msg.body === "string") {
+          content = msg.body;
+        } else if (typeof msg.content === "string") {
+          content = msg.content;
+        } else if (typeof msg.text === "string") {
+          content = msg.text;
+        } else if (msg.conversation) {
+          content = msg.conversation;
+        } else if (msg.extendedTextMessage?.text) {
+          content = msg.extendedTextMessage.text;
+        } else if (msg.imageMessage?.caption) {
+          content = `[Imagem] ${msg.imageMessage.caption}`;
+        } else if (msg.videoMessage?.caption) {
+          content = `[Vídeo] ${msg.videoMessage.caption}`;
+        } else if (msg.audioMessage) {
+          content = "[Áudio]";
+        } else if (typeof msg.body === "object" && msg.body !== null) {
+          // Try to extract from nested structure
+          const bodyObj = msg.body as Record<string, unknown>;
+          if (bodyObj.conversation) content = String(bodyObj.conversation);
+          else if (bodyObj.text) content = String(bodyObj.text);
+          else if (bodyObj.extendedTextMessage && typeof bodyObj.extendedTextMessage === "object") {
+            const ext = bodyObj.extendedTextMessage as Record<string, unknown>;
+            if (ext.text) content = String(ext.text);
+          }
+        }
+        
         const messageId = msg.id || `${Date.now()}`;
         const timestamp = msg.timestamp 
           ? new Date(Number(msg.timestamp) * 1000).toISOString()
           : new Date().toISOString();
+
+        console.log(`Extracted - phone: ${phone}, content: ${content.substring(0, 50)}...`);
 
         if (!phone || !content) {
           console.log(`Skipping message: no phone (${phone}) or content (${content})`);
