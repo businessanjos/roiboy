@@ -152,6 +152,8 @@ export default function Reminders() {
   const [emailSubject, setEmailSubject] = useState("");
   const [sendWhatsapp, setSendWhatsapp] = useState(true);
   const [sendEmail, setSendEmail] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState<string>("");
+  const [sendMode, setSendMode] = useState<"now" | "scheduled">("now");
   
   // UI state
   const [activeTab, setActiveTab] = useState("create");
@@ -325,6 +327,11 @@ export default function Reminders() {
       return;
     }
 
+    if (sendMode === "scheduled" && !scheduledFor) {
+      toast.error("Selecione a data e hora do agendamento");
+      return;
+    }
+
     setSending(true);
     
     try {
@@ -339,24 +346,79 @@ export default function Reminders() {
           send_order: index,
         }));
 
-      const { data, error } = await supabase.functions.invoke("send-reminder", {
-        body: {
-          event_id: selectedEventId,
-          campaign_name: campaignName,
-          campaign_type: campaignType,
-          participants: selectedParticipantData,
-          message_template: message,
-          email_subject: emailSubject,
-          send_whatsapp: sendWhatsapp,
-          send_email: sendEmail,
-        },
-      });
+      if (sendMode === "scheduled") {
+        // Create scheduled campaign directly in the database
+        const { data: campaign, error: campaignError } = await supabase
+          .from("reminder_campaigns")
+          .insert({
+            account_id: currentUser.account_id,
+            event_id: selectedEventId,
+            campaign_type: campaignType,
+            name: campaignName,
+            message_template: message,
+            email_subject: emailSubject,
+            send_whatsapp: sendWhatsapp,
+            send_email: sendEmail,
+            status: "scheduled",
+            scheduled_for: new Date(scheduledFor).toISOString(),
+            total_recipients: selectedParticipantData.length,
+            created_by: currentUser.id,
+            delay_min_seconds: 3,
+            delay_max_seconds: 10,
+          })
+          .select("id")
+          .single();
 
-      if (error) throw error;
+        if (campaignError) throw campaignError;
+
+        // Create recipient records
+        type RecipientStatus = "pending" | "queued" | "sending" | "sent" | "failed" | "responded";
+        
+        const recipientRecords = selectedParticipantData.map((p, index) => ({
+          account_id: currentUser.account_id,
+          campaign_id: campaign.id,
+          participant_id: p.participant_id,
+          client_id: p.client_id,
+          recipient_name: p.name,
+          recipient_phone: p.phone,
+          recipient_email: p.email,
+          whatsapp_status: (sendWhatsapp && p.phone ? "queued" : "pending") as RecipientStatus,
+          email_status: (sendEmail && p.email ? "queued" : "pending") as RecipientStatus,
+          send_order: index,
+        }));
+
+        const { error: recipientsError } = await supabase
+          .from("reminder_recipients")
+          .insert(recipientRecords);
+
+        if (recipientsError) throw recipientsError;
+
+        toast.success(`Campanha agendada para ${format(new Date(scheduledFor), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`);
+      } else {
+        // Send immediately using the edge function
+        const { data, error } = await supabase.functions.invoke("send-reminder", {
+          body: {
+            event_id: selectedEventId,
+            campaign_name: campaignName,
+            campaign_type: campaignType,
+            participants: selectedParticipantData,
+            message_template: message,
+            email_subject: emailSubject,
+            send_whatsapp: sendWhatsapp,
+            send_email: sendEmail,
+          },
+        });
+
+        if (error) throw error;
+
+        toast.success(`Campanha criada! Enviando para ${selectedParticipantData.length} participantes...`);
+        
+        if (data?.campaign_id) {
+          setViewingCampaignId(data.campaign_id);
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: ["reminder-campaigns"] });
-      
-      toast.success(`Campanha criada! Enviando para ${selectedParticipantData.length} participantes...`);
       
       // Reset wizard
       setCurrentStep("event");
@@ -364,12 +426,9 @@ export default function Reminders() {
       setSelectedParticipants([]);
       setCampaignType("notice");
       setMessage("");
+      setScheduledFor("");
+      setSendMode("now");
       setActiveTab("history");
-      
-      // Start polling for updates
-      if (data?.campaign_id) {
-        setViewingCampaignId(data.campaign_id);
-      }
 
     } catch (error: any) {
       console.error("Send campaign error:", error);
@@ -744,6 +803,52 @@ export default function Reminders() {
                     </div>
                   </div>
 
+                  {/* Scheduling Options */}
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                    <p className="text-sm font-medium">Quando enviar?</p>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="sendMode"
+                          value="now"
+                          checked={sendMode === "now"}
+                          onChange={() => setSendMode("now")}
+                          className="accent-primary"
+                        />
+                        <span className="text-sm">Enviar agora</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="sendMode"
+                          value="scheduled"
+                          checked={sendMode === "scheduled"}
+                          onChange={() => setSendMode("scheduled")}
+                          className="accent-primary"
+                        />
+                        <span className="text-sm flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          Agendar
+                        </span>
+                      </label>
+                    </div>
+                    
+                    {sendMode === "scheduled" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="scheduledFor">Data e hora do envio</Label>
+                        <Input
+                          id="scheduledFor"
+                          type="datetime-local"
+                          value={scheduledFor}
+                          onChange={(e) => setScheduledFor(e.target.value)}
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="max-w-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">Prévia da Mensagem</p>
                     <pre className="whitespace-pre-wrap text-sm font-mono bg-background p-3 rounded border">
@@ -754,7 +859,10 @@ export default function Reminders() {
                   <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                     <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
                       <Clock className="h-4 w-4" />
-                      Os envios serão feitos com intervalo de 3-10 segundos entre cada mensagem para simular envio humano.
+                      {sendMode === "scheduled" 
+                        ? `O envio será iniciado automaticamente em ${scheduledFor ? format(new Date(scheduledFor), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "data selecionada"}`
+                        : "Os envios serão feitos com intervalo de 3-10 segundos entre cada mensagem para simular envio humano."
+                      }
                     </p>
                   </div>
                 </CardContent>
