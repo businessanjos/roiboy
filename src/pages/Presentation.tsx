@@ -960,15 +960,6 @@ export default function Presentation() {
               </CardContent>
             </Card>
             
-            <Card className="group hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="p-2 rounded-lg bg-pink-500/10 w-fit mb-3">
-                  <Ticket className="h-5 w-5 text-pink-600" />
-                </div>
-                <h3 className="font-semibold mb-1">Cupons de Desconto</h3>
-                <p className="text-sm text-muted-foreground">Crie cupons com desconto fixo ou percentual, limite de uso e validade.</p>
-              </CardContent>
-            </Card>
             
             <Card className="group hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
