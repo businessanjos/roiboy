@@ -152,7 +152,7 @@ serve(async (req) => {
       case "create": {
         // Create a new instance for this account
         // UAZAPI expects "Name" (capitalized) in the payload
-        result = await uazapiAdminRequest("/instance/create", "POST", {
+        const createResult = await uazapiAdminRequest("/instance/create", "POST", {
           Name: instanceName,
           qrcode: true,
           webhook: {
@@ -162,7 +162,7 @@ serve(async (req) => {
         });
 
         // Store instance token if returned
-        const instanceToken = (result as { token?: string })?.token;
+        const instanceToken = (createResult as { token?: string })?.token;
 
         // Update integrations table
         await supabase
@@ -179,6 +179,15 @@ serve(async (req) => {
             },
           }, { onConflict: "account_id,type" });
 
+        // Now connect the instance to get QR code
+        try {
+          const connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
+          result = { ...createResult as object, qrcode: connectResult };
+        } catch (connectErr) {
+          console.log("Connect after create failed:", connectErr);
+          result = createResult;
+        }
+
         break;
       }
 
@@ -189,8 +198,8 @@ serve(async (req) => {
       }
 
       case "qrcode": {
-        // Get current QR code
-        result = await uazapiAdminRequest(`/instance/qrcode/${instanceName}`, "GET");
+        // Get current QR code - use connect endpoint since qrcode endpoint may not exist
+        result = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
         break;
       }
 
