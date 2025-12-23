@@ -169,116 +169,81 @@ serve(async (req) => {
         const instanceToken = createResult.token || createResult.instance?.token;
 
         // Wait for instance to initialize
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Now try to connect the instance to generate QR code
-        // UAZAPI requires calling the connect endpoint separately after creation
+        // The UAZAPI GO needs to call instance/connect to generate the QR code
+        // This starts the WhatsApp connection process
         let qrcodeBase64 = "";
         let connectResult: unknown = null;
         
-        // Try POST to /instance/connect first (some UAZAPI versions use POST)
-        try {
-          console.log("Trying POST /instance/connect with admintoken");
-          connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "POST");
-          console.log("POST connect result:", JSON.stringify(connectResult));
+        // Try different endpoints to get QR code after connection is initiated
+        const qrEndpoints = [
+          { url: `/instance/connect/${instanceName}`, method: "GET", useAdmin: true },
+          { url: `/instance/qr/${instanceName}`, method: "GET", useAdmin: true },
+          { url: `/instance/qrbase64/${instanceName}`, method: "GET", useAdmin: true },
+          { url: `/qr/${instanceName}`, method: "GET", useAdmin: true },
+        ];
+
+        for (const endpoint of qrEndpoints) {
+          if (qrcodeBase64) break;
           
-          const connectData = connectResult as {
-            base64?: string;
-            qrcode?: string | { base64?: string };
-            code?: string;
-            pairingCode?: string;
-            qr?: string;
-            QRCode?: string;
-          };
-          
-          qrcodeBase64 = connectData.base64 || 
-                         connectData.qr ||
-                         connectData.QRCode ||
-                         (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
-                         connectData.code || 
-                         connectData.pairingCode || "";
-        } catch (err) {
-          console.log("POST connect failed:", (err as Error).message);
+          try {
+            console.log(`Trying ${endpoint.method} ${endpoint.url}`);
+            
+            if (endpoint.useAdmin) {
+              connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
+            } else if (instanceToken) {
+              connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken);
+            }
+            
+            console.log(`Result from ${endpoint.url}:`, JSON.stringify(connectResult));
+            
+            const connectData = connectResult as {
+              base64?: string;
+              qrcode?: string | { base64?: string };
+              code?: string;
+              pairingCode?: string;
+              qr?: string;
+              QRCode?: string;
+              instance?: { qrcode?: string };
+            };
+            
+            // Try all possible fields where QR code might be
+            qrcodeBase64 = connectData.base64 || 
+                           connectData.qr ||
+                           connectData.QRCode ||
+                           connectData.instance?.qrcode ||
+                           (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
+                           connectData.code || 
+                           connectData.pairingCode || "";
+                           
+            if (qrcodeBase64) {
+              console.log(`QR code found from ${endpoint.url}`);
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
         }
 
-        // If POST didn't work, try GET to /instance/connect
+        // If still no QR code, try POST to connect and then fetch QR separately
         if (!qrcodeBase64) {
           try {
-            console.log("Trying GET /instance/connect with admintoken");
-            connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
-            console.log("GET connect result:", JSON.stringify(connectResult));
+            console.log("Trying POST /instance/connect to start connection");
+            await uazapiAdminRequest(`/instance/connect/${instanceName}`, "POST");
             
-            const connectData = connectResult as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              code?: string;
-              pairingCode?: string;
-              qr?: string;
-              QRCode?: string;
-            };
+            // Wait a bit then fetch QR
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
-            qrcodeBase64 = connectData.base64 || 
-                           connectData.qr ||
-                           connectData.QRCode ||
-                           (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
-                           connectData.code || 
-                           connectData.pairingCode || "";
+            try {
+              console.log("Fetching QR after POST connect");
+              connectResult = await uazapiAdminRequest(`/instance/qr/${instanceName}`, "GET");
+              const qrData = connectResult as { base64?: string; qr?: string; qrcode?: string };
+              qrcodeBase64 = qrData.base64 || qrData.qr || qrData.qrcode || "";
+            } catch {
+              console.log("QR fetch after POST failed");
+            }
           } catch (err) {
-            console.log("GET connect failed:", (err as Error).message);
-          }
-        }
-        
-        // Try /connect endpoint directly (some versions use just /connect)
-        if (!qrcodeBase64 && instanceToken) {
-          try {
-            console.log("Trying GET /connect with instance token");
-            connectResult = await uazapiInstanceRequest("/connect", "GET", instanceToken);
-            console.log("/connect result:", JSON.stringify(connectResult));
-            
-            const connectData = connectResult as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              code?: string;
-              pairingCode?: string;
-              qr?: string;
-              QRCode?: string;
-            };
-            
-            qrcodeBase64 = connectData.base64 || 
-                           connectData.qr ||
-                           connectData.QRCode ||
-                           (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
-                           connectData.code || 
-                           connectData.pairingCode || "";
-          } catch (err) {
-            console.log("/connect with token failed:", (err as Error).message);
-          }
-        }
-
-        // Try with token header on connect/name endpoint
-        if (!qrcodeBase64 && instanceToken) {
-          try {
-            console.log("Trying GET /connect/{name} with instance token");
-            connectResult = await uazapiInstanceRequest(`/connect/${instanceName}`, "GET", instanceToken);
-            console.log("/connect/{name} result:", JSON.stringify(connectResult));
-            
-            const connectData = connectResult as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              code?: string;
-              pairingCode?: string;
-              qr?: string;
-              QRCode?: string;
-            };
-            
-            qrcodeBase64 = connectData.base64 || 
-                           connectData.qr ||
-                           connectData.QRCode ||
-                           (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
-                           connectData.code || 
-                           connectData.pairingCode || "";
-          } catch (err) {
-            console.log("/connect/{name} with token failed:", (err as Error).message);
+            console.log("POST connect failed:", (err as Error).message);
           }
         }
 
