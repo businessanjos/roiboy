@@ -22,6 +22,7 @@ import {
   ClipboardList,
   Presentation,
   Shield,
+  BellRing,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,7 @@ const navItems: NavItem[] = [
   { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
   { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
   { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
+  { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/integrations", icon: Link2, label: "Integrações", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
 ];
