@@ -97,24 +97,36 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
     return ratings.reduce((a, b) => a + b, 0) / ratings.length;
   };
 
+  const splitName = (fullName: string | undefined) => {
+    if (!fullName) return { firstName: "", lastName: "" };
+    const parts = fullName.trim().split(" ");
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+    return { firstName, lastName };
+  };
+
   const exportCSV = () => {
     const headers = [
-      "Cliente", "NPS", "Avaliação Geral", "Conteúdo", "Organização", 
+      "Nome", "Sobrenome", "NPS", "Avaliação Geral", "Conteúdo", "Organização", 
       "Local", "Recomendaria", "Pontos Fortes", "Melhorias", "Comentários", "Data"
     ];
-    const rows = feedback.map(f => [
-      f.clients?.full_name || "Anônimo",
-      f.nps_score?.toString() || "",
-      f.overall_rating?.toString() || "",
-      f.content_rating?.toString() || "",
-      f.organization_rating?.toString() || "",
-      f.venue_rating?.toString() || "",
-      f.would_recommend === true ? "Sim" : f.would_recommend === false ? "Não" : "",
-      f.highlights || "",
-      f.improvements || "",
-      f.additional_comments || "",
-      format(new Date(f.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
-    ]);
+    const rows = feedback.map(f => {
+      const { firstName, lastName } = splitName(f.clients?.full_name);
+      return [
+        firstName || "Anônimo",
+        lastName,
+        f.nps_score?.toString() || "",
+        f.overall_rating?.toString() || "",
+        f.content_rating?.toString() || "",
+        f.organization_rating?.toString() || "",
+        f.venue_rating?.toString() || "",
+        f.would_recommend === true ? "Sim" : f.would_recommend === false ? "Não" : "",
+        f.highlights || "",
+        f.improvements || "",
+        f.additional_comments || "",
+        format(new Date(f.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+      ];
+    });
 
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(","))
