@@ -205,7 +205,7 @@ serve(async (req) => {
               account_id: accountId,
               phone_e164: phone,
               full_name: contactName,
-              status: "lead",
+              status: "no_contract",
             })
             .select("id")
             .single();
@@ -262,17 +262,10 @@ serve(async (req) => {
             account_id: accountId,
             client_id: clientId,
             conversation_id: conversationId,
-            channel: "whatsapp",
+            source: "whatsapp",
             direction: "client_to_team",
             content_text: content,
-            external_message_id: messageId,
-            happened_at: timestamp,
-            metadata: {
-              source: "uazapi",
-              contact_name: contactName,
-              chat_id: chat.id,
-              message_type: msg.type,
-            },
+            sent_at: timestamp,
           });
 
         if (messageError) {
@@ -353,7 +346,7 @@ serve(async (req) => {
                 account_id: accountId,
                 phone_e164: phone,
                 full_name: contactName,
-                status: "lead",
+                status: "no_contract",
               })
               .select("id")
               .single();
@@ -401,15 +394,10 @@ serve(async (req) => {
               account_id: accountId,
               client_id: clientId,
               conversation_id: conversationId,
-              channel: "whatsapp",
+              source: "whatsapp",
               direction: "client_to_team",
               content_text: content,
-              external_message_id: msg.key.id,
-              happened_at: timestamp,
-              metadata: {
-                source: "uazapi",
-                contact_name: contactName,
-              },
+              sent_at: timestamp,
             });
 
           processedCount++;
