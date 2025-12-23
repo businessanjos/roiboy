@@ -1057,14 +1057,19 @@ export default function Reminders() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge className={STATUS_CONFIG[recipient.whatsapp_status]?.color}>
-                          {STATUS_CONFIG[recipient.whatsapp_status]?.label}
-                        </Badge>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className={STATUS_CONFIG[recipient.whatsapp_status]?.color}>
+                            {STATUS_CONFIG[recipient.whatsapp_status]?.label}
+                          </Badge>
+                          {recipient.whatsapp_error && (
+                            <AlertCircle className="h-3 w-3 text-destructive" />
+                          )}
+                        </div>
                         {recipient.whatsapp_error && (
-                          <span className="text-xs text-destructive" title={recipient.whatsapp_error}>
-                            <AlertCircle className="h-3 w-3" />
-                          </span>
+                          <p className="text-xs text-destructive max-w-[200px] break-words">
+                            {recipient.whatsapp_error}
+                          </p>
                         )}
                       </div>
                       {recipient.whatsapp_sent_at && (

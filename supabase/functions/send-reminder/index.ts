@@ -265,11 +265,13 @@ serve(async (req) => {
 
       // Send WhatsApp via UAZAPI
       if (send_whatsapp && participant.phone) {
-        if (whatsappConfig?.instance_name && UAZAPI_URL) {
+        const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
+        
+        if (whatsappConfig?.instance_name && UAZAPI_URL && UAZAPI_ADMIN_TOKEN) {
           try {
             const cleanPhone = participant.phone.replace(/\D/g, "");
             
-            // Use instance token if available, otherwise use admin token
+            // Build headers - use instance token if available, otherwise admin token
             const headers: Record<string, string> = {
               "Content-Type": "application/json",
             };
@@ -277,9 +279,11 @@ serve(async (req) => {
             if (whatsappConfig.instance_token) {
               headers["token"] = whatsappConfig.instance_token;
             } else {
-              const adminToken = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
-              headers["admintoken"] = adminToken;
+              headers["admintoken"] = UAZAPI_ADMIN_TOKEN;
             }
+            
+            console.log(`Sending WhatsApp to ${cleanPhone} via ${whatsappConfig.instance_name}`);
+            console.log(`Using auth: ${whatsappConfig.instance_token ? 'instance_token' : 'admintoken'}`);
             
             const response = await fetch(
               `${UAZAPI_URL}/message/sendText/${whatsappConfig.instance_name}`,

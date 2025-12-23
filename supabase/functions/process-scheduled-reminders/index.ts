@@ -158,11 +158,11 @@ serve(async (req) => {
 
         // Send WhatsApp via UAZAPI
         if (campaign.send_whatsapp && recipient.recipient_phone) {
-          if (whatsappConfig?.instance_name && UAZAPI_URL) {
+          if (whatsappConfig?.instance_name && UAZAPI_URL && UAZAPI_ADMIN_TOKEN) {
             try {
               const cleanPhone = recipient.recipient_phone.replace(/\D/g, "");
               
-              // Use instance token if available, otherwise use admin token
+              // Build headers - use instance token if available, otherwise admin token
               const headers: Record<string, string> = {
                 "Content-Type": "application/json",
               };
@@ -172,6 +172,9 @@ serve(async (req) => {
               } else {
                 headers["admintoken"] = UAZAPI_ADMIN_TOKEN;
               }
+              
+              console.log(`Sending WhatsApp to ${cleanPhone} via ${whatsappConfig.instance_name}`);
+              console.log(`Using auth: ${whatsappConfig.instance_token ? 'instance_token' : 'admintoken'}`);
               
               const response = await fetch(
                 `${UAZAPI_URL}/message/sendText/${whatsappConfig.instance_name}`,
