@@ -47,6 +47,7 @@ const ChoosePlan = lazy(() => import("./pages/ChoosePlan"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Download = lazy(() => import("./pages/Download"));
+const Home = lazy(() => import("./pages/Home"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -78,6 +79,7 @@ const App = () => (
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
                           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/home" element={<Home />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/f/:formId" element={<PublicForm />} />
           <Route path="/rsvp/:token" element={<PublicRSVP />} />
