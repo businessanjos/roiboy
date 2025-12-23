@@ -238,8 +238,8 @@ serve(async (req) => {
         // Extract instance token
         const instanceToken = createResult.token || createResult.instance?.token;
 
-        // Wait for instance to initialize
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait for instance to initialize (increased to 4s for UAZAPI GO)
+        await new Promise(resolve => setTimeout(resolve, 4000));
 
         // Try to get QR code using the INSTANCE TOKEN (not admin token)
         // UAZAPI GO uses the instance token to authenticate instance-specific endpoints
@@ -247,11 +247,16 @@ serve(async (req) => {
         let connectResult: unknown = null;
         
         if (instanceToken) {
-          // Try different endpoints using the instance token
+          // Try different endpoints using the instance token - POST first, then GET
           const instanceEndpoints = [
+            { url: `/connect`, method: "POST" },
             { url: `/connect`, method: "GET" },
+            { url: `/qr`, method: "POST" },
             { url: `/qr`, method: "GET" },
+            { url: `/qrcode`, method: "POST" },
             { url: `/qrcode`, method: "GET" },
+            { url: `/instance/connect`, method: "POST" },
+            { url: `/instance/qr`, method: "POST" },
           ];
 
           for (const endpoint of instanceEndpoints) {
@@ -294,23 +299,27 @@ serve(async (req) => {
           }
         }
         
-        // If still no QR code with instance token, try admin endpoints
+        // If still no QR code with instance token, try admin endpoints (POST then GET)
         if (!qrcodeBase64) {
           const adminEndpoints = [
-            `/instance/connect/${instanceName}`,
-            `/instance/qr/${instanceName}`,
-            `/connect/${instanceName}`,
-            `/qr/${instanceName}`,
+            { url: `/instance/connect/${instanceName}`, method: "POST" },
+            { url: `/instance/connect/${instanceName}`, method: "GET" },
+            { url: `/instance/qr/${instanceName}`, method: "POST" },
+            { url: `/instance/qr/${instanceName}`, method: "GET" },
+            { url: `/connect/${instanceName}`, method: "POST" },
+            { url: `/connect/${instanceName}`, method: "GET" },
+            { url: `/qr/${instanceName}`, method: "POST" },
+            { url: `/qr/${instanceName}`, method: "GET" },
           ];
 
           for (const endpoint of adminEndpoints) {
             if (qrcodeBase64) break;
             
             try {
-              console.log(`Trying admin: GET ${endpoint}`);
-              connectResult = await uazapiAdminRequest(endpoint, "GET");
+              console.log(`Trying admin: ${endpoint.method} ${endpoint.url}`);
+              connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
               
-              console.log(`Admin result from ${endpoint}:`, JSON.stringify(connectResult));
+              console.log(`Admin result from ${endpoint.url}:`, JSON.stringify(connectResult));
               
               const connectData = connectResult as {
                 base64?: string;
@@ -326,10 +335,10 @@ serve(async (req) => {
                              (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) || "";
                              
               if (qrcodeBase64) {
-                console.log(`QR code found from admin ${endpoint}`);
+                console.log(`QR code found from admin ${endpoint.url}`);
               }
             } catch (err) {
-              console.log(`Admin ${endpoint} failed:`, (err as Error).message);
+              console.log(`Admin ${endpoint.url} failed:`, (err as Error).message);
             }
           }
         }
