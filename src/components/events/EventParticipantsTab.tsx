@@ -415,7 +415,7 @@ export default function EventParticipantsTab({
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className={`font-medium ${p.client_id ? 'text-primary hover:underline' : ''}`}>
+                            <p className={`font-medium ${p.client_id ? 'text-foreground hover:text-primary hover:underline' : ''}`}>
                               {getParticipantName(p)}
                             </p>
                             {!p.client_id && (
