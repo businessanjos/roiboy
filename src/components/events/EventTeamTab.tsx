@@ -32,7 +32,9 @@ import {
   Camera,
   UserCog,
   Headphones,
-  User
+  User,
+  Building2,
+  Home
 } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
@@ -52,6 +54,7 @@ interface TeamMember {
   role_description: string | null;
   responsibilities: string | null;
   is_primary: boolean;
+  is_external: boolean;
   users?: User;
 }
 
@@ -83,6 +86,7 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
   const [roleDescription, setRoleDescription] = useState("");
   const [responsibilities, setResponsibilities] = useState("");
   const [isPrimary, setIsPrimary] = useState(false);
+  const [isExternal, setIsExternal] = useState(false);
 
   useEffect(() => {
     if (eventId && accountId) {
@@ -127,6 +131,7 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
     setRoleDescription("");
     setResponsibilities("");
     setIsPrimary(false);
+    setIsExternal(false);
   };
 
   const handleAddMember = async () => {
@@ -145,6 +150,7 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
         role_description: roleDescription || null,
         responsibilities: responsibilities || null,
         is_primary: isPrimary,
+        is_external: isExternal,
       });
 
     if (error) {
@@ -239,10 +245,25 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
                   </div>
                   
                   <div className="mt-4 space-y-2">
-                    <Badge className={roleConfig[member.role].color}>
-                      <RoleIcon className="h-3 w-3 mr-1" />
-                      {roleConfig[member.role].label}
-                    </Badge>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={roleConfig[member.role].color}>
+                        <RoleIcon className="h-3 w-3 mr-1" />
+                        {roleConfig[member.role].label}
+                      </Badge>
+                      <Badge variant="outline" className={member.is_external ? "border-orange-500 text-orange-600" : "border-blue-500 text-blue-600"}>
+                        {member.is_external ? (
+                          <>
+                            <Building2 className="h-3 w-3 mr-1" />
+                            Externo
+                          </>
+                        ) : (
+                          <>
+                            <Home className="h-3 w-3 mr-1" />
+                            Interno
+                          </>
+                        )}
+                      </Badge>
+                    </div>
                     
                     {member.role_description && (
                       <p className="text-sm font-medium">{member.role_description}</p>
@@ -329,6 +350,29 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
                 placeholder="Liste as responsabilidades deste membro..."
                 rows={2}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Classificação</Label>
+              <Select value={isExternal ? "external" : "internal"} onValueChange={(v) => setIsExternal(v === "external")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">
+                    <div className="flex items-center gap-2">
+                      <Home className="h-4 w-4" />
+                      Interno (da equipe)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="external">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Externo (contratado/convidado)
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
