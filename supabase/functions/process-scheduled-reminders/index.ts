@@ -158,18 +158,26 @@ serve(async (req) => {
 
         // Send WhatsApp via UAZAPI
         if (campaign.send_whatsapp && recipient.recipient_phone) {
-          if (whatsappConfig?.instance_name && UAZAPI_URL && UAZAPI_ADMIN_TOKEN) {
+          if (whatsappConfig?.instance_name && UAZAPI_URL) {
             try {
               const cleanPhone = recipient.recipient_phone.replace(/\D/g, "");
+              
+              // Use instance token if available, otherwise use admin token
+              const headers: Record<string, string> = {
+                "Content-Type": "application/json",
+              };
+              
+              if (whatsappConfig.instance_token) {
+                headers["token"] = whatsappConfig.instance_token;
+              } else {
+                headers["admintoken"] = UAZAPI_ADMIN_TOKEN;
+              }
               
               const response = await fetch(
                 `${UAZAPI_URL}/message/sendText/${whatsappConfig.instance_name}`,
                 {
                   method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${UAZAPI_ADMIN_TOKEN}`,
-                  },
+                  headers,
                   body: JSON.stringify({
                     number: cleanPhone,
                     text: personalizedMessage,
@@ -185,7 +193,7 @@ serve(async (req) => {
               } else {
                 const errorData = await response.json();
                 whatsappStatus = "failed";
-                whatsappError = errorData.message || "Erro ao enviar";
+                whatsappError = errorData.message || `Erro ao enviar (${response.status})`;
                 failedCount++;
                 console.log(`WhatsApp failed for ${recipient.recipient_name}: ${whatsappError}`);
               }
