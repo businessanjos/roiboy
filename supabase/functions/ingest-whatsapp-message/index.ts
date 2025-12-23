@@ -23,6 +23,7 @@ interface MessagePayload {
   sender_phone_e164?: string;
   source?: string;
   account_id?: string; // Direct account_id for Electron app
+  message_hash?: string; // Hash for deduplication
 }
 
 // Validate via JWT token (for extension auth)
@@ -326,6 +327,28 @@ serve(async (req) => {
     }
 
     console.log("Processing message for client:", client.id, client.full_name);
+
+    // Check for duplicate message by hash (deduplication)
+    if (payload.message_hash) {
+      const recentWindow = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min window
+      const { data: existingMsg } = await supabase
+        .from("message_events")
+        .select("id")
+        .eq("client_id", client.id)
+        .eq("account_id", client.account_id)
+        .gte("created_at", recentWindow)
+        .ilike("content_text", payload.content_text.substring(0, 100) + "%")
+        .limit(1)
+        .maybeSingle();
+      
+      if (existingMsg) {
+        console.log("Duplicate message detected, skipping:", existingMsg.id);
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, reason: "duplicate", message_id: existingMsg.id }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     const threadId = payload.is_group 
       ? `group:${payload.phone_e164 || payload.contact_name}` 

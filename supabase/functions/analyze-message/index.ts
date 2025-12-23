@@ -402,6 +402,23 @@ serve(async (req) => {
       );
     }
 
+    // DEDUPLICATION: Check if this message was already analyzed
+    if (message_event_id) {
+      const { data: existingAnalysis } = await supabase
+        .from("ai_usage_logs")
+        .select("id")
+        .eq("message_id", message_event_id)
+        .maybeSingle();
+      
+      if (existingAnalysis) {
+        console.log(`Message ${message_event_id} already analyzed, skipping (existing log: ${existingAnalysis.id})`);
+        return new Response(
+          JSON.stringify({ success: true, message: "Already analyzed", skipped: true, existing_log_id: existingAnalysis.id }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Fetch AI settings for this account
     const aiSettings = await getAISettings(supabase, account_id);
     console.log(`AI Settings loaded for account ${account_id}:`, {
