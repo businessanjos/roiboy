@@ -19,6 +19,7 @@ import royLogo from "@/assets/roy-logo.png";
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "signup" ? "signup" : "login";
   
   // Security hooks - MUST be called before any early returns
   const { checkAccountLock, recordLoginAttempt, registerSession, isCheckingLock } = useLoginSecurity();
@@ -441,7 +442,7 @@ export default function Auth() {
         </div>
 
         <Card className="shadow-elevated border-border/50">
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue={initialTab} className="w-full">
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Entrar</TabsTrigger>

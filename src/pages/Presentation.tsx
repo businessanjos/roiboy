@@ -130,8 +130,12 @@ export default function Presentation() {
   
   const isPublicRoute = location.pathname === "/sobre";
 
-  const handleCTA = () => {
-    navigate("/auth");
+  const handleLogin = () => {
+    navigate("/auth?tab=login");
+  };
+
+  const handleSignup = () => {
+    navigate("/auth?tab=signup");
   };
 
   return (
@@ -151,10 +155,10 @@ export default function Presentation() {
                 </Button>
               ) : (
                 <>
-                  <Button variant="ghost" onClick={() => navigate("/auth")}>
+                  <Button variant="ghost" onClick={handleLogin}>
                     Entrar
                   </Button>
-                  <Button onClick={handleCTA}>
+                  <Button onClick={handleSignup}>
                     Começar Grátis
                   </Button>
                 </>
@@ -189,11 +193,11 @@ export default function Presentation() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" onClick={handleCTA} className="gap-2 text-lg px-8 py-6">
+              <Button size="lg" onClick={handleSignup} className="gap-2 text-lg px-8 py-6">
                 Começar Grátis por 7 dias
                 <ArrowRight className="h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" onClick={handleCTA} className="gap-2 text-lg px-8 py-6">
+              <Button size="lg" variant="outline" onClick={handleLogin} className="gap-2 text-lg px-8 py-6">
                 <Play className="h-5 w-5" />
                 Ver como funciona
               </Button>
@@ -314,7 +318,7 @@ export default function Presentation() {
         </div>
         
         <div className="text-center mt-12">
-          <Button size="lg" onClick={handleCTA} className="gap-2 text-lg px-8 py-6">
+          <Button size="lg" onClick={handleSignup} className="gap-2 text-lg px-8 py-6">
             Começar Agora - É Grátis
             <ArrowRight className="h-5 w-5" />
           </Button>
@@ -374,7 +378,7 @@ export default function Presentation() {
               Sem compromisso, sem cartão de crédito.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={handleCTA} className="gap-2 text-lg px-10 py-7">
+              <Button size="lg" onClick={handleSignup} className="gap-2 text-lg px-10 py-7">
                 Criar Conta Grátis
                 <ArrowRight className="h-5 w-5" />
               </Button>
