@@ -169,23 +169,46 @@ serve(async (req) => {
         };
         const instanceToken = responseData.token || responseData.instance?.token;
 
-        // Try multiple endpoints to get QR code
+        // Try to get QR code from create response first
         let qrcodeBase64 = responseData.qrcode || responseData.instance?.qrcode || "";
         
-        // If no QR code in create response, try using the instance token to get it
+        // If no QR code in create response, try using the instance token with /connect endpoint
         if (!qrcodeBase64 && instanceToken) {
-          // Try different QR code endpoints with the instance token
+          // Try /connect endpoint with instance token
+          try {
+            console.log("Trying /connect with instance token");
+            const connectResult = await uazapiInstanceRequest("/connect", "GET", instanceToken);
+            console.log("Connect with token result:", JSON.stringify(connectResult));
+            
+            const connectData = connectResult as {
+              base64?: string;
+              qrcode?: string | { base64?: string };
+              code?: string;
+              pairingCode?: string;
+            };
+            
+            qrcodeBase64 = connectData.base64 || 
+                           (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
+                           connectData.code || 
+                           connectData.pairingCode || "";
+          } catch (err) {
+            console.log("/connect with token failed:", (err as Error).message);
+          }
+        }
+
+        // If still no QR code, try other endpoints with instance token
+        if (!qrcodeBase64 && instanceToken) {
           const qrEndpoints = [
-            { endpoint: `/instance/qrcode`, method: "GET" },
-            { endpoint: `/instance/qr`, method: "GET" },
-            { endpoint: `/qrcode`, method: "GET" },
+            "/qrcode",
+            "/instance/qrcode",
+            "/status",
           ];
           
-          for (const { endpoint, method } of qrEndpoints) {
+          for (const endpoint of qrEndpoints) {
             try {
-              console.log(`Trying QR endpoint with token: ${endpoint}`);
-              const qrResult = await uazapiInstanceRequest(endpoint, method, instanceToken);
-              console.log("QR result:", JSON.stringify(qrResult));
+              console.log(`Trying endpoint ${endpoint} with instance token`);
+              const qrResult = await uazapiInstanceRequest(endpoint, "GET", instanceToken);
+              console.log(`${endpoint} result:`, JSON.stringify(qrResult));
               
               const qrData = qrResult as {
                 base64?: string;
@@ -204,29 +227,8 @@ serve(async (req) => {
                 break;
               }
             } catch (qrErr) {
-              console.log(`QR endpoint ${endpoint} failed:`, (qrErr as Error).message);
+              console.log(`Endpoint ${endpoint} failed:`, (qrErr as Error).message);
             }
-          }
-        }
-
-        // Also try admin endpoint with instance name
-        if (!qrcodeBase64) {
-          try {
-            console.log("Trying admin connect endpoint");
-            const connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
-            console.log("Connect result:", JSON.stringify(connectResult));
-            
-            const connectData = connectResult as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              code?: string;
-            };
-            
-            qrcodeBase64 = connectData.base64 || 
-                           (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
-                           connectData.code || "";
-          } catch (connectErr) {
-            console.log("Connect error:", (connectErr as Error).message);
           }
         }
 
