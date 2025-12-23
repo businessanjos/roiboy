@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.send-reminder]
 verify_jwt = false
+
+[functions.process-scheduled-reminders]
+verify_jwt = false

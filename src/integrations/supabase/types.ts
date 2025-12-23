@@ -3219,6 +3219,7 @@ export type Database = {
       reminder_campaigns: {
         Row: {
           account_id: string
+          auto_type: string | null
           campaign_type: Database["public"]["Enums"]["reminder_campaign_type"]
           completed_at: string | null
           created_at: string
@@ -3233,6 +3234,7 @@ export type Database = {
           name: string
           responded_count: number
           scheduled_at: string | null
+          scheduled_for: string | null
           send_email: boolean
           send_whatsapp: boolean
           sent_count: number
@@ -3243,6 +3245,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          auto_type?: string | null
           campaign_type?: Database["public"]["Enums"]["reminder_campaign_type"]
           completed_at?: string | null
           created_at?: string
@@ -3257,6 +3260,7 @@ export type Database = {
           name: string
           responded_count?: number
           scheduled_at?: string | null
+          scheduled_for?: string | null
           send_email?: boolean
           send_whatsapp?: boolean
           sent_count?: number
@@ -3267,6 +3271,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          auto_type?: string | null
           campaign_type?: Database["public"]["Enums"]["reminder_campaign_type"]
           completed_at?: string | null
           created_at?: string
@@ -3281,6 +3286,7 @@ export type Database = {
           name?: string
           responded_count?: number
           scheduled_at?: string | null
+          scheduled_for?: string | null
           send_email?: boolean
           send_whatsapp?: boolean
           sent_count?: number
