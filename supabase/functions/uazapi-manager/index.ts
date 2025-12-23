@@ -410,31 +410,79 @@ serve(async (req) => {
       }
 
       case "status": {
-        // Get instance status
-        try {
-          result = await uazapiAdminRequest(`/instance/connectionState/${instanceName}`, "GET");
+        // Get instance status - try multiple endpoints
+        const savedToken = (existingWhatsapp?.config as { instance_token?: string })?.instance_token;
+        let statusResult: unknown = null;
+        let connectionState = "unknown";
+        
+        // Try with instance token first (more reliable)
+        if (savedToken) {
+          const tokenEndpoints = [
+            `/connectionState`,
+            `/instance/connectionState`,
+            `/status`,
+            `/instance/status`,
+          ];
           
-          // Update integration status based on UAZAPI response
-          const isConnected = result && (result as { state?: string }).state === "open";
-          
-          await supabase
-            .from("integrations")
-            .update({
-              status: isConnected ? "connected" : "disconnected",
-              config: {
-                provider: "uazapi",
-                instance_name: instanceName,
-                last_status_check: new Date().toISOString(),
-                connection_state: (result as { state?: string }).state,
-              },
-            })
-            .eq("account_id", accountId)
-            .eq("type", "whatsapp");
-            
-        } catch (err) {
-          // Instance might not exist yet
-          result = { state: "not_found", error: (err as Error).message };
+          for (const endpoint of tokenEndpoints) {
+            if (connectionState !== "unknown") break;
+            try {
+              console.log(`Trying instance token: GET ${endpoint}`);
+              statusResult = await uazapiInstanceRequest(endpoint, "GET", savedToken);
+              console.log(`Status result:`, JSON.stringify(statusResult));
+              
+              const data = statusResult as { state?: string; instance?: { state?: string }; status?: string; connected?: boolean };
+              connectionState = data.state || data.instance?.state || data.status || (data.connected ? "open" : "unknown");
+            } catch (err) {
+              console.log(`Instance ${endpoint} failed:`, (err as Error).message);
+            }
+          }
         }
+        
+        // Fallback to admin endpoints
+        if (connectionState === "unknown") {
+          const adminEndpoints = [
+            `/instance/connectionState/${instanceName}`,
+            `/instance/status/${instanceName}`,
+            `/connectionState/${instanceName}`,
+          ];
+          
+          for (const endpoint of adminEndpoints) {
+            if (connectionState !== "unknown") break;
+            try {
+              console.log(`Trying admin: GET ${endpoint}`);
+              statusResult = await uazapiAdminRequest(endpoint, "GET");
+              console.log(`Admin status result:`, JSON.stringify(statusResult));
+              
+              const data = statusResult as { state?: string; instance?: { state?: string }; status?: string };
+              connectionState = data.state || data.instance?.state || data.status || "unknown";
+            } catch (err) {
+              console.log(`Admin ${endpoint} failed:`, (err as Error).message);
+            }
+          }
+        }
+        
+        const isConnected = connectionState === "open" || connectionState === "connected";
+        
+        // Update integration status based on result
+        await supabase
+          .from("integrations")
+          .update({
+            status: isConnected ? "connected" : (connectionState === "unknown" ? "connected" : "disconnected"),
+            config: {
+              ...(existingWhatsapp?.config as object || {}),
+              last_status_check: new Date().toISOString(),
+              connection_state: connectionState,
+            },
+          })
+          .eq("account_id", accountId)
+          .eq("type", "whatsapp");
+        
+        result = { 
+          state: connectionState, 
+          connected: isConnected,
+          instance_name: instanceName,
+        };
         break;
       }
 
