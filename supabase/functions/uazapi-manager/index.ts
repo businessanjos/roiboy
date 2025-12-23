@@ -431,8 +431,22 @@ serve(async (req) => {
               statusResult = await uazapiInstanceRequest(endpoint, "GET", savedToken);
               console.log(`Status result:`, JSON.stringify(statusResult));
               
-              const data = statusResult as { state?: string; instance?: { state?: string }; status?: string; connected?: boolean };
-              connectionState = data.state || data.instance?.state || data.status || (data.connected ? "open" : "unknown");
+              // Handle multiple response formats from UAZAPI
+              const data = statusResult as { 
+                state?: string; 
+                instance?: { state?: string }; 
+                status?: string | { checked_instance?: { connection_status?: string; is_healthy?: boolean } }; 
+                connected?: boolean;
+                info?: string;
+              };
+              
+              // Check for health check response format
+              if (typeof data.status === 'object' && data.status?.checked_instance) {
+                const instanceStatus = data.status.checked_instance;
+                connectionState = instanceStatus.connection_status === "connected" ? "open" : instanceStatus.connection_status || "unknown";
+              } else {
+                connectionState = data.state || data.instance?.state || (typeof data.status === 'string' ? data.status : undefined) || (data.connected ? "open" : "unknown");
+              }
             } catch (err) {
               console.log(`Instance ${endpoint} failed:`, (err as Error).message);
             }
