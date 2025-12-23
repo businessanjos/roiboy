@@ -271,41 +271,87 @@ serve(async (req) => {
           try {
             const cleanPhone = participant.phone.replace(/\D/g, "");
             
-            // Build headers - use instance token if available, otherwise admin token
-            const headers: Record<string, string> = {
-              "Content-Type": "application/json",
-            };
-            
-            if (whatsappConfig.instance_token) {
-              headers["token"] = whatsappConfig.instance_token;
-            } else {
-              headers["admintoken"] = UAZAPI_ADMIN_TOKEN;
-            }
-            
             console.log(`Sending WhatsApp to ${cleanPhone} via ${whatsappConfig.instance_name}`);
             console.log(`Using auth: ${whatsappConfig.instance_token ? 'instance_token' : 'admintoken'}`);
             
-            const response = await fetch(
-              `${UAZAPI_URL}/message/sendText/${whatsappConfig.instance_name}`,
-              {
-                method: "POST",
-                headers,
-                body: JSON.stringify({
-                  number: cleanPhone,
-                  text: personalizedMessage,
-                }),
-              }
+            let messageSent = false;
+            let lastError = "";
+            
+            // Define endpoints to try
+            interface EndpointConfig {
+              url: string;
+              authHeader: string;
+              authValue: string;
+            }
+            
+            const endpoints: EndpointConfig[] = [];
+            
+            // With instance token (if available)
+            if (whatsappConfig.instance_token) {
+              endpoints.push(
+                { url: `/message/sendText`, authHeader: "token", authValue: whatsappConfig.instance_token },
+                { url: `/message/text`, authHeader: "token", authValue: whatsappConfig.instance_token },
+                { url: `/send/text`, authHeader: "token", authValue: whatsappConfig.instance_token },
+              );
+            }
+            
+            // With admin token
+            endpoints.push(
+              { url: `/message/sendText/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
+              { url: `/message/text/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
+              { url: `/send/text/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
+              { url: `/instance/sendText/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
             );
+            
+            for (const endpoint of endpoints) {
+              if (messageSent) break;
+              
+              try {
+                console.log(`Trying endpoint: ${endpoint.url}`);
+                
+                const headers: Record<string, string> = {
+                  "Content-Type": "application/json",
+                };
+                headers[endpoint.authHeader] = endpoint.authValue;
+                
+                const response = await fetch(
+                  `${UAZAPI_URL}${endpoint.url}`,
+                  {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({
+                      number: cleanPhone,
+                      text: personalizedMessage,
+                    }),
+                  }
+                );
+                
+                const responseText = await response.text();
+                console.log(`Response from ${endpoint.url}: ${response.status} - ${responseText}`);
 
-            if (response.ok) {
-              whatsappStatus = "sent";
-              whatsappSentAt = new Date().toISOString();
-              sentCount++;
-              console.log(`WhatsApp sent to ${participant.name} via UAZAPI`);
-            } else {
-              const errorData = await response.json();
+                if (response.ok) {
+                  whatsappStatus = "sent";
+                  whatsappSentAt = new Date().toISOString();
+                  sentCount++;
+                  messageSent = true;
+                  console.log(`WhatsApp sent to ${participant.name} via ${endpoint.url}`);
+                } else {
+                  try {
+                    const errorData = JSON.parse(responseText);
+                    lastError = errorData.message || `${response.status}`;
+                  } catch {
+                    lastError = responseText || `${response.status}`;
+                  }
+                }
+              } catch (err) {
+                lastError = err instanceof Error ? err.message : "Erro de conexão";
+                console.log(`Endpoint ${endpoint.url} failed: ${lastError}`);
+              }
+            }
+            
+            if (!messageSent) {
               whatsappStatus = "failed";
-              whatsappError = errorData.message || `Erro ao enviar (${response.status})`;
+              whatsappError = lastError || "Nenhum endpoint funcionou";
               failedCount++;
               console.log(`WhatsApp failed for ${participant.name}: ${whatsappError}`);
             }
@@ -317,7 +363,9 @@ serve(async (req) => {
           }
         } else {
           whatsappStatus = "failed";
-          whatsappError = "WhatsApp não configurado. Conecte seu WhatsApp na página de integrações.";
+          whatsappError = !UAZAPI_ADMIN_TOKEN 
+            ? "UAZAPI_ADMIN_TOKEN não configurado" 
+            : "WhatsApp não configurado. Conecte seu WhatsApp na página de integrações.";
           failedCount++;
         }
       }
