@@ -161,26 +161,33 @@ serve(async (req) => {
 
         console.log("Create result:", JSON.stringify(createResult));
 
-        // Extract QR code from response - it can be in different places
+        // Extract instance token
         const responseData = createResult as {
           token?: string;
-          qrcode?: { base64?: string; code?: string };
-          instance?: { 
-            token?: string; 
-            qrcode?: string;
-            status?: string;
-          };
-          base64?: string;
-          code?: string;
+          instance?: { token?: string };
         };
-
         const instanceToken = responseData.token || responseData.instance?.token;
-        
-        // QR code can be in different formats depending on UAZAPI version
-        let qrcodeBase64 = responseData.qrcode?.base64 || 
-                           responseData.base64 || 
-                           responseData.instance?.qrcode ||
-                           responseData.qrcode?.code;
+
+        // After creating, call connect to get the QR code
+        // The create endpoint doesn't always return the QR code immediately
+        let qrcodeBase64 = "";
+        try {
+          const connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
+          console.log("Connect result:", JSON.stringify(connectResult));
+          
+          const connectData = connectResult as {
+            base64?: string;
+            qrcode?: string | { base64?: string };
+            code?: string;
+          };
+          
+          // Extract QR code from connect response
+          qrcodeBase64 = connectData.base64 || 
+                         (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
+                         connectData.code || "";
+        } catch (connectErr) {
+          console.log("Connect error (may be expected):", (connectErr as Error).message);
+        }
 
         // Update integrations table
         await supabase
