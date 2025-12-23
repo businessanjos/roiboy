@@ -485,63 +485,91 @@ serve(async (req) => {
         let statusResult: unknown = null;
         let connectionState = "unknown";
         
+        console.log(`Status check - savedToken: ${savedToken ? "found" : "not found"}`);
+        
         // Try with instance token first (more reliable)
         if (savedToken) {
           const tokenEndpoints = [
-            `/connectionState`,
-            `/instance/connectionState`,
-            `/status`,
-            `/instance/status`,
+            { url: `/status`, method: "GET" },
+            { url: `/connectionState`, method: "GET" },
+            { url: `/instance/status`, method: "GET" },
+            { url: `/instance/connectionState`, method: "GET" },
+            { url: `/info`, method: "GET" },
+            { url: `/instance/info`, method: "GET" },
           ];
           
           for (const endpoint of tokenEndpoints) {
             if (connectionState !== "unknown") break;
             try {
-              console.log(`Trying instance token: GET ${endpoint}`);
-              statusResult = await uazapiInstanceRequest(endpoint, "GET", savedToken);
-              console.log(`Status result:`, JSON.stringify(statusResult));
+              console.log(`Trying instance token: ${endpoint.method} ${endpoint.url}`);
+              statusResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedToken);
+              console.log(`Status result from ${endpoint.url}:`, JSON.stringify(statusResult));
               
               // Handle multiple response formats from UAZAPI
               const data = statusResult as { 
                 state?: string; 
-                instance?: { state?: string }; 
+                instance?: { state?: string; status?: string }; 
                 status?: string | { checked_instance?: { connection_status?: string; is_healthy?: boolean } }; 
                 connected?: boolean;
                 info?: string;
+                connection?: string;
               };
               
               // Check for health check response format
               if (typeof data.status === 'object' && data.status?.checked_instance) {
                 const instanceStatus = data.status.checked_instance;
                 connectionState = instanceStatus.connection_status === "connected" ? "open" : instanceStatus.connection_status || "unknown";
+              } else if (data.instance?.status) {
+                connectionState = data.instance.status === "disconnected" ? "disconnected" : data.instance.status;
               } else {
-                connectionState = data.state || data.instance?.state || (typeof data.status === 'string' ? data.status : undefined) || (data.connected ? "open" : "unknown");
+                connectionState = data.state || data.connection || data.instance?.state || (typeof data.status === 'string' ? data.status : undefined) || (data.connected ? "open" : "unknown");
+              }
+              
+              if (connectionState !== "unknown") {
+                console.log(`Connection state found: ${connectionState}`);
               }
             } catch (err) {
-              console.log(`Instance ${endpoint} failed:`, (err as Error).message);
+              console.log(`Instance ${endpoint.url} failed:`, (err as Error).message);
             }
           }
         }
         
-        // Fallback to admin endpoints
+        // Fallback to admin endpoints with multiple methods
         if (connectionState === "unknown") {
           const adminEndpoints = [
-            `/instance/connectionState/${instanceName}`,
-            `/instance/status/${instanceName}`,
-            `/connectionState/${instanceName}`,
+            { url: `/instance/info/${instanceName}`, method: "GET" },
+            { url: `/instance/connectionState/${instanceName}`, method: "GET" },
+            { url: `/instance/status/${instanceName}`, method: "GET" },
+            { url: `/connectionState/${instanceName}`, method: "GET" },
+            { url: `/info/${instanceName}`, method: "GET" },
+            { url: `/status/${instanceName}`, method: "GET" },
           ];
           
           for (const endpoint of adminEndpoints) {
             if (connectionState !== "unknown") break;
             try {
-              console.log(`Trying admin: GET ${endpoint}`);
-              statusResult = await uazapiAdminRequest(endpoint, "GET");
+              console.log(`Trying admin: ${endpoint.method} ${endpoint.url}`);
+              statusResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
               console.log(`Admin status result:`, JSON.stringify(statusResult));
               
-              const data = statusResult as { state?: string; instance?: { state?: string }; status?: string };
-              connectionState = data.state || data.instance?.state || data.status || "unknown";
+              const data = statusResult as { 
+                state?: string; 
+                instance?: { state?: string; status?: string }; 
+                status?: string;
+                connection?: string;
+              };
+              
+              if (data.instance?.status) {
+                connectionState = data.instance.status;
+              } else {
+                connectionState = data.state || data.connection || data.instance?.state || data.status || "unknown";
+              }
+              
+              if (connectionState !== "unknown") {
+                console.log(`Admin connection state found: ${connectionState}`);
+              }
             } catch (err) {
-              console.log(`Admin ${endpoint} failed:`, (err as Error).message);
+              console.log(`Admin ${endpoint.url} failed:`, (err as Error).message);
             }
           }
         }
