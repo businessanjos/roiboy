@@ -63,7 +63,7 @@ import {
   BarChart3,
   Lock
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AttendanceReport from "@/components/events/AttendanceReport";
@@ -154,6 +154,9 @@ export default function Events() {
   const [materialUrl, setMaterialUrl] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  
+  // Multi-day schedule state: { 'YYYY-MM-DD': { startTime: 'HH:mm', endTime: 'HH:mm' } }
+  const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
 
   useEffect(() => {
     if (user) {
@@ -222,6 +225,7 @@ export default function Events() {
     setMaterialUrl("");
     setIsRecurring(false);
     setSelectedProducts([]);
+    setDaySchedules({});
     setEditingEvent(null);
   };
 
@@ -293,6 +297,7 @@ export default function Events() {
     setMaterialUrl(event.material_url || "");
     setIsRecurring(event.is_recurring);
     setSelectedProducts(event.event_products.map(ep => ep.product_id));
+    setDaySchedules({});
     setDialogOpen(true);
   };
 
@@ -395,6 +400,29 @@ export default function Events() {
       }));
 
       await supabase.from("event_products").insert(productLinks);
+    }
+
+    // Create schedule items for multi-day events
+    if (isMultiDay && scheduledAt && endsAt && Object.keys(daySchedules).length > 0) {
+      const scheduleItems = Object.entries(daySchedules)
+        .filter(([_, times]) => times.startTime && times.endTime)
+        .map(([dateStr, times], index) => {
+          const startDateTime = new Date(`${dateStr}T${times.startTime}:00`);
+          const endDateTime = new Date(`${dateStr}T${times.endTime}:00`);
+          
+          return {
+            event_id: eventId,
+            account_id: accountId,
+            title: `Dia ${index + 1} - ${format(new Date(dateStr), "EEEE, dd/MM", { locale: ptBR })}`,
+            start_time: startDateTime.toISOString(),
+            end_time: endDateTime.toISOString(),
+            display_order: index + 1,
+          };
+        });
+
+      if (scheduleItems.length > 0) {
+        await supabase.from("event_schedule").insert(scheduleItems);
+      }
     }
 
     toast({
@@ -679,26 +707,92 @@ export default function Events() {
                   </div>
 
                   {isMultiDay ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="scheduled_at">Início</Label>
-                        <Input
-                          id="scheduled_at"
-                          type="datetime-local"
-                          value={scheduledAt}
-                          onChange={(e) => setScheduledAt(e.target.value)}
-                        />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="start_date">Data de Início</Label>
+                          <Input
+                            id="start_date"
+                            type="date"
+                            value={scheduledAt ? scheduledAt.slice(0, 10) : ""}
+                            onChange={(e) => {
+                              setScheduledAt(e.target.value ? `${e.target.value}T00:00` : "");
+                              setDaySchedules({});
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="end_date">Data de Término</Label>
+                          <Input
+                            id="end_date"
+                            type="date"
+                            value={endsAt ? endsAt.slice(0, 10) : ""}
+                            onChange={(e) => {
+                              setEndsAt(e.target.value ? `${e.target.value}T23:59` : "");
+                              setDaySchedules({});
+                            }}
+                            min={scheduledAt ? scheduledAt.slice(0, 10) : undefined}
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="ends_at">Término</Label>
-                        <Input
-                          id="ends_at"
-                          type="datetime-local"
-                          value={endsAt}
-                          onChange={(e) => setEndsAt(e.target.value)}
-                          min={scheduledAt}
-                        />
-                      </div>
+                      
+                      {scheduledAt && endsAt && (() => {
+                        const startDate = new Date(scheduledAt);
+                        const endDate = new Date(endsAt);
+                        if (startDate > endDate) return null;
+                        
+                        const days = eachDayOfInterval({ start: startDate, end: endDate });
+                        
+                        return (
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium">Horários de cada dia</Label>
+                            <div className="border rounded-lg p-3 space-y-3 max-h-48 overflow-y-auto">
+                              {days.map((day, index) => {
+                                const dateStr = format(day, "yyyy-MM-dd");
+                                const schedule = daySchedules[dateStr] || { startTime: "", endTime: "" };
+                                
+                                return (
+                                  <div key={dateStr} className="flex items-center gap-3">
+                                    <span className="text-sm font-medium min-w-[140px]">
+                                      Dia {index + 1} - {format(day, "EEEE, dd/MM", { locale: ptBR })}
+                                    </span>
+                                    <div className="flex items-center gap-2 flex-1">
+                                      <Input
+                                        type="time"
+                                        value={schedule.startTime}
+                                        onChange={(e) => {
+                                          setDaySchedules(prev => ({
+                                            ...prev,
+                                            [dateStr]: { ...prev[dateStr], startTime: e.target.value }
+                                          }));
+                                        }}
+                                        className="w-24"
+                                        placeholder="Início"
+                                      />
+                                      <span className="text-muted-foreground">até</span>
+                                      <Input
+                                        type="time"
+                                        value={schedule.endTime}
+                                        onChange={(e) => {
+                                          setDaySchedules(prev => ({
+                                            ...prev,
+                                            [dateStr]: { ...prev[dateStr], endTime: e.target.value }
+                                          }));
+                                        }}
+                                        className="w-24"
+                                        placeholder="Término"
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Esses horários serão salvos automaticamente na programação do evento.
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
