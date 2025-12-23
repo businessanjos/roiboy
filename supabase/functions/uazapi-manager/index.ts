@@ -22,12 +22,24 @@ async function configureWebhook(instanceToken: string, instanceName: string, sup
   const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
   console.log(`Configuring webhook for instance ${instanceName} to ${webhookUrl}`);
   
-  // Try different endpoints to set webhook
+  // UAZAPI webhook body format
+  const webhookBody = {
+    url: webhookUrl,
+    enabled: true,
+    webhookByEvents: true,
+    events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "MESSAGES_UPDATE"]
+  };
+  
+  // Try different endpoints and methods to set webhook
   const webhookEndpoints = [
-    { url: `/webhook/set`, method: "PUT", body: { url: webhookUrl, enabled: true, webhookByEvents: true, events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "MESSAGES_UPDATE"] } },
-    { url: `/webhook`, method: "PUT", body: { url: webhookUrl, enabled: true } },
-    { url: `/instance/webhook`, method: "PUT", body: { url: webhookUrl, enabled: true } },
-    { url: `/settings/webhook`, method: "PUT", body: { url: webhookUrl, enabled: true } },
+    // POST methods (most common for UAZAPI)
+    { url: `/webhook/set`, method: "POST", body: webhookBody },
+    { url: `/webhook`, method: "POST", body: webhookBody },
+    { url: `/instance/webhook`, method: "POST", body: webhookBody },
+    { url: `/settings/webhook`, method: "POST", body: webhookBody },
+    // PUT methods as fallback
+    { url: `/webhook/set`, method: "PUT", body: webhookBody },
+    { url: `/webhook`, method: "PUT", body: webhookBody },
   ];
   
   for (const endpoint of webhookEndpoints) {
@@ -41,10 +53,12 @@ async function configureWebhook(instanceToken: string, instanceName: string, sup
     }
   }
   
-  // Try admin endpoints as fallback
+  // Try admin endpoints as fallback (POST first, then PUT)
   const adminWebhookEndpoints = [
-    { url: `/instance/webhook/${instanceName}`, method: "PUT", body: { url: webhookUrl, enabled: true } },
-    { url: `/webhook/${instanceName}`, method: "PUT", body: { url: webhookUrl, enabled: true } },
+    { url: `/instance/webhook/${instanceName}`, method: "POST", body: webhookBody },
+    { url: `/webhook/${instanceName}`, method: "POST", body: webhookBody },
+    { url: `/instance/webhook/${instanceName}`, method: "PUT", body: webhookBody },
+    { url: `/webhook/${instanceName}`, method: "PUT", body: webhookBody },
   ];
   
   for (const endpoint of adminWebhookEndpoints) {
