@@ -17,7 +17,7 @@ interface UazapiRequest {
   message?: string;
 }
 
-// Request helper for admin endpoints (using admintoken header)
+// Request helper for admin endpoints (using apikey header - Evolution API standard)
 async function uazapiAdminRequest(endpoint: string, method: string, body?: unknown) {
   const url = `${UAZAPI_URL}${endpoint}`;
   console.log(`UAZAPI Admin Request: ${method} ${url}`);
@@ -30,11 +30,12 @@ async function uazapiAdminRequest(endpoint: string, method: string, body?: unkno
     throw new Error("UAZAPI_ADMIN_TOKEN não configurado. Adicione a secret nas configurações.");
   }
   
+  // Try with apikey header (Evolution API standard)
   const response = await fetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
-      "admintoken": UAZAPI_ADMIN_TOKEN,
+      "apikey": UAZAPI_ADMIN_TOKEN,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
