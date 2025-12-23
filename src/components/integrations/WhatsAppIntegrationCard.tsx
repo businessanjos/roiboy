@@ -263,14 +263,29 @@ export function WhatsAppIntegrationCard({
       }
 
       const data = response.data;
+      console.log("Status response:", data);
       
-      if (data?.data?.state === "open" || data?.data?.connected) {
-        toast.success("WhatsApp está conectado");
+      // Check multiple paths for connection state
+      const state = data?.state || data?.data?.state || data?.connection_state;
+      const connected = data?.connected || data?.data?.connected || state === "open" || state === "connected";
+      
+      if (connected) {
+        toast.success("WhatsApp está conectado!");
         setQrCode(null);
         setPaircode(null);
         setShowConnectionOptions(false);
+      } else if (state === "disconnected") {
+        toast.warning("WhatsApp desconectado. Reconecte via QR Code.");
       } else {
-        toast.info(`Status: ${data?.data?.state || "desconhecido"}`);
+        // Format state for display
+        const stateMap: Record<string, string> = {
+          "open": "Conectado",
+          "connected": "Conectado",
+          "disconnected": "Desconectado",
+          "connecting": "Conectando...",
+          "unknown": "Verificando...",
+        };
+        toast.info(`Status: ${stateMap[state] || state || "Verificando..."}`);
       }
 
       onRefresh();
