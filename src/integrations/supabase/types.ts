@@ -3216,6 +3216,110 @@ export type Database = {
           },
         ]
       }
+      reminder_campaigns: {
+        Row: {
+          account_id: string
+          campaign_type: Database["public"]["Enums"]["reminder_campaign_type"]
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          delay_max_seconds: number
+          delay_min_seconds: number
+          email_subject: string | null
+          event_id: string
+          failed_count: number
+          id: string
+          message_template: string
+          name: string
+          responded_count: number
+          scheduled_at: string | null
+          send_email: boolean
+          send_whatsapp: boolean
+          sent_count: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["reminder_campaign_status"]
+          total_recipients: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          campaign_type?: Database["public"]["Enums"]["reminder_campaign_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          delay_max_seconds?: number
+          delay_min_seconds?: number
+          email_subject?: string | null
+          event_id: string
+          failed_count?: number
+          id?: string
+          message_template: string
+          name: string
+          responded_count?: number
+          scheduled_at?: string | null
+          send_email?: boolean
+          send_whatsapp?: boolean
+          sent_count?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["reminder_campaign_status"]
+          total_recipients?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          campaign_type?: Database["public"]["Enums"]["reminder_campaign_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          delay_max_seconds?: number
+          delay_min_seconds?: number
+          email_subject?: string | null
+          event_id?: string
+          failed_count?: number
+          id?: string
+          message_template?: string
+          name?: string
+          responded_count?: number
+          scheduled_at?: string | null
+          send_email?: boolean
+          send_whatsapp?: boolean
+          sent_count?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["reminder_campaign_status"]
+          total_recipients?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_campaigns_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_campaigns_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reminder_logs: {
         Row: {
           account_id: string
@@ -3307,6 +3411,101 @@ export type Database = {
             columns: ["reminder_id"]
             isOneToOne: false
             referencedRelation: "reminders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminder_recipients: {
+        Row: {
+          account_id: string
+          campaign_id: string
+          client_id: string | null
+          created_at: string
+          email_error: string | null
+          email_sent_at: string | null
+          email_status: Database["public"]["Enums"]["reminder_recipient_status"]
+          id: string
+          participant_id: string | null
+          recipient_email: string | null
+          recipient_name: string
+          recipient_phone: string | null
+          responded_at: string | null
+          response_data: Json | null
+          send_order: number
+          updated_at: string
+          whatsapp_error: string | null
+          whatsapp_sent_at: string | null
+          whatsapp_status: Database["public"]["Enums"]["reminder_recipient_status"]
+        }
+        Insert: {
+          account_id: string
+          campaign_id: string
+          client_id?: string | null
+          created_at?: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          email_status?: Database["public"]["Enums"]["reminder_recipient_status"]
+          id?: string
+          participant_id?: string | null
+          recipient_email?: string | null
+          recipient_name: string
+          recipient_phone?: string | null
+          responded_at?: string | null
+          response_data?: Json | null
+          send_order?: number
+          updated_at?: string
+          whatsapp_error?: string | null
+          whatsapp_sent_at?: string | null
+          whatsapp_status?: Database["public"]["Enums"]["reminder_recipient_status"]
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string
+          client_id?: string | null
+          created_at?: string
+          email_error?: string | null
+          email_sent_at?: string | null
+          email_status?: Database["public"]["Enums"]["reminder_recipient_status"]
+          id?: string
+          participant_id?: string | null
+          recipient_email?: string | null
+          recipient_name?: string
+          recipient_phone?: string | null
+          responded_at?: string | null
+          response_data?: Json | null
+          send_order?: number
+          updated_at?: string
+          whatsapp_error?: string | null
+          whatsapp_sent_at?: string | null
+          whatsapp_status?: Database["public"]["Enums"]["reminder_recipient_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_recipients_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "reminder_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_recipients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_recipients_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "event_participants"
             referencedColumns: ["id"]
           },
         ]
@@ -4293,6 +4492,20 @@ export type Database = {
         | "lowE_lowROI"
         | "highE_highROI"
       recommendation_status: "open" | "done" | "dismissed"
+      reminder_campaign_status:
+        | "draft"
+        | "scheduled"
+        | "sending"
+        | "completed"
+        | "cancelled"
+      reminder_campaign_type: "notice" | "rsvp" | "checkin" | "feedback"
+      reminder_recipient_status:
+        | "pending"
+        | "queued"
+        | "sending"
+        | "sent"
+        | "failed"
+        | "responded"
       risk_source:
         | "whatsapp_text"
         | "whatsapp_audio"
@@ -4568,6 +4781,22 @@ export const Constants = {
         "highE_highROI",
       ],
       recommendation_status: ["open", "done", "dismissed"],
+      reminder_campaign_status: [
+        "draft",
+        "scheduled",
+        "sending",
+        "completed",
+        "cancelled",
+      ],
+      reminder_campaign_type: ["notice", "rsvp", "checkin", "feedback"],
+      reminder_recipient_status: [
+        "pending",
+        "queued",
+        "sending",
+        "sent",
+        "failed",
+        "responded",
+      ],
       risk_source: [
         "whatsapp_text",
         "whatsapp_audio",

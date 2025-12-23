@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { 
   Bell, 
   Send,
@@ -36,7 +45,14 @@ import {
   XCircle,
   Clock,
   History,
-  AlertCircle
+  AlertCircle,
+  ChevronRight,
+  ChevronLeft,
+  FileText,
+  ClipboardCheck,
+  Star,
+  Eye,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -63,51 +79,84 @@ interface Participant {
   } | null;
 }
 
-interface ReminderLog {
+interface Campaign {
   id: string;
-  reminder_id: string;
-  client_id: string | null;
-  event_id: string | null;
-  channel: "whatsapp" | "email" | "notification";
-  status: "pending" | "sent" | "failed" | "cancelled";
-  error_message: string | null;
-  sent_at: string | null;
+  name: string;
+  campaign_type: "notice" | "rsvp" | "checkin" | "feedback";
+  status: "draft" | "scheduled" | "sending" | "completed" | "cancelled";
+  message_template: string;
+  send_whatsapp: boolean;
+  send_email: boolean;
+  total_recipients: number;
+  sent_count: number;
+  failed_count: number;
+  responded_count: number;
   created_at: string;
-  reminders?: { name: string } | null;
-  clients?: { full_name: string } | null;
+  started_at: string | null;
+  completed_at: string | null;
   events?: { title: string } | null;
 }
 
-const channelIcons = {
-  whatsapp: MessageSquare,
-  email: Mail,
-  notification: Bell,
+interface Recipient {
+  id: string;
+  recipient_name: string;
+  recipient_phone: string | null;
+  recipient_email: string | null;
+  whatsapp_status: "pending" | "queued" | "sending" | "sent" | "failed" | "responded";
+  email_status: "pending" | "queued" | "sending" | "sent" | "failed" | "responded";
+  whatsapp_sent_at: string | null;
+  email_sent_at: string | null;
+  whatsapp_error: string | null;
+  email_error: string | null;
+  responded_at: string | null;
+}
+
+const STEPS = ["event", "participants", "type", "message", "review"] as const;
+type Step = typeof STEPS[number];
+
+const CAMPAIGN_TYPES = {
+  notice: { icon: Bell, label: "Aviso", description: "Apenas informar sobre o evento" },
+  rsvp: { icon: FileText, label: "RSVP", description: "Solicitar confirmação de presença" },
+  checkin: { icon: ClipboardCheck, label: "Check-in", description: "Enviar link para check-in no evento" },
+  feedback: { icon: Star, label: "Feedback", description: "Solicitar avaliação pós-evento" },
 };
 
-const statusConfig = {
-  pending: { icon: Clock, color: "text-yellow-500", label: "Pendente" },
-  sent: { icon: CheckCircle2, color: "text-green-500", label: "Enviado" },
-  failed: { icon: XCircle, color: "text-red-500", label: "Falhou" },
-  cancelled: { icon: AlertCircle, color: "text-muted-foreground", label: "Cancelado" },
+const STATUS_CONFIG = {
+  pending: { color: "bg-muted text-muted-foreground", label: "Pendente" },
+  queued: { color: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400", label: "Na fila" },
+  sending: { color: "bg-blue-500/20 text-blue-700 dark:text-blue-400", label: "Enviando" },
+  sent: { color: "bg-green-500/20 text-green-700 dark:text-green-400", label: "Enviado" },
+  failed: { color: "bg-red-500/20 text-red-700 dark:text-red-400", label: "Falhou" },
+  responded: { color: "bg-purple-500/20 text-purple-700 dark:text-purple-400", label: "Respondeu" },
 };
+
+const CAMPAIGN_STATUS_CONFIG = {
+  draft: { color: "secondary", label: "Rascunho" },
+  scheduled: { color: "outline", label: "Agendado" },
+  sending: { color: "default", label: "Enviando" },
+  completed: { color: "default", label: "Concluído" },
+  cancelled: { color: "destructive", label: "Cancelado" },
+} as const;
 
 export default function Reminders() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
+  
+  // Wizard state
+  const [currentStep, setCurrentStep] = useState<Step>("event");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [campaignType, setCampaignType] = useState<keyof typeof CAMPAIGN_TYPES>("notice");
+  const [campaignName, setCampaignName] = useState("");
+  const [message, setMessage] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
   const [sendWhatsapp, setSendWhatsapp] = useState(true);
   const [sendEmail, setSendEmail] = useState(false);
-  const [message, setMessage] = useState("");
+  
+  // UI state
+  const [activeTab, setActiveTab] = useState("create");
   const [sending, setSending] = useState(false);
-  const [activeTab, setActiveTab] = useState("send");
-  const [lastResults, setLastResults] = useState<{
-    whatsapp_sent: number;
-    whatsapp_failed: number;
-    email_sent: number;
-    email_failed: number;
-    logs: Array<{ participant: string; channel: string; status: string; error?: string }>;
-  } | null>(null);
+  const [viewingCampaignId, setViewingCampaignId] = useState<string | null>(null);
 
   // Fetch events
   const { data: events = [], isLoading: loadingEvents } = useQuery({
@@ -146,36 +195,63 @@ export default function Reminders() {
     enabled: !!selectedEventId,
   });
 
-  // Fetch reminder logs
-  const { data: logs = [], isLoading: loadingLogs } = useQuery({
-    queryKey: ["reminder-logs"],
+  // Fetch campaigns
+  const { data: campaigns = [], isLoading: loadingCampaigns } = useQuery({
+    queryKey: ["reminder-campaigns"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("reminder_logs")
+        .from("reminder_campaigns")
         .select(`
           *,
-          reminders:reminder_id(name),
-          clients:client_id(full_name),
-          events:event_id(title)
+          events(title)
         `)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(50);
       if (error) throw error;
-      return data as ReminderLog[];
+      return data as Campaign[];
     },
   });
+
+  // Fetch recipients for viewing campaign
+  const { data: viewingRecipients = [], isLoading: loadingRecipients } = useQuery({
+    queryKey: ["campaign-recipients", viewingCampaignId],
+    queryFn: async () => {
+      if (!viewingCampaignId) return [];
+      const { data, error } = await supabase
+        .from("reminder_recipients")
+        .select("*")
+        .eq("campaign_id", viewingCampaignId)
+        .order("send_order");
+      if (error) throw error;
+      return data as Recipient[];
+    },
+    enabled: !!viewingCampaignId,
+  });
+
+  // Generate default message based on type and event
+  useEffect(() => {
+    const event = events.find(e => e.id === selectedEventId);
+    if (!event) return;
+
+    const dateText = event.scheduled_at 
+      ? format(new Date(event.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+      : "em breve";
+
+    const messages: Record<string, string> = {
+      notice: `Olá {nome}! 👋\n\nLembrando que o evento "${event.title}" acontece ${dateText}.\n\nNos vemos lá!`,
+      rsvp: `Olá {nome}! 👋\n\nVocê está convidado(a) para "${event.title}" que acontece ${dateText}.\n\nPor favor, confirme sua presença clicando no link abaixo:\n{link_rsvp}\n\nEsperamos você!`,
+      checkin: `Olá {nome}! 🎉\n\nO evento "${event.title}" está acontecendo!\n\nFaça seu check-in pelo link:\n{link_checkin}\n\nNos vemos em breve!`,
+      feedback: `Olá {nome}! 🙏\n\nObrigado por participar do evento "${event.title}"!\n\nSua opinião é muito importante. Por favor, avalie o evento pelo link:\n{link_feedback}\n\nObrigado pelo feedback!`,
+    };
+
+    setMessage(messages[campaignType] || messages.notice);
+    setEmailSubject(`${CAMPAIGN_TYPES[campaignType].label}: ${event.title}`);
+    setCampaignName(`${CAMPAIGN_TYPES[campaignType].label} - ${event.title}`);
+  }, [selectedEventId, campaignType, events]);
 
   const handleSelectEvent = (eventId: string) => {
     setSelectedEventId(eventId);
     setSelectedParticipants([]);
-    setLastResults(null);
-    const event = events.find(e => e.id === eventId);
-    if (event) {
-      const dateText = event.scheduled_at 
-        ? format(new Date(event.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-        : "em breve";
-      setMessage(`Olá {nome}! Lembrando que o evento "${event.title}" acontece ${dateText}. Confirme sua presença!`);
-    }
   };
 
   const toggleParticipant = (participantId: string) => {
@@ -210,41 +286,67 @@ export default function Reminders() {
     return p.guest_email || null;
   };
 
-  const handleSendReminders = async () => {
-    if (!selectedEventId || selectedParticipants.length === 0) {
-      toast.error("Selecione pelo menos um participante");
-      return;
+  const canProceed = () => {
+    switch (currentStep) {
+      case "event": return !!selectedEventId;
+      case "participants": return selectedParticipants.length > 0;
+      case "type": return !!campaignType;
+      case "message": return message.trim().length > 0 && (sendWhatsapp || sendEmail);
+      case "review": return true;
+      default: return false;
     }
+  };
 
-    if (!message.trim()) {
-      toast.error("Digite uma mensagem");
-      return;
+  const goToStep = (step: Step) => {
+    const currentIndex = STEPS.indexOf(currentStep);
+    const targetIndex = STEPS.indexOf(step);
+    if (targetIndex <= currentIndex || canProceed()) {
+      setCurrentStep(step);
     }
+  };
 
-    if (!sendWhatsapp && !sendEmail) {
-      toast.error("Selecione pelo menos um canal de envio");
+  const nextStep = () => {
+    const currentIndex = STEPS.indexOf(currentStep);
+    if (currentIndex < STEPS.length - 1 && canProceed()) {
+      setCurrentStep(STEPS[currentIndex + 1]);
+    }
+  };
+
+  const prevStep = () => {
+    const currentIndex = STEPS.indexOf(currentStep);
+    if (currentIndex > 0) {
+      setCurrentStep(STEPS[currentIndex - 1]);
+    }
+  };
+
+  const handleSendCampaign = async () => {
+    if (!currentUser?.account_id) {
+      toast.error("Usuário não autenticado");
       return;
     }
 
     setSending(true);
-    setLastResults(null);
     
     try {
       const selectedParticipantData = participants
         .filter(p => selectedParticipants.includes(p.id))
-        .map(p => ({
-          id: p.id,
+        .map((p, index) => ({
+          participant_id: p.id,
+          client_id: p.client_id,
           name: getParticipantName(p),
           phone: getParticipantPhone(p),
           email: getParticipantEmail(p),
-          client_id: p.client_id,
+          send_order: index,
         }));
 
       const { data, error } = await supabase.functions.invoke("send-reminder", {
         body: {
           event_id: selectedEventId,
+          campaign_name: campaignName,
+          campaign_type: campaignType,
           participants: selectedParticipantData,
-          message: message,
+          message_template: message,
+          email_subject: emailSubject,
           send_whatsapp: sendWhatsapp,
           send_email: sendEmail,
         },
@@ -252,48 +354,50 @@ export default function Reminders() {
 
       if (error) throw error;
 
-      setLastResults(data);
+      queryClient.invalidateQueries({ queryKey: ["reminder-campaigns"] });
       
-      // Invalidate logs query to refresh
-      queryClient.invalidateQueries({ queryKey: ["reminder-logs"] });
-
-      const totalSent = (data.whatsapp_sent || 0) + (data.email_sent || 0);
-      const totalFailed = (data.whatsapp_failed || 0) + (data.email_failed || 0);
-
-      if (totalFailed > 0 && totalSent > 0) {
-        toast.warning(`${totalSent} enviados, ${totalFailed} falharam`);
-      } else if (totalFailed > 0) {
-        toast.error(`${totalFailed} lembretes falharam`);
-      } else {
-        toast.success(`${totalSent} lembretes enviados!`);
+      toast.success(`Campanha criada! Enviando para ${selectedParticipantData.length} participantes...`);
+      
+      // Reset wizard
+      setCurrentStep("event");
+      setSelectedEventId("");
+      setSelectedParticipants([]);
+      setCampaignType("notice");
+      setMessage("");
+      setActiveTab("history");
+      
+      // Start polling for updates
+      if (data?.campaign_id) {
+        setViewingCampaignId(data.campaign_id);
       }
 
-      setSelectedParticipants([]);
     } catch (error: any) {
-      console.error("Send reminder error:", error);
-      toast.error(error.message || "Erro ao enviar lembretes");
+      console.error("Send campaign error:", error);
+      toast.error(error.message || "Erro ao criar campanha");
     } finally {
       setSending(false);
     }
   };
 
+  const selectedEvent = events.find(e => e.id === selectedEventId);
+
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-6 max-w-5xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Bell className="h-6 w-6" />
           Lembretes
         </h1>
         <p className="text-muted-foreground">
-          Envie lembretes para os participantes dos seus eventos
+          Crie campanhas de lembretes para os participantes dos seus eventos
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="send" className="flex items-center gap-2">
+          <TabsTrigger value="create" className="flex items-center gap-2">
             <Send className="h-4 w-4" />
-            Enviar
+            Nova Campanha
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -301,311 +405,586 @@ export default function Reminders() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="send" className="mt-6 space-y-6">
-          {/* Step 1: Select Event */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                1. Selecione o Evento
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select value={selectedEventId} onValueChange={handleSelectEvent}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha um evento..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {loadingEvents ? (
-                    <SelectItem value="loading" disabled>Carregando...</SelectItem>
-                  ) : events.length === 0 ? (
-                    <SelectItem value="none" disabled>Nenhum evento</SelectItem>
-                  ) : (
-                    events.map((event) => (
-                      <SelectItem key={event.id} value={event.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{event.title}</span>
-                          {event.scheduled_at && (
-                            <span className="text-muted-foreground text-sm">
-                              - {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
-          {/* Step 2: Select Participants */}
-          {selectedEventId && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    2. Selecione os Participantes
-                  </CardTitle>
-                  {participants.length > 0 && (
-                    <Button variant="outline" size="sm" onClick={selectAll}>
-                      {selectedParticipants.length === participants.length ? "Desmarcar todos" : "Selecionar todos"}
-                    </Button>
-                  )}
-                </div>
-                <CardDescription>
-                  {selectedParticipants.length} de {participants.length} selecionados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingParticipants ? (
-                  <div className="text-center py-4 text-muted-foreground">Carregando...</div>
-                ) : participants.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground">
-                    Nenhum participante neste evento
+        <TabsContent value="create" className="mt-6">
+          {/* Progress Steps */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              {STEPS.map((step, index) => {
+                const isActive = step === currentStep;
+                const isPast = STEPS.indexOf(currentStep) > index;
+                const stepLabels = {
+                  event: "Evento",
+                  participants: "Participantes",
+                  type: "Tipo",
+                  message: "Mensagem",
+                  review: "Revisão",
+                };
+                
+                return (
+                  <div 
+                    key={step} 
+                    className="flex items-center cursor-pointer"
+                    onClick={() => goToStep(step)}
+                  >
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors ${
+                      isActive 
+                        ? "border-primary bg-primary text-primary-foreground" 
+                        : isPast 
+                          ? "border-primary bg-primary/20 text-primary"
+                          : "border-muted-foreground/30 text-muted-foreground"
+                    }`}>
+                      {isPast ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                    </div>
+                    <span className={`ml-2 text-sm font-medium ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                      {stepLabels[step]}
+                    </span>
+                    {index < STEPS.length - 1 && (
+                      <ChevronRight className="h-4 w-4 mx-4 text-muted-foreground/50" />
+                    )}
                   </div>
-                ) : (
-                  <div className="grid gap-2 max-h-64 overflow-y-auto">
-                    {participants.map((participant) => {
-                      const name = getParticipantName(participant);
-                      const phone = getParticipantPhone(participant);
-                      const email = getParticipantEmail(participant);
-                      const isSelected = selectedParticipants.includes(participant.id);
-                      
-                      return (
-                        <div
-                          key={participant.id}
-                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            isSelected ? "bg-accent border-accent" : "hover:bg-muted"
-                          }`}
-                          onClick={() => toggleParticipant(participant.id)}
-                        >
-                          <Checkbox checked={isSelected} />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              {phone && (
-                                <span className="flex items-center gap-1">
-                                  <MessageSquare className="h-3 w-3" />
-                                  {phone}
-                                </span>
-                              )}
-                              {email && (
-                                <span className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {email}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Step Content */}
+          <Card className="min-h-[400px]">
+            {/* Step 1: Select Event */}
+            {currentStep === "event" && (
+              <>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Selecione o Evento
+                  </CardTitle>
+                  <CardDescription>
+                    Escolha o evento para o qual deseja enviar lembretes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select value={selectedEventId} onValueChange={handleSelectEvent}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Escolha um evento..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loadingEvents ? (
+                        <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                      ) : events.length === 0 ? (
+                        <SelectItem value="none" disabled>Nenhum evento</SelectItem>
+                      ) : (
+                        events.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{event.title}</span>
+                              {event.scheduled_at && (
+                                <span className="text-muted-foreground text-sm">
+                                  - {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                                 </span>
                               )}
                             </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </>
+            )}
+
+            {/* Step 2: Select Participants */}
+            {currentStep === "participants" && (
+              <>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Selecione os Participantes
+                      </CardTitle>
+                      <CardDescription>
+                        {selectedParticipants.length} de {participants.length} selecionados
+                      </CardDescription>
+                    </div>
+                    {participants.length > 0 && (
+                      <Button variant="outline" size="sm" onClick={selectAll}>
+                        {selectedParticipants.length === participants.length ? "Desmarcar todos" : "Selecionar todos"}
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingParticipants ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                      Carregando participantes...
+                    </div>
+                  ) : participants.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      Nenhum participante neste evento
+                    </div>
+                  ) : (
+                    <div className="grid gap-2 max-h-80 overflow-y-auto">
+                      {participants.map((participant) => {
+                        const name = getParticipantName(participant);
+                        const phone = getParticipantPhone(participant);
+                        const email = getParticipantEmail(participant);
+                        const isSelected = selectedParticipants.includes(participant.id);
+                        
+                        return (
+                          <div
+                            key={participant.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                              isSelected ? "bg-accent border-primary/50" : "hover:bg-muted"
+                            }`}
+                            onClick={() => toggleParticipant(participant.id)}
+                          >
+                            <Checkbox checked={isSelected} />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{name}</p>
+                              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                {phone && (
+                                  <span className="flex items-center gap-1">
+                                    <MessageSquare className="h-3 w-3" />
+                                    {phone}
+                                  </span>
+                                )}
+                                {email && (
+                                  <span className="flex items-center gap-1 truncate">
+                                    <Mail className="h-3 w-3" />
+                                    {email}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant={
+                              participant.rsvp_status === "confirmed" ? "default" :
+                              participant.rsvp_status === "declined" ? "destructive" :
+                              "secondary"
+                            }>
+                              {participant.rsvp_status === "confirmed" ? "Confirmado" :
+                               participant.rsvp_status === "declined" ? "Recusou" :
+                               "Pendente"}
+                            </Badge>
                           </div>
-                          <Badge variant={
-                            participant.rsvp_status === "confirmed" ? "default" :
-                            participant.rsvp_status === "declined" ? "destructive" :
-                            "secondary"
-                          }>
-                            {participant.rsvp_status === "confirmed" ? "Confirmado" :
-                             participant.rsvp_status === "declined" ? "Recusou" :
-                             "Pendente"}
-                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </>
+            )}
+
+            {/* Step 3: Campaign Type */}
+            {currentStep === "type" && (
+              <>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Tipo de Lembrete
+                  </CardTitle>
+                  <CardDescription>
+                    Escolha o objetivo desta campanha
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {Object.entries(CAMPAIGN_TYPES).map(([type, config]) => {
+                      const Icon = config.icon;
+                      const isSelected = campaignType === type;
+                      
+                      return (
+                        <div
+                          key={type}
+                          className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            isSelected 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          onClick={() => setCampaignType(type as keyof typeof CAMPAIGN_TYPES)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{config.label}</h3>
+                              <p className="text-sm text-muted-foreground">{config.description}</p>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </>
+            )}
 
-          {/* Step 3: Message and Send */}
-          {selectedEventId && selectedParticipants.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Send className="h-5 w-5" />
-                  3. Mensagem e Envio
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Channels */}
-                <div>
-                  <Label className="mb-2 block">Canais de Envio</Label>
-                  <div className="flex gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="whatsapp"
-                        checked={sendWhatsapp}
-                        onCheckedChange={(checked) => setSendWhatsapp(checked === true)}
-                      />
-                      <label htmlFor="whatsapp" className="text-sm flex items-center gap-1 cursor-pointer">
-                        <MessageSquare className="h-4 w-4 text-green-500" />
-                        WhatsApp
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="email"
-                        checked={sendEmail}
-                        onCheckedChange={(checked) => setSendEmail(checked === true)}
-                      />
-                      <label htmlFor="email" className="text-sm flex items-center gap-1 cursor-pointer">
-                        <Mail className="h-4 w-4 text-blue-500" />
-                        Email
-                      </label>
+            {/* Step 4: Message */}
+            {currentStep === "message" && (
+              <>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Mensagem
+                  </CardTitle>
+                  <CardDescription>
+                    Configure a mensagem que será enviada
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label htmlFor="campaign-name">Nome da Campanha</Label>
+                    <Input
+                      id="campaign-name"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
+                      placeholder="Ex: Lembrete Evento X"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="mb-3 block">Canais de Envio</Label>
+                    <div className="flex gap-6">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="whatsapp"
+                          checked={sendWhatsapp}
+                          onCheckedChange={(checked) => setSendWhatsapp(checked === true)}
+                        />
+                        <label htmlFor="whatsapp" className="text-sm flex items-center gap-2 cursor-pointer">
+                          <MessageSquare className="h-4 w-4 text-green-500" />
+                          WhatsApp
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="email"
+                          checked={sendEmail}
+                          onCheckedChange={(checked) => setSendEmail(checked === true)}
+                        />
+                        <label htmlFor="email" className="text-sm flex items-center gap-2 cursor-pointer">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          Email
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Message */}
-                <div>
-                  <Label htmlFor="message">Mensagem</Label>
-                  <Textarea
-                    id="message"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Digite a mensagem do lembrete..."
-                    rows={4}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Use {"{nome}"} para personalizar com o nome do participante
-                  </p>
-                </div>
+                  {sendEmail && (
+                    <div>
+                      <Label htmlFor="email-subject">Assunto do Email</Label>
+                      <Input
+                        id="email-subject"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Assunto do email"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
 
-                {/* Send Button */}
-                <Button 
-                  onClick={handleSendReminders} 
-                  disabled={sending}
-                  className="w-full"
-                  size="lg"
-                >
+                  <div>
+                    <Label htmlFor="message">Mensagem</Label>
+                    <Textarea
+                      id="message"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Digite a mensagem..."
+                      rows={6}
+                      className="mt-1 font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Variáveis disponíveis: <code className="bg-muted px-1 rounded">{"{nome}"}</code>, 
+                      <code className="bg-muted px-1 rounded ml-1">{"{link_rsvp}"}</code>,
+                      <code className="bg-muted px-1 rounded ml-1">{"{link_checkin}"}</code>,
+                      <code className="bg-muted px-1 rounded ml-1">{"{link_feedback}"}</code>
+                    </p>
+                  </div>
+                </CardContent>
+              </>
+            )}
+
+            {/* Step 5: Review */}
+            {currentStep === "review" && (
+              <>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5" />
+                    Revisão
+                  </CardTitle>
+                  <CardDescription>
+                    Confirme os detalhes antes de enviar
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Evento</p>
+                      <p className="font-medium">{selectedEvent?.title}</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Tipo</p>
+                      <p className="font-medium">{CAMPAIGN_TYPES[campaignType].label}</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Destinatários</p>
+                      <p className="font-medium">{selectedParticipants.length} participante(s)</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Canais</p>
+                      <p className="font-medium flex items-center gap-2">
+                        {sendWhatsapp && <MessageSquare className="h-4 w-4 text-green-500" />}
+                        {sendEmail && <Mail className="h-4 w-4 text-blue-500" />}
+                        {sendWhatsapp && "WhatsApp"}
+                        {sendWhatsapp && sendEmail && " + "}
+                        {sendEmail && "Email"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">Prévia da Mensagem</p>
+                    <pre className="whitespace-pre-wrap text-sm font-mono bg-background p-3 rounded border">
+                      {message.replace(/\{nome\}/g, "João Silva")}
+                    </pre>
+                  </div>
+
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Os envios serão feitos com intervalo de 3-10 segundos entre cada mensagem para simular envio humano.
+                    </p>
+                  </div>
+                </CardContent>
+              </>
+            )}
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between p-6 pt-0 border-t mt-6">
+              <Button
+                variant="outline"
+                onClick={prevStep}
+                disabled={currentStep === "event"}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+              
+              {currentStep === "review" ? (
+                <Button onClick={handleSendCampaign} disabled={sending}>
                   {sending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Enviando...
+                      Iniciando...
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Enviar para {selectedParticipants.length} participante{selectedParticipants.length > 1 ? "s" : ""}
+                      Iniciar Envio
                     </>
                   )}
                 </Button>
-
-                {/* Last Results */}
-                {lastResults && (
-                  <div className="border rounded-lg p-4 mt-4 bg-muted/50">
-                    <h4 className="font-medium mb-2">Resultado do Envio</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {sendWhatsapp && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            WhatsApp enviados: {lastResults.whatsapp_sent}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <XCircle className="h-4 w-4 text-red-500" />
-                            WhatsApp falhas: {lastResults.whatsapp_failed}
-                          </div>
-                        </>
-                      )}
-                      {sendEmail && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            Emails enviados: {lastResults.email_sent}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <XCircle className="h-4 w-4 text-red-500" />
-                            Email falhas: {lastResults.email_failed}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    {lastResults.logs.some(l => l.error) && (
-                      <div className="mt-3 text-sm">
-                        <p className="font-medium text-destructive">Erros:</p>
-                        {lastResults.logs
-                          .filter(l => l.error)
-                          .map((log, i) => (
-                            <p key={i} className="text-muted-foreground">
-                              • {log.participant} ({log.channel}): {log.error}
-                            </p>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <Button onClick={nextStep} disabled={!canProceed()}>
+                  Próximo
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="history" className="mt-6">
-          {loadingLogs ? (
-            <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-          ) : logs.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <History className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium text-foreground mb-2">Nenhum envio registrado</h3>
-                <p className="text-muted-foreground text-sm">
-                  O histórico de envios aparecerá aqui
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Canal</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => {
-                    const ChannelIcon = channelIcons[log.channel];
-                    const statusInfo = statusConfig[log.status];
-                    const StatusIcon = statusInfo.icon;
-                    return (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-medium">
-                          {log.events?.title || "-"}
-                        </TableCell>
-                        <TableCell>{log.clients?.full_name || "-"}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <ChannelIcon className="h-4 w-4" />
-                            <span className="capitalize">{log.channel}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className={`flex items-center gap-1 ${statusInfo.color}`}>
-                            <StatusIcon className="h-4 w-4" />
-                            <span>{statusInfo.label}</span>
-                          </div>
-                          {log.error_message && (
-                            <p className="text-xs text-muted-foreground mt-1 truncate max-w-[200px]">
-                              {log.error_message}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Histórico de Campanhas</CardTitle>
+                  <CardDescription>
+                    Veja o status e resultados das suas campanhas
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ["reminder-campaigns"] })}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Atualizar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingCampaigns ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                  Carregando campanhas...
+                </div>
+              ) : campaigns.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <History className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  Nenhuma campanha criada ainda
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Campanha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Progresso</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {campaigns.map((campaign) => {
+                      const TypeIcon = CAMPAIGN_TYPES[campaign.campaign_type]?.icon || Bell;
+                      const progress = campaign.total_recipients > 0
+                        ? Math.round(((campaign.sent_count + campaign.failed_count) / campaign.total_recipients) * 100)
+                        : 0;
+                      
+                      return (
+                        <TableRow key={campaign.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{campaign.name}</p>
+                              <p className="text-sm text-muted-foreground">{campaign.events?.title}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <TypeIcon className="h-4 w-4" />
+                              {CAMPAIGN_TYPES[campaign.campaign_type]?.label}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={CAMPAIGN_STATUS_CONFIG[campaign.status]?.color as any || "secondary"}>
+                              {CAMPAIGN_STATUS_CONFIG[campaign.status]?.label || campaign.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="w-32">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-green-600">{campaign.sent_count} ✓</span>
+                                <span className="text-red-600">{campaign.failed_count} ✗</span>
+                                <span className="text-muted-foreground">/ {campaign.total_recipients}</span>
+                              </div>
+                              <Progress value={progress} className="h-2" />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {format(new Date(campaign.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setViewingCampaignId(campaign.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Campaign Details Dialog */}
+      <Dialog open={!!viewingCampaignId} onOpenChange={(open) => !open && setViewingCampaignId(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Campanha</DialogTitle>
+            <DialogDescription>
+              Status de envio para cada destinatário
+            </DialogDescription>
+          </DialogHeader>
+          
+          {loadingRecipients ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Destinatário</TableHead>
+                  <TableHead>WhatsApp</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Resposta</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {viewingRecipients.map((recipient) => (
+                  <TableRow key={recipient.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{recipient.recipient_name}</p>
+                        <div className="text-xs text-muted-foreground">
+                          {recipient.recipient_phone && <span>{recipient.recipient_phone}</span>}
+                          {recipient.recipient_phone && recipient.recipient_email && <span> • </span>}
+                          {recipient.recipient_email && <span>{recipient.recipient_email}</span>}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge className={STATUS_CONFIG[recipient.whatsapp_status]?.color}>
+                          {STATUS_CONFIG[recipient.whatsapp_status]?.label}
+                        </Badge>
+                        {recipient.whatsapp_error && (
+                          <span className="text-xs text-destructive" title={recipient.whatsapp_error}>
+                            <AlertCircle className="h-3 w-3" />
+                          </span>
+                        )}
+                      </div>
+                      {recipient.whatsapp_sent_at && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(recipient.whatsapp_sent_at), "HH:mm:ss", { locale: ptBR })}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge className={STATUS_CONFIG[recipient.email_status]?.color}>
+                          {STATUS_CONFIG[recipient.email_status]?.label}
+                        </Badge>
+                        {recipient.email_error && (
+                          <span className="text-xs text-destructive" title={recipient.email_error}>
+                            <AlertCircle className="h-3 w-3" />
+                          </span>
+                        )}
+                      </div>
+                      {recipient.email_sent_at && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(recipient.email_sent_at), "HH:mm:ss", { locale: ptBR })}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {recipient.responded_at ? (
+                        <Badge className="bg-purple-500/20 text-purple-700 dark:text-purple-400">
+                          {format(new Date(recipient.responded_at), "dd/MM HH:mm", { locale: ptBR })}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
