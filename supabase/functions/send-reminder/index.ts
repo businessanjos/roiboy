@@ -185,27 +185,30 @@ serve(async (req) => {
       console.error("Error creating recipients:", recipientsError);
     }
 
-    // Get Evolution API integration
-    let evolutionConfig: { api_url?: string; api_key?: string; instance_name?: string } | null = null;
+    // Get WhatsApp integration (UAZAPI)
+    let whatsappConfig: { provider?: string; instance_name?: string } | null = null;
     
     if (send_whatsapp) {
       const { data: integration } = await supabase
         .from("integrations")
         .select("config")
         .eq("account_id", accountId)
-        .in("type", ["evolution", "whatsapp"])
+        .eq("type", "whatsapp")
         .eq("status", "connected")
         .maybeSingle();
 
       if (integration?.config) {
         const config = integration.config as Record<string, unknown>;
-        evolutionConfig = {
-          api_url: config.api_url as string | undefined,
-          api_key: config.api_key as string | undefined,
+        whatsappConfig = {
+          provider: config.provider as string | undefined,
           instance_name: config.instance_name as string | undefined,
         };
       }
     }
+
+    // UAZAPI config
+    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
     // Get Resend API key
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -260,19 +263,19 @@ serve(async (req) => {
       let emailError: string | null = null;
       let emailSentAt: string | null = null;
 
-      // Send WhatsApp
+      // Send WhatsApp via UAZAPI
       if (send_whatsapp && participant.phone) {
-        if (evolutionConfig?.api_url && evolutionConfig?.instance_name) {
+        if (whatsappConfig?.instance_name && UAZAPI_URL && UAZAPI_ADMIN_TOKEN) {
           try {
             const cleanPhone = participant.phone.replace(/\D/g, "");
             
             const response = await fetch(
-              `${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`,
+              `${UAZAPI_URL}/message/sendText/${whatsappConfig.instance_name}`,
               {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "apikey": evolutionConfig.api_key || "",
+                  "Authorization": `Bearer ${UAZAPI_ADMIN_TOKEN}`,
                 },
                 body: JSON.stringify({
                   number: cleanPhone,
@@ -285,7 +288,7 @@ serve(async (req) => {
               whatsappStatus = "sent";
               whatsappSentAt = new Date().toISOString();
               sentCount++;
-              console.log(`WhatsApp sent to ${participant.name}`);
+              console.log(`WhatsApp sent to ${participant.name} via UAZAPI`);
             } else {
               const errorData = await response.json();
               whatsappStatus = "failed";
@@ -301,7 +304,7 @@ serve(async (req) => {
           }
         } else {
           whatsappStatus = "failed";
-          whatsappError = "WhatsApp não configurado. Configure a integração Evolution API.";
+          whatsappError = "WhatsApp não configurado. Conecte seu WhatsApp na página de integrações.";
           failedCount++;
         }
       }
