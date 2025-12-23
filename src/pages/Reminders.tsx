@@ -59,15 +59,14 @@ export default function Reminders() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Fetch upcoming events
+  // Fetch events
   const { data: events = [], isLoading: loadingEvents } = useQuery({
     queryKey: ["events-for-reminders"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
         .select("id, title, scheduled_at, modality")
-        .gte("scheduled_at", new Date().toISOString())
-        .order("scheduled_at", { ascending: true })
+        .order("scheduled_at", { ascending: false, nullsFirst: false })
         .limit(50);
       if (error) throw error;
       return data as Event[];
@@ -105,7 +104,10 @@ export default function Reminders() {
     // Set default message
     const event = events.find(e => e.id === eventId);
     if (event) {
-      setMessage(`Olá! Lembrando que o evento "${event.title}" acontece em ${format(new Date(event.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}. Confirme sua presença!`);
+      const dateText = event.scheduled_at 
+        ? format(new Date(event.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+        : "em breve";
+      setMessage(`Olá! Lembrando que o evento "${event.title}" acontece ${dateText}. Confirme sua presença!`);
     }
   };
 
@@ -238,9 +240,11 @@ export default function Reminders() {
                     <SelectItem key={event.id} value={event.id}>
                       <div className="flex items-center gap-2">
                         <span>{event.title}</span>
-                        <span className="text-muted-foreground text-sm">
-                          - {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </span>
+                        {event.scheduled_at && (
+                          <span className="text-muted-foreground text-sm">
+                            - {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </span>
+                        )}
                       </div>
                     </SelectItem>
                   ))
