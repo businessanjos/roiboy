@@ -11,7 +11,7 @@ const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 interface UazapiRequest {
-  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text";
+  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode";
   instance_name?: string;
   phone?: string;
   message?: string;
@@ -297,6 +297,106 @@ serve(async (req) => {
       case "qrcode": {
         // Get current QR code - use connect endpoint since qrcode endpoint may not exist
         result = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
+        break;
+      }
+
+      case "paircode": {
+        // Generate pairing code (8-digit code for WhatsApp connection)
+        if (!phone) {
+          return new Response(
+            JSON.stringify({ error: "Phone number is required for pairing code" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Clean phone number (remove non-digits)
+        const cleanPhone = phone.replace(/\D/g, "");
+        console.log(`Generating pairing code for phone: ${cleanPhone}`);
+        
+        // Get instance token from integration or existing config
+        const { data: existingIntegration } = await supabase
+          .from("integrations")
+          .select("config")
+          .eq("account_id", accountId)
+          .eq("type", "whatsapp")
+          .single();
+
+        const instanceToken = (existingIntegration?.config as { instance_token?: string })?.instance_token;
+        
+        // Try different endpoints for pairing code
+        let paircode = "";
+        let paircodeResult: unknown = null;
+        
+        // Try with instance token first
+        if (instanceToken) {
+          const tokenEndpoints = [
+            { url: `/paircode`, method: "POST", body: { number: cleanPhone } },
+            { url: `/instance/paircode`, method: "POST", body: { number: cleanPhone } },
+            { url: `/requestPairingCode`, method: "POST", body: { number: cleanPhone } },
+          ];
+          
+          for (const endpoint of tokenEndpoints) {
+            if (paircode) break;
+            try {
+              console.log(`Trying instance: ${endpoint.method} ${endpoint.url}`);
+              paircodeResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, endpoint.body);
+              console.log(`Paircode result:`, JSON.stringify(paircodeResult));
+              
+              const data = paircodeResult as { paircode?: string; code?: string; pairingCode?: string; data?: { paircode?: string } };
+              paircode = data.paircode || data.code || data.pairingCode || data.data?.paircode || "";
+            } catch (err) {
+              console.log(`Instance ${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+        
+        // Try with admin token
+        if (!paircode) {
+          const adminEndpoints = [
+            { url: `/instance/paircode/${instanceName}`, method: "POST", body: { number: cleanPhone } },
+            { url: `/paircode/${instanceName}`, method: "POST", body: { number: cleanPhone } },
+            { url: `/instance/requestPairingCode/${instanceName}`, method: "POST", body: { number: cleanPhone } },
+          ];
+          
+          for (const endpoint of adminEndpoints) {
+            if (paircode) break;
+            try {
+              console.log(`Trying admin: ${endpoint.method} ${endpoint.url}`);
+              paircodeResult = await uazapiAdminRequest(endpoint.url, endpoint.method, endpoint.body);
+              console.log(`Admin paircode result:`, JSON.stringify(paircodeResult));
+              
+              const data = paircodeResult as { paircode?: string; code?: string; pairingCode?: string; data?: { paircode?: string } };
+              paircode = data.paircode || data.code || data.pairingCode || data.data?.paircode || "";
+            } catch (err) {
+              console.log(`Admin ${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+
+        if (paircode) {
+          // Update integration with pairing code
+          await supabase
+            .from("integrations")
+            .upsert({
+              account_id: accountId,
+              type: "whatsapp",
+              status: "pending",
+              config: {
+                provider: "uazapi",
+                instance_name: instanceName,
+                instance_token: instanceToken,
+                paircode: paircode,
+                phone_number: cleanPhone,
+                paircode_generated_at: new Date().toISOString(),
+              },
+            }, { onConflict: "account_id,type" });
+        }
+
+        result = {
+          paircode,
+          phone: cleanPhone,
+          instance_name: instanceName,
+        };
         break;
       }
 
