@@ -7,46 +7,57 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-interface UazapiMessage {
-  key: {
-    remoteJid: string;
-    fromMe: boolean;
-    id: string;
+// UAZAPI sends messages in this format (from actual webhook payload)
+interface UazapiWebhookPayload {
+  BaseUrl?: string;
+  EventType?: string;
+  // Alternative formats
+  event?: string;
+  instance?: string;
+  // Chat info
+  chat?: {
+    id?: string;
+    image?: string;
+    imagePreview?: string;
+    name?: string;
+    phone?: string;
+    lead_email?: string;
   };
-  pushName?: string;
+  // Message data - can be in different formats
   message?: {
-    conversation?: string;
-    extendedTextMessage?: {
-      text: string;
-    };
-    imageMessage?: {
-      caption?: string;
-    };
-    videoMessage?: {
-      caption?: string;
-    };
-    audioMessage?: {
-      seconds?: number;
-    };
+    id?: string;
+    body?: string;
+    content?: string;
+    text?: string;
+    type?: string;
+    fromMe?: boolean;
+    timestamp?: number | string;
   };
-  messageTimestamp?: number | string;
-}
-
-interface UazapiWebhook {
-  event: string;
-  instance: string;
+  // Alternative message format
   data?: {
-    messages?: UazapiMessage[];
+    messages?: Array<{
+      key: {
+        remoteJid: string;
+        fromMe: boolean;
+        id: string;
+      };
+      pushName?: string;
+      message?: {
+        conversation?: string;
+        extendedTextMessage?: { text: string };
+        imageMessage?: { caption?: string };
+        videoMessage?: { caption?: string };
+        audioMessage?: { seconds?: number };
+      };
+      messageTimestamp?: number | string;
+    }>;
     state?: string;
-    qrcode?: {
-      base64?: string;
-    };
+    qrcode?: { base64?: string };
   };
 }
 
 function extractPhoneFromJid(jid: string): string {
   if (!jid) return "";
-  // Format: 5511999999999@s.whatsapp.net or 5511999999999@g.us (group)
   const match = jid.match(/^(\d+)@/);
   return match ? `+${match[1]}` : "";
 }
@@ -55,16 +66,11 @@ function isGroupJid(jid: string): boolean {
   return jid?.includes("@g.us") || false;
 }
 
-function extractTextContent(message: UazapiMessage["message"]): string | null {
-  if (!message) return null;
-  
-  if (message.conversation) return message.conversation;
-  if (message.extendedTextMessage?.text) return message.extendedTextMessage.text;
-  if (message.imageMessage?.caption) return `[Imagem] ${message.imageMessage.caption}`;
-  if (message.videoMessage?.caption) return `[Vídeo] ${message.videoMessage.caption}`;
-  if (message.audioMessage) return "[Áudio]";
-  
-  return null;
+function normalizePhone(phone: string | undefined): string {
+  if (!phone) return "";
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, "");
+  return digits ? `+${digits}` : "";
 }
 
 serve(async (req) => {
@@ -77,113 +83,256 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const webhook: UazapiWebhook = await req.json();
-    const { event, instance, data } = webhook;
-
-    console.log(`UAZAPI Webhook received: event=${event}, instance=${instance}`);
-    console.log(`Webhook payload:`, JSON.stringify(webhook).substring(0, 500));
-
-    // Find account by integration instance_name (try multiple formats)
-    // Instance names can be: roy-796e7970, roy_796e7970, roy_796e7970_fd93_4574_a, etc.
-    const possibleInstanceNames = [
-      instance,
-      instance.replace(/_/g, "-"),
-      instance.replace(/-/g, "_"),
-      instance.split("_").slice(0, 2).join("-"), // roy_796e7970_xxx -> roy-796e7970
-      instance.split("_").slice(0, 2).join("_"), // keep first two parts
-    ];
+    const payload: UazapiWebhookPayload = await req.json();
     
+    // Log the raw payload for debugging
+    console.log("UAZAPI Webhook raw payload:", JSON.stringify(payload).substring(0, 1000));
+
+    // Determine event type (UAZAPI uses EventType, some versions use event)
+    const eventType = payload.EventType || payload.event;
+    console.log(`Event type: ${eventType}`);
+
+    // Extract instance from BaseUrl (e.g., https://cxroycom.uazapi.com -> find integration by account)
+    const baseUrl = payload.BaseUrl || "";
+    const instance = payload.instance;
+    
+    console.log(`BaseUrl: ${baseUrl}, instance: ${instance}`);
+
+    // Find account - try different methods
     let integration = null;
-    for (const tryName of possibleInstanceNames) {
-      console.log(`Trying to find integration with instance_name: ${tryName}`);
+    
+    // Method 1: Find by instance name if provided
+    if (instance) {
+      const possibleNames = [
+        instance,
+        instance.replace(/_/g, "-"),
+        instance.replace(/-/g, "_"),
+        instance.split("_").slice(0, 2).join("-"),
+        instance.split("_").slice(0, 2).join("_"),
+      ];
+      
+      for (const tryName of possibleNames) {
+        const { data: found } = await supabase
+          .from("integrations")
+          .select("account_id, config")
+          .eq("type", "whatsapp")
+          .filter("config->>instance_name", "eq", tryName)
+          .maybeSingle();
+        
+        if (found) {
+          integration = found;
+          console.log(`Found integration by instance_name: ${tryName}`);
+          break;
+        }
+      }
+    }
+    
+    // Method 2: Find by provider type (for now, get first UAZAPI integration)
+    if (!integration) {
       const { data: found } = await supabase
         .from("integrations")
         .select("account_id, config")
         .eq("type", "whatsapp")
-        .filter("config->>instance_name", "eq", tryName)
+        .filter("config->>provider", "eq", "uazapi")
+        .limit(1)
         .maybeSingle();
       
       if (found) {
         integration = found;
-        console.log(`Found integration for instance_name: ${tryName}`);
-        break;
+        console.log("Found integration by provider=uazapi");
       }
     }
 
     if (!integration) {
-      console.log(`No integration found for instance ${instance}. Tried: ${possibleInstanceNames.join(", ")}`);
+      console.log("No UAZAPI integration found");
       return new Response(JSON.stringify({ ignored: true, reason: "no_integration" }), { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
 
     const accountId = integration.account_id;
+    console.log(`Processing for account: ${accountId}`);
 
-    // Handle different event types
-    switch (event) {
-      case "connection.update": {
-        const state = data?.state;
-        console.log(`Connection update for ${accountId}: ${state}`);
+    // Handle message events (EventType: "messages" or event: "messages.upsert")
+    if (eventType === "messages" || eventType === "messages.upsert") {
+      // UAZAPI format: chat + message at root level
+      if (payload.chat && payload.message) {
+        const chat = payload.chat;
+        const msg = payload.message;
+        
+        // Skip outgoing messages
+        if (msg.fromMe) {
+          console.log("Skipping outgoing message");
+          return new Response(JSON.stringify({ ignored: true, reason: "outgoing" }), { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+        
+        const phone = normalizePhone(chat.phone);
+        const contactName = chat.name || "Desconhecido";
+        const content = msg.body || msg.content || msg.text || "";
+        const messageId = msg.id || `${Date.now()}`;
+        const timestamp = msg.timestamp 
+          ? new Date(Number(msg.timestamp) * 1000).toISOString()
+          : new Date().toISOString();
 
-        await supabase
-          .from("integrations")
-          .update({
-            status: state === "open" ? "connected" : "disconnected",
-            config: {
-              ...((integration.config as Record<string, unknown>) || {}),
-              connection_state: state,
-              last_connection_update: new Date().toISOString(),
-            },
-          })
+        if (!phone || !content) {
+          console.log(`Skipping message: no phone (${phone}) or content (${content})`);
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_data" }), { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+
+        console.log(`Processing message from ${phone} (${contactName}): ${content.substring(0, 50)}...`);
+
+        // Find or create client
+        let clientId: string | null = null;
+        
+        const { data: existingClient } = await supabase
+          .from("clients")
+          .select("id")
           .eq("account_id", accountId)
-          .eq("type", "whatsapp");
+          .eq("phone_e164", phone)
+          .maybeSingle();
 
-        break;
-      }
+        if (existingClient) {
+          clientId = existingClient.id;
+          console.log(`Found existing client: ${clientId}`);
+        } else {
+          const { data: newClient, error: createError } = await supabase
+            .from("clients")
+            .insert({
+              account_id: accountId,
+              phone_e164: phone,
+              full_name: contactName,
+              status: "lead",
+            })
+            .select("id")
+            .single();
 
-      case "qrcode.updated": {
-        const qrcode = data?.qrcode?.base64;
-        console.log(`QR Code updated for ${accountId}`);
+          if (newClient) {
+            clientId = newClient.id;
+            console.log(`Created new client: ${clientId} for ${phone}`);
+          } else if (createError) {
+            console.error("Error creating client:", createError);
+          }
+        }
 
-        await supabase
-          .from("integrations")
-          .update({
-            status: "pending",
-            config: {
-              ...((integration.config as Record<string, unknown>) || {}),
-              qrcode_base64: qrcode,
-              qrcode_updated_at: new Date().toISOString(),
-            },
-          })
+        if (!clientId) {
+          console.log("Could not find or create client");
+          return new Response(JSON.stringify({ error: "client_creation_failed" }), { 
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+
+        // Find or create conversation
+        let conversationId: string | null = null;
+        
+        const { data: existingConvo } = await supabase
+          .from("conversations")
+          .select("id")
           .eq("account_id", accountId)
-          .eq("type", "whatsapp");
+          .eq("client_id", clientId)
+          .eq("channel", "whatsapp")
+          .maybeSingle();
 
-        break;
+        if (existingConvo) {
+          conversationId = existingConvo.id;
+        } else {
+          const { data: newConvo } = await supabase
+            .from("conversations")
+            .insert({
+              account_id: accountId,
+              client_id: clientId,
+              channel: "whatsapp",
+              external_thread_id: chat.id,
+            })
+            .select("id")
+            .single();
+
+          if (newConvo) {
+            conversationId = newConvo.id;
+          }
+        }
+
+        // Insert message event
+        const { error: messageError } = await supabase
+          .from("message_events")
+          .insert({
+            account_id: accountId,
+            client_id: clientId,
+            conversation_id: conversationId,
+            channel: "whatsapp",
+            direction: "client_to_team",
+            content_text: content,
+            external_message_id: messageId,
+            happened_at: timestamp,
+            metadata: {
+              source: "uazapi",
+              contact_name: contactName,
+              chat_id: chat.id,
+              message_type: msg.type,
+            },
+          });
+
+        if (messageError) {
+          console.error("Error inserting message:", messageError);
+          return new Response(JSON.stringify({ error: messageError.message }), { 
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+        
+        console.log("Message saved successfully!");
+
+        // Trigger AI analysis for text messages
+        if (content.length > 10 && !content.startsWith("[")) {
+          try {
+            await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${supabaseKey}`,
+              },
+              body: JSON.stringify({
+                account_id: accountId,
+                client_id: clientId,
+                message_content: content,
+              }),
+            });
+            console.log("AI analysis triggered");
+          } catch (err) {
+            console.log("AI analysis trigger error (non-blocking):", err);
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, client_id: clientId, message_saved: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-
-      case "messages.upsert": {
-        const messages = data?.messages || [];
+      
+      // Alternative format: data.messages array
+      if (payload.data?.messages) {
+        const messages = payload.data.messages;
+        let processedCount = 0;
         
         for (const msg of messages) {
-          // Skip outgoing messages
           if (msg.key.fromMe) continue;
-          
-          // Skip group messages
           if (isGroupJid(msg.key.remoteJid)) continue;
 
           const phone = extractPhoneFromJid(msg.key.remoteJid);
-          const content = extractTextContent(msg.message);
           const contactName = msg.pushName || "Desconhecido";
-          const timestamp = msg.messageTimestamp 
-            ? new Date(Number(msg.messageTimestamp) * 1000).toISOString()
-            : new Date().toISOString();
+          
+          let content = "";
+          if (msg.message?.conversation) content = msg.message.conversation;
+          else if (msg.message?.extendedTextMessage?.text) content = msg.message.extendedTextMessage.text;
+          else if (msg.message?.imageMessage?.caption) content = `[Imagem] ${msg.message.imageMessage.caption}`;
+          else if (msg.message?.videoMessage?.caption) content = `[Vídeo] ${msg.message.videoMessage.caption}`;
+          else if (msg.message?.audioMessage) content = "[Áudio]";
+          
+          if (!phone || !content) continue;
 
-          if (!phone || !content) {
-            console.log("Skipping message: no phone or content");
-            continue;
-          }
-
-          console.log(`Processing message from ${phone}: ${content.substring(0, 50)}...`);
+          console.log(`Processing alt format message from ${phone}: ${content.substring(0, 50)}...`);
 
           // Find or create client
           let clientId: string | null = null;
@@ -198,7 +347,6 @@ serve(async (req) => {
           if (existingClient) {
             clientId = existingClient.id;
           } else {
-            // Create new client
             const { data: newClient } = await supabase
               .from("clients")
               .insert({
@@ -210,16 +358,10 @@ serve(async (req) => {
               .select("id")
               .single();
 
-            if (newClient) {
-              clientId = newClient.id;
-              console.log(`Created new client ${clientId} for ${phone}`);
-            }
+            if (newClient) clientId = newClient.id;
           }
 
-          if (!clientId) {
-            console.log("Could not find or create client, skipping");
-            continue;
-          }
+          if (!clientId) continue;
 
           // Find or create conversation
           let conversationId: string | null = null;
@@ -246,13 +388,14 @@ serve(async (req) => {
               .select("id")
               .single();
 
-            if (newConvo) {
-              conversationId = newConvo.id;
-            }
+            if (newConvo) conversationId = newConvo.id;
           }
 
-          // Insert message event
-          const { error: messageError } = await supabase
+          const timestamp = msg.messageTimestamp 
+            ? new Date(Number(msg.messageTimestamp) * 1000).toISOString()
+            : new Date().toISOString();
+
+          await supabase
             .from("message_events")
             .insert({
               account_id: accountId,
@@ -260,51 +403,77 @@ serve(async (req) => {
               conversation_id: conversationId,
               channel: "whatsapp",
               direction: "client_to_team",
-              content: content,
+              content_text: content,
               external_message_id: msg.key.id,
               happened_at: timestamp,
               metadata: {
                 source: "uazapi",
                 contact_name: contactName,
-                instance: instance,
               },
             });
 
-          if (messageError) {
-            console.error("Error inserting message:", messageError);
-          } else {
-            console.log("Message saved successfully");
-
-            // Trigger AI analysis for text messages
-            if (content.length > 10 && !content.startsWith("[")) {
-              try {
-                await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${supabaseKey}`,
-                  },
-                  body: JSON.stringify({
-                    account_id: accountId,
-                    client_id: clientId,
-                    message_content: content,
-                  }),
-                });
-              } catch (err) {
-                console.log("AI analysis trigger error (non-blocking):", err);
-              }
-            }
-          }
+          processedCount++;
         }
-        break;
-      }
 
-      default:
-        console.log(`Unhandled event: ${event}`);
+        console.log(`Processed ${processedCount} messages`);
+        return new Response(
+          JSON.stringify({ success: true, processed: processedCount }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
+    // Handle connection update
+    if (eventType === "connection" || eventType === "connection.update") {
+      const state = payload.data?.state;
+      console.log(`Connection update: ${state}`);
+
+      await supabase
+        .from("integrations")
+        .update({
+          status: state === "open" ? "connected" : "disconnected",
+          config: {
+            ...((integration.config as Record<string, unknown>) || {}),
+            connection_state: state,
+            last_connection_update: new Date().toISOString(),
+          },
+        })
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp");
+
+      return new Response(
+        JSON.stringify({ success: true, event: eventType }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Handle QR code update
+    if (eventType === "qrcode" || eventType === "qrcode.updated") {
+      const qrcode = payload.data?.qrcode?.base64;
+      console.log("QR Code updated");
+
+      await supabase
+        .from("integrations")
+        .update({
+          status: "pending",
+          config: {
+            ...((integration.config as Record<string, unknown>) || {}),
+            qrcode_base64: qrcode,
+            qrcode_updated_at: new Date().toISOString(),
+          },
+        })
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp");
+
+      return new Response(
+        JSON.stringify({ success: true, event: eventType }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Unhandled event type: ${eventType}`);
     return new Response(
-      JSON.stringify({ success: true, event }),
+      JSON.stringify({ success: true, event: eventType, handled: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
