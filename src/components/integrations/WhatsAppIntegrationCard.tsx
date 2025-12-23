@@ -531,11 +531,19 @@ export function WhatsAppIntegrationCard({
 
           {whatsappIntegration && !isConnected && !qrCode && !paircode && !showConnectionOptions && (
             <Button 
-              onClick={() => setShowConnectionOptions(true)} 
+              onClick={() => {
+                setShowConnectionOptions(true);
+                setConnectionMethod("qrcode");
+                handleGetQRCode();
+              }} 
               disabled={loading}
             >
-              <QrCode className="h-4 w-4 mr-2" />
-              Conectar
+              {loading && action === "qrcode" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <QrCode className="h-4 w-4 mr-2" />
+              )}
+              Conectar via QR Code
             </Button>
           )}
 
