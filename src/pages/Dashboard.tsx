@@ -721,54 +721,54 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Visão geral do seu negócio</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => { fetchClients(); fetchUpcomingEvents(); fetchROIStats(); fetchRiskStats(); fetchContractData(); }} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline ml-2">Atualizar</span>
           </Button>
-          <Button asChild>
+          <Button asChild size="sm">
             <Link to="/clients/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Cliente
+              <Plus className="h-4 w-4" />
+              <span className="hidden xs:inline ml-2">Novo Cliente</span>
             </Link>
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="gestao" className="space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="gestao" className="gap-2">
-              <Settings2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Gestão</span>
+      <Tabs defaultValue="gestao" className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+          <TabsList className="grid w-full grid-cols-3 max-w-sm sm:max-w-md h-9 sm:h-10">
+            <TabsTrigger value="gestao" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Settings2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Gestão</span>
             </TabsTrigger>
-            <TabsTrigger value="cx" className="gap-2">
-              <Heart className="h-4 w-4" />
-              <span className="hidden sm:inline">CX</span>
+            <TabsTrigger value="cx" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>CX</span>
             </TabsTrigger>
-            <TabsTrigger value="roi" className="gap-2">
-              <Target className="h-4 w-4" />
-              <span className="hidden sm:inline">ROI</span>
+            <TabsTrigger value="roi" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>ROI</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Filters - aligned with tabs */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium hidden sm:inline">Filtros:</span>
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto overflow-x-auto pb-1 scrollbar-thin">
+            <div className="flex items-center gap-1.5 text-muted-foreground flex-shrink-0">
+              <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm font-medium hidden xs:inline">Filtros:</span>
             </div>
             <Select value={gestaoProductFilter} onValueChange={setGestaoProductFilter}>
-              <SelectTrigger className="w-[160px] h-9">
-                <SelectValue placeholder="Todos os produtos" />
+              <SelectTrigger className="w-[130px] sm:w-[160px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
+                <SelectValue placeholder="Produtos" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os produtos</SelectItem>
@@ -788,7 +788,7 @@ export default function Dashboard() {
                 }
               }}
             >
-              <SelectTrigger className="w-[150px] h-9">
+              <SelectTrigger className="w-[120px] sm:w-[150px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -1088,7 +1088,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Status Cards - Single Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-5">
             {/* Total de Clientes */}
             <Card className="shadow-card border-l-4 border-l-primary">
               <CardContent className="p-4">
@@ -1172,7 +1172,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <ChartContainer config={chartConfig} className="h-[320px] w-full">
+              <ChartContainer config={chartConfig} className="h-[250px] sm:h-[320px] w-full">
                 <BarChart 
                   data={monthlyChartData} 
                   margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
