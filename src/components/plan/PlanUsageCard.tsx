@@ -13,7 +13,8 @@ import {
   FileText, 
   Sparkles,
   TrendingUp,
-  Crown
+  Crown,
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const RESOURCE_CONFIG: Record<ResourceType, { icon: typeof Users; label: string;
   products: { icon: Package, label: "Produtos", color: "text-orange-500" },
   forms: { icon: FileText, label: "Formulários", color: "text-pink-500" },
   ai_analyses: { icon: Sparkles, label: "Análises IA", color: "text-cyan-500" },
+  whatsapp_connections: { icon: MessageCircle, label: "Conexões WhatsApp", color: "text-emerald-500" },
 };
 
 interface UsageItemProps {
@@ -91,7 +93,7 @@ export function PlanUsageCard() {
 
   if (!data) return null;
 
-  const resources: ResourceType[] = ["clients", "users", "events", "products", "forms", "ai_analyses"];
+  const resources: ResourceType[] = ["clients", "users", "events", "products", "forms", "ai_analyses", "whatsapp_connections"];
 
   return (
     <Card>
