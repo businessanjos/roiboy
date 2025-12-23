@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,9 +124,7 @@ type ViewMode = "list" | "kanban";
 
 export default function Tasks() {
   const { currentUser } = useCurrentUser();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
@@ -137,50 +136,57 @@ export default function Tasks() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  useEffect(() => {
-    fetchTasks();
-    fetchUsers();
+  // Fetch tasks with React Query
+  const { data: tasks = [], isLoading: loading } = useQuery({
+    queryKey: ["internal-tasks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("internal_tasks")
+        .select(`
+          *,
+          clients:client_id (id, full_name),
+          assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url)
+        `)
+        .order("created_at", { ascending: false });
 
+      if (error) throw error;
+      return (data || []) as Task[];
+    },
+    staleTime: 30000,
+  });
+
+  // Fetch users with React Query
+  const { data: users = [] } = useQuery({
+    queryKey: ["team-users-tasks"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("id, name, avatar_url")
+        .order("name");
+      return (data || []) as User[];
+    },
+    staleTime: 60000,
+  });
+
+  // Realtime subscription
+  useEffect(() => {
     const channel = supabase
       .channel("tasks-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "internal_tasks" },
-        () => fetchTasks()
+        () => queryClient.invalidateQueries({ queryKey: ["internal-tasks"] })
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
-  const fetchTasks = async () => {
-    const { data, error } = await supabase
-      .from("internal_tasks")
-      .select(`
-        *,
-        clients:client_id (id, full_name),
-        assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching tasks:", error);
-      toast.error("Erro ao carregar tarefas");
-    } else {
-      setTasks((data || []) as Task[]);
-    }
-    setLoading(false);
-  };
-
-  const fetchUsers = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, name, avatar_url")
-      .order("name");
-    if (data) setUsers(data);
-  };
+  const invalidateTasks = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+  }, [queryClient]);
 
   const handleToggleComplete = useCallback(async (task: Task) => {
     const newStatus = task.status === "done" ? "pending" : "done";
@@ -196,9 +202,9 @@ export default function Tasks() {
       toast.error("Erro ao atualizar tarefa");
     } else {
       toast.success(newStatus === "done" ? "Tarefa concluída!" : "Tarefa reaberta");
-      fetchTasks();
+      invalidateTasks();
     }
-  }, []);
+  }, [invalidateTasks]);
 
   const handleDeleteTask = useCallback(async () => {
     if (!taskToDelete) return;
@@ -214,9 +220,9 @@ export default function Tasks() {
       toast.success("Tarefa excluída!");
       setDeleteDialogOpen(false);
       setTaskToDelete(null);
-      fetchTasks();
+      invalidateTasks();
     }
-  }, [taskToDelete]);
+  }, [taskToDelete, invalidateTasks]);
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: Task["status"]) => {
     const { error } = await supabase
@@ -231,9 +237,9 @@ export default function Tasks() {
       toast.error("Erro ao mover tarefa");
     } else {
       toast.success("Tarefa movida!");
-      fetchTasks();
+      invalidateTasks();
     }
-  }, []);
+  }, [invalidateTasks]);
 
   const openEditDialog = useCallback((task: Task) => {
     setEditingTask(task);
@@ -747,7 +753,7 @@ export default function Tasks() {
         onOpenChange={setDialogOpen}
         task={editingTask}
         initialStatus={initialStatus}
-        onSuccess={fetchTasks}
+        onSuccess={invalidateTasks}
       />
 
       {/* Delete Dialog */}
