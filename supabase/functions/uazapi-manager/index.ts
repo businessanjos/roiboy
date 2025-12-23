@@ -11,10 +11,55 @@ const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 interface UazapiRequest {
-  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode";
+  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook";
   instance_name?: string;
   phone?: string;
   message?: string;
+}
+
+// Helper function to configure webhook automatically
+async function configureWebhook(instanceToken: string, instanceName: string, supabaseUrl: string): Promise<boolean> {
+  const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
+  console.log(`Configuring webhook for instance ${instanceName} to ${webhookUrl}`);
+  
+  // Try different endpoints to set webhook
+  const webhookEndpoints = [
+    { url: `/webhook/set`, method: "PUT", body: { url: webhookUrl, enabled: true, webhookByEvents: true, events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "MESSAGES_UPDATE"] } },
+    { url: `/webhook`, method: "PUT", body: { url: webhookUrl, enabled: true } },
+    { url: `/instance/webhook`, method: "PUT", body: { url: webhookUrl, enabled: true } },
+    { url: `/settings/webhook`, method: "PUT", body: { url: webhookUrl, enabled: true } },
+  ];
+  
+  for (const endpoint of webhookEndpoints) {
+    try {
+      console.log(`Trying webhook config: ${endpoint.method} ${endpoint.url}`);
+      await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, endpoint.body);
+      console.log(`Webhook configured successfully via ${endpoint.url}`);
+      return true;
+    } catch (err) {
+      console.log(`Webhook ${endpoint.url} failed:`, (err as Error).message);
+    }
+  }
+  
+  // Try admin endpoints as fallback
+  const adminWebhookEndpoints = [
+    { url: `/instance/webhook/${instanceName}`, method: "PUT", body: { url: webhookUrl, enabled: true } },
+    { url: `/webhook/${instanceName}`, method: "PUT", body: { url: webhookUrl, enabled: true } },
+  ];
+  
+  for (const endpoint of adminWebhookEndpoints) {
+    try {
+      console.log(`Trying admin webhook config: ${endpoint.method} ${endpoint.url}`);
+      await uazapiAdminRequest(endpoint.url, endpoint.method, endpoint.body);
+      console.log(`Webhook configured successfully via admin ${endpoint.url}`);
+      return true;
+    } catch (err) {
+      console.log(`Admin webhook ${endpoint.url} failed:`, (err as Error).message);
+    }
+  }
+  
+  console.log("Could not configure webhook automatically");
+  return false;
 }
 
 // Request helper for admin endpoints (using admintoken header - UAZAPI standard)
@@ -478,6 +523,13 @@ serve(async (req) => {
         
         const isConnected = connectionState === "open" || connectionState === "connected";
         
+        // If connected, ensure webhook is configured
+        let webhookConfigured = false;
+        if (isConnected && savedToken) {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+          webhookConfigured = await configureWebhook(savedToken, instanceName, supabaseUrl);
+        }
+        
         // Update integration status based on result
         await supabase
           .from("integrations")
@@ -487,6 +539,7 @@ serve(async (req) => {
               ...(existingWhatsapp?.config as object || {}),
               last_status_check: new Date().toISOString(),
               connection_state: connectionState,
+              webhook_configured: webhookConfigured || (existingWhatsapp?.config as { webhook_configured?: boolean })?.webhook_configured,
             },
           })
           .eq("account_id", accountId)
@@ -496,6 +549,42 @@ serve(async (req) => {
           state: connectionState, 
           connected: isConnected,
           instance_name: instanceName,
+          webhook_configured: webhookConfigured,
+        };
+        break;
+      }
+
+      case "configure_webhook": {
+        // Manually configure webhook
+        const savedToken = (existingWhatsapp?.config as { instance_token?: string })?.instance_token;
+        
+        if (!savedToken) {
+          return new Response(
+            JSON.stringify({ error: "WhatsApp não está conectado. Conecte primeiro." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const webhookConfigured = await configureWebhook(savedToken, instanceName, supabaseUrl);
+        
+        if (webhookConfigured) {
+          await supabase
+            .from("integrations")
+            .update({
+              config: {
+                ...(existingWhatsapp?.config as object || {}),
+                webhook_configured: true,
+                webhook_configured_at: new Date().toISOString(),
+              },
+            })
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp");
+        }
+        
+        result = {
+          webhook_configured: webhookConfigured,
+          webhook_url: `${supabaseUrl}/functions/v1/uazapi-webhook`,
         };
         break;
       }
