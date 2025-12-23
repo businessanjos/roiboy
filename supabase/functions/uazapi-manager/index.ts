@@ -142,10 +142,19 @@ serve(async (req) => {
     const payload: UazapiRequest = await req.json();
     const { action, phone, message } = payload;
 
-    // Instance name is based on account ID for isolation
-    const instanceName = `roy_${accountId.replace(/-/g, "_").slice(0, 20)}`;
+    // Get existing integration to use saved instance name
+    const { data: existingWhatsapp } = await supabase
+      .from("integrations")
+      .select("config")
+      .eq("account_id", accountId)
+      .eq("type", "whatsapp")
+      .maybeSingle();
 
-    console.log(`UAZAPI action: ${action} for account ${accountId}`);
+    // Use saved instance name or generate new one
+    const savedInstanceName = (existingWhatsapp?.config as { instance_name?: string })?.instance_name;
+    const instanceName = savedInstanceName || `roy-${accountId.slice(0, 8)}`;
+
+    console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}`);
 
     let result: unknown;
 
