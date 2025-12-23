@@ -151,8 +151,9 @@ serve(async (req) => {
     switch (action) {
       case "create": {
         // Create a new instance for this account
+        // UAZAPI expects "Name" (capitalized) in the payload
         result = await uazapiAdminRequest("/instance/create", "POST", {
-          instanceName,
+          Name: instanceName,
           qrcode: true,
           webhook: {
             url: `${supabaseUrl}/functions/v1/uazapi-webhook`,
