@@ -43,6 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { QRCodeSVG } from "qrcode.react";
 import { 
   Plus, 
@@ -121,6 +122,7 @@ export default function Events() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { canCreate } = usePlanLimits();
+  const { logAudit } = useAuditLog();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
@@ -416,6 +418,14 @@ export default function Events() {
       }
     }
 
+    logAudit({
+      action: editingEvent ? "update" : "create",
+      entityType: "event",
+      entityId: eventId,
+      entityName: title.trim(),
+      details: { event_type: eventType, modality, products: selectedProducts.length }
+    });
+
     toast({
       title: editingEvent ? "Evento atualizado" : "Evento criado",
       description: `${title} foi ${editingEvent ? "atualizado" : "criado"} com sucesso.`,
@@ -427,6 +437,9 @@ export default function Events() {
   };
 
   const handleDelete = async (id: string) => {
+    // Get event name before deleting
+    const eventToDelete = events.find(e => e.id === id);
+    
     const { error } = await supabase.from("events").delete().eq("id", id);
 
     if (error) {
@@ -436,6 +449,13 @@ export default function Events() {
         variant: "destructive",
       });
     } else {
+      logAudit({
+        action: "delete",
+        entityType: "event",
+        entityId: id,
+        entityName: eventToDelete?.title || "Evento",
+      });
+      
       toast({
         title: "Evento excluído",
         description: "O evento foi removido com sucesso.",

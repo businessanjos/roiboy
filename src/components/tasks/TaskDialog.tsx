@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +72,7 @@ const STATUS_LABELS = {
 
 export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, onSuccess }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
+  const { logAudit } = useAuditLog();
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -167,6 +169,15 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           .update(updateData)
           .eq("id", task.id);
         if (error) throw error;
+        
+        logAudit({
+          action: formData.status === "done" ? "complete" : "update",
+          entityType: "task",
+          entityId: task.id,
+          entityName: formData.title.trim(),
+          details: { status: formData.status, priority: formData.priority }
+        });
+        
         toast.success("Tarefa atualizada!");
       } else {
         const insertData = {
@@ -181,10 +192,21 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           created_by: currentUser.id,
           completed_at: formData.status === "done" ? new Date().toISOString() : null,
         };
-        const { error } = await supabase
+        const { data: newTask, error } = await supabase
           .from("internal_tasks")
-          .insert(insertData);
+          .insert(insertData)
+          .select()
+          .single();
         if (error) throw error;
+        
+        logAudit({
+          action: "create",
+          entityType: "task",
+          entityId: newTask.id,
+          entityName: formData.title.trim(),
+          details: { status: formData.status, priority: formData.priority, client_id: formData.client_id || null }
+        });
+        
         toast.success("Tarefa criada!");
       }
 

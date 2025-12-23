@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -238,6 +239,7 @@ const parseCSV = (content: string): CsvRow[] => {
 export default function Clients() {
   const { currentUser } = useCurrentUser();
   const { canCreate, isNearLimit, data: planData } = usePlanLimits();
+  const { logAudit } = useAuditLog();
   const [clients, setClients] = useState<any[]>([]);
   const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
   const [scoreMap, setScoreMap] = useState<Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }>>({});
@@ -741,6 +743,15 @@ export default function Clients() {
           await supabase.from("client_field_values").insert(fieldValuesToInsert);
         }
       }
+      
+      // Log audit
+      logAudit({
+        action: "create",
+        entityType: "client",
+        entityId: newClient.id,
+        entityName: newClientData.full_name.trim(),
+        details: { products: selectedProducts.length }
+      });
       
       toast.success("Cliente adicionado!");
       setDialogOpen(false);
