@@ -37,6 +37,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions";
+import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import {
@@ -104,6 +105,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { unreadCount } = useNotifications();
   const { pendingCount: pendingTasksCount, overdueCount } = usePendingTasksCount();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
+  const { isImpersonating } = useImpersonation();
   const { setTheme, theme } = useTheme();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
@@ -119,8 +121,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   // Filter nav items based on permissions and super admin status
   const filteredNavItems = useMemo(() => {
-    // Super admins only see admin-related items
-    if (isSuperAdmin) return superAdminNavItems;
+    // Super admins only see admin-related items UNLESS they are impersonating
+    if (isSuperAdmin && !isImpersonating) return superAdminNavItems;
     
     // While loading permissions, show all items to avoid flash
     if (permissionsLoading) return navItems;
@@ -131,7 +133,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       // Check permission(s)
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, isImpersonating]);
+
+  // When impersonating, show regular UI even for super admins
+  const showRegularUI = isImpersonating || !isSuperAdmin;
 
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
@@ -214,8 +219,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           );
         })}
 
-        {/* Notifications - hide for super admins */}
-        {!isSuperAdmin && (
+        {/* Notifications - hide for super admins (unless impersonating) */}
+        {showRegularUI && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -270,8 +275,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         )}
       </nav>
 
-      {/* Plan Info - hide for super admins */}
-      {!isSuperAdmin && <SidebarPlanInfo collapsed={collapsed} />}
+      {/* Plan Info - hide for super admins (unless impersonating) */}
+      {showRegularUI && <SidebarPlanInfo collapsed={collapsed} />}
 
       {/* User Menu */}
       <div className="p-3 border-t border-border">
