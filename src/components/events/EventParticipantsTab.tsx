@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,7 @@ export default function EventParticipantsTab({
   onUpdate 
 }: EventParticipantsTabProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -397,7 +399,15 @@ export default function EventParticipantsTab({
                   return (
                     <TableRow key={p.id}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
+                        <div 
+                          className={`flex items-center gap-3 ${p.client_id ? 'cursor-pointer hover:opacity-80' : ''}`}
+                          onClick={(e) => {
+                            if (p.client_id) {
+                              e.stopPropagation();
+                              navigate(`/clients/${p.client_id}`);
+                            }
+                          }}
+                        >
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={p.clients?.avatar_url || undefined} />
                             <AvatarFallback>
@@ -405,7 +415,9 @@ export default function EventParticipantsTab({
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{getParticipantName(p)}</p>
+                            <p className={`font-medium ${p.client_id ? 'text-primary hover:underline' : ''}`}>
+                              {getParticipantName(p)}
+                            </p>
                             {!p.client_id && (
                               <Badge variant="outline" className="text-xs">Externo</Badge>
                             )}
