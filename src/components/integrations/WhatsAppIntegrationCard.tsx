@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CheckCircle2, XCircle, Copy, RefreshCw, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, Clock, Loader2, QrCode, LogOut, Smartphone } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -14,63 +14,117 @@ type Integration = Tables<"integrations">;
 
 interface WhatsAppIntegrationCardProps {
   integrations: Integration[];
-  whatsappMessageUrl: string;
-  whatsappAudioUrl: string;
-  copied: string | null;
-  copyToClipboard: (text: string, label: string) => void;
   onRefresh: () => void;
 }
 
 export function WhatsAppIntegrationCard({
   integrations,
-  whatsappMessageUrl,
-  whatsappAudioUrl,
-  copied,
-  copyToClipboard,
   onRefresh,
 }: WhatsAppIntegrationCardProps) {
-  // Cast type to string for comparison since integration_type enum may not be updated yet
   const whatsappIntegration = integrations.find((i) => (i.type as string) === "whatsapp");
-  const isConnected = whatsappIntegration?.status === "connected";
-  
-  // Check if last heartbeat was recent (within 10 minutes)
   const config = whatsappIntegration?.config as Record<string, unknown> | null;
-  const lastHeartbeat = config?.last_heartbeat as string | undefined;
-  const appVersion = config?.app_version as string | undefined;
+  const provider = config?.provider as string | undefined;
+  const connectionState = config?.connection_state as string | undefined;
+  const qrcodeBase64 = config?.qrcode_base64 as string | undefined;
+  const instanceName = config?.instance_name as string | undefined;
   
-  const [isOnline, setIsOnline] = useState(false);
-  const [lastSeenText, setLastSeenText] = useState<string | null>(null);
+  const isConnected = whatsappIntegration?.status === "connected" || connectionState === "open";
+  const isPending = connectionState === "pending" || (!isConnected && qrcodeBase64);
+  
+  const [loading, setLoading] = useState(false);
+  const [action, setAction] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(qrcodeBase64 || null);
+  const [pollingStatus, setPollingStatus] = useState(false);
 
+  // Poll for status updates when QR code is shown
   useEffect(() => {
-    if (lastHeartbeat) {
-      const heartbeatDate = new Date(lastHeartbeat);
-      const now = new Date();
-      const diffMinutes = (now.getTime() - heartbeatDate.getTime()) / (1000 * 60);
-      setIsOnline(diffMinutes < 10);
-      setLastSeenText(
-        formatDistanceToNow(heartbeatDate, { addSuffix: true, locale: ptBR })
-      );
-    } else {
-      setIsOnline(false);
-      setLastSeenText(null);
-    }
-  }, [lastHeartbeat]);
+    if (!qrCode || isConnected) return;
 
-  // Auto-refresh every 30 seconds to update connection status
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (lastHeartbeat) {
-        const heartbeatDate = new Date(lastHeartbeat);
-        const now = new Date();
-        const diffMinutes = (now.getTime() - heartbeatDate.getTime()) / (1000 * 60);
-        setIsOnline(diffMinutes < 10);
-        setLastSeenText(
-          formatDistanceToNow(heartbeatDate, { addSuffix: true, locale: ptBR })
-        );
+    setPollingStatus(true);
+    const interval = setInterval(async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session?.session?.access_token) return;
+
+        const response = await supabase.functions.invoke("uazapi-manager", {
+          body: { action: "status" },
+        });
+
+        if (response.data?.data?.state === "open") {
+          setQrCode(null);
+          setPollingStatus(false);
+          toast.success("WhatsApp conectado com sucesso!");
+          onRefresh();
+        }
+      } catch (err) {
+        console.log("Status poll error:", err);
       }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [lastHeartbeat]);
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      setPollingStatus(false);
+    };
+  }, [qrCode, isConnected, onRefresh]);
+
+  const handleAction = useCallback(async (actionType: "create" | "connect" | "disconnect" | "status") => {
+    setLoading(true);
+    setAction(actionType);
+
+    try {
+      const response = await supabase.functions.invoke("uazapi-manager", {
+        body: { action: actionType },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const data = response.data;
+
+      if (actionType === "create" || actionType === "connect") {
+        // Check for QR code in response
+        if (data?.data?.qrcode?.base64) {
+          setQrCode(data.data.qrcode.base64);
+          toast.info("Escaneie o QR Code com seu WhatsApp");
+        } else if (data?.data?.base64) {
+          setQrCode(data.data.base64);
+          toast.info("Escaneie o QR Code com seu WhatsApp");
+        } else {
+          // Try to get QR code
+          const qrResponse = await supabase.functions.invoke("uazapi-manager", {
+            body: { action: "qrcode" },
+          });
+          if (qrResponse.data?.data?.base64) {
+            setQrCode(qrResponse.data.data.base64);
+            toast.info("Escaneie o QR Code com seu WhatsApp");
+          }
+        }
+      } else if (actionType === "disconnect") {
+        setQrCode(null);
+        toast.success("WhatsApp desconectado");
+      } else if (actionType === "status") {
+        if (data?.data?.state === "open") {
+          toast.success("WhatsApp está conectado");
+        } else {
+          toast.info(`Status: ${data?.data?.state || "desconhecido"}`);
+        }
+      }
+
+      onRefresh();
+    } catch (err) {
+      console.error("UAZAPI action error:", err);
+      toast.error(err instanceof Error ? err.message : "Erro na operação");
+    } finally {
+      setLoading(false);
+      setAction(null);
+    }
+  }, [onRefresh]);
+
+  const lastConnectionUpdate = config?.last_connection_update as string | undefined;
+  const lastSeenText = lastConnectionUpdate 
+    ? formatDistanceToNow(new Date(lastConnectionUpdate), { addSuffix: true, locale: ptBR })
+    : null;
 
   return (
     <Card>
@@ -83,23 +137,23 @@ export function WhatsAppIntegrationCard({
               </svg>
             </div>
             <div>
-              <CardTitle>WhatsApp Web</CardTitle>
+              <CardTitle>WhatsApp</CardTitle>
               <CardDescription>
-                Captura de mensagens via ROY Desktop App
+                Envio e recebimento de mensagens via UAZAPI
               </CardDescription>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={isConnected && isOnline ? "default" : "secondary"} className="gap-1">
-              {isConnected && isOnline ? (
+            <Badge variant={isConnected ? "default" : isPending ? "secondary" : "outline"} className="gap-1">
+              {isConnected ? (
                 <>
                   <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                  Online
+                  Conectado
                 </>
-              ) : isConnected ? (
+              ) : isPending ? (
                 <>
                   <Clock className="h-3 w-3" />
-                  Offline
+                  Aguardando
                 </>
               ) : (
                 <>
@@ -112,94 +166,132 @@ export function WhatsAppIntegrationCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* QR Code Display */}
+        {qrCode && !isConnected && (
+          <div className="flex flex-col items-center gap-4 p-6 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Smartphone className="h-4 w-4" />
+              <span>Escaneie o QR Code com seu WhatsApp</span>
+              {pollingStatus && <Loader2 className="h-3 w-3 animate-spin" />}
+            </div>
+            <div className="bg-white p-4 rounded-lg">
+              <img 
+                src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`} 
+                alt="QR Code WhatsApp" 
+                className="w-64 h-64"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground text-center max-w-sm">
+              Abra o WhatsApp no seu celular → Menu (⋮) → Aparelhos conectados → Conectar um aparelho
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleAction("connect")}
+              disabled={loading}
+            >
+              {loading && action === "connect" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Gerar novo QR Code
+            </Button>
+          </div>
+        )}
+
         {/* Connection Status */}
-        {whatsappIntegration && (
-          <div className="rounded-lg border p-4 space-y-3">
-            <h4 className="font-medium flex items-center gap-2">
-              Status da Conexão
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onRefresh}>
-                <RefreshCw className="h-3 w-3" />
-              </Button>
-            </h4>
+        {isConnected && (
+          <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <h4 className="font-medium text-green-800 dark:text-green-400">WhatsApp Conectado</h4>
+            </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Status:</span>
-                <span className={`ml-2 font-medium ${isOnline ? "text-green-600" : "text-muted-foreground"}`}>
-                  {isOnline ? "App conectado" : isConnected ? "App offline" : "Nunca conectado"}
-                </span>
+                <span className="text-muted-foreground">Instância:</span>
+                <span className="ml-2 font-mono text-xs">{instanceName}</span>
               </div>
               {lastSeenText && (
                 <div>
-                  <span className="text-muted-foreground">Última atividade:</span>
+                  <span className="text-muted-foreground">Última atualização:</span>
                   <span className="ml-2">{lastSeenText}</span>
                 </div>
               )}
-              {appVersion && (
-                <div>
-                  <span className="text-muted-foreground">Versão do app:</span>
-                  <span className="ml-2">{appVersion}</span>
-                </div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-3">
+          {!whatsappIntegration && (
+            <Button 
+              onClick={() => handleAction("create")} 
+              disabled={loading}
+            >
+              {loading && action === "create" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <QrCode className="h-4 w-4 mr-2" />
               )}
-            </div>
-          </div>
-        )}
+              Conectar WhatsApp
+            </Button>
+          )}
 
-        {!whatsappIntegration && (
-          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4">
-            <p className="text-sm text-amber-700 dark:text-amber-400">
-              <strong>App não conectado:</strong> Faça login no ROY Desktop App e abra o WhatsApp Web para iniciar a captura de mensagens.
-            </p>
-          </div>
-        )}
+          {whatsappIntegration && !isConnected && !qrCode && (
+            <Button 
+              onClick={() => handleAction("connect")} 
+              disabled={loading}
+            >
+              {loading && action === "connect" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <QrCode className="h-4 w-4 mr-2" />
+              )}
+              Reconectar
+            </Button>
+          )}
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Endpoint de Mensagens de Texto</Label>
-            <div className="flex gap-2">
-              <Input value={whatsappMessageUrl} readOnly className="font-mono text-sm" />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => copyToClipboard(whatsappMessageUrl, "WhatsApp Message URL")}
-              >
-                {copied === "WhatsApp Message URL" ? (
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+          {whatsappIntegration && (
+            <Button 
+              variant="outline" 
+              onClick={() => handleAction("status")} 
+              disabled={loading}
+            >
+              {loading && action === "status" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Verificar Status
+            </Button>
+          )}
 
-          <div className="space-y-2">
-            <Label>Endpoint de Áudio (com transcrição)</Label>
-            <div className="flex gap-2">
-              <Input value={whatsappAudioUrl} readOnly className="font-mono text-sm" />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => copyToClipboard(whatsappAudioUrl, "WhatsApp Audio URL")}
-              >
-                {copied === "WhatsApp Audio URL" ? (
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Áudios são transcritos automaticamente via Lovable AI e deletados imediatamente após.
-            </p>
-          </div>
+          {isConnected && (
+            <Button 
+              variant="destructive" 
+              onClick={() => handleAction("disconnect")} 
+              disabled={loading}
+            >
+              {loading && action === "disconnect" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <LogOut className="h-4 w-4 mr-2" />
+              )}
+              Desconectar
+            </Button>
+          )}
         </div>
 
+        {/* Info */}
         <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-          <h4 className="font-medium">ROY Desktop App</h4>
-          <p className="text-sm text-muted-foreground">
-            O ROY Desktop App captura automaticamente mensagens do WhatsApp Web e envia
-            para o backend. Baixe o app, faça login com suas credenciais e abra o WhatsApp Web
-            para começar a capturar.
-          </p>
+          <h4 className="font-medium">Como funciona</h4>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li>• Clique em "Conectar WhatsApp" e escaneie o QR Code</li>
+            <li>• Após conectar, você pode enviar lembretes e campanhas</li>
+            <li>• Mensagens recebidas são capturadas e analisadas automaticamente</li>
+            <li>• Sem necessidade de instalar aplicativos adicionais</li>
+          </ul>
         </div>
       </CardContent>
     </Card>

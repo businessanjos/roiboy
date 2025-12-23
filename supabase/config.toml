@@ -74,3 +74,9 @@ verify_jwt = false
 
 [functions.process-scheduled-reminders]
 verify_jwt = false
+
+[functions.uazapi-manager]
+verify_jwt = false
+
+[functions.uazapi-webhook]
+verify_jwt = false

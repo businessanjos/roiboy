@@ -917,10 +917,6 @@ export default function Integrations() {
         <TabsContent value="whatsapp" className="space-y-4">
           <WhatsAppIntegrationCard 
             integrations={integrations}
-            whatsappMessageUrl={whatsappMessageUrl}
-            whatsappAudioUrl={whatsappAudioUrl}
-            copied={copied}
-            copyToClipboard={copyToClipboard}
             onRefresh={fetchIntegrations}
           />
         </TabsContent>
