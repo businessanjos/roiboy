@@ -186,7 +186,7 @@ serve(async (req) => {
     }
 
     // Get WhatsApp integration (UAZAPI)
-    let whatsappConfig: { provider?: string; instance_name?: string } | null = null;
+    let whatsappConfig: { provider?: string; instance_name?: string; instance_token?: string } | null = null;
     
     if (send_whatsapp) {
       const { data: integration } = await supabase
@@ -202,13 +202,13 @@ serve(async (req) => {
         whatsappConfig = {
           provider: config.provider as string | undefined,
           instance_name: config.instance_name as string | undefined,
+          instance_token: config.instance_token as string | undefined,
         };
       }
     }
 
     // UAZAPI config
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
-    const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
     // Get Resend API key
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -265,18 +265,27 @@ serve(async (req) => {
 
       // Send WhatsApp via UAZAPI
       if (send_whatsapp && participant.phone) {
-        if (whatsappConfig?.instance_name && UAZAPI_URL && UAZAPI_ADMIN_TOKEN) {
+        if (whatsappConfig?.instance_name && UAZAPI_URL) {
           try {
             const cleanPhone = participant.phone.replace(/\D/g, "");
+            
+            // Use instance token if available, otherwise use admin token
+            const headers: Record<string, string> = {
+              "Content-Type": "application/json",
+            };
+            
+            if (whatsappConfig.instance_token) {
+              headers["token"] = whatsappConfig.instance_token;
+            } else {
+              const adminToken = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
+              headers["admintoken"] = adminToken;
+            }
             
             const response = await fetch(
               `${UAZAPI_URL}/message/sendText/${whatsappConfig.instance_name}`,
               {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${UAZAPI_ADMIN_TOKEN}`,
-                },
+                headers,
                 body: JSON.stringify({
                   number: cleanPhone,
                   text: personalizedMessage,
@@ -292,7 +301,7 @@ serve(async (req) => {
             } else {
               const errorData = await response.json();
               whatsappStatus = "failed";
-              whatsappError = errorData.message || "Erro ao enviar";
+              whatsappError = errorData.message || `Erro ao enviar (${response.status})`;
               failedCount++;
               console.log(`WhatsApp failed for ${participant.name}: ${whatsappError}`);
             }
