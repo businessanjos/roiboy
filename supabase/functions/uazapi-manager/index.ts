@@ -22,12 +22,14 @@ async function configureWebhook(instanceToken: string, instanceName: string, sup
   const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
   console.log(`Configuring webhook for instance ${instanceName} to ${webhookUrl}`);
   
-  // UAZAPI webhook body format
+  // UAZAPI webhook body format - events in lowercase as per UAZAPI panel
   const webhookBody = {
     url: webhookUrl,
     enabled: true,
     webhookByEvents: true,
-    events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "MESSAGES_UPDATE"]
+    addUrlEvents: false,
+    addUrlTypesMessages: false,
+    events: ["messages", "connection", "qrcode", "MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"]
   };
   
   // Try different endpoints and methods to set webhook
