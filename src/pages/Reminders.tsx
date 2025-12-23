@@ -94,6 +94,7 @@ interface Campaign {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  scheduled_for: string | null;
   events?: { title: string } | null;
 }
 
@@ -881,11 +882,16 @@ export default function Reminders() {
               </Button>
               
               {currentStep === "review" ? (
-                <Button onClick={handleSendCampaign} disabled={sending}>
+                <Button onClick={handleSendCampaign} disabled={sending || (sendMode === "scheduled" && !scheduledFor)}>
                   {sending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Iniciando...
+                      {sendMode === "scheduled" ? "Agendando..." : "Iniciando..."}
+                    </>
+                  ) : sendMode === "scheduled" ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2" />
+                      Agendar Envio
                     </>
                   ) : (
                     <>
@@ -984,7 +990,14 @@ export default function Reminders() {
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {format(new Date(campaign.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            {campaign.status === "scheduled" && campaign.scheduled_for ? (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(campaign.scheduled_for), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </div>
+                            ) : (
+                              format(new Date(campaign.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                            )}
                           </TableCell>
                           <TableCell>
                             <Button
