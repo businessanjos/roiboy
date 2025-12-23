@@ -152,17 +152,11 @@ serve(async (req) => {
     switch (action) {
       case "create": {
         // Create a new instance for this account
-        // UAZAPI/Evolution API expects "instanceName" in the payload and qrcode: true to get QR immediately
+        // UAZAPI expects "Name" (capitalized) in the payload
         const createResult = await uazapiAdminRequest("/instance/create", "POST", {
-          instanceName: instanceName,
+          Name: instanceName,
           qrcode: true,
-          integration: "WHATSAPP-BAILEYS",
-          webhook: {
-            url: `${supabaseUrl}/functions/v1/uazapi-webhook`,
-            byEvents: false,
-            base64: true,
-            events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
-          },
+          webhook: `${supabaseUrl}/functions/v1/uazapi-webhook`,
         });
 
         console.log("Create result:", JSON.stringify(createResult));
