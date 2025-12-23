@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Users,
   BarChart3,
@@ -19,11 +20,39 @@ import {
   ChevronDown,
   Menu,
   X,
+  Crown,
+  Rocket,
+  Building2,
 } from "lucide-react";
+
+interface Plan {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  max_clients: number | null;
+  max_users: number | null;
+  max_whatsapp_connections: number | null;
+  max_ai_analyses: number | null;
+}
 
 const Home = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+
+  useEffect(() => {
+    async function loadPlans() {
+      const { data } = await supabase
+        .from("subscription_plans")
+        .select("id, name, description, price, max_clients, max_users, max_whatsapp_connections, max_ai_analyses")
+        .eq("is_active", true)
+        .eq("plan_type", "main")
+        .order("price", { ascending: true });
+      if (data) setPlans(data);
+    }
+    loadPlans();
+  }, []);
 
   const features = [
     {
@@ -73,6 +102,23 @@ const Home = () => {
     { value: "60%", label: "Menos Tempo Operacional" },
     { value: "100%", label: "Visibilidade dos Dados" },
   ];
+
+  const getPlanIcon = (name: string) => {
+    if (name.toLowerCase().includes("starter") || name.toLowerCase().includes("básico")) {
+      return Rocket;
+    }
+    if (name.toLowerCase().includes("pro") || name.toLowerCase().includes("profissional")) {
+      return Crown;
+    }
+    return Building2;
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -286,6 +332,102 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Pricing Section */}
+      {plans.length > 0 && (
+        <section id="pricing" className="py-20 md:py-28">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <Badge variant="outline" className="mb-4">
+                Planos
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Escolha o plano ideal para você
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Comece gratuitamente por 14 dias. Sem cartão de crédito.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {plans.map((plan, index) => {
+                const Icon = getPlanIcon(plan.name);
+                const isPopular = index === 1;
+
+                return (
+                  <Card 
+                    key={plan.id} 
+                    className={`relative transition-all hover:shadow-lg ${
+                      isPopular ? "border-primary shadow-md ring-2 ring-primary/20" : ""
+                    }`}
+                  >
+                    {isPopular && (
+                      <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+                        Mais Popular
+                      </Badge>
+                    )}
+                    <CardContent className="pt-8 pb-6">
+                      <div className="text-center mb-6">
+                        <div className="mx-auto mb-3 p-3 rounded-full bg-primary/10 text-primary w-fit">
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
+                        {plan.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
+                        )}
+                      </div>
+
+                      <div className="text-center mb-6">
+                        <span className="text-4xl font-bold text-foreground">
+                          {formatPrice(plan.price)}
+                        </span>
+                        <span className="text-muted-foreground">/mês</span>
+                      </div>
+
+                      <ul className="space-y-3 mb-6">
+                        <li className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                          <span>Até {plan.max_clients || "∞"} clientes</span>
+                        </li>
+                        <li className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                          <span>Até {plan.max_users || "∞"} usuários</span>
+                        </li>
+                        {plan.max_whatsapp_connections != null && plan.max_whatsapp_connections > 0 && (
+                          <li className="flex items-center gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500 shrink-0" />
+                            <span>
+                              {plan.max_whatsapp_connections === 1 
+                                ? "1 conexão WhatsApp" 
+                                : `${plan.max_whatsapp_connections} conexões WhatsApp`}
+                            </span>
+                          </li>
+                        )}
+                        <li className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                          <span>{plan.max_ai_analyses?.toLocaleString() || "∞"} análises IA/mês</span>
+                        </li>
+                      </ul>
+
+                      <Button 
+                        className="w-full" 
+                        variant={isPopular ? "default" : "outline"}
+                        onClick={() => navigate("/auth?tab=signup")}
+                      >
+                        Começar Grátis
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <p className="text-center text-sm text-muted-foreground mt-8">
+              Precisa de mais conexões WhatsApp? Adicione conexões extras por R$ 200/mês cada.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section id="cta" className="py-20 md:py-28">

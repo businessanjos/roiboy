@@ -68,6 +68,7 @@ interface SubscriptionPlan {
   max_clients: number | null;
   max_users: number | null;
   max_ai_analyses: number | null;
+  max_whatsapp_connections: number | null;
   features: any;
   plan_type: string;
 }
@@ -766,6 +767,14 @@ export function SubscriptionManager() {
                         <li className="flex items-center gap-2">
                           <Check className="h-4 w-4 text-success" />
                           {plan.max_users === 999999 ? "Usuários ilimitados" : `Até ${plan.max_users} usuários`}
+                        </li>
+                      )}
+                      {plan.max_whatsapp_connections != null && plan.max_whatsapp_connections > 0 && (
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-success" />
+                          {plan.max_whatsapp_connections === 1 
+                            ? "1 conexão WhatsApp" 
+                            : `${plan.max_whatsapp_connections} conexões WhatsApp`}
                         </li>
                       )}
                       {plan.max_ai_analyses && (
