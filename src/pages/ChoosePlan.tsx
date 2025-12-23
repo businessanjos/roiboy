@@ -27,6 +27,7 @@ interface SubscriptionPlan {
   max_clients: number | null;
   max_users: number | null;
   max_ai_analyses: number | null;
+  max_whatsapp_connections: number | null;
   plan_type: string;
 }
 
@@ -346,16 +347,20 @@ export default function ChoosePlan() {
                             <Check className="h-4 w-4 text-green-500 shrink-0" />
                             <span>Até {plan.max_users || "∞"} usuários</span>
                           </li>
+                          {plan.max_whatsapp_connections != null && plan.max_whatsapp_connections > 0 && (
+                            <li className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-green-500 shrink-0" />
+                              <span>
+                                {plan.max_whatsapp_connections === 1 
+                                  ? "1 conexão WhatsApp" 
+                                  : `${plan.max_whatsapp_connections} conexões WhatsApp`}
+                              </span>
+                            </li>
+                          )}
                           <li className="flex items-center gap-2">
                             <Check className="h-4 w-4 text-green-500 shrink-0" />
                             <span>{plan.max_ai_analyses?.toLocaleString() || "∞"} análises IA/mês</span>
                           </li>
-                          {features.includes("whatsapp_integration") && (
-                            <li className="flex items-center gap-2">
-                              <Check className="h-4 w-4 text-green-500 shrink-0" />
-                              <span>Integração WhatsApp</span>
-                            </li>
-                          )}
                           {features.includes("custom_fields") && (
                             <li className="flex items-center gap-2">
                               <Check className="h-4 w-4 text-green-500 shrink-0" />
