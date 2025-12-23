@@ -458,11 +458,11 @@ export default function Events() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Eventos</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">Eventos</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie entregáveis, lives e materiais dos seus produtos.
           </p>
         </div>
@@ -801,21 +801,21 @@ export default function Events() {
 
       {/* Sub-tabs for modality */}
       <Tabs value={modalityTab} onValueChange={(v) => setModalityTab(v as "all" | "presencial" | "online")} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Todos
-            <Badge variant="secondary" className="ml-1">{events.length}</Badge>
+        <TabsList className="grid w-full grid-cols-3 max-w-sm sm:max-w-md h-9 sm:h-10">
+          <TabsTrigger value="all" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Todos</span>
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 text-[10px] sm:text-xs px-1 sm:px-1.5">{events.length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="presencial" className="gap-2">
-            <MapPin className="h-4 w-4" />
-            Presenciais
-            <Badge variant="secondary" className="ml-1">{presencialCount}</Badge>
+          <TabsTrigger value="presencial" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Presenciais</span>
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 text-[10px] sm:text-xs px-1 sm:px-1.5">{presencialCount}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="online" className="gap-2">
-            <Monitor className="h-4 w-4" />
-            Online
-            <Badge variant="secondary" className="ml-1">{onlineCount}</Badge>
+          <TabsTrigger value="online" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Monitor className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Online</span>
+            <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 text-[10px] sm:text-xs px-1 sm:px-1.5">{onlineCount}</Badge>
           </TabsTrigger>
         </TabsList>
 
@@ -852,16 +852,16 @@ export default function Events() {
               }
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <Table className="min-w-[800px]">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Modalidade</TableHead>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Produtos</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="min-w-[180px]">Evento</TableHead>
+                    <TableHead className="min-w-[100px]">Tipo</TableHead>
+                    <TableHead className="min-w-[120px]">Modalidade</TableHead>
+                    <TableHead className="min-w-[140px]">Data/Hora</TableHead>
+                    <TableHead className="min-w-[120px]">Produtos</TableHead>
+                    <TableHead className="text-right min-w-[100px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

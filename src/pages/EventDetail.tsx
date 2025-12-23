@@ -223,7 +223,7 @@ export default function EventDetail() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
         <Button 
@@ -285,128 +285,130 @@ export default function EventDetail() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Users className="h-4 w-4 text-primary" />
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.attendeesCount}</p>
-              <p className="text-xs text-muted-foreground">Participantes</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.attendeesCount}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Participantes</p>
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <ListOrdered className="h-4 w-4 text-blue-500" />
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10">
+              <ListOrdered className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.scheduleItems}</p>
-              <p className="text-xs text-muted-foreground">Programação</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.scheduleItems}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Programação</p>
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <CheckSquare className="h-4 w-4 text-green-500" />
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10">
+              <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.checklistDone}/{stats.checklistTotal}</p>
-              <p className="text-xs text-muted-foreground">Checklist</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.checklistDone}/{stats.checklistTotal}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Checklist</p>
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-500/10">
-              <Gift className="h-4 w-4 text-purple-500" />
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-500/10">
+              <Gift className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.giftsTotal}</p>
-              <p className="text-xs text-muted-foreground">Brindes</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.giftsTotal}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Brindes</p>
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <DollarSign className="h-4 w-4 text-orange-500" />
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10">
+              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
+              <p className="text-xl sm:text-2xl font-bold">
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(stats.totalCosts)}
               </p>
-              <p className="text-xs text-muted-foreground">Custo Total</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Custo Total</p>
             </div>
           </div>
         </Card>
         
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <DollarSign className="h-4 w-4 text-emerald-500" />
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-500/10">
+              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
+              <p className="text-xl sm:text-2xl font-bold">
                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(stats.paidCosts)}
               </p>
-              <p className="text-xs text-muted-foreground">Pago</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Pago</p>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="overview" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Visão Geral
-          </TabsTrigger>
-          <TabsTrigger value="schedule" className="gap-2">
-            <ListOrdered className="h-4 w-4" />
-            Programação
-          </TabsTrigger>
-          <TabsTrigger value="checklist" className="gap-2">
-            <CheckSquare className="h-4 w-4" />
-            Checklist
-          </TabsTrigger>
-          <TabsTrigger value="gifts" className="gap-2">
-            <Gift className="h-4 w-4" />
-            Brindes
-          </TabsTrigger>
-          <TabsTrigger value="costs" className="gap-2">
-            <DollarSign className="h-4 w-4" />
-            Financeiro
-          </TabsTrigger>
-          <TabsTrigger value="notes" className="gap-2">
-            <FileText className="h-4 w-4" />
-            Notas
-          </TabsTrigger>
-          <TabsTrigger value="participants" className="gap-2">
-            <Users className="h-4 w-4" />
-            Participantes
-          </TabsTrigger>
-          <TabsTrigger value="team" className="gap-2">
-            <Users2 className="h-4 w-4" />
-            Equipe
-          </TabsTrigger>
-          <TabsTrigger value="media" className="gap-2">
-            <Image className="h-4 w-4" />
-            Galeria
-          </TabsTrigger>
-          <TabsTrigger value="feedback" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Feedback
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <TabsList className="inline-flex h-auto gap-0.5 sm:gap-1 p-0.5 sm:p-1 min-w-max">
+            <TabsTrigger value="overview" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Geral</span>
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <ListOrdered className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Agenda</span>
+            </TabsTrigger>
+            <TabsTrigger value="checklist" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Check</span>
+            </TabsTrigger>
+            <TabsTrigger value="gifts" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <Gift className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Brindes</span>
+            </TabsTrigger>
+            <TabsTrigger value="costs" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">$</span>
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Notas</span>
+            </TabsTrigger>
+            <TabsTrigger value="participants" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Pessoas</span>
+            </TabsTrigger>
+            <TabsTrigger value="team" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Equipe</span>
+            </TabsTrigger>
+            <TabsTrigger value="media" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <Image className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Mídia</span>
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Feedback</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
           <EventOverviewTab 
