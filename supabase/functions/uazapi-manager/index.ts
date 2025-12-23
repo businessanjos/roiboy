@@ -172,56 +172,81 @@ serve(async (req) => {
         // Try to get QR code from create response first
         let qrcodeBase64 = responseData.qrcode || responseData.instance?.qrcode || "";
         
-        // If no QR code in create response, call /instance/connect/{instanceName} with admintoken
-        // This is the correct way to get QR code in UAZAPI/Evolution API
-        if (!qrcodeBase64) {
-          try {
-            console.log(`Calling /instance/connect/${instanceName} with admintoken`);
-            const connectResult = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
-            console.log("Connect result:", JSON.stringify(connectResult));
-            
-            const connectData = connectResult as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              code?: string;
-              pairingCode?: string;
-            };
-            
-            qrcodeBase64 = connectData.base64 || 
-                           (typeof connectData.qrcode === 'string' ? connectData.qrcode : connectData.qrcode?.base64) ||
-                           connectData.code || 
-                           connectData.pairingCode || "";
-                           
-            if (qrcodeBase64) {
-              console.log("Got QR code from /instance/connect endpoint");
+        // If no QR code in create response and we have a token, use instance token to get QR
+        if (!qrcodeBase64 && instanceToken) {
+          // Wait a bit for the instance to initialize
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Try /qr endpoint with instance token (common in UAZAPI/Evolution variants)
+          const qrEndpoints = ["/qr", "/qrcode", "/instance/qr", "/connect"];
+          
+          for (const endpoint of qrEndpoints) {
+            try {
+              console.log(`Trying ${endpoint} with instance token`);
+              const qrResult = await uazapiInstanceRequest(endpoint, "GET", instanceToken);
+              console.log(`${endpoint} result:`, JSON.stringify(qrResult));
+              
+              const qrData = qrResult as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                code?: string;
+                pairingCode?: string;
+                qr?: string;
+                QRCode?: string;
+              };
+              
+              qrcodeBase64 = qrData.base64 || 
+                             qrData.qr ||
+                             qrData.QRCode ||
+                             (typeof qrData.qrcode === 'string' ? qrData.qrcode : qrData.qrcode?.base64) ||
+                             qrData.code || 
+                             qrData.pairingCode || "";
+                             
+              if (qrcodeBase64) {
+                console.log(`Got QR code from ${endpoint} endpoint`);
+                break;
+              }
+            } catch (err) {
+              console.log(`${endpoint} failed:`, (err as Error).message);
             }
-          } catch (err) {
-            console.log("/instance/connect failed:", (err as Error).message);
           }
         }
         
-        // Fallback: try /instance/qrcode/{instanceName} with admintoken
+        // If still no QR, try with admin endpoints
         if (!qrcodeBase64) {
-          try {
-            console.log(`Calling /instance/qrcode/${instanceName} with admintoken`);
-            const qrResult = await uazapiAdminRequest(`/instance/qrcode/${instanceName}`, "GET");
-            console.log("QRcode result:", JSON.stringify(qrResult));
-            
-            const qrData = qrResult as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              code?: string;
-            };
-            
-            qrcodeBase64 = qrData.base64 || 
-                           (typeof qrData.qrcode === 'string' ? qrData.qrcode : qrData.qrcode?.base64) ||
-                           qrData.code || "";
-                           
-            if (qrcodeBase64) {
-              console.log("Got QR code from /instance/qrcode endpoint");
+          const adminEndpoints = [
+            `/instance/connect/${instanceName}`,
+            `/instance/qrcode/${instanceName}`,
+            `/instance/qr/${instanceName}`,
+          ];
+          
+          for (const endpoint of adminEndpoints) {
+            try {
+              console.log(`Trying ${endpoint} with admintoken`);
+              const qrResult = await uazapiAdminRequest(endpoint, "GET");
+              console.log(`${endpoint} result:`, JSON.stringify(qrResult));
+              
+              const qrData = qrResult as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                code?: string;
+                pairingCode?: string;
+                qr?: string;
+              };
+              
+              qrcodeBase64 = qrData.base64 || 
+                             qrData.qr ||
+                             (typeof qrData.qrcode === 'string' ? qrData.qrcode : qrData.qrcode?.base64) ||
+                             qrData.code || 
+                             qrData.pairingCode || "";
+                             
+              if (qrcodeBase64) {
+                console.log(`Got QR code from ${endpoint} (admin) endpoint`);
+                break;
+              }
+            } catch (err) {
+              console.log(`${endpoint} (admin) failed:`, (err as Error).message);
             }
-          } catch (err) {
-            console.log("/instance/qrcode failed:", (err as Error).message);
           }
         }
 
