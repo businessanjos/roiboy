@@ -80,27 +80,38 @@ serve(async (req) => {
     const webhook: UazapiWebhook = await req.json();
     const { event, instance, data } = webhook;
 
-    console.log(`UAZAPI Webhook: ${event} from instance ${instance}`);
+    console.log(`UAZAPI Webhook received: event=${event}, instance=${instance}`);
+    console.log(`Webhook payload:`, JSON.stringify(webhook).substring(0, 500));
 
-    // Extract account_id from instance name (roy_accountid)
-    const instanceMatch = instance.match(/^roy_(.+)$/);
-    if (!instanceMatch) {
-      console.log("Invalid instance name format, ignoring");
-      return new Response(JSON.stringify({ ignored: true }), { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+    // Find account by integration instance_name (try multiple formats)
+    // Instance names can be: roy-796e7970, roy_796e7970, roy_796e7970_fd93_4574_a, etc.
+    const possibleInstanceNames = [
+      instance,
+      instance.replace(/_/g, "-"),
+      instance.replace(/-/g, "_"),
+      instance.split("_").slice(0, 2).join("-"), // roy_796e7970_xxx -> roy-796e7970
+      instance.split("_").slice(0, 2).join("_"), // keep first two parts
+    ];
+    
+    let integration = null;
+    for (const tryName of possibleInstanceNames) {
+      console.log(`Trying to find integration with instance_name: ${tryName}`);
+      const { data: found } = await supabase
+        .from("integrations")
+        .select("account_id, config")
+        .eq("type", "whatsapp")
+        .filter("config->>instance_name", "eq", tryName)
+        .maybeSingle();
+      
+      if (found) {
+        integration = found;
+        console.log(`Found integration for instance_name: ${tryName}`);
+        break;
+      }
     }
 
-    // Find account by integration instance_name
-    const { data: integration } = await supabase
-      .from("integrations")
-      .select("account_id, config")
-      .eq("type", "whatsapp")
-      .filter("config->instance_name", "eq", instance)
-      .maybeSingle();
-
     if (!integration) {
-      console.log(`No integration found for instance ${instance}`);
+      console.log(`No integration found for instance ${instance}. Tried: ${possibleInstanceNames.join(", ")}`);
       return new Response(JSON.stringify({ ignored: true, reason: "no_integration" }), { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
