@@ -272,86 +272,129 @@ serve(async (req) => {
             const cleanPhone = participant.phone.replace(/\D/g, "");
             
             console.log(`Sending WhatsApp to ${cleanPhone} via ${whatsappConfig.instance_name}`);
-            console.log(`Using auth: ${whatsappConfig.instance_token ? 'instance_token' : 'admintoken'}`);
             
             let messageSent = false;
             let lastError = "";
             
-            // Define endpoints to try
-            interface EndpointConfig {
-              url: string;
-              authHeader: string;
-              authValue: string;
-            }
-            
-            const endpoints: EndpointConfig[] = [];
-            
-            // With instance token (if available)
+            // If we have instance token, try instance endpoints first (no instance name in path)
             if (whatsappConfig.instance_token) {
-              endpoints.push(
-                { url: `/message/sendText`, authHeader: "token", authValue: whatsappConfig.instance_token },
-                { url: `/message/text`, authHeader: "token", authValue: whatsappConfig.instance_token },
-                { url: `/send/text`, authHeader: "token", authValue: whatsappConfig.instance_token },
-              );
+              console.log(`Using instance_token authentication`);
+              
+              const instanceEndpoints = [
+                `/message/sendText`,
+                `/message/text`,
+                `/send/text`,
+                `/sendText`,
+              ];
+              
+              for (const endpointPath of instanceEndpoints) {
+                if (messageSent) break;
+                
+                try {
+                  console.log(`Trying instance endpoint: ${endpointPath}`);
+                  
+                  const response = await fetch(
+                    `${UAZAPI_URL}${endpointPath}`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "token": whatsappConfig.instance_token,
+                      },
+                      body: JSON.stringify({
+                        number: cleanPhone,
+                        text: personalizedMessage,
+                      }),
+                    }
+                  );
+                  
+                  const responseText = await response.text();
+                  console.log(`Response from ${endpointPath}: ${response.status} - ${responseText}`);
+
+                  if (response.ok) {
+                    whatsappStatus = "sent";
+                    whatsappSentAt = new Date().toISOString();
+                    sentCount++;
+                    messageSent = true;
+                    console.log(`WhatsApp sent to ${participant.name} via ${endpointPath}`);
+                  } else {
+                    try {
+                      const errorData = JSON.parse(responseText);
+                      lastError = errorData.message || `${response.status}`;
+                    } catch {
+                      lastError = responseText || `${response.status}`;
+                    }
+                  }
+                } catch (err) {
+                  lastError = err instanceof Error ? err.message : "Erro de conexão";
+                  console.log(`Endpoint ${endpointPath} failed: ${lastError}`);
+                }
+              }
             }
             
-            // With admin token
-            endpoints.push(
-              { url: `/message/sendText/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
-              { url: `/message/text/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
-              { url: `/send/text/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
-              { url: `/instance/sendText/${whatsappConfig.instance_name}`, authHeader: "admintoken", authValue: UAZAPI_ADMIN_TOKEN },
-            );
-            
-            for (const endpoint of endpoints) {
-              if (messageSent) break;
+            // If still not sent, try admin endpoints (with instance name in path)
+            if (!messageSent) {
+              console.log(`Using admintoken authentication`);
               
-              try {
-                console.log(`Trying endpoint: ${endpoint.url}`);
+              const adminEndpoints = [
+                `/message/sendText/${whatsappConfig.instance_name}`,
+                `/message/text/${whatsappConfig.instance_name}`,
+                `/send/text/${whatsappConfig.instance_name}`,
+                `/sendText/${whatsappConfig.instance_name}`,
+                `/instance/sendText/${whatsappConfig.instance_name}`,
+                `/instance/message/sendText/${whatsappConfig.instance_name}`,
+              ];
+              
+              for (const endpointPath of adminEndpoints) {
+                if (messageSent) break;
                 
-                const headers: Record<string, string> = {
-                  "Content-Type": "application/json",
-                };
-                headers[endpoint.authHeader] = endpoint.authValue;
-                
-                const response = await fetch(
-                  `${UAZAPI_URL}${endpoint.url}`,
-                  {
-                    method: "POST",
-                    headers,
-                    body: JSON.stringify({
-                      number: cleanPhone,
-                      text: personalizedMessage,
-                    }),
-                  }
-                );
-                
-                const responseText = await response.text();
-                console.log(`Response from ${endpoint.url}: ${response.status} - ${responseText}`);
+                try {
+                  console.log(`Trying admin endpoint: ${endpointPath}`);
+                  
+                  const response = await fetch(
+                    `${UAZAPI_URL}${endpointPath}`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "admintoken": UAZAPI_ADMIN_TOKEN,
+                      },
+                      body: JSON.stringify({
+                        number: cleanPhone,
+                        text: personalizedMessage,
+                      }),
+                    }
+                  );
+                  
+                  const responseText = await response.text();
+                  console.log(`Response from ${endpointPath}: ${response.status} - ${responseText}`);
 
-                if (response.ok) {
-                  whatsappStatus = "sent";
-                  whatsappSentAt = new Date().toISOString();
-                  sentCount++;
-                  messageSent = true;
-                  console.log(`WhatsApp sent to ${participant.name} via ${endpoint.url}`);
-                } else {
-                  try {
-                    const errorData = JSON.parse(responseText);
-                    lastError = errorData.message || `${response.status}`;
-                  } catch {
-                    lastError = responseText || `${response.status}`;
+                  if (response.ok) {
+                    whatsappStatus = "sent";
+                    whatsappSentAt = new Date().toISOString();
+                    sentCount++;
+                    messageSent = true;
+                    console.log(`WhatsApp sent to ${participant.name} via ${endpointPath}`);
+                  } else {
+                    try {
+                      const errorData = JSON.parse(responseText);
+                      lastError = errorData.message || `${response.status}`;
+                    } catch {
+                      lastError = responseText || `${response.status}`;
+                    }
                   }
+                } catch (err) {
+                  lastError = err instanceof Error ? err.message : "Erro de conexão";
+                  console.log(`Endpoint ${endpointPath} failed: ${lastError}`);
                 }
-              } catch (err) {
-                lastError = err instanceof Error ? err.message : "Erro de conexão";
-                console.log(`Endpoint ${endpoint.url} failed: ${lastError}`);
               }
             }
             
             if (!messageSent) {
               whatsappStatus = "failed";
-              whatsappError = lastError || "Nenhum endpoint funcionou";
+              whatsappError = whatsappConfig.instance_token 
+                ? lastError || "Nenhum endpoint funcionou" 
+                : "Token da instância não encontrado. Por favor, reconecte o WhatsApp na página de Integrações.";
               failedCount++;
               console.log(`WhatsApp failed for ${participant.name}: ${whatsappError}`);
             }

@@ -11,7 +11,7 @@ const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 interface UazapiRequest {
-  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook";
+  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token";
   instance_name?: string;
   phone?: string;
   message?: string;
@@ -745,6 +745,86 @@ serve(async (req) => {
             number: cleanPhone,
             text: message,
           });
+        }
+        break;
+      }
+
+      case "fetch_token": {
+        // Fetch the token for an existing instance using admin API
+        console.log(`Fetching token for instance: ${instanceName}`);
+        
+        let instanceToken = "";
+        let fetchResult: unknown = null;
+        
+        // Try different endpoints to get instance info with token
+        const tokenEndpoints = [
+          { url: `/instance/fetchInstances`, method: "GET" },
+          { url: `/instance/list`, method: "GET" },
+          { url: `/instances`, method: "GET" },
+          { url: `/instance/info/${instanceName}`, method: "GET" },
+          { url: `/instance/${instanceName}`, method: "GET" },
+        ];
+        
+        for (const endpoint of tokenEndpoints) {
+          if (instanceToken) break;
+          
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            fetchResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
+            console.log(`Result:`, JSON.stringify(fetchResult));
+            
+            // Handle array of instances
+            if (Array.isArray(fetchResult)) {
+              const instance = fetchResult.find((i: { name?: string; Name?: string; instance_name?: string }) => 
+                i.name === instanceName || i.Name === instanceName || i.instance_name === instanceName
+              );
+              if (instance) {
+                instanceToken = (instance as { token?: string; Token?: string }).token || 
+                               (instance as { token?: string; Token?: string }).Token || "";
+              }
+            } else {
+              // Handle single instance response
+              const data = fetchResult as { 
+                token?: string; 
+                Token?: string; 
+                instance?: { token?: string }; 
+                data?: { token?: string }; 
+              };
+              instanceToken = data.token || data.Token || data.instance?.token || data.data?.token || "";
+            }
+            
+            if (instanceToken) {
+              console.log(`Token found from ${endpoint.url}`);
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+        
+        if (instanceToken) {
+          // Save token to integration
+          await supabase
+            .from("integrations")
+            .update({
+              config: {
+                ...(existingWhatsapp?.config as object || {}),
+                instance_token: instanceToken,
+                token_fetched_at: new Date().toISOString(),
+              },
+            })
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp");
+          
+          result = { 
+            success: true, 
+            message: "Token encontrado e salvo",
+            instance_name: instanceName,
+          };
+        } else {
+          result = { 
+            success: false, 
+            message: "Não foi possível obter o token. Tente reconectar o WhatsApp.",
+          };
         }
         break;
       }
