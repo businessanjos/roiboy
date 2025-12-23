@@ -2263,6 +2263,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          is_external: boolean
           is_primary: boolean
           responsibilities: string | null
           role: Database["public"]["Enums"]["event_team_role"]
@@ -2275,6 +2276,7 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          is_external?: boolean
           is_primary?: boolean
           responsibilities?: string | null
           role?: Database["public"]["Enums"]["event_team_role"]
@@ -2287,6 +2289,7 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          is_external?: boolean
           is_primary?: boolean
           responsibilities?: string | null
           role?: Database["public"]["Enums"]["event_team_role"]
