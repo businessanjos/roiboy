@@ -18,11 +18,13 @@ import {
   Link2,
   Copy,
   Check,
-  Send
+  Send,
+  Settings2
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
+import FeedbackQuestionsEditor from "./FeedbackQuestionsEditor";
 
 interface Client {
   id: string;
@@ -55,7 +57,7 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-
+  const [editorOpen, setEditorOpen] = useState(false);
   useEffect(() => {
     if (eventId) {
       fetchFeedback();
@@ -186,9 +188,15 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
   const FeedbackLinkSection = () => (
     <Card className="mb-6">
       <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Link2 className="h-5 w-5 text-primary" />
-          <h3 className="font-medium">Link para coleta de feedback</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-primary" />
+            <h3 className="font-medium">Link para coleta de feedback</h3>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setEditorOpen(true)}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Editar Formulário
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground mb-3">
           Compartilhe este link com os participantes para coletar feedback sobre o evento.
@@ -231,6 +239,15 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
   return (
     <div className="space-y-6">
       <FeedbackLinkSection />
+      
+      {accountId && (
+        <FeedbackQuestionsEditor
+          eventId={eventId}
+          accountId={accountId}
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+        />
+      )}
       
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

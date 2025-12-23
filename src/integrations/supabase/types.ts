@@ -1820,6 +1820,135 @@ export type Database = {
           },
         ]
       }
+      event_feedback_questions: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          event_id: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          question_text: string
+          question_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          event_id: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          question_text: string
+          question_type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          question_text?: string
+          question_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_feedback_questions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_questions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_questions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_feedback_responses: {
+        Row: {
+          account_id: string
+          created_at: string
+          event_id: string
+          feedback_id: string
+          id: string
+          question_id: string
+          question_text: string
+          response_boolean: boolean | null
+          response_number: number | null
+          response_value: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          event_id: string
+          feedback_id: string
+          id?: string
+          question_id: string
+          question_text: string
+          response_boolean?: boolean | null
+          response_number?: number | null
+          response_value?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          event_id?: string
+          feedback_id?: string
+          id?: string
+          question_id?: string
+          question_text?: string
+          response_boolean?: boolean | null
+          response_number?: number | null
+          response_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_feedback_responses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_checkin_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_feedback_responses_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "event_feedback"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_gifts: {
         Row: {
           account_id: string
@@ -2404,6 +2533,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_questions: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_default: boolean
+          is_required: boolean
+          question_text: string
+          question_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          is_required?: boolean
+          question_text: string
+          question_type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          is_required?: boolean
+          question_text?: string
+          question_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_questions_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
