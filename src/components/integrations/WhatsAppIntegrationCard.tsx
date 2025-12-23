@@ -125,8 +125,10 @@ export function WhatsAppIntegrationCard({
     setAction("qrcode");
 
     try {
+      // Use "create" action which creates instance AND returns QR code
+      // This works even if instance already exists (it will just get the QR code)
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "connect" },
+        body: { action: "create" },
       });
 
       if (response.error) {
@@ -136,13 +138,14 @@ export function WhatsAppIntegrationCard({
       const data = response.data;
       
       // Check for QR code in response - try multiple paths
-      const qr = data?.data?.qrcode_base64 ||
+      const qr = data?.qrcode_base64 ||
+                 data?.data?.qrcode_base64 ||
                  data?.data?.base64 ||
                  data?.data?.qrcode?.base64 ||
-                 data?.qrcode_base64 ||
                  data?.base64 ||
                  data?.qr ||
-                 data?.QRCode;
+                 data?.QRCode ||
+                 data?.instance?.qrcode;
       
       if (qr) {
         setQrCode(qr);
@@ -150,7 +153,23 @@ export function WhatsAppIntegrationCard({
         toast.info("Escaneie o QR Code com seu WhatsApp");
       } else {
         console.log("QR Code response:", data);
-        toast.info("QR Code não disponível. Tente o código de pareamento.");
+        toast.info("Instância criada! QR Code será exibido em instantes...");
+        // Retry after a short delay
+        setTimeout(async () => {
+          try {
+            const retryResponse = await supabase.functions.invoke("uazapi-manager", {
+              body: { action: "connect" },
+            });
+            const retryData = retryResponse.data;
+            const retryQr = retryData?.base64 || retryData?.qrcode_base64 || retryData?.qr;
+            if (retryQr) {
+              setQrCode(retryQr);
+              toast.info("Escaneie o QR Code com seu WhatsApp");
+            }
+          } catch (e) {
+            console.log("Retry failed:", e);
+          }
+        }, 3000);
       }
 
       onRefresh();
