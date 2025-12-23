@@ -17,9 +17,10 @@ interface UazapiRequest {
   message?: string;
 }
 
-async function uazapiRequest(endpoint: string, method: string, body?: unknown) {
+// Request helper for admin endpoints (using admintoken header)
+async function uazapiAdminRequest(endpoint: string, method: string, body?: unknown) {
   const url = `${UAZAPI_URL}${endpoint}`;
-  console.log(`UAZAPI Request: ${method} ${url}`);
+  console.log(`UAZAPI Admin Request: ${method} ${url}`);
   
   if (!UAZAPI_URL) {
     throw new Error("UAZAPI_URL não configurada. Adicione a secret nas configurações.");
@@ -33,12 +34,11 @@ async function uazapiRequest(endpoint: string, method: string, body?: unknown) {
     method,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${UAZAPI_ADMIN_TOKEN}`,
+      "admintoken": UAZAPI_ADMIN_TOKEN,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // Get response as text first to handle non-JSON responses
   const responseText = await response.text();
   console.log(`UAZAPI Response (${response.status}):`, responseText);
   
@@ -46,7 +46,40 @@ async function uazapiRequest(endpoint: string, method: string, body?: unknown) {
   try {
     data = JSON.parse(responseText);
   } catch {
-    // If response is not JSON, wrap the text in an error object
+    throw new Error(`UAZAPI retornou resposta inválida: ${responseText.slice(0, 200)}`);
+  }
+  
+  if (!response.ok) {
+    const errorMsg = (data as { message?: string })?.message || 
+                     (data as { error?: string })?.error || 
+                     `UAZAPI error: ${response.status}`;
+    throw new Error(errorMsg);
+  }
+  
+  return data;
+}
+
+// Request helper for instance endpoints (using token header)
+async function uazapiInstanceRequest(endpoint: string, method: string, instanceToken: string, body?: unknown) {
+  const url = `${UAZAPI_URL}${endpoint}`;
+  console.log(`UAZAPI Instance Request: ${method} ${url}`);
+  
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "token": instanceToken,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const responseText = await response.text();
+  console.log(`UAZAPI Response (${response.status}):`, responseText);
+  
+  let data: unknown;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
     throw new Error(`UAZAPI retornou resposta inválida: ${responseText.slice(0, 200)}`);
   }
   
@@ -118,7 +151,7 @@ serve(async (req) => {
     switch (action) {
       case "create": {
         // Create a new instance for this account
-        result = await uazapiRequest("/instance/create", "POST", {
+        result = await uazapiAdminRequest("/instance/create", "POST", {
           instanceName,
           qrcode: true,
           webhook: {
@@ -126,6 +159,9 @@ serve(async (req) => {
             events: ["messages.upsert", "connection.update", "qrcode.updated"],
           },
         });
+
+        // Store instance token if returned
+        const instanceToken = (result as { token?: string })?.token;
 
         // Update integrations table
         await supabase
@@ -137,6 +173,7 @@ serve(async (req) => {
             config: {
               provider: "uazapi",
               instance_name: instanceName,
+              instance_token: instanceToken,
               created_at: new Date().toISOString(),
             },
           }, { onConflict: "account_id,type" });
@@ -146,20 +183,20 @@ serve(async (req) => {
 
       case "connect": {
         // Request QR code for connection
-        result = await uazapiRequest(`/instance/connect/${instanceName}`, "GET");
+        result = await uazapiAdminRequest(`/instance/connect/${instanceName}`, "GET");
         break;
       }
 
       case "qrcode": {
         // Get current QR code
-        result = await uazapiRequest(`/instance/qrcode/${instanceName}`, "GET");
+        result = await uazapiAdminRequest(`/instance/qrcode/${instanceName}`, "GET");
         break;
       }
 
       case "status": {
         // Get instance status
         try {
-          result = await uazapiRequest(`/instance/connectionState/${instanceName}`, "GET");
+          result = await uazapiAdminRequest(`/instance/connectionState/${instanceName}`, "GET");
           
           // Update integration status based on UAZAPI response
           const isConnected = result && (result as { state?: string }).state === "open";
@@ -187,7 +224,7 @@ serve(async (req) => {
 
       case "disconnect": {
         // Disconnect/logout the instance
-        result = await uazapiRequest(`/instance/logout/${instanceName}`, "DELETE");
+        result = await uazapiAdminRequest(`/instance/logout/${instanceName}`, "DELETE");
         
         // Update integration status
         await supabase
@@ -214,13 +251,30 @@ serve(async (req) => {
           );
         }
 
-        // Clean phone number
-        const cleanPhone = phone.replace(/\D/g, "");
+        // Get instance token from integration config
+        const { data: integration } = await supabase
+          .from("integrations")
+          .select("config")
+          .eq("account_id", accountId)
+          .eq("type", "whatsapp")
+          .single();
+
+        const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         
-        result = await uazapiRequest(`/message/sendText/${instanceName}`, "POST", {
-          number: cleanPhone,
-          text: message,
-        });
+        if (!instanceToken) {
+          // Fallback to admin endpoint if no instance token
+          const cleanPhone = phone.replace(/\D/g, "");
+          result = await uazapiAdminRequest(`/message/sendText/${instanceName}`, "POST", {
+            number: cleanPhone,
+            text: message,
+          });
+        } else {
+          const cleanPhone = phone.replace(/\D/g, "");
+          result = await uazapiInstanceRequest(`/message/sendText/${instanceName}`, "POST", instanceToken, {
+            number: cleanPhone,
+            text: message,
+          });
+        }
         break;
       }
 
