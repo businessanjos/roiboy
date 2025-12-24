@@ -249,13 +249,26 @@ serve(async (req) => {
     const availableProducts = Array.from(productsSet).sort();
     const availableSegments = Array.from(segmentsSet).sort();
     
-    // Build custom field filters array with labels
-    const customFieldFilters = customFields?.map(field => ({
-      id: field.id,
-      name: field.name,
-      field_type: field.field_type,
-      values: Array.from(customFieldValuesMap[field.id] || []).sort(),
-    })).filter(f => f.values.length > 0) || [];
+    // Build custom field filters array with ALL options from field definition (not just used values)
+    const customFieldFilters = customFields?.map(field => {
+      let allValues: string[] = [];
+      
+      if (field.field_type === "boolean") {
+        allValues = ["Sim", "Não"];
+      } else if (field.options && Array.isArray(field.options)) {
+        // Get all labels from field options
+        allValues = field.options
+          .map((opt: any) => opt?.label || opt?.value || opt)
+          .filter((v: any) => typeof v === 'string' && v);
+      }
+      
+      return {
+        id: field.id,
+        name: field.name,
+        field_type: field.field_type,
+        values: allValues,
+      };
+    }).filter(f => f.values.length > 0) || [];
 
     // Map clients to members format based on settings
     const members = clients?.map(client => {
