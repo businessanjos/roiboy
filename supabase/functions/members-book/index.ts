@@ -150,13 +150,17 @@ serve(async (req) => {
 
     console.log("Custom fields for filters:", customFields?.length || 0);
 
-    // Build option ID to label map for each field
+    // Build option value to label map for each field
     const optionLabelMaps: Record<string, Record<string, string>> = {};
     customFields?.forEach(field => {
       optionLabelMaps[field.id] = {};
       if (field.options && Array.isArray(field.options)) {
         field.options.forEach((opt: any) => {
-          if (opt && typeof opt === 'object' && opt.id && opt.label) {
+          if (opt && typeof opt === 'object' && opt.value && opt.label) {
+            // Options have {value, label, color} structure
+            optionLabelMaps[field.id][opt.value] = opt.label;
+          } else if (opt && typeof opt === 'object' && opt.id && opt.label) {
+            // Fallback for {id, label} structure
             optionLabelMaps[field.id][opt.id] = opt.label;
           } else if (typeof opt === 'string') {
             // Fallback if options are just strings
