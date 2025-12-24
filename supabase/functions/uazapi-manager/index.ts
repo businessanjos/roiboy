@@ -2113,12 +2113,35 @@ serve(async (req) => {
         // Try multiple endpoints to get QR code - DO NOT recreate instance
         let qrcodeBase64 = "";
         
-        // Try instance token endpoints first
+        // First try admin restart endpoint (this generates QR code for disconnected instances)
+        console.log(`Trying admin restart to generate QR...`);
+        try {
+          const restartResult = await uazapiAdminRequest(`/instance/restart/${supportInstanceName}`, "POST") as {
+            base64?: string;
+            qrcode?: string | { base64?: string };
+            qr?: string;
+          };
+          console.log(`Admin restart result:`, JSON.stringify(restartResult).slice(0, 500));
+          qrcodeBase64 = restartResult.base64 || 
+                         restartResult.qr ||
+                         (typeof restartResult.qrcode === 'string' ? restartResult.qrcode : restartResult.qrcode?.base64) || "";
+          if (qrcodeBase64) {
+            console.log(`QR found via admin restart`);
+          }
+        } catch (err) {
+          console.log(`Admin restart failed:`, (err as Error).message);
+        }
+        
+        // Wait a bit for QR to be generated if restart was successful
+        if (!qrcodeBase64) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        // Try instance token endpoints
         const instanceQrEndpoints = [
-          { url: `/connect`, method: "POST" },
-          { url: `/connect`, method: "GET" },
           { url: `/qr`, method: "GET" },
           { url: `/qrcode`, method: "GET" },
+          { url: `/connect`, method: "GET" },
         ];
         
         for (const endpoint of instanceQrEndpoints) {
@@ -2147,12 +2170,12 @@ serve(async (req) => {
           }
         }
         
-        // Also try admin endpoints
+        // Also try admin endpoints to fetch QR
         if (!qrcodeBase64) {
           const adminQrEndpoints = [
-            { url: `/instance/connect/${supportInstanceName}`, method: "POST" },
             { url: `/instance/qr/${supportInstanceName}`, method: "GET" },
             { url: `/qr/${supportInstanceName}`, method: "GET" },
+            { url: `/instance/qrcode/${supportInstanceName}`, method: "GET" },
           ];
           
           for (const endpoint of adminQrEndpoints) {
