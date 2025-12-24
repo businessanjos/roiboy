@@ -136,6 +136,13 @@ export default function WhatsAppGroups() {
   const [removingParticipant, setRemovingParticipant] = useState<string | null>(null);
   const [clientsToAdd, setClientsToAdd] = useState<string[]>([]);
   const [isSyncingGroups, setIsSyncingGroups] = useState(false);
+  
+  // Sync groups selection state
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [availableGroups, setAvailableGroups] = useState<Array<{jid: string; name: string; size: number}>>([]);
+  const [selectedGroupsToSync, setSelectedGroupsToSync] = useState<string[]>([]);
+  const [isFetchingGroups, setIsFetchingGroups] = useState(false);
+  const [isSavingGroups, setIsSavingGroups] = useState(false);
 
   // Fetch groups from database
   const { data: groups = [], isLoading: loadingGroups, refetch: refetchGroups } = useQuery({
@@ -585,26 +592,98 @@ export default function WhatsAppGroups() {
 
   const isSendingAny = sendToGroupMutation.isPending || sendMediaToGroupMutation.isPending || isUploadingMedia;
 
-  // Sync groups from WhatsApp
-  const handleSyncGroups = async () => {
-    setIsSyncingGroups(true);
+  // Fetch groups from WhatsApp (without saving)
+  const handleFetchGroupsForSync = async () => {
+    setIsFetchingGroups(true);
     try {
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "sync_groups" },
+        body: { action: "list_groups" },
       });
       
       if (error) throw error;
       
-      if (data?.success) {
-        toast.success(data.message || "Grupos sincronizados com sucesso!");
-        refetchGroups();
-      } else {
-        toast.error(data?.message || "Erro ao sincronizar grupos");
+      const fetchedGroups = (data?.groups || []).map((g: {
+        JID?: string; jid?: string; id?: string;
+        Name?: string; name?: string; Subject?: string; subject?: string;
+        Size?: number; size?: number; Participants?: unknown[];
+      }) => ({
+        jid: g.JID || g.jid || g.id || "",
+        name: g.Name || g.name || g.Subject || g.subject || "Sem nome",
+        size: g.Size || g.size || g.Participants?.length || 0,
+      })).filter((g: {jid: string}) => g.jid.includes("@g.us"));
+      
+      // Filter out groups that are already synced
+      const existingJids = groups.map(g => g.group_jid);
+      const newGroups = fetchedGroups.filter((g: {jid: string}) => !existingJids.includes(g.jid));
+      
+      if (newGroups.length === 0) {
+        toast.info("Todos os grupos já estão sincronizados!");
+        return;
       }
+      
+      setAvailableGroups(newGroups);
+      setSelectedGroupsToSync(newGroups.map((g: {jid: string}) => g.jid)); // Select all by default
+      setSyncDialogOpen(true);
     } catch (error) {
-      toast.error("Erro ao sincronizar: " + (error as Error).message);
+      toast.error("Erro ao buscar grupos: " + (error as Error).message);
     } finally {
-      setIsSyncingGroups(false);
+      setIsFetchingGroups(false);
+    }
+  };
+
+  // Save selected groups to database
+  const handleSaveSelectedGroups = async () => {
+    if (selectedGroupsToSync.length === 0) {
+      toast.error("Selecione pelo menos um grupo");
+      return;
+    }
+    
+    setIsSavingGroups(true);
+    try {
+      const groupsToSave = availableGroups
+        .filter(g => selectedGroupsToSync.includes(g.jid))
+        .map(g => ({
+          group_jid: g.jid,
+          name: g.name,
+          participant_count: g.size,
+        }));
+      
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { 
+          action: "save_selected_groups",
+          groups: groupsToSave,
+        },
+      });
+      
+      if (error) throw error;
+      
+      toast.success(`${groupsToSave.length} grupo(s) sincronizado(s)!`);
+      setSyncDialogOpen(false);
+      setAvailableGroups([]);
+      setSelectedGroupsToSync([]);
+      refetchGroups();
+    } catch (error) {
+      toast.error("Erro ao salvar grupos: " + (error as Error).message);
+    } finally {
+      setIsSavingGroups(false);
+    }
+  };
+
+  // Toggle group selection
+  const toggleGroupSelection = (jid: string) => {
+    setSelectedGroupsToSync(prev => 
+      prev.includes(jid) 
+        ? prev.filter(id => id !== jid)
+        : [...prev, jid]
+    );
+  };
+
+  // Select/deselect all groups
+  const toggleSelectAll = () => {
+    if (selectedGroupsToSync.length === availableGroups.length) {
+      setSelectedGroupsToSync([]);
+    } else {
+      setSelectedGroupsToSync(availableGroups.map(g => g.jid));
     }
   };
 
@@ -660,11 +739,11 @@ export default function WhatsAppGroups() {
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={handleSyncGroups}
-                    disabled={isSyncingGroups}
+                    onClick={handleFetchGroupsForSync}
+                    disabled={isFetchingGroups}
                   >
-                    <Download className={`h-4 w-4 mr-2 ${isSyncingGroups ? "animate-spin" : ""}`} />
-                    {isSyncingGroups ? "Sincronizando..." : "Sincronizar do WhatsApp"}
+                    <Download className={`h-4 w-4 mr-2 ${isFetchingGroups ? "animate-spin" : ""}`} />
+                    {isFetchingGroups ? "Buscando..." : "Sincronizar do WhatsApp"}
                   </Button>
                   <Button
                     variant="outline"
@@ -1133,6 +1212,93 @@ export default function WhatsAppGroups() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Sync Groups Selection Dialog */}
+      <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Sincronizar Grupos do WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Selecione os grupos que deseja adicionar ao sistema. Grupos já sincronizados não aparecem na lista.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Select all toggle */}
+            <div className="flex items-center justify-between pb-2 border-b">
+              <span className="text-sm text-muted-foreground">
+                {selectedGroupsToSync.length} de {availableGroups.length} selecionado(s)
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSelectAll}
+              >
+                {selectedGroupsToSync.length === availableGroups.length ? "Desmarcar todos" : "Selecionar todos"}
+              </Button>
+            </div>
+
+            {/* Groups list */}
+            <div className="border rounded-lg max-h-80 overflow-y-auto">
+              {availableGroups.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  Nenhum grupo novo encontrado
+                </p>
+              ) : (
+                availableGroups.map((group) => (
+                  <div
+                    key={group.jid}
+                    className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/30 transition-colors ${
+                      selectedGroupsToSync.includes(group.jid) ? "bg-primary/5" : ""
+                    }`}
+                    onClick={() => toggleGroupSelection(group.jid)}
+                  >
+                    <Checkbox
+                      checked={selectedGroupsToSync.includes(group.jid)}
+                      onCheckedChange={() => toggleGroupSelection(group.jid)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{group.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {group.size} membros • {group.jid.split("@")[0]}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSyncDialogOpen(false)}
+              disabled={isSavingGroups}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveSelectedGroups}
+              disabled={isSavingGroups || selectedGroupsToSync.length === 0}
+            >
+              {isSavingGroups ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Sincronizar ({selectedGroupsToSync.length})
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
