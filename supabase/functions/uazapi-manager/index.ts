@@ -1047,27 +1047,65 @@ serve(async (req) => {
           throw new Error("ID do grupo é obrigatório");
         }
 
-        console.log(`Fetching participants for group: ${group_id}`);
+        // Ensure group_id has @g.us suffix
+        const groupJidForParticipants = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
+        console.log(`Fetching participants for group: ${groupJidForParticipants}`);
         
         let participantsResult: unknown = null;
-        const participantEndpoints = [
-          { url: `/group/participants/${group_id}`, method: "GET" },
-          { url: `/group/${group_id}/participants`, method: "GET" },
-          { url: `/groups/${group_id}/participants`, method: "GET" },
+        let participantsFound = false;
+        
+        // Try POST endpoints with body first (UAZAPI GO v2 format)
+        const postEndpoints = [
+          { url: `/group/participants`, method: "POST", body: { groupJid: groupJidForParticipants } },
+          { url: `/group/fetchParticipants`, method: "POST", body: { groupJid: groupJidForParticipants } },
+          { url: `/group/getParticipants`, method: "POST", body: { groupJid: groupJidForParticipants } },
+          { url: `/group/members`, method: "POST", body: { groupJid: groupJidForParticipants } },
         ];
 
-        for (const endpoint of participantEndpoints) {
+        for (const endpoint of postEndpoints) {
+          if (participantsFound) break;
           try {
             console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
-            participantsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
+            participantsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken, endpoint.body);
             console.log("Participants result:", JSON.stringify(participantsResult));
-            break;
+            
+            // Check if we got valid data
+            const data = participantsResult as { participants?: unknown[]; Participants?: unknown[]; data?: unknown[] };
+            if (Array.isArray(participantsResult) || data?.participants || data?.Participants || data?.data) {
+              participantsFound = true;
+            }
           } catch (err) {
             console.log(`${endpoint.url} failed:`, (err as Error).message);
           }
         }
+        
+        // Fallback to GET endpoints with path parameter
+        if (!participantsFound) {
+          const getEndpoints = [
+            { url: `/group/participants/${groupJidForParticipants}`, method: "GET" },
+            { url: `/group/${groupJidForParticipants}/participants`, method: "GET" },
+            { url: `/groups/${groupJidForParticipants}/participants`, method: "GET" },
+            { url: `/group/fetchParticipants/${groupJidForParticipants}`, method: "GET" },
+          ];
 
-        result = participantsResult;
+          for (const endpoint of getEndpoints) {
+            if (participantsFound) break;
+            try {
+              console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+              participantsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
+              console.log("Participants result:", JSON.stringify(participantsResult));
+              
+              const data = participantsResult as { participants?: unknown[]; Participants?: unknown[]; data?: unknown[] };
+              if (Array.isArray(participantsResult) || data?.participants || data?.Participants || data?.data) {
+                participantsFound = true;
+              }
+            } catch (err) {
+              console.log(`${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+
+        result = participantsResult || { participants: [], message: "Não foi possível buscar os membros do grupo" };
         break;
       }
 
