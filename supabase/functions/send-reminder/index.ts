@@ -276,74 +276,67 @@ serve(async (req) => {
             let messageSent = false;
             let lastError = "";
             
-            // UAZAPI/wuzapi uses /chat/send/text endpoint with Token header
-            // The body format requires: Phone, Body fields (PascalCase)
+            // UAZAPI GO V2 uses /message/text endpoint with token header
+            // Body requires: number, text fields
             
             // Normalize URL - remove trailing slash if present
             const baseUrl = UAZAPI_URL.replace(/\/$/, '');
             console.log(`UAZAPI base URL: ${baseUrl}`);
             
-            // Try different body formats - UAZAPI GO v2 and wuzapi have different formats
-            const bodyFormats = [
-              { Phone: cleanPhone, Body: personalizedMessage },  // wuzapi format (PascalCase)
-              { number: cleanPhone, text: personalizedMessage }, // UAZAPI GO v2 format
-              { phone: cleanPhone, text: personalizedMessage },  // lowercase variation
-            ];
+            // UAZAPI GO v2 body format - number and text are required
+            const messageBody = { 
+              number: cleanPhone,
+              text: personalizedMessage 
+            };
             
-            // If we have instance token, try instance endpoints first (token header identifies the instance)
+            // If we have instance token, try instance endpoints
             if (whatsappConfig.instance_token) {
               console.log(`Using instance_token authentication: ${whatsappConfig.instance_token.slice(0, 8)}...`);
               
-              // Try multiple endpoints - wuzapi uses /chat/send/text, UAZAPI GO uses /sendText
+              // UAZAPI GO V2 documented endpoint is /message/text
               const instanceEndpoints = [
-                `/chat/send/text`,   // wuzapi format
-                `/sendText`,         // UAZAPI GO v2
-                `/message/sendText`, // Alternative
+                `/message/text`,     // UAZAPI GO v2 documented endpoint
               ];
               
               for (const endpointPath of instanceEndpoints) {
                 if (messageSent) break;
                 
-                for (const messageBody of bodyFormats) {
-                  if (messageSent) break;
+                try {
+                  console.log(`Trying: POST ${endpointPath} with body: ${JSON.stringify(messageBody).substring(0, 80)}`);
                   
-                  try {
-                    console.log(`Trying: ${endpointPath} with body keys: ${Object.keys(messageBody).join(", ")}`);
-                    
-                    const response = await fetch(
-                      `${baseUrl}${endpointPath}`,
-                      {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          "Token": whatsappConfig.instance_token,  // Capital T as per wuzapi docs
-                        },
-                        body: JSON.stringify(messageBody),
-                      }
-                    );
-                    
-                    const responseText = await response.text();
-                    console.log(`Response from ${endpointPath}: ${response.status} - ${responseText.substring(0, 300)}`);
-
-                    if (response.ok) {
-                      whatsappStatus = "sent";
-                      whatsappSentAt = new Date().toISOString();
-                      sentCount++;
-                      messageSent = true;
-                      console.log(`WhatsApp sent to ${participant.name} via ${endpointPath}`);
-                      break;
-                    } else {
-                      try {
-                        const errorData = JSON.parse(responseText);
-                        lastError = errorData.message || `${response.status}`;
-                      } catch {
-                        lastError = responseText || `${response.status}`;
-                      }
+                  const response = await fetch(
+                    `${baseUrl}${endpointPath}`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "token": whatsappConfig.instance_token,  // lowercase token as per UAZAPI docs
+                      },
+                      body: JSON.stringify(messageBody),
                     }
-                  } catch (err) {
-                    lastError = err instanceof Error ? err.message : "Erro de conexão";
-                    console.log(`Endpoint ${endpointPath} failed: ${lastError}`);
+                  );
+                  
+                  const responseText = await response.text();
+                  console.log(`Response from ${endpointPath}: ${response.status} - ${responseText.substring(0, 300)}`);
+
+                  if (response.ok) {
+                    whatsappStatus = "sent";
+                    whatsappSentAt = new Date().toISOString();
+                    sentCount++;
+                    messageSent = true;
+                    console.log(`WhatsApp sent to ${participant.name} via ${endpointPath}`);
+                    break;
+                  } else {
+                    try {
+                      const errorData = JSON.parse(responseText);
+                      lastError = errorData.message || `${response.status}`;
+                    } catch {
+                      lastError = responseText || `${response.status}`;
+                    }
                   }
+                } catch (err) {
+                  lastError = err instanceof Error ? err.message : "Erro de conexão";
+                  console.log(`Endpoint ${endpointPath} failed: ${lastError}`);
                 }
               }
             }
@@ -352,56 +345,50 @@ serve(async (req) => {
             if (!messageSent) {
               console.log(`Using admintoken authentication`);
               
-              // UAZAPI admin endpoints use /{endpoint}/{instanceName}
+              // UAZAPI GO V2 admin endpoints use /message/text/{instanceName}
               const adminEndpoints = [
-                `/chat/send/text/${whatsappConfig.instance_name}`,  // wuzapi format
-                `/sendText/${whatsappConfig.instance_name}`,
-                `/message/sendText/${whatsappConfig.instance_name}`,
+                `/message/text/${whatsappConfig.instance_name}`,  // UAZAPI GO v2 admin format
               ];
               
               for (const endpointPath of adminEndpoints) {
                 if (messageSent) break;
                 
-                for (const adminBody of bodyFormats) {
-                  if (messageSent) break;
+                try {
+                  console.log(`Trying admin endpoint: POST ${endpointPath}`);
                   
-                  try {
-                    console.log(`Trying admin endpoint: ${endpointPath} with body keys: ${Object.keys(adminBody).join(", ")}`);
-                    
-                    const response = await fetch(
-                      `${baseUrl}${endpointPath}`,
-                      {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          "admintoken": UAZAPI_ADMIN_TOKEN,
-                        },
-                        body: JSON.stringify(adminBody),
-                      }
-                    );
-                    
-                    const responseText = await response.text();
-                    console.log(`Response from ${endpointPath}: ${response.status} - ${responseText.substring(0, 200)}`);
-
-                    if (response.ok) {
-                      whatsappStatus = "sent";
-                      whatsappSentAt = new Date().toISOString();
-                      sentCount++;
-                      messageSent = true;
-                      console.log(`WhatsApp sent to ${participant.name} via ${endpointPath}`);
-                      break;
-                    } else {
-                      try {
-                        const errorData = JSON.parse(responseText);
-                        lastError = errorData.message || `${response.status}`;
-                      } catch {
-                        lastError = responseText || `${response.status}`;
-                      }
+                  const response = await fetch(
+                    `${baseUrl}${endpointPath}`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "admintoken": UAZAPI_ADMIN_TOKEN,
+                      },
+                      body: JSON.stringify(messageBody),
                     }
-                  } catch (err) {
-                    lastError = err instanceof Error ? err.message : "Erro de conexão";
-                    console.log(`Endpoint ${endpointPath} failed: ${lastError}`);
+                  );
+                  
+                  const responseText = await response.text();
+                  console.log(`Response from ${endpointPath}: ${response.status} - ${responseText.substring(0, 200)}`);
+
+                  if (response.ok) {
+                    whatsappStatus = "sent";
+                    whatsappSentAt = new Date().toISOString();
+                    sentCount++;
+                    messageSent = true;
+                    console.log(`WhatsApp sent to ${participant.name} via ${endpointPath}`);
+                    break;
+                  } else {
+                    try {
+                      const errorData = JSON.parse(responseText);
+                      lastError = errorData.message || `${response.status}`;
+                    } catch {
+                      lastError = responseText || `${response.status}`;
+                    }
                   }
+                } catch (err) {
+                  lastError = err instanceof Error ? err.message : "Erro de conexão";
+                  console.log(`Endpoint ${endpointPath} failed: ${lastError}`);
                 }
               }
             }
