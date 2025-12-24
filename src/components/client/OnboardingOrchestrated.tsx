@@ -142,6 +142,7 @@ export function OnboardingOrchestrated({
           onOpenChange={setChecklistEditorOpen}
           stages={stages}
           accountId={accountId}
+          onRefresh={onRefreshStages}
         />
       </div>
     );
@@ -369,6 +370,7 @@ export function OnboardingOrchestrated({
         onOpenChange={setChecklistEditorOpen}
         stages={stages}
         accountId={accountId}
+        onRefresh={onRefreshStages}
       />
     </div>
   );

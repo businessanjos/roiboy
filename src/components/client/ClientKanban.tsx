@@ -845,6 +845,7 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
         onOpenChange={setChecklistEditorOpen}
         stages={stages}
         accountId={accountId}
+        onRefresh={onRefreshStages}
       />
     </div>
   );
