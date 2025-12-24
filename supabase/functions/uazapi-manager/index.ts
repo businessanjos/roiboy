@@ -1894,13 +1894,39 @@ serve(async (req) => {
           );
         }
 
-        // First, try to delete any existing instance with this name
+        // First, delete ALL instances with this name to avoid duplicates
         try {
-          await uazapiAdminRequest(`/instance/delete/${supportInstanceName}`, "DELETE");
-          console.log(`Deleted existing instance ${supportInstanceName}`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+            name?: string; 
+            id?: string;
+          }>;
+          
+          const duplicates = allInstances.filter(i => i.name === supportInstanceName);
+          console.log(`Found ${duplicates.length} existing instances with name ${supportInstanceName}`);
+          
+          for (const dup of duplicates) {
+            try {
+              // Try delete by name first
+              await uazapiAdminRequest(`/instance/delete/${supportInstanceName}`, "DELETE");
+              console.log(`Deleted instance by name: ${supportInstanceName}`);
+            } catch {
+              // Try delete by ID if available
+              if (dup.id) {
+                try {
+                  await uazapiAdminRequest(`/instance/delete/${dup.id}`, "DELETE");
+                  console.log(`Deleted instance by ID: ${dup.id}`);
+                } catch (e2) {
+                  console.log(`Failed to delete instance ${dup.id}:`, (e2 as Error).message);
+                }
+              }
+            }
+          }
+          
+          if (duplicates.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
         } catch (err) {
-          console.log(`No existing instance to delete or delete failed:`, (err as Error).message);
+          console.log(`Error cleaning up instances:`, (err as Error).message);
         }
 
         // Create instance via UAZAPI
@@ -1918,10 +1944,15 @@ serve(async (req) => {
         const instanceToken = createResult.token || createResult.instance?.token;
         let qrcodeBase64 = createResult.qrcode || createResult.instance?.qrcode || "";
 
-        // Save token immediately so we can use it
+        if (!instanceToken) {
+          throw new Error("Failed to create instance - no token returned");
+        }
+
+        // Save token immediately
         await supabase
           .from("system_settings")
-          .update({
+          .upsert({
+            key: "support_whatsapp",
             value: {
               instance_name: supportInstanceName,
               instance_token: instanceToken,
@@ -1929,80 +1960,28 @@ serve(async (req) => {
               status: "connecting",
               qr_code: null,
             },
-          })
-          .eq("key", "support_whatsapp");
+          }, { onConflict: 'key' });
 
-        // Wait for initialization then trigger connection
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait for UAZAPI to fully register the instance
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // UAZAPI GO: Use admin endpoint /instance/connect/{name} to trigger QR generation
-        // This is what the normal WhatsApp integration uses successfully
-        if (!qrcodeBase64 && supportInstanceName) {
-          console.log(`Triggering connection via admin endpoint`);
-          
-          const adminConnectEndpoints = [
-            { url: `/instance/connect/${supportInstanceName}`, method: "GET" },
-            { url: `/instance/connect/${supportInstanceName}`, method: "POST" },
-          ];
-          
-          for (const endpoint of adminConnectEndpoints) {
-            if (qrcodeBase64) break;
-            try {
-              console.log(`Support create: Trying admin ${endpoint.method} ${endpoint.url}`);
-              const connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method) as {
-                base64?: string;
-                qrcode?: string | { base64?: string };
-                qr?: string;
-                data?: { base64?: string; qrcode?: string };
-              };
-              console.log(`Admin connect result:`, JSON.stringify(connectResult).slice(0, 500));
-              qrcodeBase64 = connectResult.base64 || 
-                             connectResult.qr ||
-                             connectResult.data?.base64 ||
-                             connectResult.data?.qrcode ||
-                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
-              if (qrcodeBase64) {
-                console.log(`QR code found via admin ${endpoint.url}`);
-              }
-            } catch (err) {
-              console.log(`Admin ${endpoint.url} failed:`, (err as Error).message);
-            }
-          }
-        }
-
-        // If still no QR, try with instance token
+        // UAZAPI GO: Call /connect with instance token to trigger QR generation
         if (!qrcodeBase64 && instanceToken) {
-          console.log(`Trying instance token endpoints`);
+          console.log(`Triggering QR via instance token /connect`);
           
-          const qrEndpoints = [
-            { url: `/connect`, method: "GET" },
-            { url: `/connect`, method: "POST" },
-            { url: `/qr`, method: "GET" },
-            { url: `/qrcode`, method: "GET" },
-          ];
-
-          for (const endpoint of qrEndpoints) {
-            if (qrcodeBase64) break;
-            try {
-              console.log(`Support QR: Trying instance ${endpoint.method} ${endpoint.url}`);
-              const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken) as {
-                base64?: string;
-                qrcode?: string | { base64?: string };
-                qr?: string;
-                data?: { base64?: string; qrcode?: string };
-              };
-              console.log(`Instance connect result:`, JSON.stringify(connectResult).slice(0, 300));
-              qrcodeBase64 = connectResult.base64 || 
-                             connectResult.qr ||
-                             connectResult.data?.base64 ||
-                             connectResult.data?.qrcode ||
-                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
-              if (qrcodeBase64) {
-                console.log(`Support QR found via instance ${endpoint.url}`);
-              }
-            } catch (err) {
-              console.log(`Support QR instance ${endpoint.url} failed:`, (err as Error).message);
-            }
+          try {
+            const connectResult = await uazapiInstanceRequest("/connect", "GET", instanceToken) as {
+              base64?: string;
+              qrcode?: string | { base64?: string };
+              qr?: string;
+            };
+            console.log(`Connect result:`, JSON.stringify(connectResult).slice(0, 500));
+            
+            qrcodeBase64 = connectResult.base64 || 
+                           connectResult.qr ||
+                           (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+          } catch (err) {
+            console.log(`Instance /connect failed:`, (err as Error).message);
           }
         }
 
@@ -2062,166 +2041,88 @@ serve(async (req) => {
           .single();
 
         const supportConfig = settings?.value as { instance_name?: string; instance_token?: string } | null;
-        if (!supportConfig?.instance_token) {
-          return new Response(
-            JSON.stringify({ error: "Support instance not configured" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Get new QR code - try multiple endpoints
+        const instanceName = supportConfig?.instance_name || "suporte-roy";
+        
+        // Get QR code - simplified approach
         let qrcodeBase64 = "";
-        console.log(`Support refresh: Using token ${supportConfig.instance_token?.slice(0, 8)}... for instance ${supportConfig.instance_name}`);
+        let newToken = supportConfig?.instance_token;
         
-        // IMPORTANT: UAZAPI GO requires a "restart" or reinitializing the connection to generate QR
-        // First, try to restart/reinit the instance to trigger QR generation
-        if (supportConfig.instance_name) {
-          const restartEndpoints = [
-            { url: `/instance/restart/${supportConfig.instance_name}`, method: "POST" },
-            { url: `/instance/restart/${supportConfig.instance_name}`, method: "PUT" },
-            { url: `/restart/${supportConfig.instance_name}`, method: "POST" },
-          ];
-          
-          for (const endpoint of restartEndpoints) {
-            try {
-              console.log(`Support restart: Trying admin ${endpoint.method} ${endpoint.url}`);
-              const restartResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
-              console.log(`Support restart response:`, JSON.stringify(restartResult).slice(0, 200));
-              
-              // Check if restart response includes QR code
-              const restartData = restartResult as { base64?: string; qrcode?: string; qr?: string };
-              qrcodeBase64 = restartData.base64 || restartData.qr || (typeof restartData.qrcode === 'string' ? restartData.qrcode : '') || "";
-              
-              if (qrcodeBase64) {
-                console.log(`QR code found from restart`);
-                break;
-              }
-              
-              // Wait a moment for restart to take effect
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              break;
-            } catch (err) {
-              console.log(`Support restart ${endpoint.url} failed:`, (err as Error).message);
-            }
-          }
-        }
-        
-        // If no QR from restart, try to get it via connect endpoints
-        if (!qrcodeBase64) {
-          // First try instance token endpoints
-          const qrEndpoints = [
-            { url: `/connect`, method: "GET" },
-            { url: `/connect`, method: "POST" },
-            { url: `/qr`, method: "GET" },
-            { url: `/qrcode`, method: "GET" },
-          ];
-
-          for (const endpoint of qrEndpoints) {
-            if (qrcodeBase64) break;
-            try {
-              console.log(`Support refresh QR: Trying instance ${endpoint.method} ${endpoint.url}`);
-              const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, supportConfig.instance_token!) as {
-                base64?: string;
-                qrcode?: string | { base64?: string };
-                qr?: string;
-                data?: { base64?: string; qrcode?: string };
-              };
-              console.log(`Support refresh QR response:`, JSON.stringify(connectResult).slice(0, 300));
-              qrcodeBase64 = connectResult.base64 || 
-                             connectResult.qr ||
-                             connectResult.data?.base64 ||
-                             connectResult.data?.qrcode ||
-                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
-              if (qrcodeBase64) {
-                console.log(`Support refresh QR found via instance ${endpoint.url}`);
-              }
-            } catch (err) {
-              console.log(`Support refresh QR instance ${endpoint.url} failed:`, (err as Error).message);
-            }
-          }
-        }
-        
-        // If instance endpoints fail, try admin endpoints with instance name
-        if (!qrcodeBase64 && supportConfig.instance_name) {
-          const adminQrEndpoints = [
-            { url: `/instance/connect/${supportConfig.instance_name}`, method: "GET" },
-            { url: `/instance/connect/${supportConfig.instance_name}`, method: "POST" },
-            { url: `/instance/qr/${supportConfig.instance_name}`, method: "GET" },
-            { url: `/connect/${supportConfig.instance_name}`, method: "GET" },
-          ];
-          
-          for (const endpoint of adminQrEndpoints) {
-            if (qrcodeBase64) break;
-            try {
-              console.log(`Support refresh QR: Trying admin ${endpoint.method} ${endpoint.url}`);
-              const connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method) as {
-                base64?: string;
-                qrcode?: string | { base64?: string };
-                qr?: string;
-                data?: { base64?: string; qrcode?: string };
-              };
-              console.log(`Support refresh QR admin response:`, JSON.stringify(connectResult).slice(0, 300));
-              qrcodeBase64 = connectResult.base64 || 
-                             connectResult.qr ||
-                             connectResult.data?.base64 ||
-                             connectResult.data?.qrcode ||
-                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
-              if (qrcodeBase64) {
-                console.log(`Support refresh QR found via admin ${endpoint.url}`);
-              }
-            } catch (err) {
-              console.log(`Support refresh QR admin ${endpoint.url} failed:`, (err as Error).message);
-            }
-          }
-        }
-        
-        // If still no QR code, the instance may need to be re-created
-        // Delete and recreate
-        if (!qrcodeBase64 && supportConfig.instance_name) {
-          console.log(`No QR code found, trying to delete and recreate instance`);
-          
-          // Try to delete the old instance
+        // First, try to get QR with existing token
+        if (newToken) {
+          console.log(`Refresh: Trying with existing token ${newToken.slice(0, 8)}...`);
           try {
-            await uazapiAdminRequest(`/instance/delete/${supportConfig.instance_name}`, "DELETE");
-            console.log(`Deleted old instance ${supportConfig.instance_name}`);
+            const connectResult = await uazapiInstanceRequest("/connect", "GET", newToken) as {
+              base64?: string; qrcode?: string; qr?: string;
+            };
+            qrcodeBase64 = connectResult.base64 || connectResult.qr || 
+                          (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : '') || "";
+            if (qrcodeBase64) {
+              console.log(`QR found with existing token`);
+            }
           } catch (err) {
-            console.log(`Delete failed (may not exist):`, (err as Error).message);
+            console.log(`Existing token /connect failed:`, (err as Error).message);
+          }
+        }
+        
+        // If no QR, delete all instances with this name and create fresh
+        if (!qrcodeBase64) {
+          console.log(`No QR code, recreating instance...`);
+          
+          // Delete all instances with this name
+          try {
+            const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+              name?: string; id?: string;
+            }>;
+            
+            const duplicates = allInstances.filter(i => i.name === instanceName);
+            console.log(`Found ${duplicates.length} instances to delete`);
+            
+            for (const dup of duplicates) {
+              try {
+                await uazapiAdminRequest(`/instance/delete/${instanceName}`, "DELETE");
+              } catch {
+                if (dup.id) {
+                  try {
+                    await uazapiAdminRequest(`/instance/delete/${dup.id}`, "DELETE");
+                  } catch {}
+                }
+              }
+            }
+            
+            if (duplicates.length > 0) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          } catch (err) {
+            console.log(`Cleanup failed:`, (err as Error).message);
           }
           
-          // Wait a moment
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Create new instance with same name
+          // Create new instance
           try {
             const createResult = await uazapiAdminRequest("/instance/init", "POST", {
-              name: supportConfig.instance_name,
-            }) as { token?: string; instance?: { token?: string; qrcode?: string } };
+              name: instanceName,
+            }) as { token?: string; instance?: { token?: string } };
             
-            console.log(`Recreated instance:`, JSON.stringify(createResult).slice(0, 200));
-            
-            const newToken = createResult.token || createResult.instance?.token;
+            newToken = createResult.token || createResult.instance?.token;
+            console.log(`Created new instance, token: ${newToken?.slice(0, 8)}...`);
             
             if (newToken) {
-              // Update token in settings
-              supportConfig.instance_token = newToken;
-              
-              // Wait for instance to initialize
+              // Wait for initialization
               await new Promise(resolve => setTimeout(resolve, 3000));
               
-              // Try to get QR code with new token
+              // Get QR
               try {
                 const connectResult = await uazapiInstanceRequest("/connect", "GET", newToken) as {
                   base64?: string; qrcode?: string; qr?: string;
                 };
-                console.log(`Connect with new token result:`, JSON.stringify(connectResult).slice(0, 200));
                 qrcodeBase64 = connectResult.base64 || connectResult.qr || 
-                               (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : '') || "";
+                              (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : '') || "";
+                console.log(`QR from new instance: ${qrcodeBase64 ? 'found' : 'not found'}`);
               } catch (e) {
-                console.log(`Connect with new token failed:`, (e as Error).message);
+                console.log(`New instance /connect failed:`, (e as Error).message);
               }
             }
           } catch (err) {
-            console.log(`Recreate instance failed:`, (err as Error).message);
+            console.log(`Create instance failed:`, (err as Error).message);
           }
         }
 
@@ -2230,14 +2131,16 @@ serve(async (req) => {
           .from("system_settings")
           .update({
             value: {
-              ...supportConfig,
+              instance_name: instanceName,
+              instance_token: newToken,
+              phone: null,
               qr_code: qrcodeBase64,
               status: qrcodeBase64 ? "connecting" : "disconnected",
             },
           })
           .eq("key", "support_whatsapp");
 
-        result = { success: true, qr_code: qrcodeBase64 };
+        result = { success: true, qr_code: qrcodeBase64, token: newToken };
         break;
       }
 
