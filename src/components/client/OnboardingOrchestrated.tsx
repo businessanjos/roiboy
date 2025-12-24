@@ -418,7 +418,7 @@ export function OnboardingOrchestrated({
                                             )}
                                           </div>
                                         )}
-                                        {item.action_type && !isCompleted && (
+                                        {item.action_type && !isCompleted && CHECKLIST_ACTION_LABELS[item.action_type as ChecklistActionType] && (
                                           <Button
                                             variant="link"
                                             size="sm"
@@ -426,11 +426,11 @@ export function OnboardingOrchestrated({
                                             onClick={(e) => {
                                               e.preventDefault();
                                               e.stopPropagation();
-                                              handleActionClick(client.id, item.action_type!);
+                                              handleActionClick(client.id, item.action_type as ChecklistActionType);
                                             }}
                                           >
                                             <ExternalLink className="h-3 w-3 mr-1" />
-                                            {CHECKLIST_ACTION_LABELS[item.action_type]}
+                                            {CHECKLIST_ACTION_LABELS[item.action_type as ChecklistActionType]}
                                           </Button>
                                         )}
                                       </div>

@@ -35,7 +35,7 @@ export interface StageChecklistItem {
   is_active: boolean;
   due_date: string | null;
   linked_task_id: string | null;
-  action_type: ChecklistActionType | null;
+  action_type: string | null;
 }
 
 export interface ClientChecklistProgress {
@@ -172,7 +172,7 @@ export function useManageChecklistItems(accountId: string) {
       description?: string;
       dueDate?: string;
       stageName?: string;
-      actionType?: ChecklistActionType | null;
+      actionType?: string | null;
     }) => {
       // Get max display_order
       const { data: existingItems } = await supabase
@@ -260,7 +260,7 @@ export function useManageChecklistItems(accountId: string) {
       dueDate?: string | null;
       stageName?: string;
       currentLinkedTaskId?: string | null;
-      actionType?: ChecklistActionType | null;
+      actionType?: string | null;
     }) => {
       const { error } = await supabase
         .from("stage_checklist_items")
