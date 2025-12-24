@@ -144,12 +144,7 @@ export default function Tasks() {
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
 
-  // Set default active tab when statuses load
-  useEffect(() => {
-    if (customStatuses.length > 0 && activeTab === null) {
-      setActiveTab(customStatuses[0].id);
-    }
-  }, [customStatuses, activeTab]);
+  // No need to set default tab - "all" is the default
 
   // Fetch tasks with React Query
   const { data: tasks = [], isLoading: loading } = useQuery({
@@ -877,8 +872,19 @@ export default function Tasks() {
           onAddTask={openNewTaskDialog}
         />
       ) : (
-        <Tabs value={activeTab || ""} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-4">
           <TabsList className="bg-muted/50 p-1 flex-wrap h-auto gap-1">
+            <TabsTrigger 
+              value="all" 
+              className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              Todas
+              {tasks.length > 0 && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                  {tasks.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             {customStatuses.map((status) => (
               <TabsTrigger 
                 key={status.id} 
@@ -899,6 +905,9 @@ export default function Tasks() {
             ))}
           </TabsList>
 
+          <TabsContent value="all" className="mt-6">
+            <TaskTable tasks={sortedTasks} />
+          </TabsContent>
           {customStatuses.map((status) => (
             <TabsContent key={status.id} value={status.id} className="mt-6">
               <TaskTable tasks={sortedTasks} />
