@@ -21,7 +21,10 @@ serve(async (req) => {
     const accountId = url.searchParams.get("account_id");
     const accessPassword = url.searchParams.get("password");
 
+    console.log("Members Book request - accountId:", accountId);
+
     if (!accountId) {
+      console.log("Error: account_id is required");
       return new Response(
         JSON.stringify({ error: "account_id is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -35,14 +38,26 @@ serve(async (req) => {
       .eq("account_id", accountId)
       .single();
 
-    if (settingsError || !settings) {
+    console.log("Settings fetch result:", { settings, error: settingsError?.message });
+
+    if (settingsError && settingsError.code !== "PGRST116") {
+      console.error("Settings error:", settingsError);
       return new Response(
-        JSON.stringify({ error: "Members Book não encontrado ou não configurado" }),
+        JSON.stringify({ error: "Erro ao buscar configurações" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!settings) {
+      console.log("Members Book not configured for account:", accountId);
+      return new Response(
+        JSON.stringify({ error: "Members Book não configurado. Ative nas configurações do ROY." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!settings.is_enabled) {
+      console.log("Members Book is disabled for account:", accountId);
       return new Response(
         JSON.stringify({ error: "Members Book está desativado" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -51,6 +66,7 @@ serve(async (req) => {
 
     // Check password if required
     if (settings.access_password && settings.access_password !== accessPassword) {
+      console.log("Password required or incorrect for account:", accountId);
       return new Response(
         JSON.stringify({ 
           error: "Senha incorreta", 
@@ -71,7 +87,9 @@ serve(async (req) => {
       .eq("id", accountId)
       .single();
 
-    // Fetch visible members
+    console.log("Account name:", account?.name);
+
+    // Fetch visible members from visibility table
     const { data: visibilityList } = await supabase
       .from("members_book_visibility")
       .select("client_id, display_order")
@@ -80,8 +98,9 @@ serve(async (req) => {
       .order("display_order", { ascending: true });
 
     const visibleClientIds = visibilityList?.map(v => v.client_id) || [];
+    console.log("Visible client IDs from visibility table:", visibleClientIds.length);
 
-    // Build client query
+    // Build client query - fetch all active clients if no visibility list
     let clientQuery = supabase
       .from("clients")
       .select(`
@@ -93,14 +112,14 @@ serve(async (req) => {
         phone_e164,
         emails,
         status,
-        client_products!inner(
+        client_products(
           product:products(id, name)
         )
       `)
       .eq("account_id", accountId)
       .eq("status", "active");
 
-    // If visibility list exists, filter by it
+    // If visibility list exists and has entries, filter by it
     if (visibleClientIds.length > 0) {
       clientQuery = clientQuery.in("id", visibleClientIds);
     }
@@ -114,6 +133,8 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Clients fetched:", clients?.length || 0);
 
     // Map clients to members format based on settings
     const members = clients?.map(client => {
@@ -143,14 +164,15 @@ serve(async (req) => {
       return member;
     }) || [];
 
-    // Sort by visibility order if available
+    // Sort by visibility order if available, otherwise alphabetically
     if (visibleClientIds.length > 0) {
       const orderMap = new Map(visibilityList?.map(v => [v.client_id, v.display_order]) || []);
       members.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0));
     } else {
-      // Sort alphabetically by name
       members.sort((a, b) => a.name.localeCompare(b.name));
     }
+
+    console.log("Returning", members.length, "members");
 
     return new Response(
       JSON.stringify({
