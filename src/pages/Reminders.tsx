@@ -63,6 +63,7 @@ import {
   X,
 } from "lucide-react";
 import MomentosCxCampaign from "@/components/reminders/MomentosCxCampaign";
+import FormCampaign from "@/components/reminders/FormCampaign";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -736,6 +737,10 @@ export default function Reminders() {
             <Calendar className="h-4 w-4" />
             Eventos
           </TabsTrigger>
+          <TabsTrigger value="forms" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Formulários
+          </TabsTrigger>
           <TabsTrigger value="momentos-cx" className="flex items-center gap-2">
             <Heart className="h-4 w-4" />
             Momentos CX
@@ -1383,6 +1388,10 @@ export default function Reminders() {
               )}
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="forms" className="mt-6">
+          <FormCampaign />
         </TabsContent>
 
         <TabsContent value="momentos-cx" className="mt-6">
