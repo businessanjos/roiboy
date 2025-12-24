@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -194,9 +195,17 @@ function KanbanColumn({ stage, clients, isUncategorized }: KanbanColumnProps) {
   const columnName = stage?.name || "Sem Etapa";
   const columnColor = stage?.color || "#94a3b8";
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: columnId,
+  });
+
   return (
     <Card 
-      className="flex flex-col min-w-[280px] max-w-[320px] h-full border-t-4"
+      ref={setNodeRef}
+      className={cn(
+        "flex flex-col min-w-[280px] max-w-[320px] h-full border-t-4 transition-all",
+        isOver && "ring-2 ring-primary bg-primary/5"
+      )}
       style={{ borderTopColor: columnColor }}
     >
       <CardHeader className="pb-3 pt-4">
@@ -220,7 +229,10 @@ function KanbanColumn({ stage, clients, isUncategorized }: KanbanColumnProps) {
               <SortableClientCard key={client.id} client={client} />
             ))}
             {clients.length === 0 && (
-              <div className="flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground text-xs">
+              <div className={cn(
+                "flex items-center justify-center h-24 border-2 border-dashed rounded-lg text-muted-foreground text-xs transition-colors",
+                isOver && "border-primary bg-primary/10"
+              )}>
                 {isUncategorized ? "Arraste clientes aqui" : "Nenhum cliente"}
               </div>
             )}
