@@ -54,7 +54,8 @@ import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
 import { CouponsManager } from "@/components/admin/CouponsManager";
 import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager";
 import { SupportWhatsAppConfig } from "@/components/admin/SupportWhatsAppConfig";
-import { Tag, Headset } from "lucide-react";
+import { SupportKnowledgeBase } from "@/components/admin/SupportKnowledgeBase";
+import { Tag, Headset, BookOpen } from "lucide-react";
 
 interface SubscriptionPlan {
   id: string;
@@ -332,8 +333,31 @@ export default function Admin() {
         </TabsContent>
 
         <TabsContent value="support" className="mt-0 space-y-6">
-          <SupportWhatsAppConfig />
-          <SupportTicketsManager />
+          <Tabs defaultValue="tickets" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="tickets" className="gap-2">
+                <Headset className="h-4 w-4" />
+                Tickets
+              </TabsTrigger>
+              <TabsTrigger value="knowledge" className="gap-2">
+                <BookOpen className="h-4 w-4" />
+                Base de Conhecimento
+              </TabsTrigger>
+              <TabsTrigger value="config" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Configuração
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="tickets">
+              <SupportTicketsManager />
+            </TabsContent>
+            <TabsContent value="knowledge">
+              <SupportKnowledgeBase />
+            </TabsContent>
+            <TabsContent value="config">
+              <SupportWhatsAppConfig />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>
