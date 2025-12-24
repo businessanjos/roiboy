@@ -18,7 +18,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Pencil, CheckSquare, GripVertical, Layers, Check, X } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckSquare, GripVertical, Layers, Check, X, Calendar, AlertCircle } from "lucide-react";
+import { format, isPast, isToday, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -216,6 +218,7 @@ export function StageChecklistEditor({
   const [newItemStageId, setNewItemStageId] = useState<string | null>(null);
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemDescription, setNewItemDescription] = useState("");
+  const [newItemDueDate, setNewItemDueDate] = useState("");
   const [editingItem, setEditingItem] = useState<StageChecklistItem | null>(null);
 
   // Stage management state
@@ -243,9 +246,11 @@ export function StageChecklistEditor({
         stageId,
         title: newItemTitle.trim(),
         description: newItemDescription.trim() || undefined,
+        dueDate: newItemDueDate || undefined,
       });
       setNewItemTitle("");
       setNewItemDescription("");
+      setNewItemDueDate("");
       setNewItemStageId(null);
       toast.success("Item adicionado");
     } catch (error) {
@@ -262,6 +267,7 @@ export function StageChecklistEditor({
         itemId: editingItem.id,
         title: editingItem.title.trim(),
         description: editingItem.description || undefined,
+        dueDate: editingItem.due_date,
       });
       setEditingItem(null);
       toast.success("Item atualizado");
@@ -549,6 +555,20 @@ export function StageChecklistEditor({
                                       placeholder="Descrição (opcional)"
                                       rows={2}
                                     />
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                      <Input
+                                        type="date"
+                                        value={editingItem.due_date || ""}
+                                        onChange={(e) =>
+                                          setEditingItem({
+                                            ...editingItem,
+                                            due_date: e.target.value || null,
+                                          })
+                                        }
+                                        className="flex-1"
+                                      />
+                                    </div>
                                     <div className="flex gap-2">
                                       <Button
                                         size="sm"
@@ -575,6 +595,24 @@ export function StageChecklistEditor({
                                         <p className="text-xs text-muted-foreground mt-0.5">
                                           {item.description}
                                         </p>
+                                      )}
+                                      {item.due_date && (
+                                        <div className={cn(
+                                          "flex items-center gap-1 mt-1 text-xs",
+                                          isPast(parseISO(item.due_date)) && !isToday(parseISO(item.due_date))
+                                            ? "text-destructive"
+                                            : isToday(parseISO(item.due_date))
+                                              ? "text-amber-600"
+                                              : "text-muted-foreground"
+                                        )}>
+                                          {isPast(parseISO(item.due_date)) && !isToday(parseISO(item.due_date)) && (
+                                            <AlertCircle className="h-3 w-3" />
+                                          )}
+                                          <Calendar className="h-3 w-3" />
+                                          <span>
+                                            {format(parseISO(item.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                                          </span>
+                                        </div>
                                       )}
                                     </div>
                                     <Button
@@ -613,6 +651,16 @@ export function StageChecklistEditor({
                                   placeholder="Descrição ou instruções (opcional)"
                                   rows={2}
                                 />
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    type="date"
+                                    value={newItemDueDate}
+                                    onChange={(e) => setNewItemDueDate(e.target.value)}
+                                    placeholder="Prazo (opcional)"
+                                    className="flex-1"
+                                  />
+                                </div>
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
@@ -628,6 +676,7 @@ export function StageChecklistEditor({
                                       setNewItemStageId(null);
                                       setNewItemTitle("");
                                       setNewItemDescription("");
+                                      setNewItemDueDate("");
                                     }}
                                   >
                                     Cancelar
