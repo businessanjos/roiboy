@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -50,6 +50,8 @@ import {
   AlertCircle,
   Image,
   Mic,
+  MicOff,
+  Square,
   X,
   Download,
   Pencil,
@@ -155,6 +157,25 @@ export default function WhatsAppGroups() {
   const [editGroupImagePreview, setEditGroupImagePreview] = useState<string | null>(null);
   const editImageInputRef = useRef<HTMLInputElement>(null);
   const [isSavingGroupDetails, setIsSavingGroupDetails] = useState(false);
+
+  // Audio recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<number | null>(null);
+
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   // Fetch groups from database
   const { data: groups = [], isLoading: loadingGroups, refetch: refetchGroups } = useQuery({
@@ -384,6 +405,106 @@ export default function WhatsAppGroups() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    // Also stop recording if active
+    if (isRecording) {
+      stopRecording();
+    }
+  };
+
+  // Format recording time as mm:ss
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Start audio recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        }
+      });
+
+      // Try to use mp3/webm for better compatibility
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : 'audio/ogg';
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        // Create audio blob
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const extension = mimeType === 'audio/webm' ? 'webm' : mimeType === 'audio/mp4' ? 'm4a' : 'ogg';
+        const audioFile = new File([audioBlob], `gravacao-${Date.now()}.${extension}`, { type: mimeType });
+        
+        setMediaFile(audioFile);
+        setMediaPreview(null); // Audio doesn't have visual preview
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Clear interval
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+        setRecordingTime(0);
+      };
+
+      mediaRecorder.start(100); // Collect data every 100ms
+      setIsRecording(true);
+      
+      // Start timer
+      recordingIntervalRef.current = window.setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      toast.success("Gravando áudio...");
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast.error("Não foi possível acessar o microfone. Verifique as permissões.");
+    }
+  };
+
+  // Stop audio recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast.success("Áudio gravado!");
+    }
+  };
+
+  // Cancel recording without saving
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current) {
+      if (mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      // Clear chunks so onstop doesn't create file
+      audioChunksRef.current = [];
+    }
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    toast.info("Gravação cancelada");
   };
 
   const uploadMediaToStorage = async (file: File): Promise<string> => {
@@ -1055,34 +1176,78 @@ export default function WhatsAppGroups() {
                   accept="image/*,audio/*"
                   className="hidden"
                 />
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isSendingAny}
-                  >
-                    <Image className="h-4 w-4 mr-2" />
-                    Imagem
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (fileInputRef.current) {
-                        fileInputRef.current.accept = "audio/*";
-                        fileInputRef.current.click();
-                        fileInputRef.current.accept = "image/*,audio/*";
-                      }
-                    }}
-                    disabled={isSendingAny}
-                  >
-                    <Mic className="h-4 w-4 mr-2" />
-                    Áudio
-                  </Button>
-                </div>
+                
+                {/* Recording indicator */}
+                {isRecording ? (
+                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-destructive/10 border-destructive/30">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-destructive rounded-full animate-pulse" />
+                      <span className="text-sm font-medium text-destructive">
+                        Gravando... {formatRecordingTime(recordingTime)}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 ml-auto">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={cancelRecording}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={stopRecording}
+                      >
+                        <Square className="h-4 w-4 mr-1" />
+                        Parar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isSendingAny || !!mediaFile}
+                    >
+                      <Image className="h-4 w-4 mr-2" />
+                      Imagem
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = "audio/*";
+                          fileInputRef.current.click();
+                          fileInputRef.current.accept = "image/*,audio/*";
+                        }
+                      }}
+                      disabled={isSendingAny || !!mediaFile}
+                    >
+                      <Mic className="h-4 w-4 mr-2" />
+                      Arquivo de Áudio
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={startRecording}
+                      disabled={isSendingAny || !!mediaFile}
+                      className="border-primary text-primary hover:bg-primary/10"
+                    >
+                      <Mic className="h-4 w-4 mr-2" />
+                      Gravar Áudio
+                    </Button>
+                  </div>
+                )}
                 
                 {/* Media preview */}
                 {mediaFile && (
