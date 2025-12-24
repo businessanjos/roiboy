@@ -12,7 +12,7 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 interface UazapiRequest {
   action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token" 
-    | "list_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
+    | "list_groups" | "sync_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
     | "send_media" | "send_media_to_group";
   instance_name?: string;
   phone?: string;
@@ -956,6 +956,99 @@ serve(async (req) => {
         }
 
         result = { groups };
+        break;
+      }
+
+      case "sync_groups": {
+        // Sync all WhatsApp groups to database
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+
+        console.log("Syncing groups from WhatsApp to database...");
+        
+        // First, fetch all groups from WhatsApp API
+        let groups: unknown[] = [];
+        const groupEndpoints = [
+          { url: `/group/fetchAllGroups`, method: "GET" },
+          { url: `/group/all`, method: "GET" },
+          { url: `/groups`, method: "GET" },
+          { url: `/chat/groups`, method: "GET" },
+        ];
+
+        for (const endpoint of groupEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            const groupsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
+            console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 500));
+            
+            // Handle different response formats
+            if (Array.isArray(groupsResult)) {
+              groups = groupsResult;
+            } else if ((groupsResult as { groups?: unknown[] })?.groups) {
+              groups = (groupsResult as { groups: unknown[] }).groups;
+            } else if ((groupsResult as { data?: unknown[] })?.data) {
+              groups = (groupsResult as { data: unknown[] }).data;
+            }
+            
+            if (groups.length > 0) break;
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        console.log(`Found ${groups.length} groups from WhatsApp API`);
+
+        // Save/update each group in the database
+        let synced = 0;
+        let errors = 0;
+        
+        for (const g of groups) {
+          const group = g as {
+            JID?: string;
+            jid?: string;
+            id?: string;
+            Name?: string;
+            name?: string;
+            subject?: string;
+            Subject?: string;
+            Participants?: unknown[];
+            participants?: unknown[];
+            Size?: number;
+            size?: number;
+          };
+          
+          const groupJid = group.JID || group.jid || group.id || "";
+          const groupName = group.Name || group.name || group.Subject || group.subject || "";
+          const participantCount = group.Participants?.length || group.participants?.length || group.Size || group.size || 0;
+          
+          if (groupJid && groupJid.includes("@g.us")) {
+            try {
+              await supabase
+                .from("whatsapp_groups")
+                .upsert({
+                  account_id: accountId,
+                  group_jid: groupJid,
+                  name: groupName,
+                  participant_count: participantCount,
+                }, { onConflict: "account_id,group_jid" });
+              synced++;
+            } catch (err) {
+              console.log(`Error saving group ${groupJid}:`, (err as Error).message);
+              errors++;
+            }
+          }
+        }
+
+        console.log(`Sync complete: ${synced} synced, ${errors} errors`);
+        
+        result = { 
+          success: true, 
+          synced, 
+          errors,
+          total: groups.length,
+          message: `${synced} grupo(s) sincronizado(s)${errors > 0 ? `, ${errors} erro(s)` : ""}` 
+        };
         break;
       }
 
