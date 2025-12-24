@@ -23,7 +23,8 @@ import {
   Mail,
   Package,
   Lock,
-  Instagram
+  Instagram,
+  FileUser
 } from "lucide-react";
 
 interface MembersBookSettings {
@@ -33,6 +34,7 @@ interface MembersBookSettings {
   show_email: boolean;
   show_phone: boolean;
   show_instagram: boolean;
+  show_bio: boolean;
   show_products: boolean;
   custom_title: string;
   custom_description: string;
@@ -45,6 +47,7 @@ const defaultSettings: MembersBookSettings = {
   show_email: true,
   show_phone: true,
   show_instagram: true,
+  show_bio: true,
   show_products: true,
   custom_title: "Members Book",
   custom_description: "",
@@ -88,6 +91,7 @@ export function MembersBookSettings() {
           show_email: data.show_email,
           show_phone: data.show_phone,
           show_instagram: data.show_instagram ?? true,
+          show_bio: data.show_bio ?? true,
           show_products: data.show_products,
           custom_title: data.custom_title || "Members Book",
           custom_description: data.custom_description || "",
@@ -113,6 +117,7 @@ export function MembersBookSettings() {
         show_email: settings.show_email,
         show_phone: settings.show_phone,
         show_instagram: settings.show_instagram,
+        show_bio: settings.show_bio,
         show_products: settings.show_products,
         custom_title: settings.custom_title || "Members Book",
         custom_description: settings.custom_description || null,
@@ -355,6 +360,19 @@ export function MembersBookSettings() {
                 checked={settings.show_instagram}
                 onCheckedChange={(checked) => 
                   setSettings(prev => ({ ...prev, show_instagram: checked }))
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <FileUser className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Bio</span>
+              </div>
+              <Switch
+                checked={settings.show_bio}
+                onCheckedChange={(checked) => 
+                  setSettings(prev => ({ ...prev, show_bio: checked }))
                 }
               />
             </div>

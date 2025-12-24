@@ -26,6 +26,7 @@ interface Member {
   phone?: string;
   email?: string;
   instagram?: string;
+  bio?: string;
   products?: string[];
 }
 
@@ -38,6 +39,7 @@ interface MembersBookData {
     show_email: boolean;
     show_phone: boolean;
     show_instagram: boolean;
+    show_bio: boolean;
     show_products: boolean;
   };
   members: Member[];
@@ -328,6 +330,13 @@ function MemberCard({ member, settings, formatPhone, getInitials }: MemberCardPr
             )}
           </div>
         </div>
+
+        {/* Bio */}
+        {settings.show_bio && member.bio && (
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {member.bio}
+          </p>
+        )}
 
         {/* Products */}
         {settings.show_products && member.products && member.products.length > 0 && (
