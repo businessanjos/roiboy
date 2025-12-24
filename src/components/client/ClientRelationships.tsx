@@ -55,12 +55,13 @@ import {
   ExternalLink,
   Check,
   ChevronsUpDown,
+  Gift,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-type RelationshipType = "spouse" | "partner" | "dependent" | "associate" | "other";
+type RelationshipType = "spouse" | "partner" | "dependent" | "associate" | "referral" | "other";
 
 interface ClientRelationship {
   id: string;
@@ -101,6 +102,7 @@ const relationshipTypeLabels: Record<RelationshipType, { label: string; icon: Re
   partner: { label: "Parceiro(a)", icon: <Heart className="h-3 w-3" />, color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
   dependent: { label: "Dependente", icon: <UserPlus className="h-3 w-3" />, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   associate: { label: "Sócio", icon: <Briefcase className="h-3 w-3" />, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  referral: { label: "Indicação", icon: <Gift className="h-3 w-3" />, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
   other: { label: "Outro", icon: <Link2 className="h-3 w-3" />, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
 };
 
