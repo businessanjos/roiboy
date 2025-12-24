@@ -111,6 +111,7 @@ serve(async (req) => {
         logo_url,
         phone_e164,
         emails,
+        instagram,
         status,
         client_products(
           product:products(id, name)
@@ -157,6 +158,10 @@ serve(async (req) => {
         member.email = emails && emails.length > 0 ? emails[0] : null;
       }
 
+      if (settings.show_instagram) {
+        member.instagram = client.instagram;
+      }
+
       if (settings.show_products) {
         member.products = client.client_products?.map((cp: any) => cp.product?.name).filter(Boolean) || [];
       }
@@ -183,6 +188,7 @@ serve(async (req) => {
           show_company: settings.show_company,
           show_email: settings.show_email,
           show_phone: settings.show_phone,
+          show_instagram: settings.show_instagram,
           show_products: settings.show_products,
         },
         members,
