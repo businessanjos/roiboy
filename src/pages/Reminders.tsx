@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { WhatsAppFormattingToolbar } from "@/components/ui/whatsapp-formatting-toolbar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -842,13 +843,13 @@ export default function Reminders() {
 
                   <div>
                     <Label htmlFor="message">Mensagem</Label>
-                    <Textarea
+                    <WhatsAppFormattingToolbar
                       id="message"
                       value={message}
-                      onChange={(e) => setMessage(e.target.value)}
+                      onChange={setMessage}
                       placeholder="Digite a mensagem..."
                       rows={6}
-                      className="mt-1 font-mono text-sm"
+                      className="mt-1"
                     />
                     <p className="text-xs text-muted-foreground mt-2">
                       Variáveis disponíveis: <code className="bg-muted px-1 rounded">{"{nome}"}</code>, 
