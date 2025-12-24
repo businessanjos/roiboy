@@ -745,20 +745,15 @@ serve(async (req) => {
           .single();
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
+        const cleanPhone = phone.replace(/\D/g, "");
+        const messageBody = { number: cleanPhone, text: message };
         
-        if (!instanceToken) {
-          // Fallback to admin endpoint if no instance token
-          const cleanPhone = phone.replace(/\D/g, "");
-          result = await uazapiAdminRequest(`/message/sendText/${instanceName}`, "POST", {
-            number: cleanPhone,
-            text: message,
-          });
+        if (instanceToken) {
+          // Use instance token with /message/text endpoint (no instance name in path)
+          result = await uazapiInstanceRequest(`/message/text`, "POST", instanceToken, messageBody);
         } else {
-          const cleanPhone = phone.replace(/\D/g, "");
-          result = await uazapiInstanceRequest(`/message/sendText/${instanceName}`, "POST", instanceToken, {
-            number: cleanPhone,
-            text: message,
-          });
+          // Fallback to admin endpoint with instance name in path
+          result = await uazapiAdminRequest(`/message/text/${instanceName}`, "POST", messageBody);
         }
         break;
       }

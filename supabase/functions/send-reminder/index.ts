@@ -276,15 +276,22 @@ serve(async (req) => {
             let messageSent = false;
             let lastError = "";
             
+            // UAZAPI v2 uses /message/text endpoint with token header for instance auth
+            // The body should have "number" and "text" fields
+            const messageBody = {
+              number: cleanPhone,
+              text: personalizedMessage,
+            };
+            
             // If we have instance token, try instance endpoints first (no instance name in path)
             if (whatsappConfig.instance_token) {
-              console.log(`Using instance_token authentication`);
+              console.log(`Using instance_token authentication: ${whatsappConfig.instance_token.slice(0, 8)}...`);
               
+              // UAZAPI v2 correct endpoints - token identifies the instance
               const instanceEndpoints = [
-                `/message/sendText`,
                 `/message/text`,
+                `/chat/send/text`,
                 `/send/text`,
-                `/sendText`,
               ];
               
               for (const endpointPath of instanceEndpoints) {
@@ -301,10 +308,7 @@ serve(async (req) => {
                         "Content-Type": "application/json",
                         "token": whatsappConfig.instance_token,
                       },
-                      body: JSON.stringify({
-                        number: cleanPhone,
-                        text: personalizedMessage,
-                      }),
+                      body: JSON.stringify(messageBody),
                     }
                   );
                   
@@ -336,13 +340,11 @@ serve(async (req) => {
             if (!messageSent) {
               console.log(`Using admintoken authentication`);
               
+              // UAZAPI admin endpoints use /message/text/{instanceName}
               const adminEndpoints = [
-                `/message/sendText/${whatsappConfig.instance_name}`,
                 `/message/text/${whatsappConfig.instance_name}`,
+                `/chat/send/text/${whatsappConfig.instance_name}`,
                 `/send/text/${whatsappConfig.instance_name}`,
-                `/sendText/${whatsappConfig.instance_name}`,
-                `/instance/sendText/${whatsappConfig.instance_name}`,
-                `/instance/message/sendText/${whatsappConfig.instance_name}`,
               ];
               
               for (const endpointPath of adminEndpoints) {
@@ -359,10 +361,7 @@ serve(async (req) => {
                         "Content-Type": "application/json",
                         "admintoken": UAZAPI_ADMIN_TOKEN,
                       },
-                      body: JSON.stringify({
-                        number: cleanPhone,
-                        text: personalizedMessage,
-                      }),
+                      body: JSON.stringify(messageBody),
                     }
                   );
                   
