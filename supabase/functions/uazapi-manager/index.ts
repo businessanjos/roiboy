@@ -929,18 +929,18 @@ serve(async (req) => {
         // Try different endpoints to list groups
         let groups: unknown[] = [];
         
-        // Try POST endpoints first (UAZAPI commonly uses POST for fetches)
-        const postEndpoints = [
-          { url: `/group/fetchAllGroups`, body: {} },
-          { url: `/group/participatesGroups`, body: {} },
-          { url: `/group/list`, body: {} },
-          { url: `/group/all`, body: {} },
+        // According to UAZAPI docs: GET /group/list with optional query params: force, noparticipants
+        // This should be the primary endpoint
+        const getEndpointsWithParams = [
+          `/group/list?force=true&noparticipants=false`,
+          `/group/list?force=true`,
+          `/group/list`,
         ];
 
-        for (const endpoint of postEndpoints) {
+        for (const url of getEndpointsWithParams) {
           try {
-            console.log(`Trying: POST ${endpoint.url}`);
-            const groupsResult = await uazapiInstanceRequest(endpoint.url, "POST", savedInstanceToken, endpoint.body);
+            console.log(`Trying: GET ${url}`);
+            const groupsResult = await uazapiInstanceRequest(url, "GET", savedInstanceToken);
             console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
             
             // Handle different response formats
@@ -957,27 +957,26 @@ serve(async (req) => {
             }
             
             if (groups.length > 0) {
-              console.log(`Found ${groups.length} groups via POST ${endpoint.url}`);
+              console.log(`Found ${groups.length} groups via GET ${url}`);
               break;
             }
           } catch (err) {
-            console.log(`POST ${endpoint.url} failed:`, (err as Error).message);
+            console.log(`GET ${url} failed:`, (err as Error).message);
           }
         }
-
-        // Try GET endpoints as fallback
+        
+        // Try other GET endpoints as fallback
         if (groups.length === 0) {
-          const getEndpoints = [
+          const fallbackGetEndpoints = [
             `/group/fetchAllGroups`,
             `/group/participatesGroups`,
-            `/group/list`,
             `/groups`,
             `/chat/groups`,
           ];
 
-          for (const url of getEndpoints) {
+          for (const url of fallbackGetEndpoints) {
             try {
-              console.log(`Trying: GET ${url}`);
+              console.log(`Trying fallback: GET ${url}`);
               const groupsResult = await uazapiInstanceRequest(url, "GET", savedInstanceToken);
               console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
               
@@ -990,11 +989,11 @@ serve(async (req) => {
               }
               
               if (groups.length > 0) {
-                console.log(`Found ${groups.length} groups via GET ${url}`);
+                console.log(`Found ${groups.length} groups via fallback GET ${url}`);
                 break;
               }
             } catch (err) {
-              console.log(`GET ${url} failed:`, (err as Error).message);
+              console.log(`Fallback GET ${url} failed:`, (err as Error).message);
             }
           }
         }
@@ -1012,21 +1011,20 @@ serve(async (req) => {
 
         console.log("Syncing groups from WhatsApp to database...");
         
-        // First, fetch all groups from WhatsApp API using same logic as list_groups
+        // First, fetch all groups from WhatsApp API
         let groups: unknown[] = [];
         
-        // Try POST endpoints first (UAZAPI commonly uses POST for fetches)
-        const postEndpoints = [
-          { url: `/group/fetchAllGroups`, body: {} },
-          { url: `/group/participatesGroups`, body: {} },
-          { url: `/group/list`, body: {} },
-          { url: `/group/all`, body: {} },
+        // According to UAZAPI docs: GET /group/list with optional query params: force, noparticipants
+        const getEndpointsWithParams = [
+          `/group/list?force=true&noparticipants=false`,
+          `/group/list?force=true`,
+          `/group/list`,
         ];
 
-        for (const endpoint of postEndpoints) {
+        for (const url of getEndpointsWithParams) {
           try {
-            console.log(`Trying: POST ${endpoint.url}`);
-            const groupsResult = await uazapiInstanceRequest(endpoint.url, "POST", savedInstanceToken, endpoint.body);
+            console.log(`Trying: GET ${url}`);
+            const groupsResult = await uazapiInstanceRequest(url, "GET", savedInstanceToken);
             console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
             
             if (Array.isArray(groupsResult)) {
@@ -1041,26 +1039,25 @@ serve(async (req) => {
             }
             
             if (groups.length > 0) {
-              console.log(`Found ${groups.length} groups via POST ${endpoint.url}`);
+              console.log(`Found ${groups.length} groups via GET ${url}`);
               break;
             }
           } catch (err) {
-            console.log(`POST ${endpoint.url} failed:`, (err as Error).message);
+            console.log(`GET ${url} failed:`, (err as Error).message);
           }
         }
 
-        // Try GET endpoints as fallback
+        // Try fallback GET endpoints
         if (groups.length === 0) {
-          const getEndpoints = [
+          const fallbackGetEndpoints = [
             `/group/fetchAllGroups`,
             `/group/participatesGroups`,
-            `/group/list`,
             `/groups`,
           ];
 
-          for (const url of getEndpoints) {
+          for (const url of fallbackGetEndpoints) {
             try {
-              console.log(`Trying: GET ${url}`);
+              console.log(`Trying fallback: GET ${url}`);
               const groupsResult = await uazapiInstanceRequest(url, "GET", savedInstanceToken);
               console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
               
@@ -1073,11 +1070,11 @@ serve(async (req) => {
               }
               
               if (groups.length > 0) {
-                console.log(`Found ${groups.length} groups via GET ${url}`);
+                console.log(`Found ${groups.length} groups via fallback GET ${url}`);
                 break;
               }
             } catch (err) {
-              console.log(`GET ${url} failed:`, (err as Error).message);
+              console.log(`Fallback GET ${url} failed:`, (err as Error).message);
             }
           }
         }
