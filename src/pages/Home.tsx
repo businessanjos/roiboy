@@ -193,17 +193,17 @@ const Home = () => {
           <div className="max-w-3xl mx-auto text-center">
             <Badge variant="secondary" className="mb-6">
               <Zap className="h-3 w-3 mr-1" />
-              Plataforma completa para gestão de comunidades
+              Plataforma para acompanhamento de clientes high ticket
             </Badge>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
-              Gerencie seu clube de negócios com{" "}
-              <span className="text-primary">inteligência</span>
+              Gerencie seus clientes{" "}
+              <span className="text-primary">high ticket</span> com inteligência
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              O ROY APP centraliza a gestão de membros, eventos, comunicação e métricas 
-              em uma única plataforma. Reduza churn, aumente engajamento e escale sua operação.
+              O ROY centraliza a gestão de clientes premium, mentorias e comunidades 
+              de alto valor. Reduza churn, aumente engajamento e maximize a retenção.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -252,11 +252,11 @@ const Home = () => {
               Funcionalidades
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Tudo que você precisa em um só lugar
+              Tudo para gestão de clientes high ticket
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Ferramentas poderosas para gerenciar todos os aspectos do seu clube de negócios, 
-              mentoria ou comunidade.
+              Ferramentas poderosas para gerenciar mentorias, consultorias, 
+              masterminds e comunidades de alto valor.
             </p>
           </div>
 
