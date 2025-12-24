@@ -746,14 +746,17 @@ serve(async (req) => {
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         const cleanPhone = phone.replace(/\D/g, "");
+        
+        // UAZAPI GO v2 - Documentação oficial: POST /send/text
+        // Body: { number: "5511999999999", text: "mensagem" }
         const messageBody = { number: cleanPhone, text: message };
         
         if (instanceToken) {
-          // Use instance token with /message/sendtext endpoint (no instance name in path)
-          result = await uazapiInstanceRequest(`/message/sendtext`, "POST", instanceToken, messageBody);
+          // Use instance token with /send/text endpoint (documentação oficial UAZAPI)
+          result = await uazapiInstanceRequest(`/send/text`, "POST", instanceToken, messageBody);
         } else {
           // Fallback to admin endpoint with instance name in path
-          result = await uazapiAdminRequest(`/message/sendtext/${instanceName}`, "POST", messageBody);
+          result = await uazapiAdminRequest(`/send/text/${instanceName}`, "POST", messageBody);
         }
         break;
       }
