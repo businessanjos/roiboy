@@ -57,7 +57,12 @@ import {
   Pencil,
   Save,
   ImagePlus,
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 // Format phone number for display
@@ -164,6 +169,9 @@ export default function WhatsAppGroups() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<number | null>(null);
+  
+  // Message textarea ref for formatting
+  const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Cleanup recording on unmount
   useEffect(() => {
@@ -176,6 +184,48 @@ export default function WhatsAppGroups() {
       }
     };
   }, []);
+
+  // WhatsApp formatting helper
+  const insertFormatting = (formatType: 'bold' | 'italic' | 'strikethrough' | 'monospace') => {
+    const textarea = messageTextareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = message.substring(start, end);
+    
+    let prefix = '';
+    let suffix = '';
+    
+    switch (formatType) {
+      case 'bold':
+        prefix = '*';
+        suffix = '*';
+        break;
+      case 'italic':
+        prefix = '_';
+        suffix = '_';
+        break;
+      case 'strikethrough':
+        prefix = '~';
+        suffix = '~';
+        break;
+      case 'monospace':
+        prefix = '```';
+        suffix = '```';
+        break;
+    }
+    
+    const newText = message.substring(0, start) + prefix + selectedText + suffix + message.substring(end);
+    setMessage(newText);
+    
+    // Restore focus and cursor position
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = selectedText ? start + prefix.length + selectedText.length + suffix.length : start + prefix.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
 
   // Fetch groups from database
   const { data: groups = [], isLoading: loadingGroups, refetch: refetchGroups } = useQuery({
@@ -1308,13 +1358,92 @@ export default function WhatsAppGroups() {
                 <Label htmlFor="message">
                   {mediaFile ? "Legenda (opcional)" : "Mensagem"}
                 </Label>
+                
+                {/* Formatting toolbar */}
+                <TooltipProvider>
+                  <div className="flex items-center gap-1 mt-1 mb-1 p-1 border rounded-t-md bg-muted/30 border-b-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => insertFormatting('bold')}
+                        >
+                          <Bold className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Negrito (*texto*)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => insertFormatting('italic')}
+                        >
+                          <Italic className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Itálico (_texto_)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => insertFormatting('strikethrough')}
+                        >
+                          <Strikethrough className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Tachado (~texto~)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => insertFormatting('monospace')}
+                        >
+                          <Code className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Monoespaçado (```texto```)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <span className="text-xs text-muted-foreground ml-2">
+                      Selecione o texto e clique para formatar
+                    </span>
+                  </div>
+                </TooltipProvider>
+                
                 <Textarea
+                  ref={messageTextareaRef}
                   id="message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={mediaFile ? "Digite uma legenda..." : "Digite sua mensagem..."}
                   rows={4}
-                  className="mt-1"
+                  className="rounded-t-none"
                 />
               </div>
 
