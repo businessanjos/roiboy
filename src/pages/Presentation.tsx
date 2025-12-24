@@ -315,19 +315,19 @@ export default function Presentation() {
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <Badge variant="secondary" className="px-4 py-2 text-sm">
               <Sparkles className="h-4 w-4 mr-2" />
-              Plataforma de Customer Success com IA
+              Plataforma para clientes high ticket
             </Badge>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight leading-tight">
               Pare de perder clientes
               <span className="block bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                que você poderia salvar
+                que valem muito
               </span>
             </h1>
             
             <p className="text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              O ROY analisa suas conversas com IA e te avisa <strong>antes</strong> do cliente cancelar. 
-              Transforme cada interação em encantamento.
+              O ROY analisa suas conversas com IA e te avisa <strong>antes</strong> do cliente high ticket cancelar. 
+              Cada cliente salvo vale milhares em receita.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
@@ -370,7 +370,7 @@ export default function Presentation() {
             Você conhece essa dor?
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            A maioria dos negócios perde clientes que poderiam ser salvos com ação proativa.
+            Clientes high ticket precisam de atenção especial. Perder um deles custa caro.
           </p>
         </div>
         
