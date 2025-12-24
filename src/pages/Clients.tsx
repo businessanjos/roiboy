@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban } from "lucide-react";
 import { ClientKanban } from "@/components/client/ClientKanban";
+import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
@@ -281,7 +282,7 @@ export default function Clients() {
   const [fieldValues, setFieldValues] = useState<Record<string, Record<string, any>>>({});
   const [accountId, setAccountId] = useState<string | null>(null);
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"cards" | "table" | "kanban">("table");
+  const [viewMode, setViewMode] = useState<"cards" | "table" | "kanban" | "onboarding">("table");
   const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
   const [clientStages, setClientStages] = useState<Array<{ id: string; name: string; color: string; display_order: number }>>([]);
   
@@ -1189,6 +1190,15 @@ export default function Clients() {
               title="Kanban"
             >
               <Kanban className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "onboarding" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode("onboarding")}
+              title="Onboarding Orquestrado"
+            >
+              <CheckCircle2 className="h-4 w-4" />
             </Button>
           </div>
 
@@ -2525,6 +2535,27 @@ export default function Clients() {
       {/* Kanban View */}
       {viewMode === "kanban" && (accountId || currentUser?.account_id) && (
         <ClientKanban
+          clients={filtered.map(c => ({
+            id: c.id,
+            full_name: c.full_name,
+            phone_e164: c.phone_e164,
+            emails: c.emails,
+            company_name: c.company_name,
+            avatar_url: c.avatar_url,
+            stage_id: c.stage_id,
+            status: c.status,
+            client_products: c.client_products,
+          }))}
+          stages={clientStages}
+          accountId={accountId || currentUser?.account_id || ''}
+          onStageChange={handleClientStageChange}
+          onRefreshStages={fetchClientStages}
+        />
+      )}
+
+      {/* Onboarding Orquestrado View */}
+      {viewMode === "onboarding" && (accountId || currentUser?.account_id) && (
+        <OnboardingOrchestrated
           clients={filtered.map(c => ({
             id: c.id,
             full_name: c.full_name,
