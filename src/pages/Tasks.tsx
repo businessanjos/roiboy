@@ -61,11 +61,14 @@ import {
   User2,
   List,
   LayoutGrid,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { TaskKanban } from "@/components/tasks/TaskKanban";
+import { TaskStatusManager } from "@/components/tasks/TaskStatusManager";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
@@ -135,6 +138,10 @@ export default function Tasks() {
   const [initialStatus, setInitialStatus] = useState<Task["status"] | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [statusManagerOpen, setStatusManagerOpen] = useState(false);
+
+  // Custom task statuses
+  const { statuses: customStatuses } = useTaskStatuses();
 
   // Fetch tasks with React Query
   const { data: tasks = [], isLoading: loading } = useQuery({
@@ -654,6 +661,17 @@ export default function Tasks() {
                 Kanban
               </Button>
             </div>
+            {viewMode === "kanban" && (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => setStatusManagerOpen(true)}
+                className="h-9"
+              >
+                <Settings className="h-4 w-4 mr-1.5" />
+                Personalizar
+              </Button>
+            )}
             <Button 
               onClick={() => openNewTaskDialog()}
               className="shadow-sm"
@@ -879,6 +897,12 @@ export default function Tasks() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Status Manager Dialog */}
+      <TaskStatusManager 
+        open={statusManagerOpen} 
+        onOpenChange={setStatusManagerOpen} 
+      />
     </div>
   );
 }

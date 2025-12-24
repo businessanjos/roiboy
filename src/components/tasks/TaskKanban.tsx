@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   DndContext,
@@ -45,10 +45,13 @@ import {
   User2,
   GripVertical,
   Plus,
+  Circle,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useTaskStatuses, TaskStatus as CustomTaskStatus } from "@/hooks/useTaskStatuses";
 
 interface User {
   id: string;
@@ -65,7 +68,7 @@ interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: "pending" | "in_progress" | "done" | "overdue" | "cancelled";
+  status: string;
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
   client_id: string | null;
@@ -73,54 +76,25 @@ interface Task {
   created_at: string;
   clients: Client | null;
   assigned_user: User | null;
+  custom_status_id?: string | null;
 }
-
-type TaskStatus = Task["status"];
 
 interface TaskKanbanProps {
   tasks: Task[];
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
-  onStatusChange: (taskId: string, newStatus: TaskStatus) => Promise<void>;
-  onAddTask: (status: TaskStatus) => void;
+  onStatusChange: (taskId: string, newStatus: string) => Promise<void>;
+  onAddTask: (status: string) => void;
 }
 
-const STATUS_CONFIG: Record<TaskStatus, { 
-  label: string; 
-  icon: React.ElementType; 
-  className: string;
-  headerClass: string;
-}> = {
-  pending: { 
-    label: "Pendente", 
-    icon: Clock, 
-    className: "bg-muted text-muted-foreground",
-    headerClass: "border-t-amber-500"
-  },
-  in_progress: { 
-    label: "Em andamento", 
-    icon: ArrowRight, 
-    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    headerClass: "border-t-blue-500"
-  },
-  done: { 
-    label: "Concluído", 
-    icon: CheckCircle2, 
-    className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    headerClass: "border-t-green-500"
-  },
-  overdue: { 
-    label: "Atrasado", 
-    icon: AlertTriangle, 
-    className: "bg-destructive/10 text-destructive",
-    headerClass: "border-t-destructive"
-  },
-  cancelled: { 
-    label: "Cancelado", 
-    icon: XCircle, 
-    className: "bg-muted text-muted-foreground",
-    headerClass: "border-t-muted-foreground"
-  },
+const ICON_MAP: Record<string, React.ElementType> = {
+  "clock": Clock,
+  "arrow-right": ArrowRight,
+  "check-circle-2": CheckCircle2,
+  "x-circle": XCircle,
+  "circle": Circle,
+  "alert-triangle": AlertTriangle,
+  "star": Star,
 };
 
 const PRIORITY_CONFIG = {
@@ -130,13 +104,15 @@ const PRIORITY_CONFIG = {
   low: { label: "Baixa", className: "bg-muted text-muted-foreground" },
 };
 
-const COLUMNS: TaskStatus[] = ["pending", "in_progress", "done", "overdue", "cancelled"];
-
 function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function getDueDateInfo(task: Task) {
+function getIconComponent(iconName: string): React.ElementType {
+  return ICON_MAP[iconName] || Circle;
+}
+
+function getDueDateInfo(task: Task, statuses: CustomTaskStatus[]) {
   if (!task.due_date) return null;
   const dueDate = new Date(task.due_date);
   const today = new Date();
@@ -144,35 +120,40 @@ function getDueDateInfo(task: Task) {
   dueDate.setHours(0, 0, 0, 0);
   
   const daysDiff = differenceInDays(dueDate, today);
-  const isCompleted = task.status === "done";
-  const isCancelled = task.status === "cancelled";
   
-  if (isCompleted || isCancelled) {
-    return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground" };
+  // Check if task is in a completed status
+  const taskStatus = statuses.find(s => s.name.toLowerCase() === task.status.toLowerCase().replace('_', ' '));
+  const isCompleted = taskStatus?.is_completed_status || task.status === "done" || task.status === "cancelled";
+  
+  if (isCompleted) {
+    return { text: format(dueDate, "dd/MM", { locale: ptBR }), className: "text-muted-foreground" };
   }
+  
+  const formattedDate = format(dueDate, "dd/MM", { locale: ptBR });
   
   if (daysDiff < 0) {
-    return { text: `${Math.abs(daysDiff)}d atrasado`, className: "text-destructive font-medium" };
+    return { text: `${Math.abs(daysDiff)}d atrasado · ${formattedDate}`, className: "text-destructive font-medium" };
   }
   if (daysDiff === 0) {
-    return { text: "Hoje", className: "text-amber-600 dark:text-amber-400 font-medium" };
+    return { text: `Hoje · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400 font-medium" };
   }
   if (daysDiff === 1) {
-    return { text: "Amanhã", className: "text-amber-600 dark:text-amber-400" };
+    return { text: `Amanhã · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400" };
   }
   if (daysDiff <= 7) {
-    return { text: `${daysDiff} dias`, className: "text-foreground" };
+    return { text: `${daysDiff} dias · ${formattedDate}`, className: "text-foreground" };
   }
-  return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground" };
+  return { text: formattedDate, className: "text-muted-foreground" };
 }
 
 interface SortableTaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  statuses: CustomTaskStatus[];
 }
 
-function SortableTaskCard({ task, onEdit, onDelete }: SortableTaskCardProps) {
+function SortableTaskCard({ task, onEdit, onDelete, statuses }: SortableTaskCardProps) {
   const {
     attributes,
     listeners,
@@ -187,7 +168,7 @@ function SortableTaskCard({ task, onEdit, onDelete }: SortableTaskCardProps) {
     transition,
   };
 
-  const dueDateInfo = getDueDateInfo(task);
+  const dueDateInfo = getDueDateInfo(task, statuses);
   const priorityConfig = PRIORITY_CONFIG[task.priority];
 
   return (
@@ -288,24 +269,27 @@ function SortableTaskCard({ task, onEdit, onDelete }: SortableTaskCardProps) {
 }
 
 interface KanbanColumnProps {
-  status: TaskStatus;
+  status: CustomTaskStatus;
   tasks: Task[];
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
-  onAddTask: (status: TaskStatus) => void;
+  onAddTask: (status: string) => void;
+  allStatuses: CustomTaskStatus[];
 }
 
-function KanbanColumn({ status, tasks, onEditTask, onDeleteTask, onAddTask }: KanbanColumnProps) {
-  const config = STATUS_CONFIG[status];
-  const Icon = config.icon;
+function KanbanColumn({ status, tasks, onEditTask, onDeleteTask, onAddTask, allStatuses }: KanbanColumnProps) {
+  const Icon = getIconComponent(status.icon);
 
   return (
-    <Card className={cn("flex flex-col min-w-[280px] max-w-[320px] h-full border-t-4", config.headerClass)}>
+    <Card 
+      className="flex flex-col min-w-[280px] max-w-[320px] h-full border-t-4"
+      style={{ borderTopColor: status.color }}
+    >
       <CardHeader className="pb-3 pt-4">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <Icon className="h-4 w-4" />
-            {config.label}
+            <Icon className="h-4 w-4" style={{ color: status.color }} />
+            {status.name}
           </div>
           <div className="flex items-center gap-1">
             <Badge variant="outline" className="text-xs font-normal">
@@ -315,7 +299,7 @@ function KanbanColumn({ status, tasks, onEditTask, onDeleteTask, onAddTask }: Ka
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={() => onAddTask(status)}
+              onClick={() => onAddTask(status.name.toLowerCase().replace(' ', '_'))}
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -331,6 +315,7 @@ function KanbanColumn({ status, tasks, onEditTask, onDeleteTask, onAddTask }: Ka
                 task={task}
                 onEdit={onEditTask}
                 onDelete={onDeleteTask}
+                statuses={allStatuses}
               />
             ))}
             {tasks.length === 0 && (
@@ -345,8 +330,21 @@ function KanbanColumn({ status, tasks, onEditTask, onDeleteTask, onAddTask }: Ka
   );
 }
 
+// Map old status names to new ones
+function normalizeStatus(status: string): string {
+  const mapping: Record<string, string> = {
+    "pending": "pendente",
+    "in_progress": "em andamento",
+    "done": "concluído",
+    "cancelled": "cancelado",
+    "overdue": "atrasado",
+  };
+  return mapping[status] || status.toLowerCase();
+}
+
 export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, onAddTask }: TaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const { statuses } = useTaskStatuses();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -356,10 +354,30 @@ export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, on
     })
   );
 
-  const tasksByStatus = useMemo(() => COLUMNS.reduce((acc, status) => {
-    acc[status] = tasks.filter((task) => task.status === status);
-    return acc;
-  }, {} as Record<TaskStatus, Task[]>), [tasks]);
+  // Group tasks by status - match by status name (case-insensitive)
+  const tasksByStatus = useMemo(() => {
+    const result: Record<string, Task[]> = {};
+    
+    statuses.forEach((s) => {
+      result[s.id] = [];
+    });
+
+    tasks.forEach((task) => {
+      const normalizedTaskStatus = normalizeStatus(task.status);
+      const matchingStatus = statuses.find(
+        (s) => s.name.toLowerCase() === normalizedTaskStatus
+      );
+      
+      if (matchingStatus) {
+        result[matchingStatus.id].push(task);
+      } else if (statuses.length > 0) {
+        // Put in first column if no match
+        result[statuses[0].id].push(task);
+      }
+    });
+
+    return result;
+  }, [tasks, statuses]);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
@@ -372,25 +390,43 @@ export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, on
 
     if (!over) return;
 
-    const activeTask = tasks.find((t) => t.id === active.id);
-    if (!activeTask) return;
+    const draggedTask = tasks.find((t) => t.id === active.id);
+    if (!draggedTask) return;
 
     // Find the column the task was dropped into
-    let targetStatus: TaskStatus | null = null;
+    let targetStatusId: string | null = null;
 
     // Check if dropped over a task
     const overTask = tasks.find((t) => t.id === over.id);
     if (overTask) {
-      targetStatus = overTask.status;
+      const normalizedStatus = normalizeStatus(overTask.status);
+      const status = statuses.find((s) => s.name.toLowerCase() === normalizedStatus);
+      targetStatusId = status?.id || null;
     } else {
-      // Dropped over a column directly
-      targetStatus = over.id as TaskStatus;
+      // Dropped over a column directly - over.id is the status id
+      targetStatusId = over.id as string;
     }
 
-    if (targetStatus && targetStatus !== activeTask.status) {
-      await onStatusChange(activeTask.id, targetStatus);
+    if (targetStatusId) {
+      const targetStatus = statuses.find((s) => s.id === targetStatusId);
+      if (targetStatus) {
+        const currentNormalized = normalizeStatus(draggedTask.status);
+        if (currentNormalized !== targetStatus.name.toLowerCase()) {
+          // Convert status name to the format expected by the backend
+          const statusKey = targetStatus.name.toLowerCase().replace(' ', '_');
+          await onStatusChange(draggedTask.id, statusKey);
+        }
+      }
     }
-  }, [tasks, onStatusChange]);
+  }, [tasks, statuses, onStatusChange]);
+
+  if (statuses.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        Carregando status...
+      </div>
+    );
+  }
 
   return (
     <DndContext
@@ -400,14 +436,15 @@ export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, on
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "calc(100vh - 400px)" }}>
-        {COLUMNS.map((status) => (
+        {statuses.map((status) => (
           <KanbanColumn
-            key={status}
+            key={status.id}
             status={status}
-            tasks={tasksByStatus[status]}
+            tasks={tasksByStatus[status.id] || []}
             onEditTask={onEditTask}
             onDeleteTask={onDeleteTask}
             onAddTask={onAddTask}
+            allStatuses={statuses}
           />
         ))}
       </div>
