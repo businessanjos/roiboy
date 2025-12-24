@@ -11,9 +11,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const formId = url.searchParams.get("formId");
-    const clientId = url.searchParams.get("clientId");
+    // Support both GET (query params) and POST (body)
+    let formId: string | null = null;
+    let clientId: string | null = null;
+
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      formId = url.searchParams.get("formId");
+      clientId = url.searchParams.get("clientId");
+    } else {
+      const body = await req.json();
+      formId = body.formId || null;
+      clientId = body.clientId || null;
+    }
 
     if (!formId) {
       return new Response(
