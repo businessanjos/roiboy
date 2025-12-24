@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -56,7 +56,11 @@ import {
   RefreshCw,
   Trash2,
   RotateCcw,
-  Heart
+  Heart,
+  Image,
+  Mic,
+  Square,
+  X,
 } from "lucide-react";
 import MomentosCxCampaign from "@/components/reminders/MomentosCxCampaign";
 import {
@@ -171,6 +175,18 @@ export default function Reminders() {
   const [scheduledFor, setScheduledFor] = useState<string>("");
   const [sendMode, setSendMode] = useState<"now" | "scheduled">("now");
   
+  // Media upload state
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Audio recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<number | null>(null);
+  
   // UI state
   const [activeTab, setActiveTab] = useState("create");
   const [sending, setSending] = useState(false);
@@ -178,6 +194,18 @@ export default function Reminders() {
   const [retrying, setRetrying] = useState(false);
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   // Fetch events
   const { data: events = [], isLoading: loadingEvents } = useQuery({
@@ -414,6 +442,162 @@ export default function Reminders() {
     }
   };
 
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const isAudio = file.type.startsWith("audio/");
+    const isDocument = !isImage && !isAudio && (
+      file.type === "application/pdf" ||
+      file.type === "application/msword" ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.type === "application/vnd.ms-excel" ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.type === "application/vnd.ms-powerpoint" ||
+      file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      file.type === "text/plain" ||
+      file.type === "application/zip" ||
+      file.type === "application/x-rar-compressed" ||
+      file.name.endsWith('.pdf') ||
+      file.name.endsWith('.doc') ||
+      file.name.endsWith('.docx') ||
+      file.name.endsWith('.xls') ||
+      file.name.endsWith('.xlsx') ||
+      file.name.endsWith('.ppt') ||
+      file.name.endsWith('.pptx') ||
+      file.name.endsWith('.txt') ||
+      file.name.endsWith('.zip') ||
+      file.name.endsWith('.rar')
+    );
+    
+    if (!isImage && !isAudio && !isDocument) {
+      toast.error("Tipo de arquivo não suportado. Use imagens, áudios ou documentos (PDF, Word, Excel, etc.)");
+      return;
+    }
+
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 16MB");
+      return;
+    }
+
+    setMediaFile(file);
+    
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setMediaPreview(null);
+    }
+  };
+
+  const clearMedia = () => {
+    setMediaFile(null);
+    setMediaPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    if (isRecording) {
+      stopRecording();
+    }
+  };
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        }
+      });
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : 'audio/ogg';
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const extension = mimeType === 'audio/webm' ? 'webm' : mimeType === 'audio/mp4' ? 'm4a' : 'ogg';
+        const audioFile = new File([audioBlob], `gravacao-${Date.now()}.${extension}`, { type: mimeType });
+        
+        setMediaFile(audioFile);
+        setMediaPreview(null);
+        
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+        setRecordingTime(0);
+      };
+
+      mediaRecorder.start(100);
+      setIsRecording(true);
+      
+      recordingIntervalRef.current = window.setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      toast.success("Gravando áudio...");
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast.error("Não foi possível acessar o microfone. Verifique as permissões.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast.success("Áudio gravado!");
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current) {
+      if (mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      audioChunksRef.current = [];
+    }
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    toast.info("Gravação cancelada");
+  };
+
+  const getMediaType = (file: File): "image" | "audio" | "document" => {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type.startsWith("audio/")) return "audio";
+    return "document";
+  };
+
   const handleSendCampaign = async () => {
     if (!currentUser?.account_id) {
       toast.error("Usuário não autenticado");
@@ -521,6 +705,7 @@ export default function Reminders() {
       setMessage("");
       setScheduledFor("");
       setSendMode("now");
+      clearMedia();
       setActiveTab("history");
 
     } catch (error: any) {
@@ -858,6 +1043,173 @@ export default function Reminders() {
                       <code className="bg-muted px-1 rounded ml-1">{"{link_feedback}"}</code>
                     </p>
                   </div>
+
+                  {/* Media Upload Section */}
+                  {sendWhatsapp && (
+                    <div>
+                      <Label className="mb-3 block">Anexar Mídia (opcional)</Label>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                        className="hidden"
+                      />
+                      
+                      {isRecording ? (
+                        <div className="p-3 border rounded-lg bg-red-500/10 border-red-500/30">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                              <span className="text-sm font-medium">Gravando...</span>
+                              <span className="text-sm text-muted-foreground font-mono">
+                                {formatRecordingTime(recordingTime)}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={cancelRecording}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Cancelar
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                onClick={stopRecording}
+                              >
+                                <Square className="h-4 w-4 mr-1" />
+                                Parar
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (fileInputRef.current) {
+                                fileInputRef.current.accept = "image/*";
+                                fileInputRef.current.click();
+                              }
+                            }}
+                            disabled={sending || !!mediaFile}
+                          >
+                            <Image className="h-4 w-4 mr-2" />
+                            Imagem
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (fileInputRef.current) {
+                                fileInputRef.current.accept = "audio/*";
+                                fileInputRef.current.click();
+                              }
+                            }}
+                            disabled={sending || !!mediaFile}
+                          >
+                            <Mic className="h-4 w-4 mr-2" />
+                            Áudio
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (fileInputRef.current) {
+                                fileInputRef.current.accept = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar";
+                                fileInputRef.current.click();
+                              }
+                            }}
+                            disabled={sending || !!mediaFile}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Arquivo
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={startRecording}
+                            disabled={sending || !!mediaFile}
+                            className="border-primary text-primary hover:bg-primary/10"
+                          >
+                            <Mic className="h-4 w-4 mr-2" />
+                            Gravar Áudio
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Media preview */}
+                      {mediaFile && !isRecording && (
+                        <div className="mt-3 p-3 border rounded-lg bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {mediaFile.type.startsWith("image/") ? (
+                                <Image className="h-4 w-4 text-muted-foreground" />
+                              ) : mediaFile.type.startsWith("audio/") ? (
+                                <Mic className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <span className="text-sm font-medium truncate max-w-[200px]">
+                                {mediaFile.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                ({(mediaFile.size / 1024).toFixed(1)} KB)
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={clearMedia}
+                              disabled={sending}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          {/* Image preview */}
+                          {mediaPreview && mediaFile.type.startsWith("image/") && (
+                            <img 
+                              src={mediaPreview} 
+                              alt="Preview" 
+                              className="mt-2 max-h-32 rounded object-contain"
+                            />
+                          )}
+                          
+                          {/* Audio player preview */}
+                          {mediaFile.type.startsWith("audio/") && (
+                            <div className="mt-3">
+                              <audio 
+                                controls 
+                                src={URL.createObjectURL(mediaFile)} 
+                                className="w-full h-10"
+                                preload="metadata"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Ouça o áudio antes de enviar
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground mt-2">
+                        A mídia será enviada junto com a mensagem de texto via WhatsApp
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </>
             )}
@@ -952,6 +1304,33 @@ export default function Reminders() {
                       {message.replace(/\{nome\}/g, "João Silva")}
                     </pre>
                   </div>
+
+                  {/* Media attached preview in review */}
+                  {mediaFile && sendWhatsapp && (
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-2">Mídia Anexada</p>
+                      <div className="flex items-center gap-2">
+                        {mediaFile.type.startsWith("image/") ? (
+                          <Image className="h-4 w-4 text-muted-foreground" />
+                        ) : mediaFile.type.startsWith("audio/") ? (
+                          <Mic className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span className="text-sm font-medium">{mediaFile.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(mediaFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      {mediaPreview && mediaFile.type.startsWith("image/") && (
+                        <img 
+                          src={mediaPreview} 
+                          alt="Preview" 
+                          className="mt-2 max-h-24 rounded object-contain"
+                        />
+                      )}
+                    </div>
+                  )}
 
                   <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                     <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
