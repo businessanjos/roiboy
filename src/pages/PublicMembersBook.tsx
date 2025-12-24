@@ -184,7 +184,8 @@ export default function PublicMembersBook() {
       if (field.field_type === "multi_select" && Array.isArray(fieldValue)) {
         return fieldValue.includes(selectedValue);
       } else if (field.field_type === "boolean") {
-        return (fieldValue === true && selectedValue === "true") || (fieldValue === false && selectedValue === "false");
+        // Compare with "Sim"/"Não" labels
+        return (fieldValue === true && selectedValue === "Sim") || (fieldValue === false && selectedValue === "Não");
       } else {
         return fieldValue === selectedValue;
       }
@@ -372,10 +373,7 @@ export default function PublicMembersBook() {
                     <SelectContent>
                       {field.values.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {field.field_type === "boolean" 
-                            ? (value === "true" ? "Sim" : "Não")
-                            : value
-                          }
+                          {value}
                         </SelectItem>
                       ))}
                     </SelectContent>
