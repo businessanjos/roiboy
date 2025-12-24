@@ -2012,34 +2012,71 @@ serve(async (req) => {
 
         // Get new QR code - try multiple endpoints
         let qrcodeBase64 = "";
+        console.log(`Support refresh: Using token ${supportConfig.instance_token?.slice(0, 8)}... for instance ${supportConfig.instance_name}`);
+        
+        // First try instance token endpoints
         const qrEndpoints = [
           { url: `/connect`, method: "GET" },
           { url: `/connect`, method: "POST" },
           { url: `/qr`, method: "GET" },
           { url: `/qrcode`, method: "GET" },
-          { url: `/instance/qr`, method: "GET" },
         ];
 
         for (const endpoint of qrEndpoints) {
           if (qrcodeBase64) break;
           try {
-            console.log(`Support refresh QR: Trying ${endpoint.method} ${endpoint.url}`);
-            const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, supportConfig.instance_token) as {
+            console.log(`Support refresh QR: Trying instance ${endpoint.method} ${endpoint.url}`);
+            const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, supportConfig.instance_token!) as {
               base64?: string;
               qrcode?: string | { base64?: string };
               qr?: string;
               data?: { base64?: string; qrcode?: string };
             };
+            console.log(`Support refresh QR response:`, JSON.stringify(connectResult).slice(0, 200));
             qrcodeBase64 = connectResult.base64 || 
                            connectResult.qr ||
                            connectResult.data?.base64 ||
                            connectResult.data?.qrcode ||
                            (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
             if (qrcodeBase64) {
-              console.log(`Support refresh QR found via ${endpoint.url}`);
+              console.log(`Support refresh QR found via instance ${endpoint.url}`);
             }
           } catch (err) {
-            console.log(`Support refresh QR ${endpoint.url} failed:`, (err as Error).message);
+            console.log(`Support refresh QR instance ${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+        
+        // If instance endpoints fail, try admin endpoints with instance name
+        if (!qrcodeBase64 && supportConfig.instance_name) {
+          const adminQrEndpoints = [
+            { url: `/instance/connect/${supportConfig.instance_name}`, method: "GET" },
+            { url: `/instance/connect/${supportConfig.instance_name}`, method: "POST" },
+            { url: `/instance/qr/${supportConfig.instance_name}`, method: "GET" },
+            { url: `/connect/${supportConfig.instance_name}`, method: "GET" },
+          ];
+          
+          for (const endpoint of adminQrEndpoints) {
+            if (qrcodeBase64) break;
+            try {
+              console.log(`Support refresh QR: Trying admin ${endpoint.method} ${endpoint.url}`);
+              const connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method) as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                qr?: string;
+                data?: { base64?: string; qrcode?: string };
+              };
+              console.log(`Support refresh QR admin response:`, JSON.stringify(connectResult).slice(0, 200));
+              qrcodeBase64 = connectResult.base64 || 
+                             connectResult.qr ||
+                             connectResult.data?.base64 ||
+                             connectResult.data?.qrcode ||
+                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+              if (qrcodeBase64) {
+                console.log(`Support refresh QR found via admin ${endpoint.url}`);
+              }
+            } catch (err) {
+              console.log(`Support refresh QR admin ${endpoint.url} failed:`, (err as Error).message);
+            }
           }
         }
 
