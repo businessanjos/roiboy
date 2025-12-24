@@ -2101,6 +2101,38 @@ serve(async (req) => {
         
         console.log(`Refresh QR for support instance: ${supportInstanceName}`);
         
+        // FIRST: Delete ALL existing "suporte-roy" instances to avoid duplicates
+        try {
+          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ name: string; id: string; token?: string }>;
+          console.log(`Found ${allInstances?.length || 0} total instances, checking for duplicates...`);
+          
+          if (Array.isArray(allInstances)) {
+            for (const inst of allInstances) {
+              if (inst.name === supportInstanceName) {
+                console.log(`Deleting old support instance: ${inst.name} (id: ${inst.id})`);
+                try {
+                  // Try to delete using admin endpoint
+                  await uazapiAdminRequest(`/instance/delete/${inst.name}`, "DELETE");
+                  console.log(`Deleted instance ${inst.name} successfully`);
+                } catch (delErr) {
+                  console.log(`Failed to delete via /instance/delete/${inst.name}:`, (delErr as Error).message);
+                  // Try alternative delete endpoint
+                  try {
+                    await uazapiAdminRequest(`/instance/${inst.name}`, "DELETE");
+                  } catch (delErr2) {
+                    console.log(`Also failed /instance/${inst.name}:`, (delErr2 as Error).message);
+                  }
+                }
+              }
+            }
+          }
+          
+          // Wait a bit after deleting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (err) {
+          console.log("Error cleaning up old instances:", (err as Error).message);
+        }
+        
         // EXACT SAME LOGIC AS "create" ACTION THAT WORKS
         // Step 1: Create/init the instance (UAZAPI GO will reuse if exists)
         const createSupportResult = await uazapiAdminRequest("/instance/init", "POST", {
