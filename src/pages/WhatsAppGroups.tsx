@@ -451,29 +451,58 @@ export default function WhatsAppGroups() {
       
       console.log("Participants response:", data);
       
-      // Parse different response formats
+      // Parse different response formats - UAZAPI returns { data: { participants: [...] } } or { participants: [...] }
       let participants: GroupParticipant[] = [];
       
-      if (Array.isArray(data)) {
-        participants = data.map((p: { id?: string; Id?: string; phone?: string; admin?: string; Admin?: string; name?: string; pushName?: string }) => ({
-          id: p.id || p.Id || p.phone || "",
-          phone: (p.id || p.Id || p.phone || "").split("@")[0],
-          admin: p.admin || p.Admin,
-          name: p.name || p.pushName,
-        }));
-      } else if (data?.participants && Array.isArray(data.participants)) {
-        participants = data.participants.map((p: { id?: string; Id?: string; phone?: string; admin?: string; Admin?: string; name?: string; pushName?: string }) => ({
-          id: p.id || p.Id || p.phone || "",
-          phone: (p.id || p.Id || p.phone || "").split("@")[0],
-          admin: p.admin || p.Admin,
-          name: p.name || p.pushName,
-        }));
-      } else if (data?.Participants && Array.isArray(data.Participants)) {
-        participants = data.Participants.map((p: { JID?: string; Admin?: string }) => ({
-          id: p.JID || "",
-          phone: (p.JID || "").split("@")[0],
-          admin: p.Admin,
-        }));
+      // Get the actual participants array from different possible locations
+      const rawParticipants = 
+        data?.data?.participants || 
+        data?.participants || 
+        data?.data?.Participants || 
+        data?.Participants ||
+        (Array.isArray(data?.data) ? data.data : null) ||
+        (Array.isArray(data) ? data : null) ||
+        [];
+      
+      if (Array.isArray(rawParticipants)) {
+        participants = rawParticipants.map((p: { 
+          id?: string; 
+          Id?: string; 
+          JID?: string;
+          phone?: string; 
+          PhoneNumber?: string;
+          admin?: string; 
+          Admin?: string; 
+          IsAdmin?: boolean;
+          IsSuperAdmin?: boolean;
+          name?: string; 
+          pushName?: string;
+          DisplayName?: string;
+        }) => {
+          // Extract phone from JID or PhoneNumber (format: "5511999999999@s.whatsapp.net" or "123456@lid")
+          const jid = p.JID || p.id || p.Id || "";
+          const phoneNumber = p.PhoneNumber || p.phone || "";
+          
+          // Try to get clean phone number
+          let phone = "";
+          if (phoneNumber && phoneNumber.includes("@")) {
+            phone = phoneNumber.split("@")[0];
+          } else if (jid && jid.includes("@")) {
+            phone = jid.split("@")[0];
+          } else {
+            phone = phoneNumber || jid;
+          }
+          
+          // Determine admin status
+          const isAdmin = p.IsAdmin || p.IsSuperAdmin || p.admin === "admin" || p.Admin === "admin" || p.admin === "superadmin";
+          
+          return {
+            id: jid,
+            phone: phone,
+            admin: isAdmin ? (p.IsSuperAdmin ? "superadmin" : "admin") : undefined,
+            name: p.DisplayName || p.name || p.pushName,
+          };
+        });
       }
       
       setGroupParticipants(participants);
