@@ -35,6 +35,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 import { ContractDialog } from "@/components/client/ContractDialog";
+import { ProductDialog } from "@/components/client/ProductDialog";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -306,6 +307,10 @@ export default function Clients() {
   // Contract dialog state (for quick add from clients list)
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [contractClientData, setContractClientData] = useState<{ id: string; name: string } | null>(null);
+
+  // Product dialog state (for quick add from clients list)
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [productClientData, setProductClientData] = useState<{ id: string; name: string; productIds: string[] } | null>(null);
 
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
@@ -2071,35 +2076,54 @@ export default function Clients() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          {client.client_products && client.client_products.length > 0 ? (
-                            <div className="flex flex-wrap justify-center gap-1">
-                              {client.client_products.slice(0, 2).map((cp: any) => (
-                                <Badge key={cp.product_id} variant="secondary" className="text-xs">
-                                  {cp.products?.name || "Produto"}
-                                </Badge>
-                              ))}
-                              {client.client_products.length > 2 && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge variant="outline" className="text-xs">
-                                        +{client.client_products.length - 2}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <div className="text-xs">
-                                        {client.client_products.slice(2).map((cp: any) => (
-                                          <p key={cp.product_id}>{cp.products?.name}</p>
-                                        ))}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
+                          <button
+                            onClick={() => {
+                              const productIds = client.client_products?.map((cp: any) => cp.product_id) || [];
+                              setProductClientData({ id: client.id, name: client.full_name, productIds });
+                              setProductDialogOpen(true);
+                            }}
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                          >
+                            {client.client_products && client.client_products.length > 0 ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex flex-wrap justify-center gap-1">
+                                      {client.client_products.slice(0, 2).map((cp: any) => (
+                                        <Badge key={cp.product_id} variant="secondary" className="text-xs">
+                                          {cp.products?.name || "Produto"}
+                                        </Badge>
+                                      ))}
+                                      {client.client_products.length > 2 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          +{client.client_products.length - 2}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs">
+                                      {client.client_products.map((cp: any) => (
+                                        <p key={cp.product_id}>{cp.products?.name}</p>
+                                      ))}
+                                      <p className="mt-1 text-primary">Clique para editar</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-xs text-muted-foreground">-</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Clique para adicionar produtos</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </button>
                         </TableCell>
                         <TableCell className="text-center">
                           <button
@@ -2627,6 +2651,19 @@ export default function Clients() {
         onSuccess={() => {
           fetchClients();
           setContractClientData(null);
+        }}
+      />
+
+      {/* Product Dialog for quick add/edit from clients list */}
+      <ProductDialog
+        open={productDialogOpen}
+        onOpenChange={setProductDialogOpen}
+        clientId={productClientData?.id || ""}
+        clientName={productClientData?.name}
+        currentProductIds={productClientData?.productIds || []}
+        onSuccess={() => {
+          fetchClients();
+          setProductClientData(null);
         }}
       />
     </div>
