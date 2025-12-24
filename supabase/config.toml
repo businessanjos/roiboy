@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.uazapi-webhook]
 verify_jwt = false
+
+[functions.retry-failed-reminders]
+verify_jwt = false

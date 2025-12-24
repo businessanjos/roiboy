@@ -52,8 +52,20 @@ import {
   ClipboardCheck,
   Star,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  RotateCcw
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -160,6 +172,9 @@ export default function Reminders() {
   const [activeTab, setActiveTab] = useState("create");
   const [sending, setSending] = useState(false);
   const [viewingCampaignId, setViewingCampaignId] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch events
   const { data: events = [], isLoading: loadingEvents } = useQuery({
@@ -230,6 +245,80 @@ export default function Reminders() {
     },
     enabled: !!viewingCampaignId,
   });
+
+  // Get viewing campaign details
+  const viewingCampaign = campaigns.find(c => c.id === viewingCampaignId);
+  const hasFailedRecipients = viewingRecipients.some(
+    r => r.whatsapp_status === "failed" || r.email_status === "failed"
+  );
+
+  // Retry failed messages handler
+  const handleRetryFailed = async () => {
+    if (!viewingCampaignId) return;
+    
+    setRetrying(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Sessão expirada");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("retry-failed-reminders", {
+        body: { campaign_id: viewingCampaignId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const result = response.data;
+      toast.success(`${result.success_count} mensagens reenviadas com sucesso`);
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ["campaign-recipients", viewingCampaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    } catch (error) {
+      console.error("Error retrying failed messages:", error);
+      toast.error("Erro ao reenviar mensagens: " + (error as Error).message);
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  // Delete campaign handler
+  const handleDeleteCampaign = async () => {
+    if (!deletingCampaignId) return;
+    
+    setDeleting(true);
+    try {
+      // First delete recipients
+      const { error: recipientsError } = await supabase
+        .from("reminder_recipients")
+        .delete()
+        .eq("campaign_id", deletingCampaignId);
+
+      if (recipientsError) throw recipientsError;
+
+      // Then delete campaign
+      const { error: campaignError } = await supabase
+        .from("reminder_campaigns")
+        .delete()
+        .eq("id", deletingCampaignId);
+
+      if (campaignError) throw campaignError;
+
+      toast.success("Campanha excluída com sucesso");
+      setDeletingCampaignId(null);
+      setViewingCampaignId(null);
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    } catch (error) {
+      console.error("Error deleting campaign:", error);
+      toast.error("Erro ao excluir campanha");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Generate default message based on type and event
   useEffect(() => {
@@ -1000,13 +1089,25 @@ export default function Reminders() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setViewingCampaignId(campaign.id)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setViewingCampaignId(campaign.id)}
+                                title="Ver detalhes"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeletingCampaignId(campaign.id)}
+                                title="Excluir campanha"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -1109,8 +1210,65 @@ export default function Reminders() {
               </TableBody>
             </Table>
           )}
+
+          {/* Action buttons */}
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center gap-2">
+              {hasFailedRecipients && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetryFailed}
+                  disabled={retrying}
+                >
+                  {retrying ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                  )}
+                  Reenviar Falhas
+                </Button>
+              )}
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeletingCampaignId(viewingCampaignId)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir Campanha
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingCampaignId} onOpenChange={(open) => !open && setDeletingCampaignId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Campanha</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.
+              Todos os registros de envio serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCampaign}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
