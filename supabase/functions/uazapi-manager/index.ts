@@ -26,6 +26,7 @@ interface UazapiRequest {
   media_url?: string;
   media_type?: "image" | "audio" | "document";
   caption?: string;
+  file_name?: string;
   groups?: Array<{ group_jid: string; name: string; participant_count: number }>;
 }
 
@@ -1623,7 +1624,7 @@ serve(async (req) => {
 
       case "send_media_to_group": {
         // Send media (image/audio/document) to group
-        const { group_id, media_url, media_type = "image", caption } = payload as UazapiRequest;
+        const { group_id, media_url, media_type = "image", caption, file_name } = payload as UazapiRequest;
         
         if (!savedInstanceToken) {
           throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
@@ -1638,23 +1639,24 @@ serve(async (req) => {
         }
 
         const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
-        console.log(`Sending ${media_type} to group: ${groupJid}`);
+        console.log(`Sending ${media_type} to group: ${groupJid}, fileName: ${file_name}`);
         
         let sendMediaResult: unknown = null;
         let mediaSuccess = false;
         
         // UAZAPI GO v2 - Media to group (uses "number" field for group JID)
+        // Include fileName for documents to preserve original name
         const mediaEndpoints = [
-          // Standard UAZAPI format - uses "number" for recipient
-          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, file: media_url, caption: caption || "" } },
+          // Standard UAZAPI format - uses "number" for recipient, with fileName for documents
+          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, file: media_url, caption: caption || "", fileName: file_name || "" } },
           // Alternative with url field
-          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, url: media_url, caption: caption || "" } },
+          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, url: media_url, caption: caption || "", fileName: file_name || "" } },
           // Alternative format with "to" field
-          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, file: media_url, caption: caption || "" } },
+          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, file: media_url, caption: caption || "", fileName: file_name || "" } },
           // Alternative endpoint structure
-          { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: groupJid, File: media_url, Caption: caption || "" } },
+          { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: groupJid, File: media_url, Caption: caption || "", FileName: file_name || "" } },
           // Generic media endpoint
-          { url: `/send/media`, method: "POST", body: { number: groupJid, file: media_url, type: media_type, caption: caption || "" } },
+          { url: `/send/media`, method: "POST", body: { number: groupJid, file: media_url, type: media_type, caption: caption || "", fileName: file_name || "" } },
         ];
 
         for (const endpoint of mediaEndpoints) {
