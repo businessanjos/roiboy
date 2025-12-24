@@ -2014,35 +2014,71 @@ serve(async (req) => {
         let qrcodeBase64 = "";
         console.log(`Support refresh: Using token ${supportConfig.instance_token?.slice(0, 8)}... for instance ${supportConfig.instance_name}`);
         
-        // First try instance token endpoints
-        const qrEndpoints = [
-          { url: `/connect`, method: "GET" },
-          { url: `/connect`, method: "POST" },
-          { url: `/qr`, method: "GET" },
-          { url: `/qrcode`, method: "GET" },
-        ];
-
-        for (const endpoint of qrEndpoints) {
-          if (qrcodeBase64) break;
-          try {
-            console.log(`Support refresh QR: Trying instance ${endpoint.method} ${endpoint.url}`);
-            const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, supportConfig.instance_token!) as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              qr?: string;
-              data?: { base64?: string; qrcode?: string };
-            };
-            console.log(`Support refresh QR response:`, JSON.stringify(connectResult).slice(0, 200));
-            qrcodeBase64 = connectResult.base64 || 
-                           connectResult.qr ||
-                           connectResult.data?.base64 ||
-                           connectResult.data?.qrcode ||
-                           (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
-            if (qrcodeBase64) {
-              console.log(`Support refresh QR found via instance ${endpoint.url}`);
+        // IMPORTANT: UAZAPI GO requires a "restart" or reinitializing the connection to generate QR
+        // First, try to restart/reinit the instance to trigger QR generation
+        if (supportConfig.instance_name) {
+          const restartEndpoints = [
+            { url: `/instance/restart/${supportConfig.instance_name}`, method: "POST" },
+            { url: `/instance/restart/${supportConfig.instance_name}`, method: "PUT" },
+            { url: `/restart/${supportConfig.instance_name}`, method: "POST" },
+          ];
+          
+          for (const endpoint of restartEndpoints) {
+            try {
+              console.log(`Support restart: Trying admin ${endpoint.method} ${endpoint.url}`);
+              const restartResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
+              console.log(`Support restart response:`, JSON.stringify(restartResult).slice(0, 200));
+              
+              // Check if restart response includes QR code
+              const restartData = restartResult as { base64?: string; qrcode?: string; qr?: string };
+              qrcodeBase64 = restartData.base64 || restartData.qr || (typeof restartData.qrcode === 'string' ? restartData.qrcode : '') || "";
+              
+              if (qrcodeBase64) {
+                console.log(`QR code found from restart`);
+                break;
+              }
+              
+              // Wait a moment for restart to take effect
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              break;
+            } catch (err) {
+              console.log(`Support restart ${endpoint.url} failed:`, (err as Error).message);
             }
-          } catch (err) {
-            console.log(`Support refresh QR instance ${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+        
+        // If no QR from restart, try to get it via connect endpoints
+        if (!qrcodeBase64) {
+          // First try instance token endpoints
+          const qrEndpoints = [
+            { url: `/connect`, method: "GET" },
+            { url: `/connect`, method: "POST" },
+            { url: `/qr`, method: "GET" },
+            { url: `/qrcode`, method: "GET" },
+          ];
+
+          for (const endpoint of qrEndpoints) {
+            if (qrcodeBase64) break;
+            try {
+              console.log(`Support refresh QR: Trying instance ${endpoint.method} ${endpoint.url}`);
+              const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, supportConfig.instance_token!) as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                qr?: string;
+                data?: { base64?: string; qrcode?: string };
+              };
+              console.log(`Support refresh QR response:`, JSON.stringify(connectResult).slice(0, 300));
+              qrcodeBase64 = connectResult.base64 || 
+                             connectResult.qr ||
+                             connectResult.data?.base64 ||
+                             connectResult.data?.qrcode ||
+                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+              if (qrcodeBase64) {
+                console.log(`Support refresh QR found via instance ${endpoint.url}`);
+              }
+            } catch (err) {
+              console.log(`Support refresh QR instance ${endpoint.url} failed:`, (err as Error).message);
+            }
           }
         }
         
@@ -2065,7 +2101,7 @@ serve(async (req) => {
                 qr?: string;
                 data?: { base64?: string; qrcode?: string };
               };
-              console.log(`Support refresh QR admin response:`, JSON.stringify(connectResult).slice(0, 200));
+              console.log(`Support refresh QR admin response:`, JSON.stringify(connectResult).slice(0, 300));
               qrcodeBase64 = connectResult.base64 || 
                              connectResult.qr ||
                              connectResult.data?.base64 ||
@@ -2077,6 +2113,56 @@ serve(async (req) => {
             } catch (err) {
               console.log(`Support refresh QR admin ${endpoint.url} failed:`, (err as Error).message);
             }
+          }
+        }
+        
+        // If still no QR code, the instance may need to be re-created
+        // Delete and recreate
+        if (!qrcodeBase64 && supportConfig.instance_name) {
+          console.log(`No QR code found, trying to delete and recreate instance`);
+          
+          // Try to delete the old instance
+          try {
+            await uazapiAdminRequest(`/instance/delete/${supportConfig.instance_name}`, "DELETE");
+            console.log(`Deleted old instance ${supportConfig.instance_name}`);
+          } catch (err) {
+            console.log(`Delete failed (may not exist):`, (err as Error).message);
+          }
+          
+          // Wait a moment
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Create new instance with same name
+          try {
+            const createResult = await uazapiAdminRequest("/instance/init", "POST", {
+              name: supportConfig.instance_name,
+            }) as { token?: string; instance?: { token?: string; qrcode?: string } };
+            
+            console.log(`Recreated instance:`, JSON.stringify(createResult).slice(0, 200));
+            
+            const newToken = createResult.token || createResult.instance?.token;
+            
+            if (newToken) {
+              // Update token in settings
+              supportConfig.instance_token = newToken;
+              
+              // Wait for instance to initialize
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              // Try to get QR code with new token
+              try {
+                const connectResult = await uazapiInstanceRequest("/connect", "GET", newToken) as {
+                  base64?: string; qrcode?: string; qr?: string;
+                };
+                console.log(`Connect with new token result:`, JSON.stringify(connectResult).slice(0, 200));
+                qrcodeBase64 = connectResult.base64 || connectResult.qr || 
+                               (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : '') || "";
+              } catch (e) {
+                console.log(`Connect with new token failed:`, (e as Error).message);
+              }
+            }
+          } catch (err) {
+            console.log(`Recreate instance failed:`, (err as Error).message);
           }
         }
 
