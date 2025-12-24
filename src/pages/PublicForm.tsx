@@ -43,7 +43,7 @@ interface ClientData {
 export default function PublicForm() {
   const { formId } = useParams();
   const [searchParams] = useSearchParams();
-  const clientId = searchParams.get("client");
+  const clientId = searchParams.get("clientId") || searchParams.get("client");
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
