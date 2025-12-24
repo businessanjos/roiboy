@@ -1053,39 +1053,87 @@ serve(async (req) => {
         
         let participantsResult: unknown = null;
         let participantsFound = false;
+        let participants: unknown[] = [];
         
-        // Try POST endpoints with body first (UAZAPI GO v2 format)
-        const postEndpoints = [
-          { url: `/group/participants`, method: "POST", body: { groupJid: groupJidForParticipants } },
-          { url: `/group/fetchParticipants`, method: "POST", body: { groupJid: groupJidForParticipants } },
-          { url: `/group/getParticipants`, method: "POST", body: { groupJid: groupJidForParticipants } },
-          { url: `/group/members`, method: "POST", body: { groupJid: groupJidForParticipants } },
+        // Strategy 1: Try to get group info which may contain participants
+        const groupInfoEndpoints = [
+          { url: `/group/fetchGroup`, method: "POST", body: { jid: groupJidForParticipants } },
+          { url: `/group/fetchGroup`, method: "POST", body: { groupJid: groupJidForParticipants } },
+          { url: `/group/info`, method: "POST", body: { jid: groupJidForParticipants } },
+          { url: `/group/info`, method: "POST", body: { groupJid: groupJidForParticipants } },
+          { url: `/group/metadata`, method: "POST", body: { jid: groupJidForParticipants } },
+          { url: `/group/metadata`, method: "POST", body: { groupJid: groupJidForParticipants } },
         ];
 
-        for (const endpoint of postEndpoints) {
+        for (const endpoint of groupInfoEndpoints) {
           if (participantsFound) break;
           try {
-            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
-            participantsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken, endpoint.body);
-            console.log("Participants result:", JSON.stringify(participantsResult));
+            console.log(`Trying group info: ${endpoint.method} ${endpoint.url}`);
+            const groupInfo = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken, endpoint.body);
+            console.log("Group info result:", JSON.stringify(groupInfo));
             
-            // Check if we got valid data
-            const data = participantsResult as { participants?: unknown[]; Participants?: unknown[]; data?: unknown[] };
-            if (Array.isArray(participantsResult) || data?.participants || data?.Participants || data?.data) {
+            // Extract participants from group info
+            const data = groupInfo as { 
+              participants?: unknown[]; 
+              Participants?: unknown[]; 
+              members?: unknown[];
+              group?: { participants?: unknown[]; Participants?: unknown[]; members?: unknown[] };
+            };
+            
+            participants = data?.participants || 
+                          data?.Participants || 
+                          data?.members ||
+                          data?.group?.participants || 
+                          data?.group?.Participants || 
+                          data?.group?.members || [];
+            
+            if (participants.length > 0) {
               participantsFound = true;
+              participantsResult = { participants };
             }
           } catch (err) {
             console.log(`${endpoint.url} failed:`, (err as Error).message);
           }
         }
         
-        // Fallback to GET endpoints with path parameter
+        // Strategy 2: Try dedicated participants endpoints with POST
+        if (!participantsFound) {
+          const postEndpoints = [
+            { url: `/group/participants`, method: "POST", body: { jid: groupJidForParticipants } },
+            { url: `/group/participants`, method: "POST", body: { groupJid: groupJidForParticipants } },
+            { url: `/group/fetchParticipants`, method: "POST", body: { jid: groupJidForParticipants } },
+            { url: `/group/getParticipants`, method: "POST", body: { jid: groupJidForParticipants } },
+            { url: `/group/members`, method: "POST", body: { jid: groupJidForParticipants } },
+          ];
+
+          for (const endpoint of postEndpoints) {
+            if (participantsFound) break;
+            try {
+              console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+              participantsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken, endpoint.body);
+              console.log("Participants result:", JSON.stringify(participantsResult));
+              
+              const data = participantsResult as { participants?: unknown[]; Participants?: unknown[]; data?: unknown[]; members?: unknown[] };
+              participants = Array.isArray(participantsResult) ? participantsResult : 
+                            (data?.participants || data?.Participants || data?.data || data?.members || []);
+              
+              if (participants.length > 0) {
+                participantsFound = true;
+                participantsResult = { participants };
+              }
+            } catch (err) {
+              console.log(`${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+        
+        // Strategy 3: Fallback to GET endpoints with path parameter
         if (!participantsFound) {
           const getEndpoints = [
             { url: `/group/participants/${groupJidForParticipants}`, method: "GET" },
             { url: `/group/${groupJidForParticipants}/participants`, method: "GET" },
-            { url: `/groups/${groupJidForParticipants}/participants`, method: "GET" },
-            { url: `/group/fetchParticipants/${groupJidForParticipants}`, method: "GET" },
+            { url: `/group/info/${groupJidForParticipants}`, method: "GET" },
+            { url: `/group/metadata/${groupJidForParticipants}`, method: "GET" },
           ];
 
           for (const endpoint of getEndpoints) {
@@ -1095,9 +1143,13 @@ serve(async (req) => {
               participantsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
               console.log("Participants result:", JSON.stringify(participantsResult));
               
-              const data = participantsResult as { participants?: unknown[]; Participants?: unknown[]; data?: unknown[] };
-              if (Array.isArray(participantsResult) || data?.participants || data?.Participants || data?.data) {
+              const data = participantsResult as { participants?: unknown[]; Participants?: unknown[]; data?: unknown[]; members?: unknown[] };
+              participants = Array.isArray(participantsResult) ? participantsResult : 
+                            (data?.participants || data?.Participants || data?.data || data?.members || []);
+              
+              if (participants.length > 0) {
                 participantsFound = true;
+                participantsResult = { participants };
               }
             } catch (err) {
               console.log(`${endpoint.url} failed:`, (err as Error).message);
@@ -1105,7 +1157,7 @@ serve(async (req) => {
           }
         }
 
-        result = participantsResult || { participants: [], message: "Não foi possível buscar os membros do grupo" };
+        result = participantsResult || { participants: [], message: "Não foi possível buscar os membros do grupo. Tente atualizar a lista de grupos." };
         break;
       }
 
