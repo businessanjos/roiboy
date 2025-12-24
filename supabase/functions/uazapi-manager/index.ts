@@ -2113,26 +2113,41 @@ serve(async (req) => {
         // Try multiple endpoints to get QR code - DO NOT recreate instance
         let qrcodeBase64 = "";
         
-        // First try admin restart endpoint (this generates QR code for disconnected instances)
-        console.log(`Trying admin restart to generate QR...`);
-        try {
-          const restartResult = await uazapiAdminRequest(`/instance/restart/${supportInstanceName}`, "POST") as {
-            base64?: string;
-            qrcode?: string | { base64?: string };
-            qr?: string;
-          };
-          console.log(`Admin restart result:`, JSON.stringify(restartResult).slice(0, 500));
-          qrcodeBase64 = restartResult.base64 || 
-                         restartResult.qr ||
-                         (typeof restartResult.qrcode === 'string' ? restartResult.qrcode : restartResult.qrcode?.base64) || "";
-          if (qrcodeBase64) {
-            console.log(`QR found via admin restart`);
+        // First try admin connect endpoint (this initiates connection and returns QR)
+        const connectEndpoints = [
+          { url: `/instance/connect/${supportInstanceName}`, method: "GET" },
+          { url: `/instance/connect/${supportInstanceName}`, method: "POST" },
+        ];
+        
+        for (const endpoint of connectEndpoints) {
+          if (qrcodeBase64) break;
+          console.log(`Trying admin connect: ${endpoint.method} ${endpoint.url}`);
+          try {
+            const connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method) as {
+              base64?: string;
+              qrcode?: string | { base64?: string };
+              qr?: string;
+              code?: string;
+              pairingCode?: string;
+              data?: { base64?: string; qrcode?: string; code?: string };
+            };
+            console.log(`Admin connect result:`, JSON.stringify(connectResult).slice(0, 500));
+            qrcodeBase64 = connectResult.base64 || 
+                           connectResult.qr ||
+                           connectResult.code ||
+                           connectResult.data?.base64 ||
+                           connectResult.data?.qrcode ||
+                           connectResult.data?.code ||
+                           (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+            if (qrcodeBase64) {
+              console.log(`QR found via admin connect ${endpoint.url}`);
+            }
+          } catch (err) {
+            console.log(`Admin connect ${endpoint.url} failed:`, (err as Error).message);
           }
-        } catch (err) {
-          console.log(`Admin restart failed:`, (err as Error).message);
         }
         
-        // Wait a bit for QR to be generated if restart was successful
+        // Wait a bit for QR to be generated
         if (!qrcodeBase64) {
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
