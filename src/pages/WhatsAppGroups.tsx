@@ -52,6 +52,9 @@ import {
   Mic,
   X,
   Download,
+  Pencil,
+  Save,
+  ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -143,6 +146,15 @@ export default function WhatsAppGroups() {
   const [selectedGroupsToSync, setSelectedGroupsToSync] = useState<string[]>([]);
   const [isFetchingGroups, setIsFetchingGroups] = useState(false);
   const [isSavingGroups, setIsSavingGroups] = useState(false);
+  
+  // Edit group state
+  const [isEditingGroup, setIsEditingGroup] = useState(false);
+  const [editGroupName, setEditGroupName] = useState("");
+  const [editGroupDescription, setEditGroupDescription] = useState("");
+  const [editGroupImageFile, setEditGroupImageFile] = useState<File | null>(null);
+  const [editGroupImagePreview, setEditGroupImagePreview] = useState<string | null>(null);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
+  const [isSavingGroupDetails, setIsSavingGroupDetails] = useState(false);
 
   // Fetch groups from database
   const { data: groups = [], isLoading: loadingGroups, refetch: refetchGroups } = useQuery({
@@ -579,6 +591,11 @@ export default function WhatsAppGroups() {
   // Open manage dialog
   const handleOpenManageDialog = (group: WhatsAppGroup) => {
     setManagingGroup(group);
+    setEditGroupName(group.name || group.subject || "");
+    setEditGroupDescription(group.description || "");
+    setEditGroupImageFile(null);
+    setEditGroupImagePreview(null);
+    setIsEditingGroup(false);
     fetchGroupParticipants(group);
   };
 
@@ -588,6 +605,95 @@ export default function WhatsAppGroups() {
     setGroupParticipants([]);
     setAddingParticipants(false);
     setClientsToAdd([]);
+    setIsEditingGroup(false);
+    setEditGroupName("");
+    setEditGroupDescription("");
+    setEditGroupImageFile(null);
+    setEditGroupImagePreview(null);
+  };
+  
+  // Handle edit group image file selection
+  const handleEditGroupImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Apenas imagens são suportadas");
+      return;
+    }
+
+    // Check file size (max 5MB for group images)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Máximo 5MB");
+      return;
+    }
+
+    setEditGroupImageFile(file);
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditGroupImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Save group details (name, description, image)
+  const handleSaveGroupDetails = async () => {
+    if (!managingGroup) return;
+    
+    setIsSavingGroupDetails(true);
+    const groupJid = managingGroup.group_jid || managingGroup.id;
+    
+    try {
+      // Update name if changed
+      if (editGroupName !== (managingGroup.name || managingGroup.subject || "")) {
+        const { error } = await supabase.functions.invoke("uazapi-manager", {
+          body: { 
+            action: "update_group_name",
+            group_id: groupJid,
+            group_name: editGroupName,
+          },
+        });
+        if (error) throw error;
+      }
+      
+      // Update description
+      const originalDesc = managingGroup.description || "";
+      if (editGroupDescription !== originalDesc) {
+        const { error } = await supabase.functions.invoke("uazapi-manager", {
+          body: { 
+            action: "update_group_description",
+            group_id: groupJid,
+            group_description: editGroupDescription,
+          },
+        });
+        if (error) throw error;
+      }
+      
+      // Upload and update image if selected
+      if (editGroupImageFile) {
+        const imageUrl = await uploadMediaToStorage(editGroupImageFile);
+        const { error } = await supabase.functions.invoke("uazapi-manager", {
+          body: { 
+            action: "update_group_image",
+            group_id: groupJid,
+            group_image: imageUrl,
+          },
+        });
+        if (error) throw error;
+      }
+      
+      toast.success("Dados do grupo atualizados!");
+      setIsEditingGroup(false);
+      setEditGroupImageFile(null);
+      setEditGroupImagePreview(null);
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-groups"] });
+      
+    } catch (error) {
+      toast.error("Erro ao atualizar grupo: " + (error as Error).message);
+    } finally {
+      setIsSavingGroupDetails(false);
+    }
   };
 
   const isSendingAny = sendToGroupMutation.isPending || sendMediaToGroupMutation.isPending || isUploadingMedia;
@@ -1051,19 +1157,134 @@ export default function WhatsAppGroups() {
 
       {/* Manage Participants Dialog */}
       <Dialog open={!!managingGroup} onOpenChange={(open) => !open && handleCloseManageDialog()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Gerenciar Membros
-            </DialogTitle>
-            <DialogDescription>
-              {managingGroup?.subject || managingGroup?.name} 
-              {!loadingParticipants && ` • ${groupParticipants.length} membros`}
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Gerenciar Grupo
+                </DialogTitle>
+                <DialogDescription>
+                  {managingGroup?.subject || managingGroup?.name} 
+                  {!loadingParticipants && ` • ${groupParticipants.length} membros`}
+                </DialogDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingGroup(!isEditingGroup)}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                {isEditingGroup ? "Voltar" : "Editar Grupo"}
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Edit Group Details Section */}
+            {isEditingGroup && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Pencil className="h-4 w-4" />
+                  Editar Dados do Grupo
+                </h4>
+                
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="edit-group-name">Nome do Grupo</Label>
+                    <Input
+                      id="edit-group-name"
+                      value={editGroupName}
+                      onChange={(e) => setEditGroupName(e.target.value)}
+                      placeholder="Nome do grupo"
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit-group-description">Descrição</Label>
+                    <Textarea
+                      id="edit-group-description"
+                      value={editGroupDescription}
+                      onChange={(e) => setEditGroupDescription(e.target.value)}
+                      placeholder="Descrição do grupo (opcional)"
+                      rows={3}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label className="mb-2 block">Imagem do Grupo</Label>
+                    <input
+                      type="file"
+                      ref={editImageInputRef}
+                      onChange={handleEditGroupImageSelect}
+                      accept="image/jpeg,image/png"
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => editImageInputRef.current?.click()}
+                        disabled={isSavingGroupDetails}
+                      >
+                        <ImagePlus className="h-4 w-4 mr-2" />
+                        Selecionar Imagem
+                      </Button>
+                      {editGroupImageFile && (
+                        <div className="flex items-center gap-2">
+                          {editGroupImagePreview && (
+                            <img 
+                              src={editGroupImagePreview} 
+                              alt="Preview" 
+                              className="w-10 h-10 rounded object-cover"
+                            />
+                          )}
+                          <span className="text-sm text-muted-foreground">
+                            {editGroupImageFile.name}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditGroupImageFile(null);
+                              setEditGroupImagePreview(null);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Formato JPEG, máximo 640x640 pixels
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveGroupDetails}
+                    disabled={isSavingGroupDetails}
+                  >
+                    {isSavingGroupDetails ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Salvar Alterações
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsEditingGroup(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Current participants */}
             <div>
               <div className="flex items-center justify-between mb-2">
