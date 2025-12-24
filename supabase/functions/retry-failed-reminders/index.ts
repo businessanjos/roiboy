@@ -196,9 +196,17 @@ serve(async (req) => {
       const linkCheckin = event?.checkin_code ? `${appUrl}/checkin/${event.checkin_code}` : `${appUrl}/checkin/code`;
       const linkFeedback = event ? `${appUrl}/feedback/${event.id}?p=${recipient.participant_id}` : "";
 
+      // Split name into first name and last name
+      const recipientName = recipient.recipient_name || "Participante";
+      const nameParts = recipientName.trim().split(/\s+/);
+      const primeiroNome = nameParts[0] || recipientName;
+      const sobrenome = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
       // Replace placeholders in message
       let finalMessage = campaign.message_template
-        .replace(/\{nome\}/gi, recipient.recipient_name || "Participante")
+        .replace(/\{nome\}/gi, recipientName)
+        .replace(/\{primeiro_nome\}/gi, primeiroNome)
+        .replace(/\{sobrenome\}/gi, sobrenome)
         .replace(/\{link_rsvp\}/gi, linkRsvp)
         .replace(/\{link_checkin\}/gi, linkCheckin)
         .replace(/\{link_feedback\}/gi, linkFeedback);

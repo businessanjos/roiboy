@@ -247,12 +247,19 @@ serve(async (req) => {
       const linkCheckin = event.checkin_code ? `${appUrl}/checkin/${event.checkin_code}` : `${appUrl}/checkin/code`;
       const linkFeedback = `${appUrl}/feedback/${event_id}?p=${participant.participant_id}`;
 
+      // Split name into first name and last name
+      const nameParts = participant.name.trim().split(/\s+/);
+      const primeiroNome = nameParts[0] || participant.name;
+      const sobrenome = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
       // Personalize message
       const personalizedMessage = message_template
-        .replace(/\{nome\}/g, participant.name)
-        .replace(/\{link_rsvp\}/g, linkRsvp)
-        .replace(/\{link_checkin\}/g, linkCheckin)
-        .replace(/\{link_feedback\}/g, linkFeedback);
+        .replace(/\{nome\}/gi, participant.name)
+        .replace(/\{primeiro_nome\}/gi, primeiroNome)
+        .replace(/\{sobrenome\}/gi, sobrenome)
+        .replace(/\{link_rsvp\}/gi, linkRsvp)
+        .replace(/\{link_checkin\}/gi, linkCheckin)
+        .replace(/\{link_feedback\}/gi, linkFeedback);
 
       let whatsappStatus = "pending";
       let whatsappError: string | null = null;
