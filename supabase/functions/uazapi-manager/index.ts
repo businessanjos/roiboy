@@ -1177,18 +1177,26 @@ serve(async (req) => {
           throw new Error("Mensagem é obrigatória");
         }
 
-        console.log(`Sending message to group: ${group_id}`);
+        // Ensure group_id has @g.us suffix
+        const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
+        console.log(`Sending message to group: ${groupJid}`);
         
         let sendResult: unknown = null;
+        let sendSuccess = false;
+        
+        // Try different endpoint formats - UAZAPI typically uses chatId for groups
         const sendEndpoints = [
-          { url: `/sendText`, method: "POST", body: { phone: group_id, message } },
-          { url: `/message/sendText`, method: "POST", body: { number: group_id, text: message } },
-          { url: `/send/text`, method: "POST", body: { to: group_id, text: message } },
+          { url: `/send/text`, method: "POST", body: { chatId: groupJid, text: message } },
+          { url: `/sendText`, method: "POST", body: { chatId: groupJid, message: message } },
+          { url: `/message/sendText`, method: "POST", body: { chatId: groupJid, text: message } },
+          { url: `/sendMessage`, method: "POST", body: { chatId: groupJid, message: message } },
+          { url: `/chat/sendText`, method: "POST", body: { chatId: groupJid, text: message } },
         ];
 
         for (const endpoint of sendEndpoints) {
+          if (sendSuccess) break;
           try {
-            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            console.log(`Trying: ${endpoint.method} ${endpoint.url} with body:`, JSON.stringify(endpoint.body));
             sendResult = await uazapiInstanceRequest(
               endpoint.url, 
               endpoint.method, 
@@ -1197,9 +1205,25 @@ serve(async (req) => {
             );
             console.log("Send to group result:", JSON.stringify(sendResult));
             
-            // Check if successful
-            const sendData = sendResult as { error?: boolean; messageId?: string; status?: string };
-            if (sendData.error === false || sendData.messageId || sendData.status === "PENDING") {
+            // Check if successful - various response formats
+            const sendData = sendResult as { 
+              error?: boolean | string; 
+              messageId?: string; 
+              status?: string;
+              key?: { id?: string };
+              message?: { key?: { id?: string } };
+              id?: string;
+            };
+            
+            if (
+              sendData.error === false || 
+              sendData.messageId || 
+              sendData.status === "PENDING" ||
+              sendData.key?.id ||
+              sendData.message?.key?.id ||
+              sendData.id
+            ) {
+              sendSuccess = true;
               break;
             }
           } catch (err) {
@@ -1207,7 +1231,9 @@ serve(async (req) => {
           }
         }
 
-        result = sendResult || { success: false, message: "Não foi possível enviar a mensagem" };
+        result = sendSuccess 
+          ? { success: true, message: "Mensagem enviada com sucesso", data: sendResult }
+          : { success: false, message: "Não foi possível enviar a mensagem" };
         break;
       }
 
