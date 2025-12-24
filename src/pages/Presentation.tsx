@@ -42,28 +42,28 @@ const tourSlides = [
     features: ["E-Score e ROIzometer em tempo real", "Alertas automáticos de churn", "Visão 360º do cliente"]
   },
   {
-    title: "Análise de Conversas com IA",
-    description: "Conecte seu WhatsApp e deixe a IA analisar cada mensagem automaticamente.",
+    title: "WhatsApp e Grupos",
+    description: "Sincronize grupos do WhatsApp, capture mensagens e deixe a IA analisar cada interação.",
     icon: MessageSquare,
-    features: ["Transcrição de áudios", "Detecção de sentimentos", "Identificação de riscos e oportunidades"]
+    features: ["Sincronização de grupos automática", "Transcrição de áudios com IA", "Detecção de sentimentos e riscos"]
   },
   {
-    title: "Métricas que Importam",
-    description: "Scores exclusivos calculados automaticamente a partir do comportamento real do cliente.",
-    icon: BarChart3,
-    features: ["E-Score: engajamento em WhatsApp e Lives", "ROIzometer: percepção de valor", "V-NPS: NPS comportamental automático"]
+    title: "Kanban de Clientes",
+    description: "Gerencie seus clientes visualmente em um Kanban personalizável por estágio.",
+    icon: Users,
+    features: ["Arraste e solte entre estágios", "Estágios personalizáveis", "Filtros avançados por status"]
   },
   {
     title: "Gestão de Eventos",
-    description: "Crie eventos, faça check-in por QR Code e colete feedback NPS automaticamente.",
+    description: "Eventos completos com check-in QR Code, custos, brindes, checklist e feedback.",
     icon: Calendar,
-    features: ["Check-in por QR Code", "Feedback pós-evento", "Relatórios de presença"]
+    features: ["Check-in por QR Code", "Controle de custos e brindes", "Feedback personalizado com NPS"]
   },
   {
-    title: "Alertas Proativos",
-    description: "Receba notificações antes que problemas aconteçam. Aja no momento certo.",
+    title: "Formulários e Campanhas",
+    description: "Crie formulários personalizados e envie campanhas de Momentos CX para encantar.",
     icon: Bell,
-    features: ["Alertas de risco de churn", "Lembretes de aniversários", "Oportunidades de upsell"]
+    features: ["Formulários públicos personalizados", "Campanhas de aniversário e datas especiais", "Lembretes automáticos de follow-up"]
   }
 ];
 
@@ -94,26 +94,26 @@ const benefits = [
   {
     icon: Zap,
     title: "Detecte riscos antes do churn",
-    description: "IA analisa cada conversa e identifica sinais de insatisfação automaticamente.",
+    description: "IA analisa conversas e grupos do WhatsApp, identificando sinais de insatisfação automaticamente.",
     highlight: "Redução de até 40% no churn"
   },
   {
     icon: BarChart3,
-    title: "Veja o ROI que seu cliente percebe",
-    description: "O ROIzometer mostra em tempo real se seu cliente acha que está valendo a pena.",
-    highlight: "Métrica exclusiva do ROY"
+    title: "Kanban visual de clientes",
+    description: "Gerencie seus clientes em estágios personalizáveis. Arraste e solte para organizar seu funil.",
+    highlight: "Visão clara do pipeline"
   },
   {
     icon: Heart,
-    title: "Encante nos momentos certos",
-    description: "Saiba aniversários, conquistas e eventos importantes para surpreender.",
+    title: "Campanhas de Momentos CX",
+    description: "Envie mensagens automáticas em aniversários, datas especiais e marcos importantes.",
     highlight: "Relacionamento que fideliza"
   },
   {
     icon: Users,
-    title: "Escale sem perder qualidade",
-    description: "Gerencie centenas de clientes com a mesma atenção que daria a poucos.",
-    highlight: "10x mais eficiência"
+    title: "Grupos WhatsApp sincronizados",
+    description: "Sincronize todos os grupos do WhatsApp e tenha visão completa das interações.",
+    highlight: "Controle total da comunicação"
   }
 ];
 
