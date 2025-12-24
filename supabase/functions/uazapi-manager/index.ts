@@ -1639,11 +1639,18 @@ serve(async (req) => {
         let sendMediaResult: unknown = null;
         let mediaSuccess = false;
         
-        // UAZAPI GO v2 - Media to group (same as individual but with group JID)
+        // UAZAPI GO v2 - Media to group (uses "file" field for URL)
         const mediaEndpoints = [
-          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, url: media_url, caption: caption || "" } },
-          { url: `/send/media`, method: "POST", body: { number: groupJid, mediaUrl: media_url, type: media_type, caption: caption || "" } },
-          { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: groupJid, Url: media_url, Caption: caption || "" } },
+          // Standard UAZAPI format - uses "file" for URL and "to" for recipient
+          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, file: media_url, caption: caption || "" } },
+          // Alternative format with "number" field
+          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, file: media_url, caption: caption || "" } },
+          // Alternative endpoint structure
+          { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: groupJid, File: media_url, Caption: caption || "" } },
+          // Generic media endpoint
+          { url: `/send/media`, method: "POST", body: { to: groupJid, file: media_url, type: media_type, caption: caption || "" } },
+          // Fallback with url field
+          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, url: media_url, caption: caption || "" } },
         ];
 
         for (const endpoint of mediaEndpoints) {
