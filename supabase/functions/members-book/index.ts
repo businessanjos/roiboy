@@ -139,9 +139,57 @@ serve(async (req) => {
 
     console.log("Clients fetched:", clients?.length || 0);
 
+    // Fetch custom fields that can be used as filters (select, multi_select, boolean)
+    const { data: customFields } = await supabase
+      .from("custom_fields")
+      .select("id, name, field_type, options")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .in("field_type", ["select", "multi_select", "boolean"])
+      .order("display_order", { ascending: true });
+
+    console.log("Custom fields for filters:", customFields?.length || 0);
+
+    // Fetch field values for clients
+    const clientIds = clients?.map(c => c.id) || [];
+    let fieldValuesMap: Record<string, Record<string, any>> = {};
+    
+    if (customFields && customFields.length > 0 && clientIds.length > 0) {
+      const { data: fieldValues } = await supabase
+        .from("client_field_values")
+        .select("client_id, field_id, value_text, value_boolean, value_json")
+        .eq("account_id", accountId)
+        .in("client_id", clientIds)
+        .in("field_id", customFields.map(f => f.id));
+
+      // Group by client_id
+      fieldValues?.forEach(fv => {
+        if (!fieldValuesMap[fv.client_id]) {
+          fieldValuesMap[fv.client_id] = {};
+        }
+        // Get the value based on field type
+        const field = customFields.find(f => f.id === fv.field_id);
+        if (field) {
+          if (field.field_type === "boolean") {
+            fieldValuesMap[fv.client_id][fv.field_id] = fv.value_boolean;
+          } else if (field.field_type === "multi_select") {
+            fieldValuesMap[fv.client_id][fv.field_id] = fv.value_json || [];
+          } else {
+            fieldValuesMap[fv.client_id][fv.field_id] = fv.value_text;
+          }
+        }
+      });
+    }
+
     // Collect unique products and segments for filters
     const productsSet = new Set<string>();
     const segmentsSet = new Set<string>();
+    // Collect unique values for each custom field
+    const customFieldValuesMap: Record<string, Set<string>> = {};
+    
+    customFields?.forEach(field => {
+      customFieldValuesMap[field.id] = new Set<string>();
+    });
 
     clients?.forEach(client => {
       // Collect products
@@ -155,10 +203,33 @@ serve(async (req) => {
       if (diagnostics && diagnostics.length > 0 && diagnostics[0]?.business_segment) {
         segmentsSet.add(diagnostics[0].business_segment);
       }
+      // Collect custom field values
+      const clientFieldValues = fieldValuesMap[client.id] || {};
+      customFields?.forEach(field => {
+        const value = clientFieldValues[field.id];
+        if (value !== undefined && value !== null && value !== "") {
+          if (field.field_type === "multi_select" && Array.isArray(value)) {
+            value.forEach((v: string) => customFieldValuesMap[field.id].add(v));
+          } else if (field.field_type === "boolean") {
+            customFieldValuesMap[field.id].add(value ? "true" : "false");
+          } else if (typeof value === "string") {
+            customFieldValuesMap[field.id].add(value);
+          }
+        }
+      });
     });
 
     const availableProducts = Array.from(productsSet).sort();
     const availableSegments = Array.from(segmentsSet).sort();
+    
+    // Build custom field filters array
+    const customFieldFilters = customFields?.map(field => ({
+      id: field.id,
+      name: field.name,
+      field_type: field.field_type,
+      options: field.options,
+      values: Array.from(customFieldValuesMap[field.id] || []).sort(),
+    })).filter(f => f.values.length > 0) || [];
 
     // Map clients to members format based on settings
     const members = clients?.map(client => {
@@ -170,6 +241,7 @@ serve(async (req) => {
         name: client.full_name,
         avatar_url: client.avatar_url || client.logo_url,
         segment: segment, // Always include segment for filtering
+        custom_fields: fieldValuesMap[client.id] || {}, // Include custom field values for filtering
       };
 
       if (settings.show_company) {
@@ -231,6 +303,7 @@ serve(async (req) => {
         filters: {
           products: availableProducts,
           segments: availableSegments,
+          custom_fields: customFieldFilters,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

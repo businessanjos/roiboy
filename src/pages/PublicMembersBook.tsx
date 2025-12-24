@@ -38,6 +38,15 @@ interface Member {
   bio?: string;
   products?: string[];
   segment?: string;
+  custom_fields?: Record<string, any>;
+}
+
+interface CustomFieldFilter {
+  id: string;
+  name: string;
+  field_type: string;
+  options?: string[];
+  values: string[];
 }
 
 interface MembersBookData {
@@ -57,6 +66,7 @@ interface MembersBookData {
   filters?: {
     products: string[];
     segments: string[];
+    custom_fields?: CustomFieldFilter[];
   };
 }
 
@@ -74,6 +84,7 @@ export default function PublicMembersBook() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [selectedSegment, setSelectedSegment] = useState<string>("");
+  const [selectedCustomFields, setSelectedCustomFields] = useState<Record<string, string>>({});
   const [pendingSettings, setPendingSettings] = useState<{ custom_title?: string; custom_description?: string } | null>(null);
 
   const fetchMembersBook = async (accessPassword?: string) => {
@@ -160,14 +171,34 @@ export default function PublicMembersBook() {
     const matchesSegment = !selectedSegment || 
       member.segment === selectedSegment;
     
-    return matchesSearch && matchesProduct && matchesSegment;
+    // Custom fields filter
+    const matchesCustomFields = Object.entries(selectedCustomFields).every(([fieldId, selectedValue]) => {
+      if (!selectedValue) return true;
+      const fieldValue = member.custom_fields?.[fieldId];
+      if (fieldValue === undefined || fieldValue === null) return false;
+      
+      // Find the field type
+      const field = data?.filters?.custom_fields?.find(f => f.id === fieldId);
+      if (!field) return false;
+      
+      if (field.field_type === "multi_select" && Array.isArray(fieldValue)) {
+        return fieldValue.includes(selectedValue);
+      } else if (field.field_type === "boolean") {
+        return (fieldValue === true && selectedValue === "true") || (fieldValue === false && selectedValue === "false");
+      } else {
+        return fieldValue === selectedValue;
+      }
+    });
+    
+    return matchesSearch && matchesProduct && matchesSegment && matchesCustomFields;
   }) || [];
 
-  const hasActiveFilters = !!selectedProduct || !!selectedSegment;
+  const hasActiveFilters = !!selectedProduct || !!selectedSegment || Object.values(selectedCustomFields).some(v => !!v);
 
   const clearFilters = () => {
     setSelectedProduct("");
     setSelectedSegment("");
+    setSelectedCustomFields({});
   };
 
   const getInitials = (name: string) => {
@@ -327,6 +358,29 @@ export default function PublicMembersBook() {
                     </SelectContent>
                   </Select>
                 )}
+                
+                {/* Custom Field Filters */}
+                {data.filters?.custom_fields?.map((field) => (
+                  <Select 
+                    key={field.id}
+                    value={selectedCustomFields[field.id] || ""} 
+                    onValueChange={(value) => setSelectedCustomFields(prev => ({ ...prev, [field.id]: value }))}
+                  >
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue placeholder={field.name} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.values.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {field.field_type === "boolean" 
+                            ? (value === "true" ? "Sim" : "Não")
+                            : value
+                          }
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ))}
                 
                 {hasActiveFilters && (
                   <Button
