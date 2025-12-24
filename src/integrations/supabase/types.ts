@@ -1204,6 +1204,7 @@ export type Database = {
           account_id: string
           additional_phones: Json | null
           avatar_url: string | null
+          bio: string | null
           birth_date: string | null
           business_city: string | null
           business_complement: string | null
@@ -1243,6 +1244,7 @@ export type Database = {
           account_id: string
           additional_phones?: Json | null
           avatar_url?: string | null
+          bio?: string | null
           birth_date?: string | null
           business_city?: string | null
           business_complement?: string | null
@@ -1282,6 +1284,7 @@ export type Database = {
           account_id?: string
           additional_phones?: Json | null
           avatar_url?: string | null
+          bio?: string | null
           birth_date?: string | null
           business_city?: string | null
           business_complement?: string | null
@@ -3026,6 +3029,7 @@ export type Database = {
           custom_title: string | null
           id: string
           is_enabled: boolean
+          show_bio: boolean | null
           show_company: boolean
           show_email: boolean
           show_instagram: boolean
@@ -3041,6 +3045,7 @@ export type Database = {
           custom_title?: string | null
           id?: string
           is_enabled?: boolean
+          show_bio?: boolean | null
           show_company?: boolean
           show_email?: boolean
           show_instagram?: boolean
@@ -3056,6 +3061,7 @@ export type Database = {
           custom_title?: string | null
           id?: string
           is_enabled?: boolean
+          show_bio?: boolean | null
           show_company?: boolean
           show_email?: boolean
           show_instagram?: boolean

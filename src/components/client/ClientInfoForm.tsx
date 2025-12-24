@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home } from "lucide-react";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home, Instagram, FileUser } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   validateCPF, 
@@ -41,6 +41,8 @@ export interface ClientFormData {
   birth_date: string;
   company_name: string;
   notes: string;
+  instagram: string;
+  bio: string;
   // Residential address
   street: string;
   street_number: string;
@@ -645,6 +647,42 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
+          {/* Instagram & Bio */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <FileUser className="h-3.5 w-3.5" />
+              Perfil Público
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <Instagram className="h-3.5 w-3.5 text-pink-500" />
+                  Instagram
+                </Label>
+                <Input
+                  value={data.instagram}
+                  onChange={(e) => updateField("instagram", e.target.value.replace(/^@/, ''))}
+                  placeholder="usuario"
+                  className="h-9"
+                />
+                <p className="text-[11px] text-muted-foreground">Sem o @ (ex: usuario)</p>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium">Bio</Label>
+                <Textarea
+                  value={data.bio}
+                  onChange={(e) => updateField("bio", e.target.value)}
+                  placeholder="Breve descrição para exibir no Members Book..."
+                  className="min-h-[80px] resize-none"
+                  maxLength={500}
+                />
+                <p className="text-[11px] text-muted-foreground text-right">{data.bio?.length || 0}/500</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
           {/* CPF & Birth Date */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -1090,6 +1128,8 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   birth_date: "",
   company_name: "",
   notes: "",
+  instagram: "",
+  bio: "",
   street: "",
   street_number: "",
   complement: "",

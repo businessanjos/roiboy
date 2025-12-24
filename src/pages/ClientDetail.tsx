@@ -85,6 +85,8 @@ interface Client {
   birth_date?: string;
   company_name?: string;
   notes?: string;
+  instagram?: string;
+  bio?: string;
   street?: string;
   street_number?: string;
   complement?: string;
@@ -399,6 +401,8 @@ export default function ClientDetail() {
       birth_date: client.birth_date || "",
       company_name: client.company_name || "",
       notes: client.notes || "",
+      instagram: client.instagram || "",
+      bio: client.bio || "",
       street: client.street || "",
       street_number: client.street_number || "",
       complement: client.complement || "",
@@ -456,6 +460,8 @@ export default function ClientDetail() {
           birth_date: editFormData.birth_date || null,
           company_name: editFormData.company_name || null,
           notes: editFormData.notes || null,
+          instagram: editFormData.instagram || null,
+          bio: editFormData.bio || null,
           street: editFormData.street || null,
           street_number: editFormData.street_number || null,
           complement: editFormData.complement || null,
@@ -491,6 +497,8 @@ export default function ClientDetail() {
         birth_date: editFormData.birth_date,
         company_name: editFormData.company_name,
         notes: editFormData.notes,
+        instagram: editFormData.instagram,
+        bio: editFormData.bio,
         street: editFormData.street,
         street_number: editFormData.street_number,
         complement: editFormData.complement,
