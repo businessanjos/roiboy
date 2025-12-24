@@ -214,9 +214,8 @@ serve(async (req) => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-    // Derive app URL from request origin or use env
-    const origin = req.headers.get("origin") || "https://preview--roy-ai.lovable.app";
-    const appUrl = origin;
+    // Use custom domain for links
+    const appUrl = "https://cxroy.com";
 
     let sentCount = 0;
     let failedCount = 0;
