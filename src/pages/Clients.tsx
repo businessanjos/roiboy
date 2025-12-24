@@ -2534,7 +2534,7 @@ export default function Clients() {
       )}
 
       {/* Kanban View */}
-      {viewMode === "kanban" && accountId && (
+      {viewMode === "kanban" && (accountId || currentUser?.account_id) && (
         <ClientKanban
           clients={filtered.map(c => ({
             id: c.id,
@@ -2548,7 +2548,7 @@ export default function Clients() {
             client_products: c.client_products,
           }))}
           stages={clientStages}
-          accountId={accountId}
+          accountId={accountId || currentUser?.account_id || ''}
           onStageChange={handleClientStageChange}
           onRefreshStages={fetchClientStages}
         />
