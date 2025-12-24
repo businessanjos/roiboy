@@ -58,41 +58,43 @@ const Home = () => {
     {
       icon: Users,
       title: "Gestão de Clientes",
-      description: "Acompanhe cada membro com timeline de atividades, contratos, diagnóstico e campos personalizados.",
+      description: "Kanban visual, timeline de atividades, contratos, diagnóstico, campos personalizados e relacionamentos entre clientes.",
     },
     {
       icon: BarChart3,
       title: "Métricas Inteligentes",
-      description: "ROIzômetro, E-Score e vNPS para medir engajamento, risco de churn e satisfação dos membros.",
+      description: "ROIzômetro, E-Score e vNPS para medir engajamento, risco de churn e satisfação dos membros em tempo real.",
     },
     {
       icon: MessageSquare,
-      title: "Integração WhatsApp",
-      description: "Capture mensagens automaticamente e use IA para analisar sentimentos e detectar eventos de vida.",
+      title: "WhatsApp e Grupos",
+      description: "Sincronize grupos, capture mensagens e use IA para analisar sentimentos, detectar eventos de vida e gerar insights.",
     },
     {
       icon: Calendar,
-      title: "Gestão de Eventos",
-      description: "Organize eventos com check-in QR Code, controle de custos, feedback e galeria de mídias.",
+      title: "Eventos Completos",
+      description: "Check-in QR Code, lista de presença, custos, brindes, checklist, feedback personalizado e galeria de mídias.",
     },
     {
       icon: Target,
-      title: "Tarefas e Projetos",
-      description: "Kanban visual para gerenciar atividades, com atribuição de responsáveis e prazos.",
+      title: "Formulários e Pesquisas",
+      description: "Crie formulários personalizados para captura de leads, pesquisas NPS, cadastros e muito mais.",
     },
     {
       icon: Shield,
-      title: "Contratos e Produtos",
-      description: "Gerencie contratos, renovações automáticas e catálogo de produtos com facilidade.",
+      title: "Lembretes e Campanhas CX",
+      description: "Campanhas de Momentos CX, lembretes automáticos de aniversário e datas especiais para encantar clientes.",
     },
   ];
 
   const benefits = [
-    "Reduza o churn com alertas inteligentes",
-    "Aumente o engajamento dos membros",
-    "Centralize toda a comunicação",
-    "Tome decisões baseadas em dados",
-    "Automatize tarefas repetitivas",
+    "Reduza o churn com alertas inteligentes de IA",
+    "Sincronize grupos do WhatsApp automaticamente",
+    "Gerencie clientes em Kanban visual",
+    "Crie formulários e pesquisas personalizadas",
+    "Envie campanhas de Momentos CX",
+    "Controle eventos com check-in QR Code",
+    "Tome decisões baseadas em dados reais",
     "Escale sua operação com eficiência",
   ];
 
