@@ -54,8 +54,10 @@ import {
   Eye,
   RefreshCw,
   Trash2,
-  RotateCcw
+  RotateCcw,
+  Heart
 } from "lucide-react";
+import MomentosCxCampaign from "@/components/reminders/MomentosCxCampaign";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -548,6 +550,10 @@ export default function Reminders() {
             <Send className="h-4 w-4" />
             Nova Campanha
           </TabsTrigger>
+          <TabsTrigger value="momentos-cx" className="flex items-center gap-2">
+            <Heart className="h-4 w-4" />
+            Momentos CX
+          </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Histórico
@@ -997,6 +1003,10 @@ export default function Reminders() {
               )}
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="momentos-cx" className="mt-6">
+          <MomentosCxCampaign />
         </TabsContent>
 
         <TabsContent value="history" className="mt-6">

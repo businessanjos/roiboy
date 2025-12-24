@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.retry-failed-reminders]
 verify_jwt = false
+
+[functions.send-cx-moment-campaign]
+verify_jwt = false
