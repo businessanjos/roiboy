@@ -19,7 +19,7 @@ interface Client {
 interface ClientEnrichment {
   vnps?: { vnps_score: number; vnps_class: string } | null;
   score?: { escore: number; roizometer: number; quadrant: string; trend: string } | null;
-  contract?: { status: string; start_date: string | null; end_date: string | null } | null;
+  contract?: { status: string; start_date: string | null; end_date: string | null; value?: number; contract_type?: string } | null;
   whatsapp?: { hasConversation: boolean; messageCount: number; lastMessageAt: string | null } | null;
 }
 
@@ -92,9 +92,8 @@ export function useClientEnrichments(clientIds: string[]) {
           .order("computed_at", { ascending: false }),
         supabase
           .from("client_contracts")
-          .select("client_id, status, start_date, end_date")
+          .select("client_id, status, start_date, end_date, value, contract_type")
           .in("client_id", clientIds)
-          .eq("status", "active")
           .order("end_date", { ascending: false }),
         supabase
           .from("conversations")
@@ -127,13 +126,22 @@ export function useClientEnrichments(clientIds: string[]) {
         }
       });
 
+      // Group contracts by client, prioritize active ones
       const contractsMap: Record<string, any> = {};
       (contractsRes.data || []).forEach((c: any) => {
-        if (!contractsMap[c.client_id]) {
+        const existing = contractsMap[c.client_id];
+        // Prioritize: active > paused > ended/cancelled
+        const statusPriority: Record<string, number> = { active: 3, paused: 2, ended: 1, cancelled: 0 };
+        const newPriority = statusPriority[c.status] ?? 0;
+        const existingPriority = existing ? (statusPriority[existing.status] ?? 0) : -1;
+        
+        if (!existing || newPriority > existingPriority) {
           contractsMap[c.client_id] = {
             status: c.status,
             start_date: c.start_date,
             end_date: c.end_date,
+            value: c.value,
+            contract_type: c.contract_type,
           };
         }
       });

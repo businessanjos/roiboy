@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { VNPSBadge } from "@/components/ui/vnps-badge";
-import { ChevronRight, MessageCircle, Wifi, WifiOff, Clock, AlertTriangle, CalendarIcon } from "lucide-react";
+import { ChevronRight, MessageCircle, Wifi, WifiOff, Clock, AlertTriangle, CalendarIcon, FileText, Pause, XCircle, CheckCircle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,7 @@ interface Client {
 interface Enrichment {
   vnps?: { vnps_score: number; vnps_class: string } | null;
   score?: { escore: number; roizometer: number; quadrant: string; trend: string } | null;
-  contract?: { status: string; start_date: string | null; end_date: string | null } | null;
+  contract?: { status: string; start_date: string | null; end_date: string | null; value?: number; contract_type?: string } | null;
   whatsapp?: { hasConversation: boolean; messageCount: number; lastMessageAt: string | null } | null;
 }
 
@@ -89,41 +89,134 @@ const ClientRow = memo(({
   // Contract status indicator
   const getContractIndicator = () => {
     if (!contract) return null;
-    const endDate = contract.end_date ? new Date(contract.end_date) : null;
-    if (!endDate) return null;
     
-    const daysUntilExpiry = differenceInDays(endDate, new Date());
+    const { status, end_date, start_date, value, contract_type } = contract;
+    const endDate = end_date ? new Date(end_date) : null;
+    const startDate = start_date ? new Date(start_date) : null;
     
-    if (daysUntilExpiry < 0) {
+    const formatCurrency = (v: number) => 
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+    
+    const contractTypeLabels: Record<string, string> = {
+      compra: 'Compra',
+      mentoria: 'Mentoria',
+      assinatura: 'Assinatura',
+      servico: 'Serviço',
+    };
+    
+    const typeLabel = contract_type ? contractTypeLabels[contract_type] || contract_type : '';
+    const valueLabel = value ? formatCurrency(value) : '';
+    
+    // Cancelled contract
+    if (status === 'cancelled') {
       return (
         <Tooltip>
           <TooltipTrigger>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <XCircle className="h-4 w-4 text-destructive/70" />
           </TooltipTrigger>
-          <TooltipContent>Contrato expirado</TooltipContent>
+          <TooltipContent>
+            <div className="text-sm">Contrato cancelado</div>
+            {typeLabel && <div className="text-xs text-muted-foreground">{typeLabel}</div>}
+          </TooltipContent>
         </Tooltip>
       );
     }
-    if (daysUntilExpiry <= 30) {
+    
+    // Paused contract
+    if (status === 'paused') {
       return (
         <Tooltip>
           <TooltipTrigger>
-            <Clock className="h-4 w-4 text-amber-500" />
+            <Pause className="h-4 w-4 text-amber-500" />
           </TooltipTrigger>
-          <TooltipContent>Expira em {daysUntilExpiry} dias</TooltipContent>
+          <TooltipContent>
+            <div className="text-sm">Contrato pausado</div>
+            {typeLabel && <div className="text-xs text-muted-foreground">{typeLabel}</div>}
+          </TooltipContent>
         </Tooltip>
       );
     }
-    return (
-      <Tooltip>
-        <TooltipTrigger>
-          <CalendarIcon className="h-4 w-4 text-green-500" />
-        </TooltipTrigger>
-        <TooltipContent>
-          Até {format(endDate, "dd/MM/yyyy", { locale: ptBR })}
-        </TooltipContent>
-      </Tooltip>
-    );
+    
+    // Ended contract
+    if (status === 'ended') {
+      return (
+        <Tooltip>
+          <TooltipTrigger>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-sm">Contrato encerrado</div>
+            {endDate && <div className="text-xs text-muted-foreground">Até {format(endDate, "dd/MM/yyyy", { locale: ptBR })}</div>}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
+    // Active contract - check expiration
+    if (status === 'active' && endDate) {
+      const daysUntilExpiry = differenceInDays(endDate, new Date());
+      
+      if (daysUntilExpiry < 0) {
+        return (
+          <Tooltip>
+            <TooltipTrigger>
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-sm font-medium text-destructive">Contrato expirado</div>
+              <div className="text-xs text-muted-foreground">Expirou em {format(endDate, "dd/MM/yyyy", { locale: ptBR })}</div>
+              {typeLabel && <div className="text-xs text-muted-foreground">{typeLabel} {valueLabel}</div>}
+            </TooltipContent>
+          </Tooltip>
+        );
+      }
+      
+      if (daysUntilExpiry <= 30) {
+        return (
+          <Tooltip>
+            <TooltipTrigger>
+              <Clock className="h-4 w-4 text-amber-500" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-sm font-medium text-amber-600">Expira em {daysUntilExpiry} dias</div>
+              <div className="text-xs text-muted-foreground">Até {format(endDate, "dd/MM/yyyy", { locale: ptBR })}</div>
+              {typeLabel && <div className="text-xs text-muted-foreground">{typeLabel} {valueLabel}</div>}
+            </TooltipContent>
+          </Tooltip>
+        );
+      }
+      
+      return (
+        <Tooltip>
+          <TooltipTrigger>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-sm font-medium text-green-600">Contrato ativo</div>
+            <div className="text-xs text-muted-foreground">Até {format(endDate, "dd/MM/yyyy", { locale: ptBR })}</div>
+            {typeLabel && <div className="text-xs text-muted-foreground">{typeLabel} {valueLabel}</div>}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
+    // Active contract without end date
+    if (status === 'active') {
+      return (
+        <Tooltip>
+          <TooltipTrigger>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-sm font-medium text-green-600">Contrato ativo</div>
+            {startDate && <div className="text-xs text-muted-foreground">Desde {format(startDate, "dd/MM/yyyy", { locale: ptBR })}</div>}
+            {typeLabel && <div className="text-xs text-muted-foreground">{typeLabel} {valueLabel}</div>}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
+    return null;
   };
 
   return (
