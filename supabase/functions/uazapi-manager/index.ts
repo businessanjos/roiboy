@@ -1907,31 +1907,60 @@ serve(async (req) => {
         // Wait for initialization
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Get QR code
+        // Get QR code - try multiple endpoints
         let qrcodeBase64 = "";
         if (instanceToken) {
-          try {
-            const connectResult = await uazapiInstanceRequest("/connect", "POST", instanceToken) as {
-              base64?: string;
-              qrcode?: string;
-            };
-            qrcodeBase64 = connectResult.base64 || connectResult.qrcode || "";
-          } catch (err) {
-            console.log("Failed to get QR:", (err as Error).message);
+          const qrEndpoints = [
+            { url: `/connect`, method: "GET" },
+            { url: `/connect`, method: "POST" },
+            { url: `/qr`, method: "GET" },
+            { url: `/qrcode`, method: "GET" },
+            { url: `/instance/qr`, method: "GET" },
+          ];
+
+          for (const endpoint of qrEndpoints) {
+            if (qrcodeBase64) break;
+            try {
+              console.log(`Support QR: Trying ${endpoint.method} ${endpoint.url}`);
+              const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken) as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                qr?: string;
+                data?: { base64?: string; qrcode?: string };
+              };
+              qrcodeBase64 = connectResult.base64 || 
+                             connectResult.qr ||
+                             connectResult.data?.base64 ||
+                             connectResult.data?.qrcode ||
+                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+              if (qrcodeBase64) {
+                console.log(`Support QR found via ${endpoint.url}`);
+              }
+            } catch (err) {
+              console.log(`Support QR ${endpoint.url} failed:`, (err as Error).message);
+            }
           }
 
           // Configure webhook for support
           const supportWebhookUrl = `${supabaseUrl}/functions/v1/support-webhook`;
-          try {
-            await uazapiInstanceRequest("/webhook/set", "POST", instanceToken, {
-              url: supportWebhookUrl,
-              enabled: true,
-              webhookByEvents: true,
-              events: ["messages", "connection", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
-            });
-            console.log("Support webhook configured");
-          } catch (err) {
-            console.log("Webhook config failed:", (err as Error).message);
+          const webhookEndpoints = [
+            { url: `/webhook/set`, method: "PUT" },
+            { url: `/webhook/set`, method: "POST" },
+            { url: `/webhook`, method: "PUT" },
+          ];
+          for (const endpoint of webhookEndpoints) {
+            try {
+              await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, {
+                url: supportWebhookUrl,
+                enabled: true,
+                webhookByEvents: true,
+                events: ["messages", "connection", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
+              });
+              console.log(`Support webhook configured via ${endpoint.url}`);
+              break;
+            } catch (err) {
+              console.log(`Webhook ${endpoint.url} failed:`, (err as Error).message);
+            }
           }
         }
 
@@ -1981,16 +2010,37 @@ serve(async (req) => {
           );
         }
 
-        // Get new QR code
+        // Get new QR code - try multiple endpoints
         let qrcodeBase64 = "";
-        try {
-          const connectResult = await uazapiInstanceRequest("/connect", "POST", supportConfig.instance_token) as {
-            base64?: string;
-            qrcode?: string;
-          };
-          qrcodeBase64 = connectResult.base64 || connectResult.qrcode || "";
-        } catch (err) {
-          console.log("Failed to get QR:", (err as Error).message);
+        const qrEndpoints = [
+          { url: `/connect`, method: "GET" },
+          { url: `/connect`, method: "POST" },
+          { url: `/qr`, method: "GET" },
+          { url: `/qrcode`, method: "GET" },
+          { url: `/instance/qr`, method: "GET" },
+        ];
+
+        for (const endpoint of qrEndpoints) {
+          if (qrcodeBase64) break;
+          try {
+            console.log(`Support refresh QR: Trying ${endpoint.method} ${endpoint.url}`);
+            const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, supportConfig.instance_token) as {
+              base64?: string;
+              qrcode?: string | { base64?: string };
+              qr?: string;
+              data?: { base64?: string; qrcode?: string };
+            };
+            qrcodeBase64 = connectResult.base64 || 
+                           connectResult.qr ||
+                           connectResult.data?.base64 ||
+                           connectResult.data?.qrcode ||
+                           (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+            if (qrcodeBase64) {
+              console.log(`Support refresh QR found via ${endpoint.url}`);
+            }
+          } catch (err) {
+            console.log(`Support refresh QR ${endpoint.url} failed:`, (err as Error).message);
+          }
         }
 
         // Update settings
