@@ -129,8 +129,8 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
           checked={isCompleted}
           onCheckedChange={() => onToggleComplete(task)}
           className={cn(
-            "h-5 w-5 rounded-full border-2 transition-colors",
-            isCompleted && "bg-green-500 border-green-500 text-white"
+            "h-4 w-4 rounded-full border transition-colors",
+            isCompleted ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/40"
           )}
           disabled={isCancelled}
         />

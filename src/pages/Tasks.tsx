@@ -241,6 +241,34 @@ export default function Tasks() {
     }
   }, [invalidateTasks]);
 
+  const handlePriorityChange = useCallback(async (taskId: string, newPriority: Task["priority"]) => {
+    const { error } = await supabase
+      .from("internal_tasks")
+      .update({ priority: newPriority })
+      .eq("id", taskId);
+
+    if (error) {
+      toast.error("Erro ao alterar prioridade");
+    } else {
+      toast.success("Prioridade atualizada!");
+      invalidateTasks();
+    }
+  }, [invalidateTasks]);
+
+  const handleDueDateChange = useCallback(async (taskId: string, newDate: string | null) => {
+    const { error } = await supabase
+      .from("internal_tasks")
+      .update({ due_date: newDate })
+      .eq("id", taskId);
+
+    if (error) {
+      toast.error("Erro ao alterar prazo");
+    } else {
+      toast.success("Prazo atualizado!");
+      invalidateTasks();
+    }
+  }, [invalidateTasks]);
+
   const openEditDialog = useCallback((task: Task) => {
     setEditingTask(task);
     setInitialStatus(undefined);
@@ -394,8 +422,8 @@ export default function Tasks() {
                           checked={isCompleted}
                           onCheckedChange={() => handleToggleComplete(task)}
                           className={cn(
-                            "h-5 w-5 rounded-full border-2",
-                            isCompleted && "bg-green-500 border-green-500 text-white"
+                            "h-4 w-4 rounded-full border transition-colors",
+                            isCompleted ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/40"
                           )}
                           disabled={isCancelled}
                         />
@@ -444,22 +472,80 @@ export default function Tasks() {
                         </DropdownMenu>
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className={cn(
-                          "inline-flex px-2 py-1 rounded-md text-xs font-medium",
-                          priorityConfig.className
-                        )}>
-                          {priorityConfig.label}
-                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                              "inline-flex px-2 py-1 rounded-md text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity",
+                              priorityConfig.className
+                            )}>
+                              {priorityConfig.label}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-32">
+                            {Object.entries(PRIORITY_CONFIG).map(([priority, config]) => (
+                              <DropdownMenuItem
+                                key={priority}
+                                onClick={() => handlePriorityChange(task.id, priority as Task["priority"])}
+                                className={cn(task.priority === priority && "bg-muted")}
+                              >
+                                <span className={cn("w-2 h-2 rounded-full mr-2", 
+                                  priority === "urgent" && "bg-red-500",
+                                  priority === "high" && "bg-orange-500",
+                                  priority === "medium" && "bg-blue-500",
+                                  priority === "low" && "bg-muted-foreground"
+                                )} />
+                                {config.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell className="text-center">
-                        {dueDateInfo ? (
-                          <div className={cn("flex items-center justify-center gap-1 text-xs", dueDateInfo.className)}>
-                            <Calendar className="h-3 w-3" />
-                            <span>{dueDateInfo.text}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                              "inline-flex items-center gap-1 text-xs cursor-pointer hover:opacity-80 transition-opacity",
+                              dueDateInfo ? dueDateInfo.className : "text-muted-foreground"
+                            )}>
+                              <Calendar className="h-3 w-3" />
+                              <span>{dueDateInfo ? dueDateInfo.text : "Definir"}</span>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-36">
+                            <DropdownMenuItem onClick={() => handleDueDateChange(task.id, new Date().toISOString().split('T')[0])}>
+                              Hoje
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const tomorrow = new Date();
+                              tomorrow.setDate(tomorrow.getDate() + 1);
+                              handleDueDateChange(task.id, tomorrow.toISOString().split('T')[0]);
+                            }}>
+                              Amanhã
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const nextWeek = new Date();
+                              nextWeek.setDate(nextWeek.getDate() + 7);
+                              handleDueDateChange(task.id, nextWeek.toISOString().split('T')[0]);
+                            }}>
+                              Em 1 semana
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const nextMonth = new Date();
+                              nextMonth.setMonth(nextMonth.getMonth() + 1);
+                              handleDueDateChange(task.id, nextMonth.toISOString().split('T')[0]);
+                            }}>
+                              Em 1 mês
+                            </DropdownMenuItem>
+                            {task.due_date && (
+                              <DropdownMenuItem 
+                                onClick={() => handleDueDateChange(task.id, null)}
+                                className="text-destructive"
+                              >
+                                Remover prazo
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         {task.clients ? (
