@@ -217,11 +217,11 @@ serve(async (req) => {
     // 1. No existing integration exists, OR
     // 2. Existing integration is disconnected
     const savedInstanceName = (existingWhatsapp?.config as { instance_name?: string })?.instance_name;
-    const savedInstanceToken = (existingWhatsapp?.config as { instance_token?: string })?.instance_token;
+    let savedInstanceToken = (existingWhatsapp?.config as { instance_token?: string })?.instance_token;
     const isConnected = existingWhatsapp?.status === "connected";
     
-    // Only reuse instance if it exists AND is connected AND has a token
-    const shouldReuseInstance = isConnected && savedInstanceName && savedInstanceToken;
+    // Reutilizar instância se conectada (mesmo sem token - vamos buscar depois)
+    const shouldReuseInstance = isConnected && savedInstanceName;
     
     // Generate unique suffix using timestamp to avoid collisions
     const uniqueSuffix = `-${Date.now().toString(36).slice(-4)}`;
@@ -229,7 +229,35 @@ serve(async (req) => {
       ? savedInstanceName
       : `roy-${accountId.slice(0, 8)}${uniqueSuffix}`;
 
-    console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}, reuse: ${shouldReuseInstance}`);
+    // Se temos instância mas não temos token, tentar buscar via /instance/all
+    if (savedInstanceName && !savedInstanceToken) {
+      console.log(`Instance ${savedInstanceName} exists but token is missing. Fetching from /instance/all...`);
+      try {
+        const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ name?: string; token?: string }>;
+        const instance = allInstances.find(i => i.name === savedInstanceName);
+        if (instance?.token) {
+          savedInstanceToken = instance.token;
+          console.log(`Token found for ${savedInstanceName}: ${savedInstanceToken.slice(0, 8)}...`);
+          
+          // Salvar o token recuperado
+          await supabase
+            .from("integrations")
+            .update({
+              config: {
+                ...(existingWhatsapp?.config as object || {}),
+                instance_token: savedInstanceToken,
+                token_recovered_at: new Date().toISOString(),
+              },
+            })
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp");
+        }
+      } catch (err) {
+        console.log("Failed to fetch token from /instance/all:", (err as Error).message);
+      }
+    }
+
+    console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}, reuse: ${shouldReuseInstance}, hasToken: ${!!savedInstanceToken}`);
 
     let result: unknown;
 
