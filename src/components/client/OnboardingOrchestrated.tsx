@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowRight, CheckSquare, AlertTriangle, ChevronRight, Package, User, CalendarClock, Link2 } from "lucide-react";
 import { toast } from "sonner";
-import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage, syncChecklistToTask, StageChecklistItem } from "@/hooks/useStageChecklist";
+import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage, StageChecklistItem } from "@/hooks/useStageChecklist";
 import { StageChecklistEditor } from "./StageChecklistEditor";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -342,8 +342,7 @@ export function OnboardingOrchestrated({
                                     >
                                       <Checkbox
                                         checked={isCompleted}
-                                        onCheckedChange={async () => {
-                                          // Toggle the item
+                                        onCheckedChange={() => {
                                           toggleChecklistItem.mutate({
                                             clientId: client.id,
                                             checklistItemId: item.id,
@@ -353,17 +352,6 @@ export function OnboardingOrchestrated({
                                             allStageItems: stageItems,
                                             allProgress: checklistProgress,
                                           });
-                                          
-                                          // If completing and has due date, sync to tasks
-                                          if (!isCompleted && item.due_date && !item.linked_task_id) {
-                                            await syncChecklistToTask({
-                                              checklistItem: item,
-                                              clientId: client.id,
-                                              clientName: client.full_name,
-                                              accountId,
-                                              stageName: stage?.name || "",
-                                            });
-                                          }
                                         }}
                                         className="mt-0.5"
                                       />
@@ -396,29 +384,10 @@ export function OnboardingOrchestrated({
                                             <span className="text-xs text-muted-foreground">
                                               {format(parseISO(item.due_date), "dd/MM/yyyy", { locale: ptBR })}
                                             </span>
-                                            {!item.linked_task_id && (
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-5 px-1.5 text-xs"
-                                                onClick={async (e) => {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  const taskId = await syncChecklistToTask({
-                                                    checklistItem: item,
-                                                    clientId: client.id,
-                                                    clientName: client.full_name,
-                                                    accountId,
-                                                    stageName: stage?.name || "",
-                                                  });
-                                                  if (taskId) {
-                                                    toast.success("Tarefa criada!");
-                                                  }
-                                                }}
-                                              >
-                                                <Link2 className="h-3 w-3 mr-1" />
-                                                Criar tarefa
-                                              </Button>
+                                            {item.linked_task_id && (
+                                              <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                                                Tarefa criada
+                                              </Badge>
                                             )}
                                           </div>
                                         )}
