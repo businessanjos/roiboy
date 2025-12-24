@@ -2358,7 +2358,7 @@ export default function Clients() {
               </Table>
             </div>
         </Card>
-      ) : (
+      ) : viewMode === "cards" ? (
         <div className="grid gap-3">
           {filtered.map((client) => {
             const clientProducts = client.client_products?.map((cp: any) => cp.products?.name).filter(Boolean) || [];
@@ -2543,7 +2543,7 @@ export default function Clients() {
             <p className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</p>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* Kanban View */}
       {viewMode === "kanban" && (accountId || currentUser?.account_id) && (
