@@ -11,10 +11,14 @@ const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 interface UazapiRequest {
-  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token";
+  action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token" 
+    | "list_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group";
   instance_name?: string;
   phone?: string;
   message?: string;
+  group_id?: string;
+  group_name?: string;
+  participants?: string[];
 }
 
 // Helper function to configure webhook automatically
@@ -201,7 +205,7 @@ serve(async (req) => {
 
     const accountId = userData.account_id;
     const payload: UazapiRequest = await req.json();
-    const { action, phone, message } = payload;
+    const { action, phone, message, group_id, group_name, participants } = payload;
 
     // Get existing integration to use saved instance name
     const { data: existingWhatsapp, error: existingError } = await supabase
@@ -906,6 +910,276 @@ serve(async (req) => {
             message: "Não foi possível obter o token. Tente reconectar o WhatsApp.",
           };
         }
+        break;
+      }
+
+      case "list_groups": {
+        // List all groups using UAZAPI
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+
+        console.log("Fetching groups list...");
+        
+        // Try different endpoints to list groups
+        let groups: unknown[] = [];
+        const groupEndpoints = [
+          { url: `/group/fetchAllGroups`, method: "GET" },
+          { url: `/group/all`, method: "GET" },
+          { url: `/groups`, method: "GET" },
+          { url: `/chat/groups`, method: "GET" },
+        ];
+
+        for (const endpoint of groupEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            const groupsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
+            console.log("Groups result:", JSON.stringify(groupsResult));
+            
+            // Handle different response formats
+            if (Array.isArray(groupsResult)) {
+              groups = groupsResult;
+            } else if ((groupsResult as { groups?: unknown[] })?.groups) {
+              groups = (groupsResult as { groups: unknown[] }).groups;
+            } else if ((groupsResult as { data?: unknown[] })?.data) {
+              groups = (groupsResult as { data: unknown[] }).data;
+            }
+            
+            if (groups.length > 0) break;
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = { groups };
+        break;
+      }
+
+      case "create_group": {
+        // Create a new group
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_name) {
+          throw new Error("Nome do grupo é obrigatório");
+        }
+        
+        if (!participants || participants.length === 0) {
+          throw new Error("Pelo menos um participante é obrigatório");
+        }
+
+        console.log(`Creating group: ${group_name} with ${participants.length} participants`);
+        
+        // Clean participant phones
+        const cleanParticipants = participants.map(p => p.replace(/\D/g, ""));
+        
+        // Try different endpoints to create group
+        let createGroupResult: unknown = null;
+        const createEndpoints = [
+          { url: `/group/create`, method: "POST" },
+          { url: `/groups/create`, method: "POST" },
+        ];
+
+        for (const endpoint of createEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            createGroupResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              { 
+                subject: group_name, 
+                participants: cleanParticipants,
+                name: group_name, // alternate field name
+              }
+            );
+            console.log("Create group result:", JSON.stringify(createGroupResult));
+            break;
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = createGroupResult || { success: false, message: "Não foi possível criar o grupo" };
+        break;
+      }
+
+      case "group_participants": {
+        // Get participants of a group
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+
+        console.log(`Fetching participants for group: ${group_id}`);
+        
+        let participantsResult: unknown = null;
+        const participantEndpoints = [
+          { url: `/group/participants/${group_id}`, method: "GET" },
+          { url: `/group/${group_id}/participants`, method: "GET" },
+          { url: `/groups/${group_id}/participants`, method: "GET" },
+        ];
+
+        for (const endpoint of participantEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            participantsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
+            console.log("Participants result:", JSON.stringify(participantsResult));
+            break;
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = participantsResult;
+        break;
+      }
+
+      case "add_participant": {
+        // Add participant to group
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+        
+        if (!participants || participants.length === 0) {
+          throw new Error("Pelo menos um participante é obrigatório");
+        }
+
+        console.log(`Adding ${participants.length} participants to group: ${group_id}`);
+        
+        const cleanParticipants = participants.map(p => p.replace(/\D/g, ""));
+        
+        let addResult: unknown = null;
+        const addEndpoints = [
+          { url: `/group/addParticipants`, method: "POST" },
+          { url: `/group/${group_id}/add`, method: "POST" },
+          { url: `/groups/${group_id}/participants/add`, method: "POST" },
+        ];
+
+        for (const endpoint of addEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            addResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              { 
+                groupJid: group_id,
+                participants: cleanParticipants,
+              }
+            );
+            console.log("Add participants result:", JSON.stringify(addResult));
+            break;
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = addResult || { success: false, message: "Não foi possível adicionar participantes" };
+        break;
+      }
+
+      case "remove_participant": {
+        // Remove participant from group
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+        
+        if (!participants || participants.length === 0) {
+          throw new Error("Pelo menos um participante é obrigatório");
+        }
+
+        console.log(`Removing ${participants.length} participants from group: ${group_id}`);
+        
+        const cleanParticipants = participants.map(p => p.replace(/\D/g, ""));
+        
+        let removeResult: unknown = null;
+        const removeEndpoints = [
+          { url: `/group/removeParticipants`, method: "POST" },
+          { url: `/group/${group_id}/remove`, method: "POST" },
+          { url: `/groups/${group_id}/participants/remove`, method: "POST" },
+        ];
+
+        for (const endpoint of removeEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            removeResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              { 
+                groupJid: group_id,
+                participants: cleanParticipants,
+              }
+            );
+            console.log("Remove participants result:", JSON.stringify(removeResult));
+            break;
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = removeResult || { success: false, message: "Não foi possível remover participantes" };
+        break;
+      }
+
+      case "send_to_group": {
+        // Send message to group
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+        
+        if (!message) {
+          throw new Error("Mensagem é obrigatória");
+        }
+
+        console.log(`Sending message to group: ${group_id}`);
+        
+        let sendResult: unknown = null;
+        const sendEndpoints = [
+          { url: `/sendText`, method: "POST", body: { phone: group_id, message } },
+          { url: `/message/sendText`, method: "POST", body: { number: group_id, text: message } },
+          { url: `/send/text`, method: "POST", body: { to: group_id, text: message } },
+        ];
+
+        for (const endpoint of sendEndpoints) {
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            sendResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              endpoint.body
+            );
+            console.log("Send to group result:", JSON.stringify(sendResult));
+            
+            // Check if successful
+            const sendData = sendResult as { error?: boolean; messageId?: string; status?: string };
+            if (sendData.error === false || sendData.messageId || sendData.status === "PENDING") {
+              break;
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = sendResult || { success: false, message: "Não foi possível enviar a mensagem" };
         break;
       }
 

@@ -50,6 +50,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Download = lazy(() => import("./pages/Download"));
 const Home = lazy(() => import("./pages/Home"));
 const Reminders = lazy(() => import("./pages/Reminders"));
+const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -114,6 +115,7 @@ const App = () => (
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/account-settings" element={<AccountSettings />} />
                             <Route path="/reminders" element={<Reminders />} />
+                            <Route path="/whatsapp-groups" element={<WhatsAppGroups />} />
                             <Route path="/admin" element={<Admin />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
