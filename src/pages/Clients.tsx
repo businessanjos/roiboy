@@ -535,13 +535,19 @@ export default function Clients() {
   };
 
   const fetchClientStages = async () => {
+    const accId = accountId || currentUser?.account_id;
+    if (!accId) return;
+    
     const { data, error } = await supabase
       .from("client_stages")
       .select("id, name, color, display_order")
+      .eq("account_id", accId)
       .order("display_order");
     
     if (!error) {
       setClientStages(data || []);
+    } else {
+      console.error("Error fetching client stages:", error);
     }
   };
 
@@ -570,8 +576,14 @@ export default function Clients() {
     fetchProducts();
     fetchCustomFields();
     fetchTeamUsers();
-    fetchClientStages();
   }, []);
+
+  // Fetch client stages when account is available
+  useEffect(() => {
+    if (accountId || currentUser?.account_id) {
+      fetchClientStages();
+    }
+  }, [accountId, currentUser?.account_id]);
 
   // Fetch field values and pending form sends when clients are loaded
   useEffect(() => {
