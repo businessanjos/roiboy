@@ -150,6 +150,22 @@ serve(async (req) => {
 
     console.log("Custom fields for filters:", customFields?.length || 0);
 
+    // Build option ID to label map for each field
+    const optionLabelMaps: Record<string, Record<string, string>> = {};
+    customFields?.forEach(field => {
+      optionLabelMaps[field.id] = {};
+      if (field.options && Array.isArray(field.options)) {
+        field.options.forEach((opt: any) => {
+          if (opt && typeof opt === 'object' && opt.id && opt.label) {
+            optionLabelMaps[field.id][opt.id] = opt.label;
+          } else if (typeof opt === 'string') {
+            // Fallback if options are just strings
+            optionLabelMaps[field.id][opt] = opt;
+          }
+        });
+      }
+    });
+
     // Fetch field values for clients
     const clientIds = clients?.map(c => c.id) || [];
     let fieldValuesMap: Record<string, Record<string, any>> = {};
@@ -162,20 +178,25 @@ serve(async (req) => {
         .in("client_id", clientIds)
         .in("field_id", customFields.map(f => f.id));
 
-      // Group by client_id
+      // Group by client_id and translate option IDs to labels
       fieldValues?.forEach(fv => {
         if (!fieldValuesMap[fv.client_id]) {
           fieldValuesMap[fv.client_id] = {};
         }
-        // Get the value based on field type
         const field = customFields.find(f => f.id === fv.field_id);
         if (field) {
           if (field.field_type === "boolean") {
             fieldValuesMap[fv.client_id][fv.field_id] = fv.value_boolean;
           } else if (field.field_type === "multi_select") {
-            fieldValuesMap[fv.client_id][fv.field_id] = fv.value_json || [];
+            // Translate option IDs to labels
+            const values = fv.value_json || [];
+            const labelMap = optionLabelMaps[field.id] || {};
+            fieldValuesMap[fv.client_id][fv.field_id] = values.map((v: string) => labelMap[v] || v);
           } else {
-            fieldValuesMap[fv.client_id][fv.field_id] = fv.value_text;
+            // Translate option ID to label for select
+            const labelMap = optionLabelMaps[field.id] || {};
+            const rawValue = fv.value_text || '';
+            fieldValuesMap[fv.client_id][fv.field_id] = labelMap[rawValue] || rawValue;
           }
         }
       });
@@ -184,7 +205,7 @@ serve(async (req) => {
     // Collect unique products and segments for filters
     const productsSet = new Set<string>();
     const segmentsSet = new Set<string>();
-    // Collect unique values for each custom field
+    // Collect unique values for each custom field (as labels now)
     const customFieldValuesMap: Record<string, Set<string>> = {};
     
     customFields?.forEach(field => {
@@ -203,16 +224,18 @@ serve(async (req) => {
       if (diagnostics && diagnostics.length > 0 && diagnostics[0]?.business_segment) {
         segmentsSet.add(diagnostics[0].business_segment);
       }
-      // Collect custom field values
+      // Collect custom field values (already translated to labels)
       const clientFieldValues = fieldValuesMap[client.id] || {};
       customFields?.forEach(field => {
         const value = clientFieldValues[field.id];
         if (value !== undefined && value !== null && value !== "") {
           if (field.field_type === "multi_select" && Array.isArray(value)) {
-            value.forEach((v: string) => customFieldValuesMap[field.id].add(v));
+            value.forEach((v: string) => {
+              if (v) customFieldValuesMap[field.id].add(v);
+            });
           } else if (field.field_type === "boolean") {
             customFieldValuesMap[field.id].add(value ? "true" : "false");
-          } else if (typeof value === "string") {
+          } else if (typeof value === "string" && value) {
             customFieldValuesMap[field.id].add(value);
           }
         }
@@ -222,12 +245,11 @@ serve(async (req) => {
     const availableProducts = Array.from(productsSet).sort();
     const availableSegments = Array.from(segmentsSet).sort();
     
-    // Build custom field filters array
+    // Build custom field filters array with labels
     const customFieldFilters = customFields?.map(field => ({
       id: field.id,
       name: field.name,
       field_type: field.field_type,
-      options: field.options,
       values: Array.from(customFieldValuesMap[field.id] || []).sort(),
     })).filter(f => f.values.length > 0) || [];
 
