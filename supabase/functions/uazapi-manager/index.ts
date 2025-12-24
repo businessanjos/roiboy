@@ -2152,7 +2152,34 @@ serve(async (req) => {
         }
 
         // Wait for instance to be ready
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 4000));
+
+        // Try to START the instance first (this triggers QR generation in UAZAPI GO)
+        console.log(`Trying to start instance to trigger QR generation...`);
+        const startEndpoints = [
+          { url: `/instance/start/${supportInstanceName}`, method: "POST", admin: true },
+          { url: `/instance/start/${supportInstanceName}`, method: "GET", admin: true },
+          { url: `/start`, method: "POST", admin: false },
+          { url: `/start`, method: "GET", admin: false },
+        ];
+        
+        for (const endpoint of startEndpoints) {
+          try {
+            console.log(`Trying start: ${endpoint.admin ? "admin" : "instance"} ${endpoint.method} ${endpoint.url}`);
+            if (endpoint.admin) {
+              await uazapiAdminRequest(endpoint.url, endpoint.method);
+            } else {
+              await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken);
+            }
+            console.log(`Start succeeded for ${endpoint.url}`);
+            break;
+          } catch (err) {
+            console.log(`Start ${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+        
+        // Wait a bit more after starting
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Try to get QR code using instance token endpoints
         if (!qrcodeBase64) {
