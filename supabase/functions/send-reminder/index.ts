@@ -276,8 +276,9 @@ serve(async (req) => {
             let messageSent = false;
             let lastError = "";
             
-            // UAZAPI GO V2 uses /message/text endpoint with token header
-            // Body requires: number, text fields
+            // UAZAPI GO V2 - Documentação oficial: POST /send/text
+            // Body: { number: "5511999999999", text: "mensagem" }
+            // Header: token
             
             // Normalize URL - remove trailing slash if present
             const baseUrl = UAZAPI_URL.replace(/\/$/, '');
@@ -293,9 +294,9 @@ serve(async (req) => {
             if (whatsappConfig.instance_token) {
               console.log(`Using instance_token authentication: ${whatsappConfig.instance_token.slice(0, 8)}...`);
               
-              // UAZAPI GO V2 documented endpoint is /message/text
+              // UAZAPI GO V2 documentação oficial: /send/text
               const instanceEndpoints = [
-                `/message/text`,     // UAZAPI GO v2 documented endpoint
+                `/send/text`,     // UAZAPI GO v2 documentação oficial
               ];
               
               for (const endpointPath of instanceEndpoints) {
@@ -345,9 +346,9 @@ serve(async (req) => {
             if (!messageSent) {
               console.log(`Using admintoken authentication`);
               
-              // UAZAPI GO V2 admin endpoints use /message/text/{instanceName}
+              // UAZAPI GO V2 admin endpoints use /send/text/{instanceName}
               const adminEndpoints = [
-                `/message/text/${whatsappConfig.instance_name}`,  // UAZAPI GO v2 admin format
+                `/send/text/${whatsappConfig.instance_name}`,  // UAZAPI GO v2 admin format
               ];
               
               for (const endpointPath of adminEndpoints) {
