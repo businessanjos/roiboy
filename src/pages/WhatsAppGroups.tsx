@@ -54,6 +54,28 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// Format phone number for display
+const formatPhoneDisplay = (phone?: string): string => {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\D/g, "");
+  
+  // Brazilian format: +55 (11) 99999-9999
+  if (cleaned.length === 13 && cleaned.startsWith("55")) {
+    return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+  }
+  if (cleaned.length === 12 && cleaned.startsWith("55")) {
+    return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
+  }
+  if (cleaned.length === 11) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  }
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+  }
+  
+  return phone;
+};
+
 interface WhatsAppGroup {
   id: string;
   group_jid: string;
@@ -73,6 +95,7 @@ interface GroupParticipant {
   phone?: string;
   admin?: string;
   name?: string;
+  isClient?: boolean;
 }
 
 interface Client {
@@ -505,6 +528,36 @@ export default function WhatsAppGroups() {
         });
       }
       
+      // Enrich participants with client names from database
+      if (participants.length > 0 && clients.length > 0) {
+        participants = participants.map(p => {
+          // Try to find matching client by phone
+          const phone = p.phone || "";
+          const matchingClient = clients.find(c => {
+            const clientPhone = c.phone_e164.replace(/\D/g, "");
+            const participantPhone = phone.replace(/\D/g, "");
+            
+            // Match exact or with/without country code
+            return clientPhone === participantPhone || 
+                   clientPhone.endsWith(participantPhone) || 
+                   participantPhone.endsWith(clientPhone) ||
+                   // Also try with "55" prefix for Brazilian numbers
+                   clientPhone === `55${participantPhone}` ||
+                   participantPhone === `55${clientPhone}`;
+          });
+          
+          if (matchingClient) {
+            return {
+              ...p,
+              name: p.name || matchingClient.full_name,
+              isClient: true,
+            };
+          }
+          
+          return p;
+        });
+      }
+      
       setGroupParticipants(participants);
     } catch (error) {
       console.error("Error fetching participants:", error);
@@ -928,24 +981,31 @@ export default function WhatsAppGroups() {
                       className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-muted/30"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                          <Users className="h-4 w-4 text-muted-foreground" />
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${p.isClient ? "bg-primary/10" : "bg-muted"}`}>
+                          <Users className={`h-4 w-4 ${p.isClient ? "text-primary" : "text-muted-foreground"}`} />
                         </div>
                         <div>
                           <p className="font-medium">
-                            {p.name || p.phone || p.id.split("@")[0]}
+                            {p.name || formatPhoneDisplay(p.phone) || p.id.split("@")[0]}
                           </p>
                           {p.name && (
                             <p className="text-xs text-muted-foreground">
-                              {p.phone || p.id.split("@")[0]}
+                              {formatPhoneDisplay(p.phone) || p.id.split("@")[0]}
                             </p>
                           )}
                         </div>
-                        {p.admin && (
-                          <Badge variant="secondary" className="text-xs">
-                            {p.admin === "superadmin" ? "Dono" : "Admin"}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {p.isClient && (
+                            <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                              Cliente
+                            </Badge>
+                          )}
+                          {p.admin && (
+                            <Badge variant="secondary" className="text-xs">
+                              {p.admin === "superadmin" ? "Dono" : "Admin"}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       {!p.admin && (
                         <Button
