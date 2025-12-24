@@ -1883,7 +1883,7 @@ serve(async (req) => {
 
       // ========== SUPPORT WHATSAPP ACTIONS ==========
       case "create_support_instance": {
-        const supportInstanceName = payload.instance_name || `support-roy-${Date.now().toString(36)}`;
+        const supportInstanceName = payload.instance_name || "suporte-roy";
         
         // Check if super admin
         const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
@@ -1894,77 +1894,135 @@ serve(async (req) => {
           );
         }
 
+        // First, try to delete any existing instance with this name
+        try {
+          await uazapiAdminRequest(`/instance/delete/${supportInstanceName}`, "DELETE");
+          console.log(`Deleted existing instance ${supportInstanceName}`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (err) {
+          console.log(`No existing instance to delete or delete failed:`, (err as Error).message);
+        }
+
         // Create instance via UAZAPI
+        console.log(`Creating support instance: ${supportInstanceName}`);
         const createResult = await uazapiAdminRequest("/instance/init", "POST", {
           name: supportInstanceName,
         }) as {
           token?: string;
-          instance?: { token?: string };
+          instance?: { token?: string; qrcode?: string };
+          qrcode?: string;
         };
+        
+        console.log(`Create instance response:`, JSON.stringify(createResult).slice(0, 500));
 
         const instanceToken = createResult.token || createResult.instance?.token;
+        let qrcodeBase64 = createResult.qrcode || createResult.instance?.qrcode || "";
 
-        // Wait for initialization
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Save token immediately so we can use it
+        await supabase
+          .from("system_settings")
+          .update({
+            value: {
+              instance_name: supportInstanceName,
+              instance_token: instanceToken,
+              phone: null,
+              status: "connecting",
+              qr_code: null,
+            },
+          })
+          .eq("key", "support_whatsapp");
 
-        // Get QR code - try multiple endpoints
-        let qrcodeBase64 = "";
-        if (instanceToken) {
-          const qrEndpoints = [
-            { url: `/connect`, method: "GET" },
-            { url: `/connect`, method: "POST" },
-            { url: `/qr`, method: "GET" },
-            { url: `/qrcode`, method: "GET" },
-            { url: `/instance/qr`, method: "GET" },
+        // Wait for initialization then trigger connection
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // UAZAPI GO: Use admin endpoint /instance/connect/{name} to trigger QR generation
+        // This is what the normal WhatsApp integration uses successfully
+        if (!qrcodeBase64 && supportInstanceName) {
+          console.log(`Triggering connection via admin endpoint`);
+          
+          const adminConnectEndpoints = [
+            { url: `/instance/connect/${supportInstanceName}`, method: "GET" },
+            { url: `/instance/connect/${supportInstanceName}`, method: "POST" },
           ];
-
-          for (const endpoint of qrEndpoints) {
+          
+          for (const endpoint of adminConnectEndpoints) {
             if (qrcodeBase64) break;
             try {
-              console.log(`Support QR: Trying ${endpoint.method} ${endpoint.url}`);
-              const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken) as {
+              console.log(`Support create: Trying admin ${endpoint.method} ${endpoint.url}`);
+              const connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method) as {
                 base64?: string;
                 qrcode?: string | { base64?: string };
                 qr?: string;
                 data?: { base64?: string; qrcode?: string };
               };
+              console.log(`Admin connect result:`, JSON.stringify(connectResult).slice(0, 500));
               qrcodeBase64 = connectResult.base64 || 
                              connectResult.qr ||
                              connectResult.data?.base64 ||
                              connectResult.data?.qrcode ||
                              (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
               if (qrcodeBase64) {
-                console.log(`Support QR found via ${endpoint.url}`);
+                console.log(`QR code found via admin ${endpoint.url}`);
               }
             } catch (err) {
-              console.log(`Support QR ${endpoint.url} failed:`, (err as Error).message);
-            }
-          }
-
-          // Configure webhook for support
-          const supportWebhookUrl = `${supabaseUrl}/functions/v1/support-webhook`;
-          const webhookEndpoints = [
-            { url: `/webhook/set`, method: "PUT" },
-            { url: `/webhook/set`, method: "POST" },
-            { url: `/webhook`, method: "PUT" },
-          ];
-          for (const endpoint of webhookEndpoints) {
-            try {
-              await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, {
-                url: supportWebhookUrl,
-                enabled: true,
-                webhookByEvents: true,
-                events: ["messages", "connection", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
-              });
-              console.log(`Support webhook configured via ${endpoint.url}`);
-              break;
-            } catch (err) {
-              console.log(`Webhook ${endpoint.url} failed:`, (err as Error).message);
+              console.log(`Admin ${endpoint.url} failed:`, (err as Error).message);
             }
           }
         }
 
-        // Update system settings
+        // If still no QR, try with instance token
+        if (!qrcodeBase64 && instanceToken) {
+          console.log(`Trying instance token endpoints`);
+          
+          const qrEndpoints = [
+            { url: `/connect`, method: "GET" },
+            { url: `/connect`, method: "POST" },
+            { url: `/qr`, method: "GET" },
+            { url: `/qrcode`, method: "GET" },
+          ];
+
+          for (const endpoint of qrEndpoints) {
+            if (qrcodeBase64) break;
+            try {
+              console.log(`Support QR: Trying instance ${endpoint.method} ${endpoint.url}`);
+              const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken) as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                qr?: string;
+                data?: { base64?: string; qrcode?: string };
+              };
+              console.log(`Instance connect result:`, JSON.stringify(connectResult).slice(0, 300));
+              qrcodeBase64 = connectResult.base64 || 
+                             connectResult.qr ||
+                             connectResult.data?.base64 ||
+                             connectResult.data?.qrcode ||
+                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+              if (qrcodeBase64) {
+                console.log(`Support QR found via instance ${endpoint.url}`);
+              }
+            } catch (err) {
+              console.log(`Support QR instance ${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+
+        // Configure webhook for support
+        if (instanceToken) {
+          const supportWebhookUrl = `${supabaseUrl}/functions/v1/support-webhook`;
+          try {
+            await uazapiInstanceRequest("/webhook/set", "POST", instanceToken, {
+              url: supportWebhookUrl,
+              enabled: true,
+              webhookByEvents: true,
+              events: ["messages", "connection", "qrcode", "MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"]
+            });
+            console.log(`Support webhook configured`);
+          } catch (err) {
+            console.log(`Webhook config failed:`, (err as Error).message);
+          }
+        }
+
+        // Update system settings with final result
         await supabase
           .from("system_settings")
           .update({
@@ -1982,6 +2040,7 @@ serve(async (req) => {
           success: true,
           instance_name: supportInstanceName,
           qr_code: qrcodeBase64,
+          token: instanceToken,
         };
         break;
       }
