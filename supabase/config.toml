@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.send-cx-moment-campaign]
 verify_jwt = false
+
+[functions.members-book]
+verify_jwt = false

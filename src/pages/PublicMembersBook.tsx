@@ -42,7 +42,8 @@ interface MembersBookData {
 
 export default function PublicMembersBook() {
   const [searchParams] = useSearchParams();
-  const accountId = searchParams.get("account");
+  // Support both "account" and "account_id" for backwards compatibility
+  const accountId = searchParams.get("account") || searchParams.get("account_id");
   
   const [data, setData] = useState<MembersBookData | null>(null);
   const [loading, setLoading] = useState(true);
