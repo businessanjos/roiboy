@@ -13,12 +13,15 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 interface UazapiRequest {
   action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token" 
     | "list_groups" | "sync_groups" | "save_selected_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
-    | "send_media" | "send_media_to_group";
+    | "send_media" | "send_media_to_group"
+    | "update_group_name" | "update_group_description" | "update_group_image";
   instance_name?: string;
   phone?: string;
   message?: string;
   group_id?: string;
   group_name?: string;
+  group_description?: string;
+  group_image?: string;
   participants?: string[];
   media_url?: string;
   media_type?: "image" | "audio" | "document";
@@ -1570,8 +1573,9 @@ serve(async (req) => {
         let sendMediaResult: unknown = null;
         let mediaSuccess = false;
         
-        // UAZAPI GO v2 - Media endpoints
+        // UAZAPI GO v2 - Media endpoints (uses "number" field)
         const mediaEndpoints = [
+          { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, file: media_url, caption: caption || "" } },
           { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, url: media_url, caption: caption || "" } },
           { url: `/send/media`, method: "POST", body: { number: cleanPhone, mediaUrl: media_url, type: media_type, caption: caption || "" } },
           { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: cleanPhone, Url: media_url, Caption: caption || "" } },
@@ -1639,18 +1643,18 @@ serve(async (req) => {
         let sendMediaResult: unknown = null;
         let mediaSuccess = false;
         
-        // UAZAPI GO v2 - Media to group (uses "file" field for URL)
+        // UAZAPI GO v2 - Media to group (uses "number" field for group JID)
         const mediaEndpoints = [
-          // Standard UAZAPI format - uses "file" for URL and "to" for recipient
-          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, file: media_url, caption: caption || "" } },
-          // Alternative format with "number" field
+          // Standard UAZAPI format - uses "number" for recipient
           { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, file: media_url, caption: caption || "" } },
+          // Alternative with url field
+          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, url: media_url, caption: caption || "" } },
+          // Alternative format with "to" field
+          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, file: media_url, caption: caption || "" } },
           // Alternative endpoint structure
           { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: groupJid, File: media_url, Caption: caption || "" } },
           // Generic media endpoint
-          { url: `/send/media`, method: "POST", body: { to: groupJid, file: media_url, type: media_type, caption: caption || "" } },
-          // Fallback with url field
-          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, url: media_url, caption: caption || "" } },
+          { url: `/send/media`, method: "POST", body: { number: groupJid, file: media_url, type: media_type, caption: caption || "" } },
         ];
 
         for (const endpoint of mediaEndpoints) {
@@ -1690,6 +1694,187 @@ serve(async (req) => {
         result = mediaSuccess 
           ? { success: true, message: "Mídia enviada com sucesso ao grupo", data: sendMediaResult }
           : { success: false, message: "Não foi possível enviar a mídia ao grupo", lastResult: sendMediaResult };
+        break;
+      }
+
+      case "update_group_name": {
+        // Update group name/subject
+        const { group_id, group_name } = payload as UazapiRequest;
+        
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+        
+        if (!group_name) {
+          throw new Error("Nome do grupo é obrigatório");
+        }
+
+        const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
+        console.log(`Updating group name: ${groupJid} -> ${group_name}`);
+        
+        let updateResult: unknown = null;
+        let updateSuccess = false;
+        
+        const updateEndpoints = [
+          { url: `/group/updateSubject`, method: "POST", body: { groupJid: groupJid, subject: group_name } },
+          { url: `/group/updateName`, method: "POST", body: { groupJid: groupJid, name: group_name } },
+          { url: `/group/${groupJid}/name`, method: "PUT", body: { name: group_name } },
+        ];
+
+        for (const endpoint of updateEndpoints) {
+          if (updateSuccess) break;
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            updateResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              endpoint.body
+            );
+            console.log("Update name result:", JSON.stringify(updateResult));
+            
+            const updateData = updateResult as { error?: boolean | string; success?: boolean };
+            if (updateData.success || updateData.error === false) {
+              updateSuccess = true;
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        // Update in database if success
+        if (updateSuccess) {
+          try {
+            await supabase.from("whatsapp_groups")
+              .update({ name: group_name, updated_at: new Date().toISOString() })
+              .eq("group_jid", groupJid);
+          } catch (dbErr) {
+            console.log("Failed to update group name in DB:", dbErr);
+          }
+        }
+
+        result = updateSuccess 
+          ? { success: true, message: "Nome do grupo atualizado com sucesso", data: updateResult }
+          : { success: false, message: "Não foi possível atualizar o nome do grupo", lastResult: updateResult };
+        break;
+      }
+
+      case "update_group_description": {
+        // Update group description
+        const { group_id, group_description } = payload as UazapiRequest;
+        
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+
+        const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
+        console.log(`Updating group description: ${groupJid}`);
+        
+        let updateResult: unknown = null;
+        let updateSuccess = false;
+        
+        const updateEndpoints = [
+          { url: `/group/updateDescription`, method: "POST", body: { groupJid: groupJid, description: group_description || "" } },
+          { url: `/group/${groupJid}/description`, method: "PUT", body: { description: group_description || "" } },
+        ];
+
+        for (const endpoint of updateEndpoints) {
+          if (updateSuccess) break;
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            updateResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              endpoint.body
+            );
+            console.log("Update description result:", JSON.stringify(updateResult));
+            
+            const updateData = updateResult as { error?: boolean | string; success?: boolean };
+            if (updateData.success || updateData.error === false) {
+              updateSuccess = true;
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        // Update in database if success
+        if (updateSuccess) {
+          try {
+            await supabase.from("whatsapp_groups")
+              .update({ description: group_description, updated_at: new Date().toISOString() })
+              .eq("group_jid", groupJid);
+          } catch (dbErr) {
+            console.log("Failed to update group description in DB:", dbErr);
+          }
+        }
+
+        result = updateSuccess 
+          ? { success: true, message: "Descrição do grupo atualizada com sucesso", data: updateResult }
+          : { success: false, message: "Não foi possível atualizar a descrição do grupo", lastResult: updateResult };
+        break;
+      }
+
+      case "update_group_image": {
+        // Update group image
+        const { group_id, group_image } = payload as UazapiRequest;
+        
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+        
+        if (!group_image) {
+          throw new Error("URL da imagem é obrigatória");
+        }
+
+        const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
+        console.log(`Updating group image: ${groupJid}`);
+        
+        let updateResult: unknown = null;
+        let updateSuccess = false;
+        
+        const updateEndpoints = [
+          { url: `/group/updateImage`, method: "POST", body: { groupJid: groupJid, image: group_image } },
+          { url: `/group/${groupJid}/image`, method: "PUT", body: { image: group_image } },
+        ];
+
+        for (const endpoint of updateEndpoints) {
+          if (updateSuccess) break;
+          try {
+            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
+            updateResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              endpoint.body
+            );
+            console.log("Update image result:", JSON.stringify(updateResult));
+            
+            const updateData = updateResult as { error?: boolean | string; success?: boolean };
+            if (updateData.success || updateData.error === false) {
+              updateSuccess = true;
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = updateSuccess 
+          ? { success: true, message: "Imagem do grupo atualizada com sucesso", data: updateResult }
+          : { success: false, message: "Não foi possível atualizar a imagem do grupo", lastResult: updateResult };
         break;
       }
 
