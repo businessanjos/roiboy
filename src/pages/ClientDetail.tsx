@@ -29,7 +29,7 @@ import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
 import { ClientLogoUpload } from "@/components/client/ClientLogoUpload";
 import { ContractTimer } from "@/components/client/ContractTimer";
 import { ClientContracts } from "@/components/client/ClientContracts";
-import { ClientDiagnostic } from "@/components/client/ClientDiagnostic";
+import { ClientFormResponses } from "@/components/client/ClientFormResponses";
 import { ClientRelationships } from "@/components/client/ClientRelationships";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
@@ -2024,7 +2024,7 @@ export default function ClientDetail() {
           <TabsList className="w-max sm:w-auto">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-            <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
+            <TabsTrigger value="fichas">Fichas</TabsTrigger>
             <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="cx">Momentos CX</TabsTrigger>
@@ -2040,8 +2040,21 @@ export default function ClientDetail() {
           </TabsList>
         </div>
 
-        <TabsContent value="diagnostic">
-          <ClientDiagnostic clientId={id!} />
+        <TabsContent value="fichas">
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Fichas
+              </CardTitle>
+              <CardDescription>
+                Formulários preenchidos pelo cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <ClientFormResponses clientId={id!} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="agenda">
