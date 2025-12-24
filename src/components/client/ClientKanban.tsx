@@ -771,9 +771,9 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
           <div className="rounded-full bg-muted p-4 mb-4">
             <ArrowRight className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">Configure seu Funil de Onboarding</h3>
+          <h3 className="text-lg font-semibold mb-2">Configure seu Onboarding Orquestrado</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-md">
-            Crie etapas personalizadas para organizar seus clientes no processo de onboarding.
+            Crie etapas personalizadas com checklist para guiar seu time no processo de onboarding de cada cliente.
           </p>
           <Button onClick={() => setStageDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
