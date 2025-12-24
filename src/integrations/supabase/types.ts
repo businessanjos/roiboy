@@ -1223,6 +1223,7 @@ export type Database = {
           emails: Json | null
           full_name: string
           id: string
+          instagram: string | null
           is_mls: boolean
           logo_url: string | null
           mls_level: string | null
@@ -1261,6 +1262,7 @@ export type Database = {
           emails?: Json | null
           full_name: string
           id?: string
+          instagram?: string | null
           is_mls?: boolean
           logo_url?: string | null
           mls_level?: string | null
@@ -1299,6 +1301,7 @@ export type Database = {
           emails?: Json | null
           full_name?: string
           id?: string
+          instagram?: string | null
           is_mls?: boolean
           logo_url?: string | null
           mls_level?: string | null
@@ -3025,6 +3028,7 @@ export type Database = {
           is_enabled: boolean
           show_company: boolean
           show_email: boolean
+          show_instagram: boolean
           show_phone: boolean
           show_products: boolean
           updated_at: string
@@ -3039,6 +3043,7 @@ export type Database = {
           is_enabled?: boolean
           show_company?: boolean
           show_email?: boolean
+          show_instagram?: boolean
           show_phone?: boolean
           show_products?: boolean
           updated_at?: string
@@ -3053,6 +3058,7 @@ export type Database = {
           is_enabled?: boolean
           show_company?: boolean
           show_email?: boolean
+          show_instagram?: boolean
           show_phone?: boolean
           show_products?: boolean
           updated_at?: string

@@ -12,7 +12,9 @@ import {
   Mail, 
   Building2, 
   Users,
-  ExternalLink
+  ExternalLink,
+  Instagram,
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +25,7 @@ interface Member {
   company?: string;
   phone?: string;
   email?: string;
+  instagram?: string;
   products?: string[];
 }
 
@@ -34,6 +37,7 @@ interface MembersBookData {
     show_company: boolean;
     show_email: boolean;
     show_phone: boolean;
+    show_instagram: boolean;
     show_products: boolean;
   };
   members: Member[];
@@ -346,30 +350,67 @@ function MemberCard({ member, settings, formatPhone, getInitials }: MemberCardPr
         )}
 
         {/* Contact info */}
-        {(settings.show_phone || settings.show_email) && (
+        {(settings.show_phone || settings.show_email || settings.show_instagram) && (
           <div className="pt-3 border-t space-y-2">
-            {settings.show_phone && member.phone && (
-              <a 
-                href={`https://wa.me/${member.phone.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group/link"
-              >
-                <Phone className="h-3.5 w-3.5" />
-                <span className="truncate">{formatPhone(member.phone)}</span>
-                <ExternalLink className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-              </a>
+            {/* Contact icons row */}
+            {(settings.show_phone && member.phone) && (
+              <div className="flex items-center gap-2">
+                <a 
+                  href={`https://wa.me/${member.phone.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center h-9 w-9 rounded-full bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors"
+                  title="WhatsApp"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </a>
+                {settings.show_email && member.email && (
+                  <a 
+                    href={`mailto:${member.email}`}
+                    className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    title="E-mail"
+                  >
+                    <Mail className="h-4 w-4" />
+                  </a>
+                )}
+                {settings.show_instagram && member.instagram && (
+                  <a 
+                    href={member.instagram.startsWith('http') ? member.instagram : `https://instagram.com/${member.instagram.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center h-9 w-9 rounded-full bg-pink-500/10 text-pink-600 hover:bg-pink-500/20 transition-colors"
+                    title="Instagram"
+                  >
+                    <Instagram className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
             )}
-            {settings.show_email && member.email && (
-              <a 
-                href={`mailto:${member.email}`}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group/link"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                <span className="truncate">{member.email}</span>
-                <ExternalLink className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-              </a>
-            )}
+            {/* Show email/instagram without phone */}
+            {!settings.show_phone || !member.phone ? (
+              <div className="flex items-center gap-2">
+                {settings.show_email && member.email && (
+                  <a 
+                    href={`mailto:${member.email}`}
+                    className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    title="E-mail"
+                  >
+                    <Mail className="h-4 w-4" />
+                  </a>
+                )}
+                {settings.show_instagram && member.instagram && (
+                  <a 
+                    href={member.instagram.startsWith('http') ? member.instagram : `https://instagram.com/${member.instagram.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center h-9 w-9 rounded-full bg-pink-500/10 text-pink-600 hover:bg-pink-500/20 transition-colors"
+                    title="Instagram"
+                  >
+                    <Instagram className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            ) : null}
           </div>
         )}
       </div>
