@@ -2101,56 +2101,60 @@ serve(async (req) => {
         
         console.log(`Refresh QR for support instance: ${supportInstanceName}`);
         
-        // FIRST: Delete ALL existing "suporte-roy" instances to avoid duplicates
+        // Check if instance already exists and reuse it instead of creating new ones
+        let existingSupportToken: string | undefined = undefined;
+        
         try {
-          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ name: string; id: string; token?: string }>;
-          console.log(`Found ${allInstances?.length || 0} total instances, checking for duplicates...`);
+          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+            name: string; 
+            id: string; 
+            token?: string; 
+            status?: string;
+            qrcode?: string;
+          }>;
+          console.log(`Found ${allInstances?.length || 0} total instances`);
           
           if (Array.isArray(allInstances)) {
-            for (const inst of allInstances) {
-              if (inst.name === supportInstanceName) {
-                console.log(`Deleting old support instance: ${inst.name} (id: ${inst.id})`);
-                try {
-                  // Try to delete using admin endpoint
-                  await uazapiAdminRequest(`/instance/delete/${inst.name}`, "DELETE");
-                  console.log(`Deleted instance ${inst.name} successfully`);
-                } catch (delErr) {
-                  console.log(`Failed to delete via /instance/delete/${inst.name}:`, (delErr as Error).message);
-                  // Try alternative delete endpoint
-                  try {
-                    await uazapiAdminRequest(`/instance/${inst.name}`, "DELETE");
-                  } catch (delErr2) {
-                    console.log(`Also failed /instance/${inst.name}:`, (delErr2 as Error).message);
-                  }
-                }
-              }
+            // Find existing support instance
+            const supportInstances = allInstances.filter(inst => inst.name === supportInstanceName);
+            console.log(`Found ${supportInstances.length} instances with name ${supportInstanceName}`);
+            
+            if (supportInstances.length > 0) {
+              // Use the first one (or the one that's connecting/connected)
+              const preferredInstance = supportInstances.find(i => i.status === 'connecting' || i.status === 'connected') || supportInstances[0];
+              existingSupportToken = preferredInstance?.token;
+              console.log(`Reusing existing instance: ${preferredInstance?.id} (status: ${preferredInstance?.status})`);
             }
           }
-          
-          // Wait a bit after deleting
-          await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (err) {
-          console.log("Error cleaning up old instances:", (err as Error).message);
+          console.log("Error checking existing instances:", (err as Error).message);
         }
         
-        // EXACT SAME LOGIC AS "create" ACTION THAT WORKS
-        // Step 1: Create/init the instance (UAZAPI GO will reuse if exists)
-        const createSupportResult = await uazapiAdminRequest("/instance/init", "POST", {
-          name: supportInstanceName,
-        }) as {
-          token?: string;
-          instance?: { token?: string; id?: string; qrcode?: string };
-          qrcode?: string;
-          name?: string;
-        };
+        let supportToken: string;
+        
+        // If we have an existing instance with token, reuse it
+        if (existingSupportToken) {
+          supportToken = existingSupportToken;
+          console.log(`Using existing token for instance`);
+        } else {
+          // Create new instance only if none exists
+          console.log(`No existing instance found, creating new one`);
+          const createSupportResult = await uazapiAdminRequest("/instance/init", "POST", {
+            name: supportInstanceName,
+          }) as {
+            token?: string;
+            instance?: { token?: string; id?: string; qrcode?: string };
+            qrcode?: string;
+            name?: string;
+          };
 
-        console.log("Create support result:", JSON.stringify(createSupportResult));
+          console.log("Create support result:", JSON.stringify(createSupportResult));
 
-        // Extract instance token
-        const supportToken = createSupportResult.token || createSupportResult.instance?.token;
+          supportToken = createSupportResult.token || createSupportResult.instance?.token || "";
+        }
 
         if (!supportToken) {
-          throw new Error("Failed to create instance - no token returned");
+          throw new Error("Failed to get or create instance - no token available");
         }
 
         // Wait for instance to initialize (same as create)
