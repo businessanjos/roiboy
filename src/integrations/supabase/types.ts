@@ -4619,6 +4619,7 @@ export type Database = {
         | "dependent"
         | "associate"
         | "other"
+        | "referral"
       client_status:
         | "active"
         | "paused"
@@ -4898,6 +4899,7 @@ export const Constants = {
         "dependent",
         "associate",
         "other",
+        "referral",
       ],
       client_status: [
         "active",
