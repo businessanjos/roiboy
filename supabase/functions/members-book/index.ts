@@ -114,6 +114,7 @@ serve(async (req) => {
         instagram,
         bio,
         status,
+        client_diagnostics(business_segment),
         client_products(
           product:products(id, name)
         )
@@ -138,12 +139,37 @@ serve(async (req) => {
 
     console.log("Clients fetched:", clients?.length || 0);
 
+    // Collect unique products and segments for filters
+    const productsSet = new Set<string>();
+    const segmentsSet = new Set<string>();
+
+    clients?.forEach(client => {
+      // Collect products
+      client.client_products?.forEach((cp: any) => {
+        if (cp.product?.name) {
+          productsSet.add(cp.product.name);
+        }
+      });
+      // Collect segments
+      const diagnostics = client.client_diagnostics as any[];
+      if (diagnostics && diagnostics.length > 0 && diagnostics[0]?.business_segment) {
+        segmentsSet.add(diagnostics[0].business_segment);
+      }
+    });
+
+    const availableProducts = Array.from(productsSet).sort();
+    const availableSegments = Array.from(segmentsSet).sort();
+
     // Map clients to members format based on settings
     const members = clients?.map(client => {
+      const diagnostics = client.client_diagnostics as any[];
+      const segment = diagnostics && diagnostics.length > 0 ? diagnostics[0]?.business_segment : null;
+      
       const member: Record<string, any> = {
         id: client.id,
         name: client.full_name,
         avatar_url: client.avatar_url || client.logo_url,
+        segment: segment, // Always include segment for filtering
       };
 
       if (settings.show_company) {
@@ -169,6 +195,9 @@ serve(async (req) => {
 
       if (settings.show_products) {
         member.products = client.client_products?.map((cp: any) => cp.product?.name).filter(Boolean) || [];
+      } else {
+        // Include products for filtering even if not shown
+        member.products = client.client_products?.map((cp: any) => cp.product?.name).filter(Boolean) || [];
       }
 
       return member;
@@ -184,7 +213,7 @@ serve(async (req) => {
 
     console.log("Returning", members.length, "members");
 
-    return new Response(
+        return new Response(
       JSON.stringify({
         account_name: account?.name || "Members Book",
         settings: {
@@ -199,6 +228,10 @@ serve(async (req) => {
         },
         members,
         total: members.length,
+        filters: {
+          products: availableProducts,
+          segments: availableSegments,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

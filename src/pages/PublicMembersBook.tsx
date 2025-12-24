@@ -5,6 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Search, 
   Lock, 
@@ -14,7 +21,9 @@ import {
   Users,
   ExternalLink,
   Instagram,
-  MessageCircle
+  MessageCircle,
+  Filter,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +37,7 @@ interface Member {
   instagram?: string;
   bio?: string;
   products?: string[];
+  segment?: string;
 }
 
 interface MembersBookData {
@@ -44,6 +54,10 @@ interface MembersBookData {
   };
   members: Member[];
   total: number;
+  filters?: {
+    products: string[];
+    segments: string[];
+  };
 }
 
 export default function PublicMembersBook() {
@@ -58,6 +72,8 @@ export default function PublicMembersBook() {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [selectedSegment, setSelectedSegment] = useState<string>("");
   const [pendingSettings, setPendingSettings] = useState<{ custom_title?: string; custom_description?: string } | null>(null);
 
   const fetchMembersBook = async (accessPassword?: string) => {
@@ -130,14 +146,29 @@ export default function PublicMembersBook() {
   };
 
   const filteredMembers = data?.members.filter(member => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      member.name.toLowerCase().includes(search) ||
-      member.company?.toLowerCase().includes(search) ||
-      member.products?.some(p => p.toLowerCase().includes(search))
-    );
+    // Text search filter
+    const matchesSearch = !searchTerm || 
+      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.products?.some(p => p.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Product filter
+    const matchesProduct = !selectedProduct || 
+      member.products?.some(p => p === selectedProduct);
+    
+    // Segment filter
+    const matchesSegment = !selectedSegment || 
+      member.segment === selectedSegment;
+    
+    return matchesSearch && matchesProduct && matchesSegment;
   }) || [];
+
+  const hasActiveFilters = !!selectedProduct || !!selectedSegment;
+
+  const clearFilters = () => {
+    setSelectedProduct("");
+    setSelectedSegment("");
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -250,8 +281,8 @@ export default function PublicMembersBook() {
             </Badge>
           </div>
 
-          {/* Search */}
-          <div className="max-w-md mx-auto">
+          {/* Search and Filters */}
+          <div className="max-w-3xl mx-auto space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -261,6 +292,62 @@ export default function PublicMembersBook() {
                 className="pl-9"
               />
             </div>
+            
+            {/* Filters */}
+            {(data.filters?.products?.length > 0 || data.filters?.segments?.length > 0) && (
+              <div className="flex flex-wrap items-center gap-2 justify-center">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                
+                {data.filters?.products?.length > 0 && (
+                  <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue placeholder="Filtrar por produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {data.filters.products.map((product) => (
+                        <SelectItem key={product} value={product}>
+                          {product}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {data.filters?.segments?.length > 0 && (
+                  <Select value={selectedSegment} onValueChange={setSelectedSegment}>
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue placeholder="Filtrar por segmento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {data.filters.segments.map((segment) => (
+                        <SelectItem key={segment} value={segment}>
+                          {segment}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            )}
+            
+            {/* Active filters summary */}
+            {hasActiveFilters && (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <span>Mostrando {filteredMembers.length} de {data.total} membros</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
