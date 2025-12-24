@@ -112,6 +112,23 @@ export function ClientTasks({ clientId }: ClientTasksProps) {
     }
   };
 
+  const handleStatusChange = async (taskId: string, newStatus: Task["status"]) => {
+    const { error } = await supabase
+      .from("internal_tasks")
+      .update({
+        status: newStatus,
+        completed_at: newStatus === "done" ? new Date().toISOString() : null,
+      })
+      .eq("id", taskId);
+
+    if (error) {
+      toast.error("Erro ao atualizar status");
+    } else {
+      toast.success("Status atualizado!");
+      fetchTasks();
+    }
+  };
+
   const handleDeleteTask = async () => {
     if (!taskToDelete) return;
 
@@ -187,6 +204,7 @@ export function ClientTasks({ clientId }: ClientTasksProps) {
                   onEdit={openEditDialog}
                   onDelete={openDeleteDialog}
                   onToggleComplete={handleToggleComplete}
+                  onStatusChange={handleStatusChange}
                   showClient={false}
                 />
               ))}
@@ -205,6 +223,7 @@ export function ClientTasks({ clientId }: ClientTasksProps) {
                   onEdit={openEditDialog}
                   onDelete={openDeleteDialog}
                   onToggleComplete={handleToggleComplete}
+                  onStatusChange={handleStatusChange}
                   showClient={false}
                 />
               ))}
