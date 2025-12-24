@@ -53,6 +53,7 @@ import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
 import { CouponsManager } from "@/components/admin/CouponsManager";
 import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager";
+import { SupportWhatsAppConfig } from "@/components/admin/SupportWhatsAppConfig";
 import { Tag, Headset } from "lucide-react";
 
 interface SubscriptionPlan {
@@ -330,7 +331,8 @@ export default function Admin() {
           <CouponsManager />
         </TabsContent>
 
-        <TabsContent value="support" className="mt-0">
+        <TabsContent value="support" className="mt-0 space-y-6">
+          <SupportWhatsAppConfig />
           <SupportTicketsManager />
         </TabsContent>
       </Tabs>
