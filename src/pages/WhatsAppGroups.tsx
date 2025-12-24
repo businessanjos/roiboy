@@ -51,6 +51,7 @@ import {
   Image,
   Mic,
   X,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -134,6 +135,7 @@ export default function WhatsAppGroups() {
   const [addingParticipants, setAddingParticipants] = useState(false);
   const [removingParticipant, setRemovingParticipant] = useState<string | null>(null);
   const [clientsToAdd, setClientsToAdd] = useState<string[]>([]);
+  const [isSyncingGroups, setIsSyncingGroups] = useState(false);
 
   // Fetch groups from database
   const { data: groups = [], isLoading: loadingGroups, refetch: refetchGroups } = useQuery({
@@ -583,6 +585,29 @@ export default function WhatsAppGroups() {
 
   const isSendingAny = sendToGroupMutation.isPending || sendMediaToGroupMutation.isPending || isUploadingMedia;
 
+  // Sync groups from WhatsApp
+  const handleSyncGroups = async () => {
+    setIsSyncingGroups(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { action: "sync_groups" },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast.success(data.message || "Grupos sincronizados com sucesso!");
+        refetchGroups();
+      } else {
+        toast.error(data?.message || "Erro ao sincronizar grupos");
+      }
+    } catch (error) {
+      toast.error("Erro ao sincronizar: " + (error as Error).message);
+    } finally {
+      setIsSyncingGroups(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-5xl">
       <div className="mb-6">
@@ -632,6 +657,15 @@ export default function WhatsAppGroups() {
                       className="pl-9 w-64"
                     />
                   </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleSyncGroups}
+                    disabled={isSyncingGroups}
+                  >
+                    <Download className={`h-4 w-4 mr-2 ${isSyncingGroups ? "animate-spin" : ""}`} />
+                    {isSyncingGroups ? "Sincronizando..." : "Sincronizar do WhatsApp"}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
