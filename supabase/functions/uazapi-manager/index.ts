@@ -12,7 +12,7 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 interface UazapiRequest {
   action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token" 
-    | "list_groups" | "sync_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
+    | "list_groups" | "sync_groups" | "save_selected_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
     | "send_media" | "send_media_to_group";
   instance_name?: string;
   phone?: string;
@@ -23,6 +23,7 @@ interface UazapiRequest {
   media_url?: string;
   media_type?: "image" | "audio" | "document";
   caption?: string;
+  groups?: Array<{ group_jid: string; name: string; participant_count: number }>;
 }
 
 // Helper function to configure webhook automatically
@@ -209,7 +210,7 @@ serve(async (req) => {
 
     const accountId = userData.account_id;
     const payload: UazapiRequest = await req.json();
-    const { action, phone, message, group_id, group_name, participants } = payload;
+    const { action, phone, message, group_id, group_name, participants, groups } = payload;
 
     // Get existing integration to use saved instance name
     const { data: existingWhatsapp, error: existingError } = await supabase
@@ -1048,6 +1049,47 @@ serve(async (req) => {
           errors,
           total: groups.length,
           message: `${synced} grupo(s) sincronizado(s)${errors > 0 ? `, ${errors} erro(s)` : ""}` 
+        };
+        break;
+      }
+
+      case "save_selected_groups": {
+        // Save only selected groups to database
+        const groupsToSave = groups || [];
+        
+        if (groupsToSave.length === 0) {
+          throw new Error("Nenhum grupo selecionado para salvar");
+        }
+
+        console.log(`Saving ${groupsToSave.length} selected groups...`);
+        
+        let saved = 0;
+        let errors = 0;
+        
+        for (const group of groupsToSave) {
+          try {
+            await supabase
+              .from("whatsapp_groups")
+              .upsert({
+                account_id: accountId,
+                group_jid: group.group_jid,
+                name: group.name,
+                participant_count: group.participant_count,
+              }, { onConflict: "account_id,group_jid" });
+            saved++;
+          } catch (err) {
+            console.log(`Error saving group ${group.group_jid}:`, (err as Error).message);
+            errors++;
+          }
+        }
+
+        console.log(`Save complete: ${saved} saved, ${errors} errors`);
+        
+        result = { 
+          success: true, 
+          saved, 
+          errors,
+          message: `${saved} grupo(s) salvo(s)${errors > 0 ? `, ${errors} erro(s)` : ""}` 
         };
         break;
       }
