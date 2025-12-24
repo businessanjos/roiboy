@@ -381,14 +381,23 @@ export default function Tasks() {
     return counts;
   }, [tasks, customStatuses]);
 
-  // For stats cards, get counts from custom statuses
+  // For stats cards, get counts from custom statuses by name
   const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => {
-    // Find completed statuses
-    const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
-    const nonCompletedCount = tasks.filter(t => !completedStatusIds.includes(t.custom_status_id || '')).length;
-    const completedCount = tasks.filter(t => completedStatusIds.includes(t.custom_status_id || '')).length;
+    // Find status IDs by name patterns
+    const pendingStatus = customStatuses.find(s => s.name.toLowerCase().includes('pendente'));
+    const inProgressStatus = customStatuses.find(s => s.name.toLowerCase().includes('andamento'));
+    const doneStatus = customStatuses.find(s => s.is_completed_status || s.name.toLowerCase().includes('conclu'));
+    
+    const pendingCount = tasks.filter(t => 
+      t.custom_status_id === pendingStatus?.id || 
+      (!t.custom_status_id && pendingStatus?.is_default)
+    ).length;
+    
+    const inProgressCount = tasks.filter(t => t.custom_status_id === inProgressStatus?.id).length;
+    const doneCount = tasks.filter(t => t.custom_status_id === doneStatus?.id).length;
     
     // Count overdue from non-completed tasks
+    const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const overdueCount = tasks.filter(t => {
@@ -398,12 +407,7 @@ export default function Tasks() {
       return dueDate < today;
     }).length;
 
-    return {
-      pendingCount: nonCompletedCount,
-      overdueCount,
-      inProgressCount: 0,
-      doneCount: completedCount,
-    };
+    return { pendingCount, overdueCount, inProgressCount, doneCount };
   }, [tasks, customStatuses]);
 
   if (loading) {
