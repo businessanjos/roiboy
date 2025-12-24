@@ -25,6 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +40,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   GripVertical,
   Plus,
   MoreVertical,
@@ -48,10 +55,25 @@ import {
   Mail,
   Building2,
   ArrowRight,
+  CheckSquare,
+  AlertTriangle,
+  CheckCircle2,
+  Circle,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { StageChecklistEditor } from "./StageChecklistEditor";
+import {
+  useStageChecklistItems,
+  useClientChecklistProgress,
+  useToggleChecklistItem,
+  getChecklistStatus,
+  hasPendingInPreviousStages,
+  StageChecklistItem,
+  ClientChecklistProgress,
+} from "@/hooks/useStageChecklist";
 
 interface ClientStage {
   id: string;
@@ -88,9 +110,21 @@ function getInitials(name: string) {
 
 interface SortableClientCardProps {
   client: Client;
+  stages: ClientStage[];
+  checklistItems: StageChecklistItem[];
+  checklistProgress: ClientChecklistProgress[];
+  accountId: string;
+  onToggleItem: (clientId: string, itemId: string, completed: boolean) => void;
 }
 
-function SortableClientCard({ client }: SortableClientCardProps) {
+function SortableClientCard({ 
+  client, 
+  stages, 
+  checklistItems, 
+  checklistProgress, 
+  accountId,
+  onToggleItem,
+}: SortableClientCardProps) {
   const {
     attributes,
     listeners,
@@ -109,13 +143,39 @@ function SortableClientCard({ client }: SortableClientCardProps) {
     ? client.emails[0] 
     : null;
 
+  // Calculate checklist status
+  const currentStage = stages.find(s => s.id === client.stage_id);
+  const checklistStatus = client.stage_id 
+    ? getChecklistStatus(client.id, client.stage_id, checklistItems, checklistProgress)
+    : { total: 0, completed: 0, isComplete: true, hasItems: false };
+
+  const hasPendingPrevious = currentStage 
+    ? hasPendingInPreviousStages(
+        client.id, 
+        currentStage.display_order, 
+        stages, 
+        checklistItems, 
+        checklistProgress
+      )
+    : false;
+
+  // Get items for current stage
+  const stageItems = client.stage_id 
+    ? checklistItems.filter(item => item.stage_id === client.stage_id)
+    : [];
+
+  const clientProgressIds = checklistProgress
+    .filter(p => p.client_id === client.id && p.completed_at)
+    .map(p => p.checklist_item_id);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
         "bg-card border rounded-lg p-3 shadow-sm transition-all hover:shadow-md",
-        isDragging && "opacity-50 shadow-lg ring-2 ring-primary"
+        isDragging && "opacity-50 shadow-lg ring-2 ring-primary",
+        hasPendingPrevious && "ring-2 ring-amber-500/50"
       )}
     >
       <div className="flex items-start gap-2">
@@ -178,6 +238,99 @@ function SortableClientCard({ client }: SortableClientCardProps) {
               )}
             </div>
           )}
+
+          {/* Checklist Status */}
+          {checklistStatus.hasItems && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="w-full text-left">
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                    {checklistStatus.isComplete ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-medium">
+                          {checklistStatus.completed}/{checklistStatus.total} concluídos
+                        </span>
+                        {hasPendingPrevious && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <AlertTriangle className="h-3 w-3 text-amber-500" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Pendências em etapas anteriores</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                      <Progress 
+                        value={(checklistStatus.completed / checklistStatus.total) * 100} 
+                        className="h-1"
+                      />
+                    </div>
+                  </div>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0" align="start">
+                <div className="p-3 border-b">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <ListChecks className="h-4 w-4" />
+                    Checklist da Etapa
+                  </h4>
+                </div>
+                <ScrollArea className="max-h-[200px]">
+                  <div className="p-3 space-y-2">
+                    {stageItems.map((item) => {
+                      const isCompleted = clientProgressIds.includes(item.id);
+                      return (
+                        <label
+                          key={item.id}
+                          className={cn(
+                            "flex items-start gap-2 p-2 rounded-md cursor-pointer transition-colors",
+                            isCompleted ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted"
+                          )}
+                        >
+                          <Checkbox
+                            checked={isCompleted}
+                            onCheckedChange={(checked) => 
+                              onToggleItem(client.id, item.id, !!checked)
+                            }
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              "text-sm",
+                              isCompleted && "line-through text-muted-foreground"
+                            )}>
+                              {item.title}
+                            </p>
+                            {item.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          {/* Warning for pending in previous stages */}
+          {hasPendingPrevious && !checklistStatus.hasItems && (
+            <div className="flex items-center gap-1.5 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[10px]">Pendências em etapas anteriores</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -188,9 +341,23 @@ interface KanbanColumnProps {
   stage: ClientStage | null;
   clients: Client[];
   isUncategorized?: boolean;
+  stages: ClientStage[];
+  checklistItems: StageChecklistItem[];
+  checklistProgress: ClientChecklistProgress[];
+  accountId: string;
+  onToggleItem: (clientId: string, itemId: string, completed: boolean) => void;
 }
 
-function KanbanColumn({ stage, clients, isUncategorized }: KanbanColumnProps) {
+function KanbanColumn({ 
+  stage, 
+  clients, 
+  isUncategorized, 
+  stages,
+  checklistItems,
+  checklistProgress,
+  accountId,
+  onToggleItem,
+}: KanbanColumnProps) {
   const columnId = stage?.id || "uncategorized";
   const columnName = stage?.name || "Sem Etapa";
   const columnColor = stage?.color || "#94a3b8";
@@ -198,6 +365,11 @@ function KanbanColumn({ stage, clients, isUncategorized }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: columnId,
   });
+
+  // Calculate stage checklist stats
+  const stageChecklistItems = stage 
+    ? checklistItems.filter(item => item.stage_id === stage.id)
+    : [];
 
   return (
     <Card 
@@ -217,16 +389,41 @@ function KanbanColumn({ stage, clients, isUncategorized }: KanbanColumnProps) {
             />
             {columnName}
           </div>
-          <Badge variant="outline" className="text-xs font-normal">
-            {clients.length}
-          </Badge>
+          <div className="flex items-center gap-1">
+            {stageChecklistItems.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Badge variant="outline" className="text-[10px] font-normal px-1.5">
+                      <CheckSquare className="h-3 w-3 mr-1" />
+                      {stageChecklistItems.length}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">{stageChecklistItems.length} itens no checklist</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <Badge variant="outline" className="text-xs font-normal">
+              {clients.length}
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto px-3 pb-3">
         <SortableContext items={clients.map(c => c.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {clients.map((client) => (
-              <SortableClientCard key={client.id} client={client} />
+              <SortableClientCard 
+                key={client.id} 
+                client={client}
+                stages={stages}
+                checklistItems={checklistItems}
+                checklistProgress={checklistProgress}
+                accountId={accountId}
+                onToggleItem={onToggleItem}
+              />
             ))}
             {clients.length === 0 && (
               <div className={cn(
@@ -458,6 +655,7 @@ function StageManagerDialog({ open, onOpenChange, stages, accountId, onRefresh }
 export function ClientKanban({ clients, stages, accountId, onStageChange, onRefreshStages }: ClientKanbanProps) {
   const [activeClient, setActiveClient] = useState<Client | null>(null);
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
+  const [checklistEditorOpen, setChecklistEditorOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -466,6 +664,23 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
       },
     })
   );
+
+  // Fetch checklist data
+  const stageIds = useMemo(() => stages.map(s => s.id), [stages]);
+  const clientIds = useMemo(() => clients.map(c => c.id), [clients]);
+  
+  const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
+  const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);
+  const toggleItem = useToggleChecklistItem();
+
+  const handleToggleItem = useCallback((clientId: string, itemId: string, completed: boolean) => {
+    toggleItem.mutate({
+      clientId,
+      checklistItemId: itemId,
+      accountId,
+      completed,
+    });
+  }, [toggleItem, accountId]);
 
   const clientsByStage = useMemo(() => {
     const result: Record<string, Client[]> = {
@@ -518,9 +733,20 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
     
     // Only update if stage changed
     if (targetStageId !== currentStageId) {
+      // Check if current stage has incomplete checklist items
+      if (currentStageId) {
+        const status = getChecklistStatus(activeClient.id, currentStageId, checklistItems, checklistProgress);
+        if (status.hasItems && !status.isComplete) {
+          toast.warning("Complete o checklist antes de mover para outra etapa", {
+            description: `${status.completed}/${status.total} itens concluídos`
+          });
+          return;
+        }
+      }
+      
       await onStageChange(activeClient.id, targetStageId);
     }
-  }, [clients, onStageChange]);
+  }, [clients, onStageChange, checklistItems, checklistProgress]);
 
   const sortedStages = useMemo(() => 
     [...stages].sort((a, b) => a.display_order - b.display_order), 
@@ -529,7 +755,11 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => setChecklistEditorOpen(true)}>
+          <CheckSquare className="h-4 w-4 mr-2" />
+          Checklist
+        </Button>
         <Button variant="outline" size="sm" onClick={() => setStageDialogOpen(true)}>
           <Settings2 className="h-4 w-4 mr-2" />
           Gerenciar Etapas
@@ -563,6 +793,11 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
               stage={null}
               clients={clientsByStage.uncategorized}
               isUncategorized
+              stages={sortedStages}
+              checklistItems={checklistItems}
+              checklistProgress={checklistProgress}
+              accountId={accountId}
+              onToggleItem={handleToggleItem}
             />
             
             {/* Stage columns */}
@@ -571,6 +806,11 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
                 key={stage.id}
                 stage={stage}
                 clients={clientsByStage[stage.id] || []}
+                stages={sortedStages}
+                checklistItems={checklistItems}
+                checklistProgress={checklistProgress}
+                accountId={accountId}
+                onToggleItem={handleToggleItem}
               />
             ))}
           </div>
@@ -598,6 +838,13 @@ export function ClientKanban({ clients, stages, accountId, onStageChange, onRefr
         stages={stages}
         accountId={accountId}
         onRefresh={onRefreshStages}
+      />
+
+      <StageChecklistEditor
+        open={checklistEditorOpen}
+        onOpenChange={setChecklistEditorOpen}
+        stages={stages}
+        accountId={accountId}
       />
     </div>
   );
