@@ -348,11 +348,15 @@ export default function Tasks() {
     const matchesUser = filterUser === "all" || 
       filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
 
-    // Filter by custom_status_id
-    const matchesTab = activeTab ? task.custom_status_id === activeTab : true;
+    // Filter by custom_status_id - also include tasks without status in first tab
+    const defaultStatus = customStatuses.find(s => s.is_default);
+    const matchesTab = activeTab 
+      ? task.custom_status_id === activeTab || 
+        (!task.custom_status_id && activeTab === defaultStatus?.id)
+      : true;
 
     return matchesSearch && matchesUser && matchesTab;
-  }), [tasks, searchTerm, filterUser, currentUser?.id, activeTab]);
+  }), [tasks, searchTerm, filterUser, currentUser?.id, activeTab, customStatuses]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
