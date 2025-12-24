@@ -68,6 +68,13 @@ interface WhatsAppGroup {
   size?: number;
 }
 
+interface GroupParticipant {
+  id: string;
+  phone?: string;
+  admin?: string;
+  name?: string;
+}
+
 interface Client {
   id: string;
   full_name: string;
@@ -99,6 +106,8 @@ export default function WhatsAppGroups() {
   
   // Manage participants state
   const [managingGroup, setManagingGroup] = useState<WhatsAppGroup | null>(null);
+  const [groupParticipants, setGroupParticipants] = useState<GroupParticipant[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [addingParticipants, setAddingParticipants] = useState(false);
   const [removingParticipant, setRemovingParticipant] = useState<string | null>(null);
   const [clientsToAdd, setClientsToAdd] = useState<string[]>([]);
@@ -236,6 +245,10 @@ export default function WhatsAppGroups() {
       toast.success("Participante(s) adicionado(s) com sucesso!");
       setAddingParticipants(false);
       setClientsToAdd([]);
+      // Refresh participants list
+      if (managingGroup) {
+        fetchGroupParticipants(managingGroup);
+      }
       queryClient.invalidateQueries({ queryKey: ["whatsapp-groups"] });
     },
     onError: (error: Error) => {
@@ -259,6 +272,10 @@ export default function WhatsAppGroups() {
     onSuccess: () => {
       toast.success("Participante removido com sucesso!");
       setRemovingParticipant(null);
+      // Refresh participants list
+      if (managingGroup) {
+        fetchGroupParticipants(managingGroup);
+      }
       queryClient.invalidateQueries({ queryKey: ["whatsapp-groups"] });
     },
     onError: (error: Error) => {
@@ -416,6 +433,72 @@ export default function WhatsAppGroups() {
     );
   };
 
+  // Fetch group participants when managing
+  const fetchGroupParticipants = async (group: WhatsAppGroup) => {
+    setLoadingParticipants(true);
+    setGroupParticipants([]);
+    
+    try {
+      const groupId = group.group_jid || group.id;
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { 
+          action: "group_participants",
+          group_id: groupId,
+        },
+      });
+      
+      if (error) throw error;
+      
+      console.log("Participants response:", data);
+      
+      // Parse different response formats
+      let participants: GroupParticipant[] = [];
+      
+      if (Array.isArray(data)) {
+        participants = data.map((p: { id?: string; Id?: string; phone?: string; admin?: string; Admin?: string; name?: string; pushName?: string }) => ({
+          id: p.id || p.Id || p.phone || "",
+          phone: (p.id || p.Id || p.phone || "").split("@")[0],
+          admin: p.admin || p.Admin,
+          name: p.name || p.pushName,
+        }));
+      } else if (data?.participants && Array.isArray(data.participants)) {
+        participants = data.participants.map((p: { id?: string; Id?: string; phone?: string; admin?: string; Admin?: string; name?: string; pushName?: string }) => ({
+          id: p.id || p.Id || p.phone || "",
+          phone: (p.id || p.Id || p.phone || "").split("@")[0],
+          admin: p.admin || p.Admin,
+          name: p.name || p.pushName,
+        }));
+      } else if (data?.Participants && Array.isArray(data.Participants)) {
+        participants = data.Participants.map((p: { JID?: string; Admin?: string }) => ({
+          id: p.JID || "",
+          phone: (p.JID || "").split("@")[0],
+          admin: p.Admin,
+        }));
+      }
+      
+      setGroupParticipants(participants);
+    } catch (error) {
+      console.error("Error fetching participants:", error);
+      toast.error("Erro ao carregar participantes");
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
+  // Open manage dialog
+  const handleOpenManageDialog = (group: WhatsAppGroup) => {
+    setManagingGroup(group);
+    fetchGroupParticipants(group);
+  };
+
+  // Close manage dialog
+  const handleCloseManageDialog = () => {
+    setManagingGroup(null);
+    setGroupParticipants([]);
+    setAddingParticipants(false);
+    setClientsToAdd([]);
+  };
+
   const isSendingAny = sendToGroupMutation.isPending || sendMediaToGroupMutation.isPending || isUploadingMedia;
 
   return (
@@ -527,7 +610,7 @@ export default function WhatsAppGroups() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setManagingGroup(group)}
+                              onClick={() => handleOpenManageDialog(group)}
                               title="Gerenciar participantes"
                             >
                               <UserPlus className="h-4 w-4" />
@@ -772,49 +855,82 @@ export default function WhatsAppGroups() {
       </Tabs>
 
       {/* Manage Participants Dialog */}
-      <Dialog open={!!managingGroup} onOpenChange={(open) => !open && setManagingGroup(null)}>
+      <Dialog open={!!managingGroup} onOpenChange={(open) => !open && handleCloseManageDialog()}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Gerenciar Participantes</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Gerenciar Membros
+            </DialogTitle>
             <DialogDescription>
-              {managingGroup?.subject || managingGroup?.name}
+              {managingGroup?.subject || managingGroup?.name} 
+              {!loadingParticipants && ` • ${groupParticipants.length} membros`}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Current participants */}
             <div>
-              <Label className="mb-2 block">Participantes Atuais</Label>
-              <div className="border rounded-lg max-h-48 overflow-y-auto">
-                {managingGroup?.participants?.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between p-3 border-b last:border-b-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>{p.id.split("@")[0]}</span>
-                      {p.admin && (
-                        <Badge variant="secondary" className="text-xs">
-                          {p.admin === "superadmin" ? "Dono" : "Admin"}
-                        </Badge>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="block">Membros do Grupo</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => managingGroup && fetchGroupParticipants(managingGroup)}
+                  disabled={loadingParticipants}
+                >
+                  <RefreshCw className={`h-4 w-4 ${loadingParticipants ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+              <div className="border rounded-lg max-h-64 overflow-y-auto">
+                {loadingParticipants ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Carregando membros...
+                  </div>
+                ) : groupParticipants.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground">
+                    Nenhum membro encontrado
+                  </p>
+                ) : (
+                  groupParticipants.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-muted/30"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {p.name || p.phone || p.id.split("@")[0]}
+                          </p>
+                          {p.name && (
+                            <p className="text-xs text-muted-foreground">
+                              {p.phone || p.id.split("@")[0]}
+                            </p>
+                          )}
+                        </div>
+                        {p.admin && (
+                          <Badge variant="secondary" className="text-xs">
+                            {p.admin === "superadmin" ? "Dono" : "Admin"}
+                          </Badge>
+                        )}
+                      </div>
+                      {!p.admin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setRemovingParticipant(p.id)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Remover do grupo"
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
                       )}
                     </div>
-                    {!p.admin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRemovingParticipant(p.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )) || (
-                  <p className="text-center py-4 text-muted-foreground">
-                    Carregando participantes...
-                  </p>
+                  ))
                 )}
               </div>
             </div>
