@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowRight, CheckSquare, AlertTriangle, ChevronRight, Package, User } from "lucide-react";
 import { toast } from "sonner";
-import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages } from "@/hooks/useStageChecklist";
+import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage } from "@/hooks/useStageChecklist";
 import { StageChecklistEditor } from "./StageChecklistEditor";
 
 interface ClientStage {
@@ -67,7 +67,29 @@ export function OnboardingOrchestrated({
 
   const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
   const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);
-  const toggleChecklistItem = useToggleChecklistItem();
+  
+  // Auto-advance to next stage when checklist is complete
+  const handleChecklistComplete = async (clientId: string, currentStageId: string | null) => {
+    const nextStage = getNextStage(currentStageId, sortedStages);
+    if (nextStage) {
+      const client = clients.find(c => c.id === clientId);
+      const currentStageName = sortedStages.find(s => s.id === currentStageId)?.name || "";
+      const nextStageName = nextStage ? sortedStages.find(s => s.id === nextStage.id)?.name || "" : "";
+      
+      try {
+        await onStageChange(clientId, nextStage.id);
+        toast.success(`${client?.full_name || "Cliente"} avançou para "${nextStageName}"`, {
+          description: `Checklist de "${currentStageName}" concluído!`
+        });
+      } catch (error) {
+        console.error("Error auto-advancing stage:", error);
+      }
+    }
+  };
+
+  const toggleChecklistItem = useToggleChecklistItem({
+    onChecklistComplete: handleChecklistComplete,
+  });
 
   // Filter only clients that are in onboarding (have a stage)
   const onboardingClients = useMemo(() => 
@@ -324,6 +346,9 @@ export function OnboardingOrchestrated({
                                             checklistItemId: item.id,
                                             accountId,
                                             completed: !isCompleted,
+                                            currentStageId: client.stage_id,
+                                            allStageItems: stageItems,
+                                            allProgress: checklistProgress,
                                           });
                                         }}
                                         className="mt-0.5"

@@ -4161,6 +4161,7 @@ export type Database = {
           created_at: string
           description: string | null
           display_order: number
+          due_date: string | null
           id: string
           is_active: boolean
           stage_id: string
@@ -4172,6 +4173,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          due_date?: string | null
           id?: string
           is_active?: boolean
           stage_id: string
@@ -4183,6 +4185,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          due_date?: string | null
           id?: string
           is_active?: boolean
           stage_id?: string

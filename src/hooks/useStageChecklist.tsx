@@ -8,6 +8,7 @@ export interface StageChecklistItem {
   description: string | null;
   display_order: number;
   is_active: boolean;
+  due_date: string | null;
 }
 
 export interface ClientChecklistProgress {
@@ -56,7 +57,9 @@ export function useClientChecklistProgress(clientIds: string[]) {
   });
 }
 
-export function useToggleChecklistItem() {
+export function useToggleChecklistItem(options?: {
+  onChecklistComplete?: (clientId: string, currentStageId: string | null) => void;
+}) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -65,11 +68,17 @@ export function useToggleChecklistItem() {
       checklistItemId,
       accountId,
       completed,
+      currentStageId,
+      allStageItems,
+      allProgress,
     }: {
       clientId: string;
       checklistItemId: string;
       accountId: string;
       completed: boolean;
+      currentStageId?: string | null;
+      allStageItems?: StageChecklistItem[];
+      allProgress?: ClientChecklistProgress[];
     }) => {
       if (completed) {
         // Mark as completed
@@ -87,6 +96,21 @@ export function useToggleChecklistItem() {
           });
 
         if (error) throw error;
+
+        // Check if checklist is now complete for current stage
+        if (currentStageId && allStageItems && allProgress && options?.onChecklistComplete) {
+          const stageItems = allStageItems.filter(item => item.stage_id === currentStageId);
+          const clientProgress = allProgress.filter(p => p.client_id === clientId);
+          
+          // Add the item we just completed to the count
+          const completedCount = stageItems.filter(item => 
+            item.id === checklistItemId || clientProgress.some(p => p.checklist_item_id === item.id && p.completed_at)
+          ).length;
+
+          if (stageItems.length > 0 && completedCount === stageItems.length) {
+            options.onChecklistComplete(clientId, currentStageId);
+          }
+        }
       } else {
         // Mark as incomplete (delete the record)
         const { error } = await supabase
@@ -112,10 +136,12 @@ export function useManageChecklistItems(accountId: string) {
       stageId,
       title,
       description,
+      dueDate,
     }: {
       stageId: string;
       title: string;
       description?: string;
+      dueDate?: string;
     }) => {
       // Get max display_order
       const { data: existingItems } = await supabase
@@ -134,6 +160,7 @@ export function useManageChecklistItems(accountId: string) {
           stage_id: stageId,
           title,
           description: description || null,
+          due_date: dueDate || null,
           display_order: maxOrder + 1,
         });
 
@@ -149,16 +176,19 @@ export function useManageChecklistItems(accountId: string) {
       itemId,
       title,
       description,
+      dueDate,
     }: {
       itemId: string;
       title: string;
       description?: string;
+      dueDate?: string | null;
     }) => {
       const { error } = await supabase
         .from("stage_checklist_items")
         .update({
           title,
           description: description || null,
+          due_date: dueDate,
           updated_at: new Date().toISOString(),
         })
         .eq("id", itemId);
@@ -227,4 +257,25 @@ export function hasPendingInPreviousStages(
   }
   
   return false;
+}
+
+// Get next stage after current stage
+export function getNextStage(
+  currentStageId: string | null,
+  stages: { id: string; display_order: number }[]
+): { id: string; display_order: number } | null {
+  if (!currentStageId) {
+    // If no current stage, return first stage
+    const sortedStages = [...stages].sort((a, b) => a.display_order - b.display_order);
+    return sortedStages[0] || null;
+  }
+  
+  const currentStage = stages.find(s => s.id === currentStageId);
+  if (!currentStage) return null;
+  
+  const nextStages = stages
+    .filter(s => s.display_order > currentStage.display_order)
+    .sort((a, b) => a.display_order - b.display_order);
+  
+  return nextStages[0] || null;
 }
