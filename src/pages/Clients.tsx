@@ -16,7 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2 } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban } from "lucide-react";
+import { ClientKanban } from "@/components/client/ClientKanban";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
@@ -278,8 +279,9 @@ export default function Clients() {
   const [fieldValues, setFieldValues] = useState<Record<string, Record<string, any>>>({});
   const [accountId, setAccountId] = useState<string | null>(null);
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [viewMode, setViewMode] = useState<"cards" | "table" | "kanban">("table");
   const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [clientStages, setClientStages] = useState<Array<{ id: string; name: string; color: string; display_order: number }>>([]);
   
   // Avatar upload state for new client
   const [newClientAvatar, setNewClientAvatar] = useState<File | null>(null);
@@ -532,11 +534,43 @@ export default function Clients() {
     }
   };
 
+  const fetchClientStages = async () => {
+    const { data, error } = await supabase
+      .from("client_stages")
+      .select("id, name, color, display_order")
+      .order("display_order");
+    
+    if (!error) {
+      setClientStages(data || []);
+    }
+  };
+
+  const handleClientStageChange = async (clientId: string, stageId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({ stage_id: stageId })
+        .eq("id", clientId);
+
+      if (error) throw error;
+
+      // Update local state
+      setClients(prev => prev.map(c => 
+        c.id === clientId ? { ...c, stage_id: stageId } : c
+      ));
+      toast.success("Cliente movido com sucesso");
+    } catch (error) {
+      console.error("Error updating client stage:", error);
+      toast.error("Erro ao mover cliente");
+    }
+  };
+
   useEffect(() => {
     fetchClients();
     fetchProducts();
     fetchCustomFields();
     fetchTeamUsers();
+    fetchClientStages();
   }, []);
 
   // Fetch field values and pending form sends when clients are loaded
@@ -1112,6 +1146,7 @@ export default function Clients() {
               size="sm"
               className="rounded-none"
               onClick={() => setViewMode("table")}
+              title="Lista"
             >
               <List className="h-4 w-4" />
             </Button>
@@ -1120,8 +1155,18 @@ export default function Clients() {
               size="sm"
               className="rounded-none"
               onClick={() => setViewMode("cards")}
+              title="Cards"
             >
               <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "kanban" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode("kanban")}
+              title="Kanban"
+            >
+              <Kanban className="h-4 w-4" />
             </Button>
           </div>
 
@@ -2488,7 +2533,27 @@ export default function Clients() {
         </div>
       )}
 
-      {/* Delete confirmation dialog */}
+      {/* Kanban View */}
+      {viewMode === "kanban" && accountId && (
+        <ClientKanban
+          clients={filtered.map(c => ({
+            id: c.id,
+            full_name: c.full_name,
+            phone_e164: c.phone_e164,
+            emails: c.emails,
+            company_name: c.company_name,
+            avatar_url: c.avatar_url,
+            stage_id: c.stage_id,
+            status: c.status,
+            client_products: c.client_products,
+          }))}
+          stages={clientStages}
+          accountId={accountId}
+          onStageChange={handleClientStageChange}
+          onRefreshStages={fetchClientStages}
+        />
+      )}
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

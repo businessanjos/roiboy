@@ -1092,6 +1092,47 @@ export type Database = {
           },
         ]
       }
+      client_stages: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_stages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_subscriptions: {
         Row: {
           account_id: string
@@ -1189,6 +1230,7 @@ export type Database = {
           notes: string | null
           phone_e164: string
           responsible_user_id: string | null
+          stage_id: string | null
           state: string | null
           status: Database["public"]["Enums"]["client_status"]
           street: string | null
@@ -1226,6 +1268,7 @@ export type Database = {
           notes?: string | null
           phone_e164: string
           responsible_user_id?: string | null
+          stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           street?: string | null
@@ -1263,6 +1306,7 @@ export type Database = {
           notes?: string | null
           phone_e164?: string
           responsible_user_id?: string | null
+          stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           street?: string | null
@@ -1283,6 +1327,13 @@ export type Database = {
             columns: ["responsible_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_stages"
             referencedColumns: ["id"]
           },
         ]
