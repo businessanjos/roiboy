@@ -749,11 +749,11 @@ serve(async (req) => {
         const messageBody = { number: cleanPhone, text: message };
         
         if (instanceToken) {
-          // Use instance token with /message/text endpoint (no instance name in path)
-          result = await uazapiInstanceRequest(`/message/text`, "POST", instanceToken, messageBody);
+          // Use instance token with /message/sendtext endpoint (no instance name in path)
+          result = await uazapiInstanceRequest(`/message/sendtext`, "POST", instanceToken, messageBody);
         } else {
           // Fallback to admin endpoint with instance name in path
-          result = await uazapiAdminRequest(`/message/text/${instanceName}`, "POST", messageBody);
+          result = await uazapiAdminRequest(`/message/sendtext/${instanceName}`, "POST", messageBody);
         }
         break;
       }
