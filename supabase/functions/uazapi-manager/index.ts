@@ -1002,13 +1002,17 @@ serve(async (req) => {
         }
 
         // Save the group to database if created successfully
+        // UAZAPI returns: { group: { JID: "...", Name: "...", Participants: [...] } }
         const groupData = createGroupResult as {
           group?: { JID?: string; Name?: string; Participants?: unknown[] };
           jid?: string;
           id?: string;
+          JID?: string;
+          Name?: string;
         } | null;
         
-        const groupJid = groupData?.group?.JID || groupData?.jid || groupData?.id;
+        // Try different response formats
+        const groupJid = groupData?.group?.JID || groupData?.JID || groupData?.jid || groupData?.id;
         const groupName = groupData?.group?.Name || group_name;
         const participantCount = groupData?.group?.Participants?.length || cleanParticipants.length + 1;
         
