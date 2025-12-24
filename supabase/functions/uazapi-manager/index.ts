@@ -14,7 +14,8 @@ interface UazapiRequest {
   action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token" 
     | "list_groups" | "sync_groups" | "save_selected_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
     | "send_media" | "send_media_to_group"
-    | "update_group_name" | "update_group_description" | "update_group_image";
+    | "update_group_name" | "update_group_description" | "update_group_image"
+    | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status";
   instance_name?: string;
   phone?: string;
   message?: string;
@@ -1877,6 +1878,234 @@ serve(async (req) => {
         result = updateSuccess 
           ? { success: true, message: "Imagem do grupo atualizada com sucesso", data: updateResult }
           : { success: false, message: "Não foi possível atualizar a imagem do grupo", lastResult: updateResult };
+        break;
+      }
+
+      // ========== SUPPORT WHATSAPP ACTIONS ==========
+      case "create_support_instance": {
+        const supportInstanceName = payload.instance_name || `support-roy-${Date.now().toString(36)}`;
+        
+        // Check if super admin
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: "Only super admins can manage support WhatsApp" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Create instance via UAZAPI
+        const createResult = await uazapiAdminRequest("/instance/init", "POST", {
+          name: supportInstanceName,
+        }) as {
+          token?: string;
+          instance?: { token?: string };
+        };
+
+        const instanceToken = createResult.token || createResult.instance?.token;
+
+        // Wait for initialization
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Get QR code
+        let qrcodeBase64 = "";
+        if (instanceToken) {
+          try {
+            const connectResult = await uazapiInstanceRequest("/connect", "POST", instanceToken) as {
+              base64?: string;
+              qrcode?: string;
+            };
+            qrcodeBase64 = connectResult.base64 || connectResult.qrcode || "";
+          } catch (err) {
+            console.log("Failed to get QR:", (err as Error).message);
+          }
+
+          // Configure webhook for support
+          const supportWebhookUrl = `${supabaseUrl}/functions/v1/support-webhook`;
+          try {
+            await uazapiInstanceRequest("/webhook/set", "POST", instanceToken, {
+              url: supportWebhookUrl,
+              enabled: true,
+              webhookByEvents: true,
+              events: ["messages", "connection", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
+            });
+            console.log("Support webhook configured");
+          } catch (err) {
+            console.log("Webhook config failed:", (err as Error).message);
+          }
+        }
+
+        // Update system settings
+        await supabase
+          .from("system_settings")
+          .update({
+            value: {
+              instance_name: supportInstanceName,
+              instance_token: instanceToken,
+              phone: null,
+              status: qrcodeBase64 ? "connecting" : "disconnected",
+              qr_code: qrcodeBase64,
+            },
+          })
+          .eq("key", "support_whatsapp");
+
+        result = {
+          success: true,
+          instance_name: supportInstanceName,
+          qr_code: qrcodeBase64,
+        };
+        break;
+      }
+
+      case "refresh_support_qr": {
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: "Only super admins can manage support WhatsApp" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get current settings
+        const { data: settings } = await supabase
+          .from("system_settings")
+          .select("value")
+          .eq("key", "support_whatsapp")
+          .single();
+
+        const supportConfig = settings?.value as { instance_name?: string; instance_token?: string } | null;
+        if (!supportConfig?.instance_token) {
+          return new Response(
+            JSON.stringify({ error: "Support instance not configured" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get new QR code
+        let qrcodeBase64 = "";
+        try {
+          const connectResult = await uazapiInstanceRequest("/connect", "POST", supportConfig.instance_token) as {
+            base64?: string;
+            qrcode?: string;
+          };
+          qrcodeBase64 = connectResult.base64 || connectResult.qrcode || "";
+        } catch (err) {
+          console.log("Failed to get QR:", (err as Error).message);
+        }
+
+        // Update settings
+        await supabase
+          .from("system_settings")
+          .update({
+            value: {
+              ...supportConfig,
+              qr_code: qrcodeBase64,
+              status: qrcodeBase64 ? "connecting" : "disconnected",
+            },
+          })
+          .eq("key", "support_whatsapp");
+
+        result = { success: true, qr_code: qrcodeBase64 };
+        break;
+      }
+
+      case "check_support_status": {
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: "Only super admins can manage support WhatsApp" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: settings } = await supabase
+          .from("system_settings")
+          .select("value")
+          .eq("key", "support_whatsapp")
+          .single();
+
+        const supportConfig = settings?.value as { instance_name?: string; instance_token?: string; qr_code?: string } | null;
+        if (!supportConfig?.instance_token) {
+          result = { status: "disconnected" };
+          break;
+        }
+
+        // Check status via UAZAPI
+        let status = "disconnected";
+        let phone = null;
+        try {
+          const statusResult = await uazapiInstanceRequest("/status", "GET", supportConfig.instance_token) as {
+            status?: string;
+            state?: string;
+            connected?: boolean;
+            phone?: string;
+            jid?: string;
+          };
+          
+          if (statusResult.connected || statusResult.status === "connected" || statusResult.state === "connected") {
+            status = "connected";
+            phone = statusResult.phone || statusResult.jid?.split("@")[0] || null;
+          }
+        } catch (err) {
+          console.log("Status check failed:", (err as Error).message);
+        }
+
+        // Update settings
+        await supabase
+          .from("system_settings")
+          .update({
+            value: {
+              ...supportConfig,
+              status,
+              phone,
+              qr_code: status === "connected" ? null : supportConfig.qr_code,
+            },
+          })
+          .eq("key", "support_whatsapp");
+
+        result = { success: true, status, phone };
+        break;
+      }
+
+      case "disconnect_support": {
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: "Only super admins can manage support WhatsApp" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: settings } = await supabase
+          .from("system_settings")
+          .select("value")
+          .eq("key", "support_whatsapp")
+          .single();
+
+        const supportConfig = settings?.value as { instance_name?: string; instance_token?: string } | null;
+        if (supportConfig?.instance_token) {
+          try {
+            await uazapiInstanceRequest("/logout", "POST", supportConfig.instance_token);
+          } catch (err) {
+            console.log("Logout failed:", (err as Error).message);
+          }
+        }
+
+        // Reset settings
+        await supabase
+          .from("system_settings")
+          .update({
+            value: {
+              instance_name: null,
+              instance_token: null,
+              phone: null,
+              status: "disconnected",
+              qr_code: null,
+            },
+          })
+          .eq("key", "support_whatsapp");
+
+        result = { success: true };
         break;
       }
 
