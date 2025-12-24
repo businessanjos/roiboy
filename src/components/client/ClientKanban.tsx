@@ -339,7 +339,7 @@ function StageManagerDialog({ open, onOpenChange, stages, accountId, onRefresh }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Gerenciar Etapas do Funil</DialogTitle>
+          <DialogTitle>Gerenciar Etapas do Onboarding</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
