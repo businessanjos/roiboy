@@ -3014,6 +3014,104 @@ export type Database = {
         }
         Relationships: []
       }
+      members_book_settings: {
+        Row: {
+          access_password: string | null
+          account_id: string
+          created_at: string
+          custom_description: string | null
+          custom_title: string | null
+          id: string
+          is_enabled: boolean
+          show_company: boolean
+          show_email: boolean
+          show_phone: boolean
+          show_products: boolean
+          updated_at: string
+        }
+        Insert: {
+          access_password?: string | null
+          account_id: string
+          created_at?: string
+          custom_description?: string | null
+          custom_title?: string | null
+          id?: string
+          is_enabled?: boolean
+          show_company?: boolean
+          show_email?: boolean
+          show_phone?: boolean
+          show_products?: boolean
+          updated_at?: string
+        }
+        Update: {
+          access_password?: string | null
+          account_id?: string
+          created_at?: string
+          custom_description?: string | null
+          custom_title?: string | null
+          id?: string
+          is_enabled?: boolean
+          show_company?: boolean
+          show_email?: boolean
+          show_phone?: boolean
+          show_products?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "members_book_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      members_book_visibility: {
+        Row: {
+          account_id: string
+          client_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          is_visible: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_visible?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_visible?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "members_book_visibility_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "members_book_visibility_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_events: {
         Row: {
           account_id: string
