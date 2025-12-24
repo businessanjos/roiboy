@@ -276,7 +276,7 @@ serve(async (req) => {
             let messageSent = false;
             let lastError = "";
             
-            // UAZAPI v2 uses /message/text endpoint with token header for instance auth
+            // UAZAPI v2 uses /message/sendtext endpoint with token header for instance auth
             // The body should have "number" and "text" fields
             const messageBody = {
               number: cleanPhone,
@@ -287,11 +287,11 @@ serve(async (req) => {
             if (whatsappConfig.instance_token) {
               console.log(`Using instance_token authentication: ${whatsappConfig.instance_token.slice(0, 8)}...`);
               
-              // UAZAPI v2 correct endpoints - token identifies the instance
+              // UAZAPI v2 correct endpoints - token header identifies the instance
+              // According to docs: POST /message/sendtext with header 'token'
               const instanceEndpoints = [
-                `/message/text`,
-                `/chat/send/text`,
-                `/send/text`,
+                `/message/sendtext`,
+                `/message/sendText`,
               ];
               
               for (const endpointPath of instanceEndpoints) {
@@ -340,11 +340,10 @@ serve(async (req) => {
             if (!messageSent) {
               console.log(`Using admintoken authentication`);
               
-              // UAZAPI admin endpoints use /message/text/{instanceName}
+              // UAZAPI admin endpoints use /message/sendtext/{instanceName}
               const adminEndpoints = [
-                `/message/text/${whatsappConfig.instance_name}`,
-                `/chat/send/text/${whatsappConfig.instance_name}`,
-                `/send/text/${whatsappConfig.instance_name}`,
+                `/message/sendtext/${whatsappConfig.instance_name}`,
+                `/message/sendText/${whatsappConfig.instance_name}`,
               ];
               
               for (const endpointPath of adminEndpoints) {
