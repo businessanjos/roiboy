@@ -1022,23 +1022,26 @@ export default function WhatsAppGroups() {
               <div>
                 <Label>Selecione o Grupo</Label>
                 <div className="grid gap-2 mt-2 max-h-48 overflow-y-auto">
-                  {groups.map((group) => (
-                    <div
-                      key={group.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedGroupId === group.id 
-                          ? "border-primary bg-primary/5" 
-                          : "hover:bg-muted/50"
-                      }`}
-                      onClick={() => setSelectedGroupId(group.id)}
-                    >
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{group.subject || group.name || "Sem nome"}</span>
-                      <Badge variant="secondary" className="ml-auto">
-                        {group.size || group.participants?.length || 0} membros
-                      </Badge>
-                    </div>
-                  ))}
+                  {groups.map((group) => {
+                    const groupJid = group.group_jid || group.id;
+                    return (
+                      <div
+                        key={group.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedGroupId === groupJid 
+                            ? "border-primary bg-primary/5" 
+                            : "hover:bg-muted/50"
+                        }`}
+                        onClick={() => setSelectedGroupId(groupJid)}
+                      >
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{group.name || group.subject || "Sem nome"}</span>
+                        <Badge variant="secondary" className="ml-auto">
+                          {group.participant_count || group.size || group.participants?.length || 0} membros
+                        </Badge>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
