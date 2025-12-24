@@ -1001,6 +1001,30 @@ serve(async (req) => {
           }
         }
 
+        // Save the group to database if created successfully
+        const groupData = createGroupResult as {
+          group?: { JID?: string; Name?: string; Participants?: unknown[] };
+          jid?: string;
+          id?: string;
+        } | null;
+        
+        const groupJid = groupData?.group?.JID || groupData?.jid || groupData?.id;
+        const groupName = groupData?.group?.Name || group_name;
+        const participantCount = groupData?.group?.Participants?.length || cleanParticipants.length + 1;
+        
+        if (groupJid) {
+          console.log(`Saving group to database: ${groupName} (${groupJid})`);
+          
+          await supabase
+            .from("whatsapp_groups")
+            .upsert({
+              account_id: accountId,
+              group_jid: groupJid,
+              name: groupName,
+              participant_count: participantCount,
+            }, { onConflict: "account_id,group_jid" });
+        }
+
         result = createGroupResult || { success: false, message: "Não foi possível criar o grupo" };
         break;
       }
