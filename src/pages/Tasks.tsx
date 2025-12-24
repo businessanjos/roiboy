@@ -272,24 +272,25 @@ export default function Tasks() {
     const daysDiff = differenceInDays(dueDate, today);
     const isCompleted = task.status === "done";
     const isCancelled = task.status === "cancelled";
+    const formattedDate = format(dueDate, "dd/MM", { locale: ptBR });
     
     if (isCompleted || isCancelled) {
-      return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground" };
+      return { text: formattedDate, className: "text-muted-foreground" };
     }
     
     if (daysDiff < 0) {
-      return { text: `${Math.abs(daysDiff)}d atrasado`, className: "text-destructive font-medium" };
+      return { text: `${Math.abs(daysDiff)}d atrasado · ${formattedDate}`, className: "text-destructive font-medium" };
     }
     if (daysDiff === 0) {
-      return { text: "Hoje", className: "text-amber-600 dark:text-amber-400 font-medium" };
+      return { text: `Hoje · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400 font-medium" };
     }
     if (daysDiff === 1) {
-      return { text: "Amanhã", className: "text-amber-600 dark:text-amber-400" };
+      return { text: `Amanhã · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400" };
     }
     if (daysDiff <= 7) {
-      return { text: `${daysDiff} dias`, className: "text-foreground" };
+      return { text: `${daysDiff} dias · ${formattedDate}`, className: "text-foreground" };
     }
-    return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground" };
+    return { text: formattedDate, className: "text-muted-foreground" };
   };
 
   const filteredTasks = useMemo(() => tasks.filter((task) => {
@@ -415,13 +416,32 @@ export default function Tasks() {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className={cn(
-                          "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium",
-                          statusConfig.className
-                        )}>
-                          <StatusIcon className="h-3 w-3" />
-                          <span>{statusConfig.label}</span>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={cn(
+                              "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity",
+                              statusConfig.className
+                            )}>
+                              <StatusIcon className="h-3 w-3" />
+                              <span>{statusConfig.label}</span>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-40">
+                            {Object.entries(STATUS_CONFIG).map(([status, config]) => {
+                              const Icon = config.icon;
+                              return (
+                                <DropdownMenuItem
+                                  key={status}
+                                  onClick={() => handleStatusChange(task.id, status as Task["status"])}
+                                  className={cn(task.status === status && "bg-muted")}
+                                >
+                                  <Icon className="mr-2 h-4 w-4" />
+                                  {config.label}
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(

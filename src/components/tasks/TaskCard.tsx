@@ -60,6 +60,7 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onToggleComplete: (task: Task) => void;
+  onStatusChange?: (taskId: string, status: Task["status"]) => void;
   showClient?: boolean;
 }
 
@@ -71,7 +72,7 @@ const STATUS_CONFIG = {
   cancelled: { label: "Cancelado", icon: XCircle, className: "text-muted-foreground" },
 };
 
-export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient = true }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusChange, showClient = true }: TaskCardProps) {
   const statusConfig = STATUS_CONFIG[task.status];
   const StatusIcon = statusConfig.icon;
   const isCompleted = task.status === "done";
@@ -86,24 +87,25 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
     dueDate.setHours(0, 0, 0, 0);
     
     const daysDiff = differenceInDays(dueDate, today);
+    const formattedDate = format(dueDate, "dd/MM", { locale: ptBR });
     
     if (isCompleted || isCancelled) {
-      return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground", urgent: false };
+      return { text: formattedDate, className: "text-muted-foreground", urgent: false };
     }
     
     if (daysDiff < 0) {
-      return { text: `${Math.abs(daysDiff)}d atrasado`, className: "text-destructive font-medium", urgent: true };
+      return { text: `${Math.abs(daysDiff)}d atrasado · ${formattedDate}`, className: "text-destructive font-medium", urgent: true };
     }
     if (daysDiff === 0) {
-      return { text: "Hoje", className: "text-amber-600 dark:text-amber-400 font-medium", urgent: true };
+      return { text: `Hoje · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400 font-medium", urgent: true };
     }
     if (daysDiff === 1) {
-      return { text: "Amanhã", className: "text-amber-600 dark:text-amber-400", urgent: false };
+      return { text: `Amanhã · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400", urgent: false };
     }
     if (daysDiff <= 7) {
-      return { text: `${daysDiff} dias`, className: "text-foreground", urgent: false };
+      return { text: `${daysDiff} dias · ${formattedDate}`, className: "text-foreground", urgent: false };
     }
-    return { text: format(dueDate, "dd MMM", { locale: ptBR }), className: "text-muted-foreground", urgent: false };
+    return { text: formattedDate, className: "text-muted-foreground", urgent: false };
   };
 
   const dueDateInfo = getDueDateInfo();
@@ -181,18 +183,51 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
 
         {/* Meta row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Status badge */}
-          <div className={cn(
-            "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
-            task.status === "in_progress" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-            task.status === "pending" && "bg-muted text-muted-foreground",
-            task.status === "overdue" && "bg-destructive/10 text-destructive",
-            task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
-            task.status === "cancelled" && "bg-muted text-muted-foreground"
-          )}>
-            <StatusIcon className="h-3.5 w-3.5" />
-            <span>{statusConfig.label}</span>
-          </div>
+          {/* Status badge with dropdown */}
+          {onStatusChange ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={cn(
+                  "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity",
+                  task.status === "in_progress" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                  task.status === "pending" && "bg-muted text-muted-foreground",
+                  task.status === "overdue" && "bg-destructive/10 text-destructive",
+                  task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
+                  task.status === "cancelled" && "bg-muted text-muted-foreground"
+                )}>
+                  <StatusIcon className="h-3.5 w-3.5" />
+                  <span>{statusConfig.label}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40">
+                {Object.entries(STATUS_CONFIG).map(([status, config]) => {
+                  const Icon = config.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={status}
+                      onClick={() => onStatusChange(task.id, status as Task["status"])}
+                      className={cn(task.status === status && "bg-muted")}
+                    >
+                      <Icon className="mr-2 h-4 w-4" />
+                      {config.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className={cn(
+              "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+              task.status === "in_progress" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+              task.status === "pending" && "bg-muted text-muted-foreground",
+              task.status === "overdue" && "bg-destructive/10 text-destructive",
+              task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
+              task.status === "cancelled" && "bg-muted text-muted-foreground"
+            )}>
+              <StatusIcon className="h-3.5 w-3.5" />
+              <span>{statusConfig.label}</span>
+            </div>
+          )}
 
           {/* Due date */}
           {dueDateInfo && (
