@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient, UseQueryOptions } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface PaginatedResult<T> {
   data: T[];
@@ -159,23 +159,39 @@ export function useInvalidateQueries() {
 }
 
 /**
- * Debounced query for search inputs
+ * Debounced value hook for search inputs
+ * Returns a value that only updates after the specified delay
  */
 export function useDebouncedValue<T>(value: T, delay: number = 300): T {
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const debouncedValue = useRef(value);
+  const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
-    timeoutRef.current = setTimeout(() => {
-      debouncedValue.current = value;
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
     }, delay);
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimeout(timer);
     };
   }, [value, delay]);
 
-  return debouncedValue.current;
+  return debouncedValue;
+}
+
+/**
+ * Hook for memoizing expensive computations with dependencies
+ */
+export function useStableCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  deps: React.DependencyList
+): T {
+  const callbackRef = useRef(callback);
+  
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, deps);
+
+  return useCallback((...args: Parameters<T>) => {
+    return callbackRef.current(...args);
+  }, []) as T;
 }
