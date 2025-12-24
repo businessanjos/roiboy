@@ -33,6 +33,9 @@ interface UazapiWebhookPayload {
     // Additional phone fields UAZAPI might use
     jid?: string;
     number?: string;
+    // Group chat fields
+    wa_chatid?: string;
+    wa_isGroup?: boolean;
   };
   // Message data - UAZAPI format
   message?: {
@@ -43,6 +46,12 @@ interface UazapiWebhookPayload {
     type?: string;
     fromMe?: boolean;
     timestamp?: number | string;
+    // Sender info for group messages
+    sender?: string;
+    sender_pn?: string;
+    senderName?: string;
+    isGroup?: boolean;
+    chatid?: string;
     // Nested message content
     conversation?: string;
     extendedTextMessage?: { text?: string };
@@ -182,10 +191,14 @@ serve(async (req) => {
         const chat = payload.chat;
         const msg = payload.message;
         
+        // Check if this is a group message
+        const isGroupMessage = msg.isGroup || chat.wa_isGroup || (chat.wa_chatid?.includes("@g.us"));
+        
         // Log structure for debugging
         console.log("Chat object keys:", Object.keys(chat));
         console.log("Message object keys:", Object.keys(msg));
-        console.log("Chat phone:", chat.phone, "Chat jid:", chat.jid, "Chat number:", chat.number, "Chat id:", chat.id);
+        console.log("Is group message:", isGroupMessage);
+        console.log("Chat phone:", chat.phone, "Sender:", msg.sender, "Sender PN:", msg.sender_pn);
         console.log("Message body type:", typeof msg.body, "Message content type:", typeof msg.content);
         
         // Skip outgoing messages
@@ -196,18 +209,35 @@ serve(async (req) => {
           });
         }
         
-        // Extract phone from multiple possible locations
-        let phone = normalizePhone(chat.phone) || normalizePhone(chat.jid) || normalizePhone(chat.number);
+        // Extract phone - for group messages, use sender; for direct messages, use chat.phone
+        let phone = "";
         
-        // If still no phone, try to extract from chat.id (format: 5511999999999@s.whatsapp.net or similar)
-        if (!phone && chat.id) {
-          const idMatch = chat.id.match(/(\d{10,15})/);
-          if (idMatch) {
-            phone = `+${idMatch[1]}`;
+        if (isGroupMessage) {
+          // For group messages, extract sender's phone from sender or sender_pn field
+          phone = normalizePhone(msg.sender_pn) || normalizePhone(msg.sender);
+          
+          // sender might be in format "5511999999999@s.whatsapp.net"
+          if (!phone && msg.sender) {
+            const senderMatch = msg.sender.match(/^(\d{10,15})/);
+            if (senderMatch) {
+              phone = `+${senderMatch[1]}`;
+            }
+          }
+          console.log(`Group message - extracted sender phone: ${phone}`);
+        } else {
+          // For direct messages, use chat.phone
+          phone = normalizePhone(chat.phone) || normalizePhone(chat.jid) || normalizePhone(chat.number);
+          
+          // If still no phone, try to extract from chat.id
+          if (!phone && chat.id) {
+            const idMatch = chat.id.match(/(\d{10,15})/);
+            if (idMatch) {
+              phone = `+${idMatch[1]}`;
+            }
           }
         }
         
-        const contactName = chat.name || "Desconhecido";
+        const contactName = (isGroupMessage ? msg.senderName : chat.name) || "Desconhecido";
         
         // Extract content from various formats
         let content = "";
