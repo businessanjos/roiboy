@@ -206,14 +206,22 @@ serve(async (req) => {
     // Get existing integration to use saved instance name
     const { data: existingWhatsapp } = await supabase
       .from("integrations")
-      .select("config")
+      .select("config, status")
       .eq("account_id", accountId)
       .eq("type", "whatsapp")
       .maybeSingle();
 
-    // Use saved instance name or generate new one
+    // For "create" action with disconnected status, generate a new unique instance name
+    // This ensures we don't try to reuse a deleted instance on UAZAPI
     const savedInstanceName = (existingWhatsapp?.config as { instance_name?: string })?.instance_name;
-    const instanceName = savedInstanceName || `roy-${accountId.slice(0, 8)}`;
+    const isDisconnected = existingWhatsapp?.status === "disconnected";
+    const forceNewInstance = action === "create" && isDisconnected;
+    
+    // Generate unique suffix using timestamp to avoid collisions
+    const uniqueSuffix = forceNewInstance ? `-${Date.now().toString(36).slice(-4)}` : "";
+    const instanceName = forceNewInstance 
+      ? `roy-${accountId.slice(0, 8)}${uniqueSuffix}`
+      : (savedInstanceName || `roy-${accountId.slice(0, 8)}`);
 
     console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}`);
 
