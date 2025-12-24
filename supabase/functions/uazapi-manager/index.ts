@@ -1965,27 +1965,80 @@ serve(async (req) => {
         // Wait for UAZAPI to fully register the instance
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // UAZAPI GO: Use ADMIN endpoint /instance/connect/{name} to get QR code
-        // This is the same endpoint used by the normal WhatsApp integration
-        if (!qrcodeBase64) {
-          console.log(`Triggering QR via admin /instance/connect/${supportInstanceName}`);
+        // UAZAPI GO: Try multiple endpoints to get QR code
+        // First try with instance token, then admin endpoints
+        if (!qrcodeBase64 && instanceToken) {
+          console.log(`Triggering QR with instance token ${instanceToken.slice(0, 8)}...`);
           
-          try {
-            const connectResult = await uazapiAdminRequest(`/instance/connect/${supportInstanceName}`, "GET") as {
-              base64?: string;
-              qrcode?: string | { base64?: string };
-              qr?: string;
-              data?: { base64?: string; qrcode?: string };
-            };
-            console.log(`Admin connect result:`, JSON.stringify(connectResult).slice(0, 500));
-            
-            qrcodeBase64 = connectResult.base64 || 
-                           connectResult.qr ||
-                           connectResult.data?.base64 ||
-                           connectResult.data?.qrcode ||
-                           (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
-          } catch (err) {
-            console.log(`Admin /instance/connect failed:`, (err as Error).message);
+          // Try instance token endpoints (like normal WhatsApp integration)
+          const instanceQrEndpoints = [
+            { url: `/connect`, method: "POST" },
+            { url: `/connect`, method: "GET" },
+            { url: `/qr`, method: "GET" },
+            { url: `/qrcode`, method: "GET" },
+          ];
+          
+          for (const endpoint of instanceQrEndpoints) {
+            if (qrcodeBase64) break;
+            try {
+              console.log(`Trying instance: ${endpoint.method} ${endpoint.url}`);
+              const connectResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken) as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                qr?: string;
+                data?: { base64?: string; qrcode?: string };
+              };
+              console.log(`Instance ${endpoint.url} result:`, JSON.stringify(connectResult).slice(0, 300));
+              
+              qrcodeBase64 = connectResult.base64 || 
+                             connectResult.qr ||
+                             connectResult.data?.base64 ||
+                             connectResult.data?.qrcode ||
+                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+              
+              if (qrcodeBase64) {
+                console.log(`QR found via instance ${endpoint.url}`);
+              }
+            } catch (err) {
+              console.log(`Instance ${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+        
+        // Also try admin endpoints
+        if (!qrcodeBase64) {
+          console.log(`Trying admin endpoints for QR...`);
+          
+          const adminQrEndpoints = [
+            { url: `/instance/connect/${supportInstanceName}`, method: "POST" },
+            { url: `/instance/qr/${supportInstanceName}`, method: "GET" },
+            { url: `/qr/${supportInstanceName}`, method: "GET" },
+          ];
+          
+          for (const endpoint of adminQrEndpoints) {
+            if (qrcodeBase64) break;
+            try {
+              console.log(`Trying admin: ${endpoint.method} ${endpoint.url}`);
+              const connectResult = await uazapiAdminRequest(endpoint.url, endpoint.method) as {
+                base64?: string;
+                qrcode?: string | { base64?: string };
+                qr?: string;
+                data?: { base64?: string; qrcode?: string };
+              };
+              console.log(`Admin ${endpoint.url} result:`, JSON.stringify(connectResult).slice(0, 300));
+              
+              qrcodeBase64 = connectResult.base64 || 
+                             connectResult.qr ||
+                             connectResult.data?.base64 ||
+                             connectResult.data?.qrcode ||
+                             (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
+              
+              if (qrcodeBase64) {
+                console.log(`QR found via admin ${endpoint.url}`);
+              }
+            } catch (err) {
+              console.log(`Admin ${endpoint.url} failed:`, (err as Error).message);
+            }
           }
         }
 
