@@ -2838,6 +2838,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string
+          custom_status_id: string | null
           description: string | null
           due_date: string | null
           id: string
@@ -2853,6 +2854,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by: string
+          custom_status_id?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -2868,6 +2870,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string
+          custom_status_id?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -2896,6 +2899,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_tasks_custom_status_id_fkey"
+            columns: ["custom_status_id"]
+            isOneToOne: false
+            referencedRelation: "task_statuses"
             referencedColumns: ["id"]
           },
         ]
@@ -4169,6 +4179,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      task_statuses: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          display_order: number
+          icon: string
+          id: string
+          is_completed_status: boolean
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string
+          id?: string
+          is_completed_status?: boolean
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string
+          id?: string
+          is_completed_status?: boolean
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_statuses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_roles: {
         Row: {
