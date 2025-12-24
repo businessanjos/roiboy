@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 interface SupportWhatsAppSettings {
   instance_name: string | null;
+  instance_token?: string | null;
   phone: string | null;
   status: "disconnected" | "connecting" | "connected";
   qr_code: string | null;
@@ -19,11 +20,11 @@ interface SupportWhatsAppSettings {
 
 export function SupportWhatsAppConfig() {
   const queryClient = useQueryClient();
-  const [instanceName, setInstanceName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
+  const [instanceName, setInstanceName] = useState("suporte-roy");
+  const [isPolling, setIsPolling] = useState(false);
 
   // Fetch current settings
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, refetch } = useQuery({
     queryKey: ["support-whatsapp-settings"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -37,12 +38,29 @@ export function SupportWhatsAppConfig() {
     },
   });
 
+  // Polling for connection status when connecting
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (isPolling || settings?.status === "connecting") {
+      intervalId = setInterval(() => {
+        refetch();
+      }, 5000); // Check every 5 seconds
+    }
+    
+    // Stop polling when connected
+    if (settings?.status === "connected") {
+      setIsPolling(false);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isPolling, settings?.status, refetch]);
+
   // Create/connect instance
   const createInstanceMutation = useMutation({
     mutationFn: async (name: string) => {
-      const UAZAPI_URL = import.meta.env.VITE_UAZAPI_URL || "";
-      
-      // Call edge function to create instance
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
         body: {
           action: "create_support_instance",
@@ -55,8 +73,12 @@ export function SupportWhatsAppConfig() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["support-whatsapp-settings"] });
-      toast.success("Instância criada! Escaneie o QR Code para conectar.");
-      setInstanceName("");
+      setIsPolling(true);
+      if (data?.qr_code) {
+        toast.success("Instância criada! Escaneie o QR Code para conectar.");
+      } else {
+        toast.success("Instância criada! Clique em 'Gerar QR Code' para conectar.");
+      }
     },
     onError: (error) => {
       console.error("Error creating instance:", error);
@@ -77,13 +99,18 @@ export function SupportWhatsAppConfig() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["support-whatsapp-settings"] });
-      toast.success("QR Code atualizado");
+      setIsPolling(true);
+      if (data?.qr_code) {
+        toast.success("QR Code gerado! Escaneie com o WhatsApp.");
+      } else {
+        toast.info("Tente novamente em alguns segundos.");
+      }
     },
     onError: (error) => {
       console.error("Error refreshing QR:", error);
-      toast.error("Erro ao atualizar QR Code");
+      toast.error("Erro ao gerar QR Code");
     },
   });
 
@@ -102,6 +129,7 @@ export function SupportWhatsAppConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["support-whatsapp-settings"] });
+      setIsPolling(false);
       toast.success("WhatsApp desconectado");
     },
     onError: (error) => {
@@ -123,8 +151,14 @@ export function SupportWhatsAppConfig() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["support-whatsapp-settings"] });
+      if (data?.status === "connected") {
+        toast.success("WhatsApp conectado com sucesso!");
+        setIsPolling(false);
+      } else if (data?.status === "connecting") {
+        toast.info("Aguardando conexão... Escaneie o QR Code.");
+      }
     },
   });
 
@@ -262,50 +296,88 @@ export function SupportWhatsAppConfig() {
             </div>
           </div>
         ) : (
-          // Show QR Code for connecting
+          // Show QR Code for connecting (instance exists but not connected)
           <div className="space-y-4">
             <div className="flex flex-col items-center gap-4">
               {settings?.qr_code ? (
-                <div className="p-4 bg-white rounded-lg">
+                <div className="p-4 bg-white rounded-lg shadow-sm">
                   <QRCodeSVG value={settings.qr_code} size={200} />
                 </div>
               ) : (
-                <div className="flex items-center justify-center w-[232px] h-[232px] bg-muted rounded-lg">
+                <div className="flex flex-col items-center justify-center w-[232px] h-[232px] bg-muted rounded-lg gap-3">
                   <QrCode className="h-12 w-12 text-muted-foreground" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refreshQRMutation.mutate()}
+                    disabled={refreshQRMutation.isPending}
+                  >
+                    {refreshQRMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="h-4 w-4 mr-2" />
+                        Gerar QR Code
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
               <p className="text-sm text-center text-muted-foreground">
-                Escaneie o QR Code com o WhatsApp para conectar
+                {settings?.qr_code 
+                  ? "Escaneie o QR Code com o WhatsApp para conectar"
+                  : "Clique para gerar o QR Code de conexão"
+                }
               </p>
               <p className="text-xs text-center text-muted-foreground">
                 Instância: {settings?.instance_name}
               </p>
             </div>
-            <div className="flex justify-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => refreshQRMutation.mutate()}
-                disabled={refreshQRMutation.isPending}
-              >
-                {refreshQRMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Atualizar QR Code
-                  </>
-                )}
-              </Button>
+            
+            {settings?.qr_code && (
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => refreshQRMutation.mutate()}
+                  disabled={refreshQRMutation.isPending}
+                >
+                  {refreshQRMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Atualizar QR Code
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => checkStatusMutation.mutate()}
+                  disabled={checkStatusMutation.isPending}
+                >
+                  {checkStatusMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Verificar Conexão"
+                  )}
+                </Button>
+              </div>
+            )}
+            
+            {/* Option to reset and create new instance */}
+            <div className="pt-4 border-t">
               <Button
                 variant="ghost"
-                onClick={() => checkStatusMutation.mutate()}
-                disabled={checkStatusMutation.isPending}
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => disconnectMutation.mutate()}
+                disabled={disconnectMutation.isPending}
               >
-                {checkStatusMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Verificar Conexão"
-                )}
+                <XCircle className="h-4 w-4 mr-2" />
+                Remover instância e criar nova
               </Button>
             </div>
           </div>
