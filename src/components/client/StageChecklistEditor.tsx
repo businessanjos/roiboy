@@ -586,11 +586,11 @@ export function StageChecklistEditor({
                                     <div className="flex items-center gap-2">
                                       <ExternalLink className="h-4 w-4 text-muted-foreground" />
                                       <Select
-                                        value={editingItem.action_type || ""}
+                                        value={editingItem.action_type || "none"}
                                         onValueChange={(value) =>
                                           setEditingItem({
                                             ...editingItem,
-                                            action_type: value as ChecklistActionType || null,
+                                            action_type: value === "none" ? null : value as ChecklistActionType,
                                           })
                                         }
                                       >
@@ -598,7 +598,7 @@ export function StageChecklistEditor({
                                           <SelectValue placeholder="Vincular a uma ação (opcional)" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="">Nenhuma ação</SelectItem>
+                                          <SelectItem value="none">Nenhuma ação</SelectItem>
                                           {Object.entries(CHECKLIST_ACTION_LABELS).map(([key, label]) => (
                                             <SelectItem key={key} value={key}>{label}</SelectItem>
                                           ))}
@@ -650,10 +650,10 @@ export function StageChecklistEditor({
                                           </span>
                                         </div>
                                       )}
-                                      {item.action_type && (
+                                      {item.action_type && CHECKLIST_ACTION_LABELS[item.action_type as ChecklistActionType] && (
                                         <div className="flex items-center gap-1 mt-1 text-xs text-primary">
                                           <ExternalLink className="h-3 w-3" />
-                                          <span>{CHECKLIST_ACTION_LABELS[item.action_type]}</span>
+                                          <span>{CHECKLIST_ACTION_LABELS[item.action_type as ChecklistActionType]}</span>
                                         </div>
                                       )}
                                     </div>
@@ -706,14 +706,14 @@ export function StageChecklistEditor({
                                 <div className="flex items-center gap-2">
                                   <ExternalLink className="h-4 w-4 text-muted-foreground" />
                                   <Select
-                                    value={newItemActionType}
-                                    onValueChange={(value) => setNewItemActionType(value as ChecklistActionType | "")}
+                                    value={newItemActionType || "none"}
+                                    onValueChange={(value) => setNewItemActionType(value === "none" ? "" : value as ChecklistActionType)}
                                   >
                                     <SelectTrigger className="flex-1">
                                       <SelectValue placeholder="Vincular a uma ação (opcional)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="">Nenhuma ação</SelectItem>
+                                      <SelectItem value="none">Nenhuma ação</SelectItem>
                                       {Object.entries(CHECKLIST_ACTION_LABELS).map(([key, label]) => (
                                         <SelectItem key={key} value={key}>{label}</SelectItem>
                                       ))}
