@@ -51,6 +51,7 @@ const Download = lazy(() => import("./pages/Download"));
 const Home = lazy(() => import("./pages/Home"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
+const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,6 +97,7 @@ const App = () => (
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
                           <Route path="/download" element={<Download />} />
+                          <Route path="/members" element={<PublicMembersBook />} />
                           <Route element={<AppLayout />}>
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/clients" element={<Clients />} />
