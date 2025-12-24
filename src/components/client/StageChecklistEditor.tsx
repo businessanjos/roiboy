@@ -27,6 +27,23 @@ import {
   useManageChecklistItems,
   StageChecklistItem,
 } from "@/hooks/useStageChecklist";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ClientStage {
   id: string;
@@ -49,6 +66,140 @@ const STAGE_COLORS = [
   "#84cc16", "#22c55e", "#10b981", "#14b8a6", "#06b6d4",
   "#0ea5e9", "#3b82f6", "#64748b"
 ];
+
+interface SortableStageItemProps {
+  stage: ClientStage;
+  index: number;
+  editingStage: ClientStage | null;
+  setEditingStage: (stage: ClientStage | null) => void;
+  handleUpdateStage: () => void;
+  handleDeleteStage: (id: string) => void;
+  savingStage: boolean;
+  itemCount: number;
+}
+
+function SortableStageItem({
+  stage,
+  index,
+  editingStage,
+  setEditingStage,
+  handleUpdateStage,
+  handleDeleteStage,
+  savingStage,
+  itemCount,
+}: SortableStageItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: stage.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const isEditing = editingStage?.id === stage.id;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-3 p-3 border rounded-lg bg-muted/30",
+        isDragging && "opacity-50 shadow-lg"
+      )}
+    >
+      {isEditing ? (
+        <>
+          <div
+            className="w-5 h-5 rounded-full shrink-0 cursor-pointer ring-2 ring-offset-1"
+            style={{ backgroundColor: editingStage.color }}
+          />
+          <Input
+            value={editingStage.name}
+            onChange={(e) =>
+              setEditingStage({ ...editingStage, name: e.target.value })
+            }
+            className="flex-1 h-8"
+            autoFocus
+          />
+          <div className="flex gap-1">
+            {STAGE_COLORS.slice(0, 6).map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={cn(
+                  "w-5 h-5 rounded-full transition-all",
+                  editingStage.color === color && "ring-2 ring-offset-1 ring-primary"
+                )}
+                style={{ backgroundColor: color }}
+                onClick={() => setEditingStage({ ...editingStage, color })}
+              />
+            ))}
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={handleUpdateStage}
+            disabled={savingStage}
+          >
+            <Check className="h-4 w-4 text-green-600" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => setEditingStage(null)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </>
+      ) : (
+        <>
+          <button
+            className="cursor-grab active:cursor-grabbing touch-none"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <span className="text-xs text-muted-foreground w-5 text-center">
+            {index + 1}
+          </span>
+          <div
+            className="w-4 h-4 rounded-full shrink-0"
+            style={{ backgroundColor: stage.color }}
+          />
+          <span className="flex-1 font-medium text-sm">{stage.name}</span>
+          <span className="text-xs text-muted-foreground">
+            {itemCount} itens
+          </span>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => setEditingStage(stage)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={() => handleDeleteStage(stage.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function StageChecklistEditor({
   open,
@@ -74,6 +225,14 @@ export function StageChecklistEditor({
   const [savingStage, setSavingStage] = useState(false);
 
   const sortedStages = [...stages].sort((a, b) => a.display_order - b.display_order);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Checklist handlers
   const handleAddItem = async (stageId: string) => {
@@ -202,6 +361,40 @@ export function StageChecklistEditor({
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sortedStages.findIndex((s) => s.id === active.id);
+    const newIndex = sortedStages.findIndex((s) => s.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reorderedStages = arrayMove(sortedStages, oldIndex, newIndex);
+
+    // Update display_order for all affected stages
+    try {
+      const updates = reorderedStages.map((stage, index) => ({
+        id: stage.id,
+        display_order: index,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from("client_stages")
+          .update({ display_order: update.display_order })
+          .eq("id", update.id);
+      }
+
+      onRefresh?.();
+      toast.success("Ordem atualizada");
+    } catch (error) {
+      console.error("Error reordering stages:", error);
+      toast.error("Erro ao reordenar etapas");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh]">
@@ -262,99 +455,39 @@ export function StageChecklistEditor({
                   </div>
                 </div>
 
-                {/* Existing stages */}
-                <div className="space-y-2">
-                  {sortedStages.map((stage, index) => (
-                    <div
-                      key={stage.id}
-                      className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
-                    >
-                      {editingStage?.id === stage.id ? (
-                        <>
-                          <div
-                            className="w-5 h-5 rounded-full shrink-0 cursor-pointer ring-2 ring-offset-1"
-                            style={{ backgroundColor: editingStage.color }}
-                          />
-                          <Input
-                            value={editingStage.name}
-                            onChange={(e) =>
-                              setEditingStage({ ...editingStage, name: e.target.value })
-                            }
-                            className="flex-1 h-8"
-                            autoFocus
-                          />
-                          <div className="flex gap-1">
-                            {STAGE_COLORS.slice(0, 6).map((color) => (
-                              <button
-                                key={color}
-                                type="button"
-                                className={cn(
-                                  "w-5 h-5 rounded-full transition-all",
-                                  editingStage.color === color && "ring-2 ring-offset-1 ring-primary"
-                                )}
-                                style={{ backgroundColor: color }}
-                                onClick={() => setEditingStage({ ...editingStage, color })}
-                              />
-                            ))}
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            onClick={handleUpdateStage}
-                            disabled={savingStage}
-                          >
-                            <Check className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            onClick={() => setEditingStage(null)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-xs text-muted-foreground w-5 text-center">
-                            {index + 1}
-                          </span>
-                          <div
-                            className="w-4 h-4 rounded-full shrink-0"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          <span className="flex-1 font-medium text-sm">{stage.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {getItemsForStage(stage.id).length} itens
-                          </span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            onClick={() => setEditingStage(stage)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteStage(stage.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
-                      )}
+                {/* Existing stages with drag and drop */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={sortedStages.map((s) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {sortedStages.map((stage, index) => (
+                        <SortableStageItem
+                          key={stage.id}
+                          stage={stage}
+                          index={index}
+                          editingStage={editingStage}
+                          setEditingStage={setEditingStage}
+                          handleUpdateStage={handleUpdateStage}
+                          handleDeleteStage={handleDeleteStage}
+                          savingStage={savingStage}
+                          itemCount={getItemsForStage(stage.id).length}
+                        />
+                      ))}
                     </div>
-                  ))}
+                  </SortableContext>
+                </DndContext>
 
-                  {sortedStages.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhuma etapa criada ainda. Adicione sua primeira etapa acima.
-                    </div>
-                  )}
-                </div>
+                {sortedStages.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma etapa criada ainda. Adicione sua primeira etapa acima.
+                  </div>
+                )}
               </div>
             </ScrollArea>
           </TabsContent>
