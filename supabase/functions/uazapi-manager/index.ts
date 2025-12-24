@@ -12,13 +12,17 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 interface UazapiRequest {
   action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token" 
-    | "list_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group";
+    | "list_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
+    | "send_media" | "send_media_to_group";
   instance_name?: string;
   phone?: string;
   message?: string;
   group_id?: string;
   group_name?: string;
   participants?: string[];
+  media_url?: string;
+  media_type?: "image" | "audio" | "document";
+  caption?: string;
 }
 
 // Helper function to configure webhook automatically
@@ -1235,6 +1239,144 @@ serve(async (req) => {
         result = sendSuccess 
           ? { success: true, message: "Mensagem enviada com sucesso", data: sendResult }
           : { success: false, message: "Não foi possível enviar a mensagem", lastResult: sendResult };
+        break;
+      }
+
+      case "send_media": {
+        // Send media (image/audio/document) to individual phone
+        const { phone, media_url, media_type = "image", caption } = payload as UazapiRequest;
+        
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!phone) {
+          throw new Error("Telefone é obrigatório");
+        }
+        
+        if (!media_url) {
+          throw new Error("URL da mídia é obrigatória");
+        }
+
+        const cleanPhone = phone.replace(/\D/g, "");
+        console.log(`Sending ${media_type} to: ${cleanPhone}`);
+        
+        let sendMediaResult: unknown = null;
+        let mediaSuccess = false;
+        
+        // UAZAPI GO v2 - Media endpoints
+        const mediaEndpoints = [
+          { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, url: media_url, caption: caption || "" } },
+          { url: `/send/media`, method: "POST", body: { number: cleanPhone, mediaUrl: media_url, type: media_type, caption: caption || "" } },
+          { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: cleanPhone, Url: media_url, Caption: caption || "" } },
+        ];
+
+        for (const endpoint of mediaEndpoints) {
+          if (mediaSuccess) break;
+          try {
+            console.log(`Trying media: ${endpoint.method} ${endpoint.url}`);
+            sendMediaResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              endpoint.body
+            );
+            console.log("Send media result:", JSON.stringify(sendMediaResult));
+            
+            const mediaData = sendMediaResult as { 
+              error?: boolean | string; 
+              messageId?: string; 
+              key?: { id?: string };
+              id?: string;
+              Message?: { ID?: string };
+            };
+            
+            if (
+              mediaData.error === false || 
+              mediaData.messageId || 
+              mediaData.key?.id ||
+              mediaData.id ||
+              mediaData.Message?.ID
+            ) {
+              mediaSuccess = true;
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = mediaSuccess 
+          ? { success: true, message: "Mídia enviada com sucesso", data: sendMediaResult }
+          : { success: false, message: "Não foi possível enviar a mídia", lastResult: sendMediaResult };
+        break;
+      }
+
+      case "send_media_to_group": {
+        // Send media (image/audio/document) to group
+        const { group_id, media_url, media_type = "image", caption } = payload as UazapiRequest;
+        
+        if (!savedInstanceToken) {
+          throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
+        }
+        
+        if (!group_id) {
+          throw new Error("ID do grupo é obrigatório");
+        }
+        
+        if (!media_url) {
+          throw new Error("URL da mídia é obrigatória");
+        }
+
+        const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
+        console.log(`Sending ${media_type} to group: ${groupJid}`);
+        
+        let sendMediaResult: unknown = null;
+        let mediaSuccess = false;
+        
+        // UAZAPI GO v2 - Media to group (same as individual but with group JID)
+        const mediaEndpoints = [
+          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, url: media_url, caption: caption || "" } },
+          { url: `/send/media`, method: "POST", body: { number: groupJid, mediaUrl: media_url, type: media_type, caption: caption || "" } },
+          { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: groupJid, Url: media_url, Caption: caption || "" } },
+        ];
+
+        for (const endpoint of mediaEndpoints) {
+          if (mediaSuccess) break;
+          try {
+            console.log(`Trying media to group: ${endpoint.method} ${endpoint.url}`);
+            sendMediaResult = await uazapiInstanceRequest(
+              endpoint.url, 
+              endpoint.method, 
+              savedInstanceToken,
+              endpoint.body
+            );
+            console.log("Send media to group result:", JSON.stringify(sendMediaResult));
+            
+            const mediaData = sendMediaResult as { 
+              error?: boolean | string; 
+              messageId?: string; 
+              key?: { id?: string };
+              id?: string;
+              Message?: { ID?: string };
+            };
+            
+            if (
+              mediaData.error === false || 
+              mediaData.messageId || 
+              mediaData.key?.id ||
+              mediaData.id ||
+              mediaData.Message?.ID
+            ) {
+              mediaSuccess = true;
+            }
+          } catch (err) {
+            console.log(`${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+
+        result = mediaSuccess 
+          ? { success: true, message: "Mídia enviada com sucesso ao grupo", data: sendMediaResult }
+          : { success: false, message: "Não foi possível enviar a mídia ao grupo", lastResult: sendMediaResult };
         break;
       }
 

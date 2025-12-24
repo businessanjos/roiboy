@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -43,6 +43,9 @@ import {
   Home,
   Plane,
   Star,
+  Image,
+  Mic,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -107,6 +110,12 @@ export default function MomentosCxCampaign() {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [campaignName, setCampaignName] = useState("Campanha Momentos CX");
   const [message, setMessage] = useState("");
+  
+  // Media state
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Filter state
   const [filterEventType, setFilterEventType] = useState<string>("all");

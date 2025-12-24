@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -48,6 +48,9 @@ import {
   Search,
   UsersRound,
   AlertCircle,
+  Image,
+  Mic,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -87,6 +90,12 @@ export default function WhatsAppGroups() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  
+  // Media upload state
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Manage participants state
   const [managingGroup, setManagingGroup] = useState<WhatsAppGroup | null>(null);
@@ -155,7 +164,7 @@ export default function WhatsAppGroups() {
     },
   });
 
-  // Send to group mutation
+  // Send to group mutation (text only)
   const sendToGroupMutation = useMutation({
     mutationFn: async ({ groupId, message }: { groupId: string; message: string }) => {
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
@@ -172,9 +181,41 @@ export default function WhatsAppGroups() {
       toast.success("Mensagem enviada com sucesso!");
       setSelectedGroupId(null);
       setMessage("");
+      clearMedia();
     },
     onError: (error: Error) => {
       toast.error("Erro ao enviar mensagem: " + error.message);
+    },
+  });
+
+  // Send media to group mutation
+  const sendMediaToGroupMutation = useMutation({
+    mutationFn: async ({ groupId, mediaUrl, mediaType, caption }: { 
+      groupId: string; 
+      mediaUrl: string; 
+      mediaType: "image" | "audio";
+      caption?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { 
+          action: "send_media_to_group",
+          group_id: groupId,
+          media_url: mediaUrl,
+          media_type: mediaType,
+          caption,
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Mídia enviada com sucesso!");
+      setSelectedGroupId(null);
+      setMessage("");
+      clearMedia();
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao enviar mídia: " + error.message);
     },
   });
 
@@ -242,9 +283,100 @@ export default function WhatsAppGroups() {
     createGroupMutation.mutate({ name: newGroupName, participants: phones });
   };
 
-  const handleSendMessage = () => {
-    if (!selectedGroupId || !message.trim()) {
-      toast.error("Selecione um grupo e digite uma mensagem");
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    const isImage = file.type.startsWith("image/");
+    const isAudio = file.type.startsWith("audio/");
+    
+    if (!isImage && !isAudio) {
+      toast.error("Apenas imagens e áudios são suportados");
+      return;
+    }
+
+    // Check file size (max 16MB)
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 16MB");
+      return;
+    }
+
+    setMediaFile(file);
+    
+    // Create preview for images
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setMediaPreview(null);
+    }
+  };
+
+  const clearMedia = () => {
+    setMediaFile(null);
+    setMediaPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadMediaToStorage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const filePath = `whatsapp-media/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from("event-media")
+      .upload(filePath, file, { 
+        contentType: file.type,
+        upsert: false 
+      });
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("event-media")
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const handleSendMessage = async () => {
+    if (!selectedGroupId) {
+      toast.error("Selecione um grupo");
+      return;
+    }
+
+    // If has media, send media
+    if (mediaFile) {
+      setIsUploadingMedia(true);
+      try {
+        const mediaUrl = await uploadMediaToStorage(mediaFile);
+        const mediaType = mediaFile.type.startsWith("image/") ? "image" : "audio";
+        
+        sendMediaToGroupMutation.mutate({ 
+          groupId: selectedGroupId, 
+          mediaUrl, 
+          mediaType, 
+          caption: message.trim() || undefined 
+        });
+      } catch (error) {
+        toast.error("Erro ao fazer upload da mídia");
+        console.error(error);
+      } finally {
+        setIsUploadingMedia(false);
+      }
+      return;
+    }
+
+    // Otherwise, send text
+    if (!message.trim()) {
+      toast.error("Digite uma mensagem ou selecione uma mídia");
       return;
     }
     sendToGroupMutation.mutate({ groupId: selectedGroupId, message });
@@ -283,6 +415,8 @@ export default function WhatsAppGroups() {
         : [...prev, clientId]
     );
   };
+
+  const isSendingAny = sendToGroupMutation.isPending || sendMediaToGroupMutation.isPending || isUploadingMedia;
 
   return (
     <div className="container mx-auto p-6 max-w-5xl">
@@ -524,32 +658,111 @@ export default function WhatsAppGroups() {
                 </div>
               </div>
 
+              {/* Media attachment */}
               <div>
-                <Label htmlFor="message">Mensagem</Label>
+                <Label className="mb-2 block">Anexar Mídia (opcional)</Label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/*,audio/*"
+                  className="hidden"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSendingAny}
+                  >
+                    <Image className="h-4 w-4 mr-2" />
+                    Imagem
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.accept = "audio/*";
+                        fileInputRef.current.click();
+                        fileInputRef.current.accept = "image/*,audio/*";
+                      }
+                    }}
+                    disabled={isSendingAny}
+                  >
+                    <Mic className="h-4 w-4 mr-2" />
+                    Áudio
+                  </Button>
+                </div>
+                
+                {/* Media preview */}
+                {mediaFile && (
+                  <div className="mt-3 p-3 border rounded-lg bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {mediaFile.type.startsWith("image/") ? (
+                          <Image className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Mic className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span className="text-sm font-medium truncate max-w-[200px]">
+                          {mediaFile.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(mediaFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearMedia}
+                        disabled={isSendingAny}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {mediaPreview && (
+                      <img 
+                        src={mediaPreview} 
+                        alt="Preview" 
+                        className="mt-2 max-h-32 rounded object-contain"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="message">
+                  {mediaFile ? "Legenda (opcional)" : "Mensagem"}
+                </Label>
                 <Textarea
                   id="message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Digite sua mensagem..."
-                  rows={6}
+                  placeholder={mediaFile ? "Digite uma legenda..." : "Digite sua mensagem..."}
+                  rows={4}
                   className="mt-1"
                 />
               </div>
 
               <Button
                 onClick={handleSendMessage}
-                disabled={sendToGroupMutation.isPending || !selectedGroupId || !message.trim()}
+                disabled={isSendingAny || !selectedGroupId || (!message.trim() && !mediaFile)}
                 className="w-full"
               >
-                {sendToGroupMutation.isPending ? (
+                {isSendingAny ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
+                    {isUploadingMedia ? "Enviando mídia..." : "Enviando..."}
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Enviar Mensagem
+                    {mediaFile ? "Enviar Mídia" : "Enviar Mensagem"}
                   </>
                 )}
               </Button>
