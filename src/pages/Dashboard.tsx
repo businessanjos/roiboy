@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -439,7 +439,7 @@ export default function Dashboard() {
     };
   }, [refetchAll]);
 
-  const filteredClients = clients.filter((client) => {
+  const filteredClients = useMemo(() => clients.filter((client) => {
     const matchesSearch =
       client.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       client.phone_e164.includes(searchQuery);
@@ -447,19 +447,21 @@ export default function Dashboard() {
     const matchesQuadrant = quadrantFilter === "all" || client.quadrant === quadrantFilter;
     const matchesProduct = productFilter === "all" || (client.product_ids?.includes(productFilter) ?? false);
     return matchesSearch && matchesStatus && matchesQuadrant && matchesProduct;
-  });
+  }), [clients, searchQuery, statusFilter, quadrantFilter, productFilter]);
 
-  const totalClients = clients.length;
-  const churnRiskCount = clients.filter((c) => c.status === "churn_risk" || c.status === "churned").length;
-  const promoterCount = clients.filter((c) => c.vnps_class === "promoter").length;
-  const detractorCount = clients.filter((c) => c.vnps_class === "detractor").length;
-  const avgROI = clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.roizometer, 0) / clients.length) : 0;
-  const avgEScore = clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.escore, 0) / clients.length) : 0;
+  const { totalClients, churnRiskCount, promoterCount, detractorCount, avgROI, avgEScore } = useMemo(() => ({
+    totalClients: clients.length,
+    churnRiskCount: clients.filter((c) => c.status === "churn_risk" || c.status === "churned").length,
+    promoterCount: clients.filter((c) => c.vnps_class === "promoter").length,
+    detractorCount: clients.filter((c) => c.vnps_class === "detractor").length,
+    avgROI: clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.roizometer, 0) / clients.length) : 0,
+    avgEScore: clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.escore, 0) / clients.length) : 0,
+  }), [clients]);
 
-  const topRiskClients = [...clients]
+  const topRiskClients = useMemo(() => [...clients]
     .filter((c) => c.status === "churn_risk" || c.status === "churned")
     .sort((a, b) => a.roizometer - b.roizometer)
-    .slice(0, 5);
+    .slice(0, 5), [clients]);
 
   const getCategoryLabel = (cat: string) => {
     const labels: Record<string, string> = {
