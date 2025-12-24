@@ -1184,13 +1184,12 @@ serve(async (req) => {
         let sendResult: unknown = null;
         let sendSuccess = false;
         
-        // Try different endpoint formats - UAZAPI typically uses chatId for groups
+        // UAZAPI GO v2 - Same format as send_text but with group JID as "number"
+        // The API expects { number: "groupJid@g.us", text: "message" }
         const sendEndpoints = [
+          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message } },
           { url: `/send/text`, method: "POST", body: { chatId: groupJid, text: message } },
-          { url: `/sendText`, method: "POST", body: { chatId: groupJid, message: message } },
-          { url: `/message/sendText`, method: "POST", body: { chatId: groupJid, text: message } },
-          { url: `/sendMessage`, method: "POST", body: { chatId: groupJid, message: message } },
-          { url: `/chat/sendText`, method: "POST", body: { chatId: groupJid, text: message } },
+          { url: `/chat/send/text`, method: "POST", body: { Phone: groupJid, Body: message } },
         ];
 
         for (const endpoint of sendEndpoints) {
@@ -1213,6 +1212,7 @@ serve(async (req) => {
               key?: { id?: string };
               message?: { key?: { id?: string } };
               id?: string;
+              Message?: { ID?: string };
             };
             
             if (
@@ -1221,7 +1221,8 @@ serve(async (req) => {
               sendData.status === "PENDING" ||
               sendData.key?.id ||
               sendData.message?.key?.id ||
-              sendData.id
+              sendData.id ||
+              sendData.Message?.ID
             ) {
               sendSuccess = true;
               break;
@@ -1233,7 +1234,7 @@ serve(async (req) => {
 
         result = sendSuccess 
           ? { success: true, message: "Mensagem enviada com sucesso", data: sendResult }
-          : { success: false, message: "Não foi possível enviar a mensagem" };
+          : { success: false, message: "Não foi possível enviar a mensagem", lastResult: sendResult };
         break;
       }
 
