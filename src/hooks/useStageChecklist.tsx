@@ -138,11 +138,13 @@ export function useManageChecklistItems(accountId: string) {
       title,
       description,
       dueDate,
+      stageName,
     }: {
       stageId: string;
       title: string;
       description?: string;
       dueDate?: string;
+      stageName?: string;
     }) => {
       // Get max display_order
       const { data: existingItems } = await supabase
@@ -154,7 +156,7 @@ export function useManageChecklistItems(accountId: string) {
 
       const maxOrder = existingItems?.[0]?.display_order ?? -1;
 
-      const { error } = await supabase
+      const { data: newItem, error } = await supabase
         .from("stage_checklist_items")
         .insert({
           account_id: accountId,
@@ -163,12 +165,53 @@ export function useManageChecklistItems(accountId: string) {
           description: description || null,
           due_date: dueDate || null,
           display_order: maxOrder + 1,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Auto-create task if has due date
+      if (dueDate && newItem) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("id")
+            .eq("auth_user_id", user.id)
+            .single();
+
+          if (userData) {
+            const { data: task } = await supabase
+              .from("internal_tasks")
+              .insert({
+                account_id: accountId,
+                title: stageName ? `[${stageName}] ${title}` : title,
+                description: description || `Item do checklist de onboarding`,
+                status: "pending",
+                priority: "medium",
+                due_date: dueDate,
+                created_by: userData.id,
+                checklist_item_id: newItem.id,
+              })
+              .select("id")
+              .single();
+
+            if (task) {
+              await supabase
+                .from("stage_checklist_items")
+                .update({ linked_task_id: task.id })
+                .eq("id", newItem.id);
+            }
+          }
+        }
+      }
+
+      return newItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stage-checklist-items"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 
@@ -178,11 +221,15 @@ export function useManageChecklistItems(accountId: string) {
       title,
       description,
       dueDate,
+      stageName,
+      currentLinkedTaskId,
     }: {
       itemId: string;
       title: string;
       description?: string;
       dueDate?: string | null;
+      stageName?: string;
+      currentLinkedTaskId?: string | null;
     }) => {
       const { error } = await supabase
         .from("stage_checklist_items")
@@ -195,9 +242,60 @@ export function useManageChecklistItems(accountId: string) {
         .eq("id", itemId);
 
       if (error) throw error;
+
+      // If has due date, create or update linked task
+      if (dueDate) {
+        if (currentLinkedTaskId) {
+          // Update existing task
+          await supabase
+            .from("internal_tasks")
+            .update({
+              title: stageName ? `[${stageName}] ${title}` : title,
+              description: description || `Item do checklist de onboarding`,
+              due_date: dueDate,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", currentLinkedTaskId);
+        } else {
+          // Create new task
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("id")
+              .eq("auth_user_id", user.id)
+              .single();
+
+            if (userData) {
+              const { data: task } = await supabase
+                .from("internal_tasks")
+                .insert({
+                  account_id: accountId,
+                  title: stageName ? `[${stageName}] ${title}` : title,
+                  description: description || `Item do checklist de onboarding`,
+                  status: "pending",
+                  priority: "medium",
+                  due_date: dueDate,
+                  created_by: userData.id,
+                  checklist_item_id: itemId,
+                })
+                .select("id")
+                .single();
+
+              if (task) {
+                await supabase
+                  .from("stage_checklist_items")
+                  .update({ linked_task_id: task.id })
+                  .eq("id", itemId);
+              }
+            }
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stage-checklist-items"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 

@@ -241,18 +241,21 @@ export function StageChecklistEditor({
   const handleAddItem = async (stageId: string) => {
     if (!newItemTitle.trim()) return;
 
+    const stage = stages.find(s => s.id === stageId);
+
     try {
       await addItem.mutateAsync({
         stageId,
         title: newItemTitle.trim(),
         description: newItemDescription.trim() || undefined,
         dueDate: newItemDueDate || undefined,
+        stageName: stage?.name,
       });
       setNewItemTitle("");
       setNewItemDescription("");
       setNewItemDueDate("");
       setNewItemStageId(null);
-      toast.success("Item adicionado");
+      toast.success(newItemDueDate ? "Item adicionado e tarefa criada" : "Item adicionado");
     } catch (error) {
       console.error("Error adding item:", error);
       toast.error("Erro ao adicionar item");
@@ -262,12 +265,16 @@ export function StageChecklistEditor({
   const handleUpdateItem = async () => {
     if (!editingItem || !editingItem.title.trim()) return;
 
+    const stage = stages.find(s => s.id === editingItem.stage_id);
+
     try {
       await updateItem.mutateAsync({
         itemId: editingItem.id,
         title: editingItem.title.trim(),
         description: editingItem.description || undefined,
         dueDate: editingItem.due_date,
+        stageName: stage?.name,
+        currentLinkedTaskId: editingItem.linked_task_id,
       });
       setEditingItem(null);
       toast.success("Item atualizado");
