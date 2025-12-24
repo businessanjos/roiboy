@@ -1250,7 +1250,7 @@ export default function WhatsAppGroups() {
                 )}
                 
                 {/* Media preview */}
-                {mediaFile && (
+                {mediaFile && !isRecording && (
                   <div className="mt-3 p-3 border rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1276,12 +1276,29 @@ export default function WhatsAppGroups() {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    {mediaPreview && (
+                    
+                    {/* Image preview */}
+                    {mediaPreview && mediaFile.type.startsWith("image/") && (
                       <img 
                         src={mediaPreview} 
                         alt="Preview" 
                         className="mt-2 max-h-32 rounded object-contain"
                       />
+                    )}
+                    
+                    {/* Audio player preview */}
+                    {mediaFile.type.startsWith("audio/") && (
+                      <div className="mt-3">
+                        <audio 
+                          controls 
+                          src={URL.createObjectURL(mediaFile)} 
+                          className="w-full h-10"
+                          preload="metadata"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Ouça o áudio antes de enviar
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}
