@@ -620,6 +620,7 @@ export function WhatsAppIntegrationCard({
             <li>• <strong>Código de pareamento:</strong> Digite um código de 8 dígitos no WhatsApp</li>
             <li>• Mensagens recebidas são capturadas e analisadas automaticamente</li>
             <li>• O sistema identifica clientes cadastrados pelo número de telefone</li>
+            <li>• Mensagens de contatos não cadastrados são ignoradas</li>
           </ul>
         </div>
       </CardContent>
