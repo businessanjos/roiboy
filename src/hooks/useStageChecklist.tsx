@@ -1,6 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export type ChecklistActionType = 
+  | 'client_info'
+  | 'client_products' 
+  | 'client_forms'
+  | 'client_fields'
+  | 'client_contracts'
+  | 'client_financial'
+  | 'client_cx'
+  | 'client_relationships'
+  | 'client_agenda'
+  | 'client_sales';
+
+export const CHECKLIST_ACTION_LABELS: Record<ChecklistActionType, string> = {
+  client_info: 'Editar cadastro',
+  client_products: 'Gerenciar produtos',
+  client_forms: 'Preencher ficha',
+  client_fields: 'Campos personalizados',
+  client_contracts: 'Contratos',
+  client_financial: 'Financeiro',
+  client_cx: 'Momentos CX',
+  client_relationships: 'Vínculos',
+  client_agenda: 'Agenda',
+  client_sales: 'Metas & Vendas',
+};
+
 export interface StageChecklistItem {
   id: string;
   stage_id: string;
@@ -10,6 +35,7 @@ export interface StageChecklistItem {
   is_active: boolean;
   due_date: string | null;
   linked_task_id: string | null;
+  action_type: ChecklistActionType | null;
 }
 
 export interface ClientChecklistProgress {
@@ -139,12 +165,14 @@ export function useManageChecklistItems(accountId: string) {
       description,
       dueDate,
       stageName,
+      actionType,
     }: {
       stageId: string;
       title: string;
       description?: string;
       dueDate?: string;
       stageName?: string;
+      actionType?: ChecklistActionType | null;
     }) => {
       // Get max display_order
       const { data: existingItems } = await supabase
@@ -164,6 +192,7 @@ export function useManageChecklistItems(accountId: string) {
           title,
           description: description || null,
           due_date: dueDate || null,
+          action_type: actionType || null,
           display_order: maxOrder + 1,
         })
         .select()
@@ -223,6 +252,7 @@ export function useManageChecklistItems(accountId: string) {
       dueDate,
       stageName,
       currentLinkedTaskId,
+      actionType,
     }: {
       itemId: string;
       title: string;
@@ -230,6 +260,7 @@ export function useManageChecklistItems(accountId: string) {
       dueDate?: string | null;
       stageName?: string;
       currentLinkedTaskId?: string | null;
+      actionType?: ChecklistActionType | null;
     }) => {
       const { error } = await supabase
         .from("stage_checklist_items")
@@ -237,6 +268,7 @@ export function useManageChecklistItems(accountId: string) {
           title,
           description: description || null,
           due_date: dueDate,
+          action_type: actionType,
           updated_at: new Date().toISOString(),
         })
         .eq("id", itemId);

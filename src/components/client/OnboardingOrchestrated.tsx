@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,12 +10,26 @@ import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowRight, CheckSquare, AlertTriangle, ChevronRight, Package, User, CalendarClock, Link2 } from "lucide-react";
+import { ArrowRight, CheckSquare, AlertTriangle, ChevronRight, Package, User, CalendarClock, Link2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage, StageChecklistItem } from "@/hooks/useStageChecklist";
+import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage, StageChecklistItem, ChecklistActionType, CHECKLIST_ACTION_LABELS } from "@/hooks/useStageChecklist";
 import { StageChecklistEditor } from "./StageChecklistEditor";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+// Map action types to client detail tabs/actions
+const ACTION_TYPE_TO_TAB: Record<ChecklistActionType, string> = {
+  client_info: 'info',
+  client_products: 'products',
+  client_forms: 'fichas',
+  client_fields: 'campos',
+  client_contracts: 'contracts',
+  client_financial: 'subscriptions',
+  client_cx: 'cx',
+  client_relationships: 'vinculos',
+  client_agenda: 'agenda',
+  client_sales: 'sales',
+};
 
 interface ClientStage {
   id: string;
@@ -54,8 +68,21 @@ export function OnboardingOrchestrated({
   onStageChange,
   onRefreshStages 
 }: OnboardingOrchestratedProps) {
+  const navigate = useNavigate();
   const [checklistEditorOpen, setChecklistEditorOpen] = useState(false);
   const [updatingClient, setUpdatingClient] = useState<string | null>(null);
+
+  // Navigate to client detail with specific tab
+  const handleActionClick = (clientId: string, actionType: ChecklistActionType) => {
+    const tab = ACTION_TYPE_TO_TAB[actionType];
+    if (actionType === 'client_info') {
+      navigate(`/clients/${clientId}?action=edit`);
+    } else if (actionType === 'client_products') {
+      navigate(`/clients/${clientId}?action=products`);
+    } else {
+      navigate(`/clients/${clientId}?tab=${tab}`);
+    }
+  };
 
   // Sort stages by display_order
   const sortedStages = useMemo(() => 
@@ -336,9 +363,9 @@ export function OnboardingOrchestrated({
                                 {stageItems.map((item) => {
                                   const isCompleted = completedItemIds.includes(item.id);
                                   return (
-                                    <label
+                                    <div
                                       key={item.id}
-                                      className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                                      className="flex items-start gap-2 p-2 rounded-md hover:bg-muted"
                                     >
                                       <Checkbox
                                         checked={isCompleted}
@@ -391,8 +418,23 @@ export function OnboardingOrchestrated({
                                             )}
                                           </div>
                                         )}
+                                        {item.action_type && !isCompleted && (
+                                          <Button
+                                            variant="link"
+                                            size="sm"
+                                            className="h-auto p-0 mt-1 text-xs text-primary"
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              handleActionClick(client.id, item.action_type!);
+                                            }}
+                                          >
+                                            <ExternalLink className="h-3 w-3 mr-1" />
+                                            {CHECKLIST_ACTION_LABELS[item.action_type]}
+                                          </Button>
+                                        )}
                                       </div>
-                                    </label>
+                                    </div>
                                   );
                                 })}
                               </div>

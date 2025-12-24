@@ -4168,6 +4168,7 @@ export type Database = {
       stage_checklist_items: {
         Row: {
           account_id: string
+          action_type: string | null
           created_at: string
           description: string | null
           display_order: number
@@ -4181,6 +4182,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          action_type?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -4194,6 +4196,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          action_type?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
