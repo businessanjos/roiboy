@@ -928,18 +928,20 @@ serve(async (req) => {
         
         // Try different endpoints to list groups
         let groups: unknown[] = [];
-        const groupEndpoints = [
-          { url: `/group/fetchAllGroups`, method: "GET" },
-          { url: `/group/all`, method: "GET" },
-          { url: `/groups`, method: "GET" },
-          { url: `/chat/groups`, method: "GET" },
+        
+        // Try POST endpoints first (UAZAPI commonly uses POST for fetches)
+        const postEndpoints = [
+          { url: `/group/fetchAllGroups`, body: {} },
+          { url: `/group/participatesGroups`, body: {} },
+          { url: `/group/list`, body: {} },
+          { url: `/group/all`, body: {} },
         ];
 
-        for (const endpoint of groupEndpoints) {
+        for (const endpoint of postEndpoints) {
           try {
-            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
-            const groupsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
-            console.log("Groups result:", JSON.stringify(groupsResult));
+            console.log(`Trying: POST ${endpoint.url}`);
+            const groupsResult = await uazapiInstanceRequest(endpoint.url, "POST", savedInstanceToken, endpoint.body);
+            console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
             
             // Handle different response formats
             if (Array.isArray(groupsResult)) {
@@ -948,14 +950,56 @@ serve(async (req) => {
               groups = (groupsResult as { groups: unknown[] }).groups;
             } else if ((groupsResult as { data?: unknown[] })?.data) {
               groups = (groupsResult as { data: unknown[] }).data;
+            } else if ((groupsResult as { chats?: unknown[] })?.chats) {
+              // Filter only group chats
+              const chats = (groupsResult as { chats: Array<{ id?: string; jid?: string }> }).chats;
+              groups = chats.filter(c => (c.id || c.jid || "").includes("@g.us"));
             }
             
-            if (groups.length > 0) break;
+            if (groups.length > 0) {
+              console.log(`Found ${groups.length} groups via POST ${endpoint.url}`);
+              break;
+            }
           } catch (err) {
-            console.log(`${endpoint.url} failed:`, (err as Error).message);
+            console.log(`POST ${endpoint.url} failed:`, (err as Error).message);
           }
         }
 
+        // Try GET endpoints as fallback
+        if (groups.length === 0) {
+          const getEndpoints = [
+            `/group/fetchAllGroups`,
+            `/group/participatesGroups`,
+            `/group/list`,
+            `/groups`,
+            `/chat/groups`,
+          ];
+
+          for (const url of getEndpoints) {
+            try {
+              console.log(`Trying: GET ${url}`);
+              const groupsResult = await uazapiInstanceRequest(url, "GET", savedInstanceToken);
+              console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
+              
+              if (Array.isArray(groupsResult)) {
+                groups = groupsResult;
+              } else if ((groupsResult as { groups?: unknown[] })?.groups) {
+                groups = (groupsResult as { groups: unknown[] }).groups;
+              } else if ((groupsResult as { data?: unknown[] })?.data) {
+                groups = (groupsResult as { data: unknown[] }).data;
+              }
+              
+              if (groups.length > 0) {
+                console.log(`Found ${groups.length} groups via GET ${url}`);
+                break;
+              }
+            } catch (err) {
+              console.log(`GET ${url} failed:`, (err as Error).message);
+            }
+          }
+        }
+
+        console.log(`Total groups found: ${groups.length}`);
         result = { groups };
         break;
       }
@@ -968,37 +1012,77 @@ serve(async (req) => {
 
         console.log("Syncing groups from WhatsApp to database...");
         
-        // First, fetch all groups from WhatsApp API
+        // First, fetch all groups from WhatsApp API using same logic as list_groups
         let groups: unknown[] = [];
-        const groupEndpoints = [
-          { url: `/group/fetchAllGroups`, method: "GET" },
-          { url: `/group/all`, method: "GET" },
-          { url: `/groups`, method: "GET" },
-          { url: `/chat/groups`, method: "GET" },
+        
+        // Try POST endpoints first (UAZAPI commonly uses POST for fetches)
+        const postEndpoints = [
+          { url: `/group/fetchAllGroups`, body: {} },
+          { url: `/group/participatesGroups`, body: {} },
+          { url: `/group/list`, body: {} },
+          { url: `/group/all`, body: {} },
         ];
 
-        for (const endpoint of groupEndpoints) {
+        for (const endpoint of postEndpoints) {
           try {
-            console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
-            const groupsResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedInstanceToken);
-            console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 500));
+            console.log(`Trying: POST ${endpoint.url}`);
+            const groupsResult = await uazapiInstanceRequest(endpoint.url, "POST", savedInstanceToken, endpoint.body);
+            console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
             
-            // Handle different response formats
             if (Array.isArray(groupsResult)) {
               groups = groupsResult;
             } else if ((groupsResult as { groups?: unknown[] })?.groups) {
               groups = (groupsResult as { groups: unknown[] }).groups;
             } else if ((groupsResult as { data?: unknown[] })?.data) {
               groups = (groupsResult as { data: unknown[] }).data;
+            } else if ((groupsResult as { chats?: unknown[] })?.chats) {
+              const chats = (groupsResult as { chats: Array<{ id?: string; jid?: string }> }).chats;
+              groups = chats.filter(c => (c.id || c.jid || "").includes("@g.us"));
             }
             
-            if (groups.length > 0) break;
+            if (groups.length > 0) {
+              console.log(`Found ${groups.length} groups via POST ${endpoint.url}`);
+              break;
+            }
           } catch (err) {
-            console.log(`${endpoint.url} failed:`, (err as Error).message);
+            console.log(`POST ${endpoint.url} failed:`, (err as Error).message);
           }
         }
 
-        console.log(`Found ${groups.length} groups from WhatsApp API`);
+        // Try GET endpoints as fallback
+        if (groups.length === 0) {
+          const getEndpoints = [
+            `/group/fetchAllGroups`,
+            `/group/participatesGroups`,
+            `/group/list`,
+            `/groups`,
+          ];
+
+          for (const url of getEndpoints) {
+            try {
+              console.log(`Trying: GET ${url}`);
+              const groupsResult = await uazapiInstanceRequest(url, "GET", savedInstanceToken);
+              console.log("Groups result:", JSON.stringify(groupsResult).substring(0, 1000));
+              
+              if (Array.isArray(groupsResult)) {
+                groups = groupsResult;
+              } else if ((groupsResult as { groups?: unknown[] })?.groups) {
+                groups = (groupsResult as { groups: unknown[] }).groups;
+              } else if ((groupsResult as { data?: unknown[] })?.data) {
+                groups = (groupsResult as { data: unknown[] }).data;
+              }
+              
+              if (groups.length > 0) {
+                console.log(`Found ${groups.length} groups via GET ${url}`);
+                break;
+              }
+            } catch (err) {
+              console.log(`GET ${url} failed:`, (err as Error).message);
+            }
+          }
+        }
+
+        console.log(`Total groups found from WhatsApp API: ${groups.length}`);
 
         // Save/update each group in the database
         let synced = 0;
