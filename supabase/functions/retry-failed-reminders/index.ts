@@ -213,13 +213,14 @@ serve(async (req) => {
       if (shouldRetryWhatsapp && whatsappConfig?.instance_token) {
         try {
           const cleanPhone = recipient.recipient_phone!.replace(/\D/g, "");
-          console.log(`Retrying WhatsApp to ${cleanPhone}`);
+          console.log(`Retrying WhatsApp to ${cleanPhone} using token: ${whatsappConfig.instance_token.slice(0, 8)}...`);
 
+          // UAZAPI GO V2 uses "token" header (not Authorization Bearer)
           const waResponse = await fetch(`${UAZAPI_URL}/send/text`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${whatsappConfig.instance_token}`,
+              "token": whatsappConfig.instance_token,
             },
             body: JSON.stringify({
               number: cleanPhone,
