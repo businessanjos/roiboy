@@ -236,15 +236,16 @@ serve(async (req) => {
     switch (action) {
       case "create": {
         // Create a new instance for this account
-        // UAZAPI expects "Name" (capitalized) in the payload
-        const createResult = await uazapiAdminRequest("/instance/create", "POST", {
-          Name: instanceName,
-          qrcode: true,
-          webhook: `${supabaseUrl}/functions/v1/uazapi-webhook`,
+        // UAZAPI GO v2 - Endpoint correto: POST /instance/init
+        // Body: { name: "instance-name" }
+        // Response: { token: "...", name: "...", instance: {...} }
+        const createResult = await uazapiAdminRequest("/instance/init", "POST", {
+          name: instanceName,
         }) as {
           token?: string;
-          instance?: { token?: string; qrcode?: string };
+          instance?: { token?: string; id?: string; qrcode?: string };
           qrcode?: string;
+          name?: string;
         };
 
         console.log("Create result:", JSON.stringify(createResult));
@@ -357,6 +358,15 @@ serve(async (req) => {
           }
         }
 
+        // Configure webhook automatically if we have instance token
+        if (instanceToken) {
+          try {
+            await configureWebhook(instanceToken, instanceName, supabaseUrl);
+          } catch (err) {
+            console.log("Webhook configuration failed (non-blocking):", (err as Error).message);
+          }
+        }
+
         // Update integrations table
         await supabase
           .from("integrations")
@@ -376,6 +386,7 @@ serve(async (req) => {
         result = {
           ...createResult as object,
           qrcode_base64: qrcodeBase64,
+          token: instanceToken,
         };
 
         break;
@@ -763,18 +774,17 @@ serve(async (req) => {
 
       case "fetch_token": {
         // Fetch the token for an existing instance using admin API
+        // UAZAPI GO v2 - GET /instance/all retorna lista com token de cada instância
         console.log(`Fetching token for instance: ${instanceName}`);
         
         let instanceToken = "";
         let fetchResult: unknown = null;
         
-        // Try different endpoints to get instance info with token
+        // UAZAPI GO v2 - Endpoint correto: GET /instance/all
         const tokenEndpoints = [
+          { url: `/instance/all`, method: "GET" },  // UAZAPI GO v2 documentação oficial
           { url: `/instance/fetchInstances`, method: "GET" },
           { url: `/instance/list`, method: "GET" },
-          { url: `/instances`, method: "GET" },
-          { url: `/instance/info/${instanceName}`, method: "GET" },
-          { url: `/instance/${instanceName}`, method: "GET" },
         ];
         
         for (const endpoint of tokenEndpoints) {
@@ -783,9 +793,9 @@ serve(async (req) => {
           try {
             console.log(`Trying: ${endpoint.method} ${endpoint.url}`);
             fetchResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
-            console.log(`Result:`, JSON.stringify(fetchResult));
+            console.log(`Result:`, JSON.stringify(fetchResult).substring(0, 500));
             
-            // Handle array of instances
+            // Handle array of instances (UAZAPI GO v2 returns array)
             if (Array.isArray(fetchResult)) {
               const instance = fetchResult.find((i: { name?: string; Name?: string; instance_name?: string }) => 
                 i.name === instanceName || i.Name === instanceName || i.instance_name === instanceName
@@ -793,6 +803,7 @@ serve(async (req) => {
               if (instance) {
                 instanceToken = (instance as { token?: string; Token?: string }).token || 
                                (instance as { token?: string; Token?: string }).Token || "";
+                console.log(`Found instance ${instanceName} with token: ${instanceToken?.slice(0, 8)}...`);
               }
             } else {
               // Handle single instance response
