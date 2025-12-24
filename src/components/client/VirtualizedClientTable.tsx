@@ -50,6 +50,7 @@ interface VirtualizedClientTableProps {
   pendingFormSends: Record<string, PendingForm[]>;
   teamUsers: TeamUser[];
   maxHeight?: number;
+  onContractClick?: (clientId: string, clientName: string) => void;
 }
 
 const ROW_HEIGHT = 72;
@@ -71,13 +72,15 @@ const ClientRow = memo(({
   enrichment, 
   pendingForms, 
   teamUsers,
-  style 
+  style,
+  onContractClick 
 }: { 
   client: Client;
   enrichment?: Enrichment;
   pendingForms?: PendingForm[];
   teamUsers: TeamUser[];
   style: React.CSSProperties;
+  onContractClick?: (clientId: string, clientName: string) => void;
 }) => {
   const vnps = enrichment?.vnps;
   const score = enrichment?.score;
@@ -274,9 +277,14 @@ const ClientRow = memo(({
 
       {/* Contract */}
       <div className="w-16 flex justify-center">
-        <TooltipProvider>
-          {getContractIndicator() || <span className="text-xs text-muted-foreground">—</span>}
-        </TooltipProvider>
+        <button
+          onClick={() => onContractClick?.(client.id, client.full_name)}
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          <TooltipProvider>
+            {getContractIndicator() || <span className="text-xs text-muted-foreground">—</span>}
+          </TooltipProvider>
+        </button>
       </div>
 
       {/* WhatsApp */}
@@ -354,6 +362,7 @@ export function VirtualizedClientTable({
   pendingFormSends,
   teamUsers,
   maxHeight = 600,
+  onContractClick,
 }: VirtualizedClientTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -409,6 +418,7 @@ export function VirtualizedClientTable({
                 enrichment={enrichments[client.id]}
                 pendingForms={pendingFormSends[client.id]}
                 teamUsers={teamUsers}
+                onContractClick={onContractClick}
                 style={{
                   position: "absolute",
                   top: 0,

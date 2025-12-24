@@ -34,6 +34,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
+import { ContractDialog } from "@/components/client/ContractDialog";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -301,6 +302,10 @@ export default function Clients() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deletingClient, setDeletingClient] = useState(false);
+
+  // Contract dialog state (for quick add from clients list)
+  const [contractDialogOpen, setContractDialogOpen] = useState(false);
+  const [contractClientData, setContractClientData] = useState<{ id: string; name: string } | null>(null);
 
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
@@ -2097,39 +2102,57 @@ export default function Clients() {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {contractMap[client.id] ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    <span>Ativo</span>
-                                    {contractMap[client.id].end_date && (
-                                      <span className="text-[10px] opacity-75">
-                                        até {format(new Date(contractMap[client.id].end_date!), "dd/MM/yy", { locale: ptBR })}
-                                      </span>
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-xs">
-                                    <p className="font-medium text-green-600 dark:text-green-400">Contrato Ativo</p>
-                                    {contractMap[client.id].start_date && (
-                                      <p>Início: {format(new Date(contractMap[client.id].start_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
-                                    )}
-                                    {contractMap[client.id].end_date && (
-                                      <p>Fim: {format(new Date(contractMap[client.id].end_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                              <AlertCircle className="h-3 w-3" />
-                              <span>Sem contrato</span>
-                            </div>
-                          )}
+                          <button
+                            onClick={() => {
+                              setContractClientData({ id: client.id, name: client.full_name });
+                              setContractDialogOpen(true);
+                            }}
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                          >
+                            {contractMap[client.id] ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      <span>Ativo</span>
+                                      {contractMap[client.id].end_date && (
+                                        <span className="text-[10px] opacity-75">
+                                          até {format(new Date(contractMap[client.id].end_date!), "dd/MM/yy", { locale: ptBR })}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs">
+                                      <p className="font-medium text-green-600 dark:text-green-400">Contrato Ativo</p>
+                                      {contractMap[client.id].start_date && (
+                                        <p>Início: {format(new Date(contractMap[client.id].start_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                      )}
+                                      {contractMap[client.id].end_date && (
+                                        <p>Fim: {format(new Date(contractMap[client.id].end_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                      )}
+                                      <p className="mt-1 text-primary">Clique para gerenciar</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                      <AlertCircle className="h-3 w-3" />
+                                      <span>Sem contrato</span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Clique para adicionar contrato</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </button>
                         </TableCell>
                         <TableCell className="text-center">
                           {scoreMap[client.id] ? (
@@ -2594,6 +2617,18 @@ export default function Clients() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Contract Dialog for quick add/edit from clients list */}
+      <ContractDialog
+        open={contractDialogOpen}
+        onOpenChange={setContractDialogOpen}
+        clientId={contractClientData?.id || ""}
+        clientName={contractClientData?.name}
+        onSuccess={() => {
+          fetchClients();
+          setContractClientData(null);
+        }}
+      />
     </div>
   );
 }
