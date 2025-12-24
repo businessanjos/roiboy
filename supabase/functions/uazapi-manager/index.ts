@@ -204,26 +204,32 @@ serve(async (req) => {
     const { action, phone, message } = payload;
 
     // Get existing integration to use saved instance name
-    const { data: existingWhatsapp } = await supabase
+    const { data: existingWhatsapp, error: existingError } = await supabase
       .from("integrations")
       .select("config, status")
       .eq("account_id", accountId)
       .eq("type", "whatsapp")
       .maybeSingle();
 
-    // For "create" action with disconnected status, generate a new unique instance name
-    // This ensures we don't try to reuse a deleted instance on UAZAPI
+    console.log(`Existing WhatsApp integration:`, existingWhatsapp ? JSON.stringify(existingWhatsapp) : 'none', existingError?.message || '');
+
+    // For "create" action, ALWAYS generate a unique instance name if:
+    // 1. No existing integration exists, OR
+    // 2. Existing integration is disconnected
     const savedInstanceName = (existingWhatsapp?.config as { instance_name?: string })?.instance_name;
-    const isDisconnected = existingWhatsapp?.status === "disconnected";
-    const forceNewInstance = action === "create" && isDisconnected;
+    const savedInstanceToken = (existingWhatsapp?.config as { instance_token?: string })?.instance_token;
+    const isConnected = existingWhatsapp?.status === "connected";
+    
+    // Only reuse instance if it exists AND is connected AND has a token
+    const shouldReuseInstance = isConnected && savedInstanceName && savedInstanceToken;
     
     // Generate unique suffix using timestamp to avoid collisions
-    const uniqueSuffix = forceNewInstance ? `-${Date.now().toString(36).slice(-4)}` : "";
-    const instanceName = forceNewInstance 
-      ? `roy-${accountId.slice(0, 8)}${uniqueSuffix}`
-      : (savedInstanceName || `roy-${accountId.slice(0, 8)}`);
+    const uniqueSuffix = `-${Date.now().toString(36).slice(-4)}`;
+    const instanceName = shouldReuseInstance 
+      ? savedInstanceName
+      : `roy-${accountId.slice(0, 8)}${uniqueSuffix}`;
 
-    console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}`);
+    console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}, reuse: ${shouldReuseInstance}`);
 
     let result: unknown;
 
