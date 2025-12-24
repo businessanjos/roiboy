@@ -661,17 +661,15 @@ export default function Tasks() {
                 Kanban
               </Button>
             </div>
-            {viewMode === "kanban" && (
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => setStatusManagerOpen(true)}
-                className="h-9"
-              >
-                <Settings className="h-4 w-4 mr-1.5" />
-                Personalizar
-              </Button>
-            )}
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => setStatusManagerOpen(true)}
+              className="h-9"
+            >
+              <Settings className="h-4 w-4 mr-1.5" />
+              Personalizar
+            </Button>
             <Button 
               onClick={() => openNewTaskDialog()}
               className="shadow-sm"
