@@ -1965,23 +1965,27 @@ serve(async (req) => {
         // Wait for UAZAPI to fully register the instance
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // UAZAPI GO: Call /connect with instance token to trigger QR generation
-        if (!qrcodeBase64 && instanceToken) {
-          console.log(`Triggering QR via instance token /connect`);
+        // UAZAPI GO: Use ADMIN endpoint /instance/connect/{name} to get QR code
+        // This is the same endpoint used by the normal WhatsApp integration
+        if (!qrcodeBase64) {
+          console.log(`Triggering QR via admin /instance/connect/${supportInstanceName}`);
           
           try {
-            const connectResult = await uazapiInstanceRequest("/connect", "GET", instanceToken) as {
+            const connectResult = await uazapiAdminRequest(`/instance/connect/${supportInstanceName}`, "GET") as {
               base64?: string;
               qrcode?: string | { base64?: string };
               qr?: string;
+              data?: { base64?: string; qrcode?: string };
             };
-            console.log(`Connect result:`, JSON.stringify(connectResult).slice(0, 500));
+            console.log(`Admin connect result:`, JSON.stringify(connectResult).slice(0, 500));
             
             qrcodeBase64 = connectResult.base64 || 
                            connectResult.qr ||
+                           connectResult.data?.base64 ||
+                           connectResult.data?.qrcode ||
                            (typeof connectResult.qrcode === 'string' ? connectResult.qrcode : connectResult.qrcode?.base64) || "";
           } catch (err) {
-            console.log(`Instance /connect failed:`, (err as Error).message);
+            console.log(`Admin /instance/connect failed:`, (err as Error).message);
           }
         }
 
