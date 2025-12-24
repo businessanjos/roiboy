@@ -225,37 +225,66 @@ serve(async (req) => {
     
     // Generate unique suffix using timestamp to avoid collisions
     const uniqueSuffix = `-${Date.now().toString(36).slice(-4)}`;
-    const instanceName = shouldReuseInstance 
-      ? savedInstanceName
-      : `roy-${accountId.slice(0, 8)}${uniqueSuffix}`;
-
-    // Se temos instância mas não temos token, tentar buscar via /instance/all
-    if (savedInstanceName && !savedInstanceToken) {
-      console.log(`Instance ${savedInstanceName} exists but token is missing. Fetching from /instance/all...`);
+    
+    // Se não temos token, buscar de qualquer instância conectada via /instance/all
+    // Isso corrige o caso onde o nome salvo não bate com a instância real
+    let actualInstanceName = savedInstanceName;
+    if (!savedInstanceToken) {
+      console.log(`Token missing. Fetching connected instances from /instance/all...`);
       try {
-        const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ name?: string; token?: string }>;
-        const instance = allInstances.find(i => i.name === savedInstanceName);
+        const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+          name?: string; 
+          token?: string; 
+          status?: string;
+          owner?: string;
+        }>;
+        
+        console.log(`Found ${allInstances.length} instances`);
+        
+        // Primeiro, tentar achar pelo nome salvo
+        let instance = allInstances.find(i => i.name === savedInstanceName);
+        
+        // Se não achou pelo nome, pegar a primeira instância conectada
+        if (!instance?.token) {
+          const connectedInstance = allInstances.find(i => i.status === "connected" && i.token);
+          if (connectedInstance) {
+            instance = connectedInstance;
+            actualInstanceName = connectedInstance.name || savedInstanceName;
+            console.log(`Using connected instance: ${actualInstanceName} instead of saved: ${savedInstanceName}`);
+          }
+        }
+        
         if (instance?.token) {
           savedInstanceToken = instance.token;
-          console.log(`Token found for ${savedInstanceName}: ${savedInstanceToken.slice(0, 8)}...`);
+          console.log(`Token found: ${savedInstanceToken.slice(0, 8)}... for instance ${actualInstanceName}`);
           
-          // Salvar o token recuperado
+          // Salvar o token e nome correto
           await supabase
             .from("integrations")
             .update({
               config: {
                 ...(existingWhatsapp?.config as object || {}),
+                instance_name: actualInstanceName,
                 instance_token: savedInstanceToken,
                 token_recovered_at: new Date().toISOString(),
               },
             })
             .eq("account_id", accountId)
             .eq("type", "whatsapp");
+            
+          console.log(`Token and instance name saved to database`);
+        } else {
+          console.log(`No connected instance with token found`);
         }
       } catch (err) {
-        console.log("Failed to fetch token from /instance/all:", (err as Error).message);
+        console.log("Failed to fetch from /instance/all:", (err as Error).message);
       }
     }
+    
+    // Usar o nome real da instância (pode ter sido atualizado)
+    const instanceName = shouldReuseInstance 
+      ? (actualInstanceName || savedInstanceName)
+      : `roy-${accountId.slice(0, 8)}${uniqueSuffix}`;
 
     console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}, reuse: ${shouldReuseInstance}, hasToken: ${!!savedInstanceToken}`);
 
