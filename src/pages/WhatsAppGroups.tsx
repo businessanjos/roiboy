@@ -265,11 +265,12 @@ export default function WhatsAppGroups() {
 
   // Send media to group mutation
   const sendMediaToGroupMutation = useMutation({
-    mutationFn: async ({ groupId, mediaUrl, mediaType, caption }: { 
+    mutationFn: async ({ groupId, mediaUrl, mediaType, caption, fileName }: { 
       groupId: string; 
       mediaUrl: string; 
       mediaType: "image" | "audio" | "document";
       caption?: string;
+      fileName?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
         body: { 
@@ -278,6 +279,7 @@ export default function WhatsAppGroups() {
           media_url: mediaUrl,
           media_type: mediaType,
           caption,
+          file_name: fileName,
         },
       });
       if (error) throw error;
@@ -565,12 +567,14 @@ export default function WhatsAppGroups() {
         const isImage = mediaFile.type.startsWith("image/");
         const isAudio = mediaFile.type.startsWith("audio/");
         const mediaType = isImage ? "image" : isAudio ? "audio" : "document";
+        const originalFileName = mediaFile.name;
         
         sendMediaToGroupMutation.mutate({ 
           groupId: selectedGroupId, 
           mediaUrl, 
           mediaType, 
-          caption: message.trim() || undefined 
+          caption: message.trim() || undefined,
+          fileName: originalFileName,
         });
       } catch (error) {
         toast.error("Erro ao fazer upload da mídia");
