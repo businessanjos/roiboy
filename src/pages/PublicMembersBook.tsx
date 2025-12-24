@@ -12,6 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   Search, 
   Lock, 
@@ -23,7 +28,9 @@ import {
   Instagram,
   MessageCircle,
   Filter,
-  X
+  X,
+  ChevronDown,
+  SlidersHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +92,7 @@ export default function PublicMembersBook() {
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [selectedSegment, setSelectedSegment] = useState<string>("");
   const [selectedCustomFields, setSelectedCustomFields] = useState<Record<string, string>>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [pendingSettings, setPendingSettings] = useState<{ custom_title?: string; custom_description?: string } | null>(null);
 
   const fetchMembersBook = async (accessPassword?: string) => {
@@ -195,6 +203,10 @@ export default function PublicMembersBook() {
   }) || [];
 
   const hasActiveFilters = !!selectedProduct || !!selectedSegment || Object.values(selectedCustomFields).some(v => !!v);
+  const activeFiltersCount = (selectedProduct ? 1 : 0) + (selectedSegment ? 1 : 0) + Object.values(selectedCustomFields).filter(v => !!v).length;
+  const hasFiltersAvailable = (data?.filters?.products?.length || 0) > 0 || 
+    (data?.filters?.segments?.length || 0) > 0 || 
+    (data?.filters?.custom_fields?.length || 0) > 0;
 
   const clearFilters = () => {
     setSelectedProduct("");
@@ -325,73 +337,99 @@ export default function PublicMembersBook() {
               />
             </div>
             
-            {/* Filters */}
-            {(data.filters?.products?.length > 0 || data.filters?.segments?.length > 0) && (
-              <div className="flex flex-wrap items-center gap-2 justify-center">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                
-                {data.filters?.products?.length > 0 && (
-                  <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                    <SelectTrigger className="w-[180px] h-9">
-                      <SelectValue placeholder="Filtrar por produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {data.filters.products.map((product) => (
-                        <SelectItem key={product} value={product}>
-                          {product}
-                        </SelectItem>
+            {/* Collapsible Filters */}
+            {hasFiltersAvailable && (
+              <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <div className="flex items-center justify-center gap-2">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Filtros
+                      {activeFiltersCount > 0 && (
+                        <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                          {activeFiltersCount}
+                        </Badge>
+                      )}
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform duration-200",
+                        filtersOpen && "rotate-180"
+                      )} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Limpar
+                    </Button>
+                  )}
+                </div>
+
+                <CollapsibleContent className="mt-4">
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {data.filters?.products?.length > 0 && (
+                        <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                          <SelectTrigger className="h-9 bg-background">
+                            <SelectValue placeholder="Produto" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {data.filters.products.map((product) => (
+                              <SelectItem key={product} value={product}>
+                                {product}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      
+                      {data.filters?.segments?.length > 0 && (
+                        <Select value={selectedSegment} onValueChange={setSelectedSegment}>
+                          <SelectTrigger className="h-9 bg-background">
+                            <SelectValue placeholder="Segmento" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {data.filters.segments.map((segment) => (
+                              <SelectItem key={segment} value={segment}>
+                                {segment}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      
+                      {/* Custom Field Filters */}
+                      {data.filters?.custom_fields?.map((field) => (
+                        <Select 
+                          key={field.id}
+                          value={selectedCustomFields[field.id] || ""} 
+                          onValueChange={(value) => setSelectedCustomFields(prev => ({ ...prev, [field.id]: value }))}
+                        >
+                          <SelectTrigger className="h-9 bg-background">
+                            <SelectValue placeholder={field.name} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.values.map((value) => (
+                              <SelectItem key={value} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {data.filters?.segments?.length > 0 && (
-                  <Select value={selectedSegment} onValueChange={setSelectedSegment}>
-                    <SelectTrigger className="w-[180px] h-9">
-                      <SelectValue placeholder="Filtrar por segmento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {data.filters.segments.map((segment) => (
-                        <SelectItem key={segment} value={segment}>
-                          {segment}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {/* Custom Field Filters */}
-                {data.filters?.custom_fields?.map((field) => (
-                  <Select 
-                    key={field.id}
-                    value={selectedCustomFields[field.id] || ""} 
-                    onValueChange={(value) => setSelectedCustomFields(prev => ({ ...prev, [field.id]: value }))}
-                  >
-                    <SelectTrigger className="w-[180px] h-9">
-                      <SelectValue placeholder={field.name} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.values.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ))}
-                
-                {hasActiveFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="h-9 px-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Limpar
-                  </Button>
-                )}
-              </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             )}
             
             {/* Active filters summary */}
