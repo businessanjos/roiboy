@@ -97,6 +97,7 @@ interface Task {
   created_at: string;
   clients: Client | null;
   assigned_user: User | null;
+  custom_status_id: string | null;
 }
 
 type SortOption = "priority" | "due_date" | "created_at";
@@ -131,7 +132,7 @@ export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -141,7 +142,14 @@ export default function Tasks() {
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
 
   // Custom task statuses
-  const { statuses: customStatuses } = useTaskStatuses();
+  const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
+
+  // Set default active tab when statuses load
+  useEffect(() => {
+    if (customStatuses.length > 0 && activeTab === null) {
+      setActiveTab(customStatuses[0].id);
+    }
+  }, [customStatuses, activeTab]);
 
   // Fetch tasks with React Query
   const { data: tasks = [], isLoading: loading } = useQuery({
@@ -231,12 +239,16 @@ export default function Tasks() {
     }
   }, [taskToDelete, invalidateTasks]);
 
-  const handleStatusChange = useCallback(async (taskId: string, newStatus: Task["status"]) => {
+  const handleStatusChange = useCallback(async (taskId: string, newStatusId: string) => {
+    // Find the status to check if it's a completed status
+    const newStatus = customStatuses.find(s => s.id === newStatusId);
+    const isCompleted = newStatus?.is_completed_status || false;
+    
     const { error } = await supabase
       .from("internal_tasks")
       .update({
-        status: newStatus,
-        completed_at: newStatus === "done" ? new Date().toISOString() : null,
+        custom_status_id: newStatusId,
+        completed_at: isCompleted ? new Date().toISOString() : null,
       })
       .eq("id", taskId);
 
@@ -246,7 +258,7 @@ export default function Tasks() {
       toast.success("Tarefa movida!");
       invalidateTasks();
     }
-  }, [invalidateTasks]);
+  }, [invalidateTasks, customStatuses]);
 
   const handlePriorityChange = useCallback(async (taskId: string, newPriority: Task["priority"]) => {
     const { error } = await supabase
@@ -297,7 +309,7 @@ export default function Tasks() {
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   }, []);
 
-  const getDueDateInfo = (task: Task) => {
+  const getDueDateInfo = useCallback((task: Task) => {
     if (!task.due_date) return null;
     const dueDate = new Date(task.due_date);
     const today = new Date();
@@ -305,11 +317,11 @@ export default function Tasks() {
     dueDate.setHours(0, 0, 0, 0);
     
     const daysDiff = differenceInDays(dueDate, today);
-    const isCompleted = task.status === "done";
-    const isCancelled = task.status === "cancelled";
+    const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+    const isCompleted = taskStatus?.is_completed_status || false;
     const formattedDate = format(dueDate, "dd/MM", { locale: ptBR });
     
-    if (isCompleted || isCancelled) {
+    if (isCompleted) {
       return { text: formattedDate, className: "text-muted-foreground" };
     }
     
@@ -326,7 +338,7 @@ export default function Tasks() {
       return { text: `${daysDiff} dias · ${formattedDate}`, className: "text-foreground" };
     }
     return { text: formattedDate, className: "text-muted-foreground" };
-  };
+  }, [customStatuses]);
 
   const filteredTasks = useMemo(() => tasks.filter((task) => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -336,14 +348,8 @@ export default function Tasks() {
     const matchesUser = filterUser === "all" || 
       filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
 
-    let matchesTab = true;
-    if (activeTab === "pending") {
-      matchesTab = task.status === "pending" || task.status === "in_progress" || task.status === "overdue";
-    } else if (activeTab === "done") {
-      matchesTab = task.status === "done";
-    } else if (activeTab === "cancelled") {
-      matchesTab = task.status === "cancelled";
-    }
+    // Filter by custom_status_id
+    const matchesTab = activeTab ? task.custom_status_id === activeTab : true;
 
     return matchesSearch && matchesUser && matchesTab;
   }), [tasks, searchTerm, filterUser, currentUser?.id, activeTab]);
@@ -362,14 +368,39 @@ export default function Tasks() {
     }
   }), [filteredTasks, sortBy]);
 
-  const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => ({
-    pendingCount: tasks.filter(t => 
-      t.status === "pending" || t.status === "in_progress" || t.status === "overdue"
-    ).length,
-    overdueCount: tasks.filter(t => t.status === "overdue").length,
-    inProgressCount: tasks.filter(t => t.status === "in_progress").length,
-    doneCount: tasks.filter(t => t.status === "done").length,
-  }), [tasks]);
+  // Count tasks per status
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    customStatuses.forEach(status => {
+      counts[status.id] = tasks.filter(t => t.custom_status_id === status.id).length;
+    });
+    return counts;
+  }, [tasks, customStatuses]);
+
+  // For stats cards, get counts from custom statuses
+  const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => {
+    // Find completed statuses
+    const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
+    const nonCompletedCount = tasks.filter(t => !completedStatusIds.includes(t.custom_status_id || '')).length;
+    const completedCount = tasks.filter(t => completedStatusIds.includes(t.custom_status_id || '')).length;
+    
+    // Count overdue from non-completed tasks
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const overdueCount = tasks.filter(t => {
+      if (!t.due_date || completedStatusIds.includes(t.custom_status_id || '')) return false;
+      const dueDate = new Date(t.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate < today;
+    }).length;
+
+    return {
+      pendingCount: nonCompletedCount,
+      overdueCount,
+      inProgressCount: 0,
+      doneCount: completedCount,
+    };
+  }, [tasks, customStatuses]);
 
   if (loading) {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
@@ -407,11 +438,9 @@ export default function Tasks() {
                 </TableRow>
               ) : (
                 tasks.map((task) => {
-                  const isCompleted = task.status === "done";
-                  const isCancelled = task.status === "cancelled";
-                  const isOverdue = task.status === "overdue";
-                  const statusConfig = STATUS_CONFIG[task.status];
-                  const StatusIcon = statusConfig.icon;
+                  // Find the custom status for this task
+                  const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+                  const isCompleted = taskStatus?.is_completed_status || false;
                   const priorityConfig = PRIORITY_CONFIG[task.priority];
                   const dueDateInfo = getDueDateInfo(task);
 
@@ -420,26 +449,30 @@ export default function Tasks() {
                       key={task.id} 
                       className={cn(
                         "hover:bg-muted/30",
-                        (isCompleted || isCancelled) && "opacity-60",
-                        isOverdue && "bg-destructive/5"
+                        isCompleted && "opacity-60"
                       )}
                     >
                       <TableCell className="text-center">
                         <Checkbox
                           checked={isCompleted}
-                          onCheckedChange={() => handleToggleComplete(task)}
+                          onCheckedChange={() => {
+                            // Find first completed status or first non-completed status
+                            const completedStatus = customStatuses.find(s => s.is_completed_status);
+                            const pendingStatus = customStatuses.find(s => !s.is_completed_status);
+                            const newStatusId = isCompleted ? pendingStatus?.id : completedStatus?.id;
+                            if (newStatusId) handleStatusChange(task.id, newStatusId as Task["status"]);
+                          }}
                           className={cn(
                             "h-4 w-4 rounded-full border transition-colors",
                             isCompleted ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/40"
                           )}
-                          disabled={isCancelled}
                         />
                       </TableCell>
                       <TableCell>
                         <div className="min-w-0">
                           <p className={cn(
                             "font-medium truncate",
-                            (isCompleted || isCancelled) && "line-through text-muted-foreground"
+                            isCompleted && "line-through text-muted-foreground"
                           )}>
                             {task.title}
                           </p>
@@ -453,28 +486,34 @@ export default function Tasks() {
                       <TableCell className="text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button className={cn(
-                              "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity",
-                              statusConfig.className
-                            )}>
-                              <StatusIcon className="h-3 w-3" />
-                              <span>{statusConfig.label}</span>
+                            <button 
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
+                              style={{ 
+                                backgroundColor: taskStatus ? `${taskStatus.color}20` : undefined,
+                                color: taskStatus?.color 
+                              }}
+                            >
+                              <span 
+                                className="w-2 h-2 rounded-full" 
+                                style={{ backgroundColor: taskStatus?.color }}
+                              />
+                              <span>{taskStatus?.name || "Sem status"}</span>
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="center" className="w-40">
-                            {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-                              const Icon = config.icon;
-                              return (
-                                <DropdownMenuItem
-                                  key={status}
-                                  onClick={() => handleStatusChange(task.id, status as Task["status"])}
-                                  className={cn(task.status === status && "bg-muted")}
-                                >
-                                  <Icon className="mr-2 h-4 w-4" />
-                                  {config.label}
-                                </DropdownMenuItem>
-                              );
-                            })}
+                          <DropdownMenuContent align="center" className="w-44">
+                            {customStatuses.map((status) => (
+                              <DropdownMenuItem
+                                key={status.id}
+                                onClick={() => handleStatusChange(task.id, status.id as Task["status"])}
+                                className={cn(task.custom_status_id === status.id && "bg-muted")}
+                              >
+                                <span 
+                                  className="mr-2 w-2 h-2 rounded-full" 
+                                  style={{ backgroundColor: status.color }}
+                                />
+                                {status.name}
+                              </DropdownMenuItem>
+                            ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -830,42 +869,33 @@ export default function Tasks() {
           onAddTask={openNewTaskDialog}
         />
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="pending" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Clock className="h-4 w-4" />
-              Pendentes
-              {pendingCount > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                  {pendingCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="done" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <CheckCircle2 className="h-4 w-4" />
-              Concluídas
-              {doneCount > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                  {doneCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="cancelled" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              Canceladas
-            </TabsTrigger>
+        <Tabs value={activeTab || ""} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="bg-muted/50 p-1 flex-wrap h-auto gap-1">
+            {customStatuses.map((status) => (
+              <TabsTrigger 
+                key={status.id} 
+                value={status.id} 
+                className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <span 
+                  className="w-2 h-2 rounded-full" 
+                  style={{ backgroundColor: status.color }}
+                />
+                {status.name}
+                {(statusCounts[status.id] || 0) > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                    {statusCounts[status.id]}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="pending" className="mt-6">
-            <TaskTable tasks={sortedTasks} />
-          </TabsContent>
-
-          <TabsContent value="done" className="mt-6">
-            <TaskTable tasks={sortedTasks} />
-          </TabsContent>
-
-          <TabsContent value="cancelled" className="mt-6">
-            <TaskTable tasks={sortedTasks} />
-          </TabsContent>
+          {customStatuses.map((status) => (
+            <TabsContent key={status.id} value={status.id} className="mt-6">
+              <TaskTable tasks={sortedTasks} />
+            </TabsContent>
+          ))}
         </Tabs>
       )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,7 @@ interface Task {
   client_id: string | null;
   assigned_to: string | null;
   completed_at?: string | null;
+  custom_status_id?: string | null;
 }
 
 interface TaskDialogProps {
@@ -51,7 +53,7 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void;
   task?: Task | null;
   clientId?: string;
-  initialStatus?: Task["status"];
+  initialStatus?: string; // Now it's the custom_status_id
   onSuccess: () => void;
 }
 
@@ -62,24 +64,17 @@ const PRIORITY_LABELS = {
   urgent: "Urgente",
 };
 
-const STATUS_LABELS = {
-  pending: "Pendente",
-  in_progress: "Em andamento",
-  done: "Concluído",
-  overdue: "Atrasado",
-  cancelled: "Cancelado",
-};
-
 export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, onSuccess }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
   const { logAudit } = useAuditLog();
+  const { statuses: customStatuses } = useTaskStatuses();
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    status: "pending" as Task["status"],
+    custom_status_id: "",
     priority: "medium" as Task["priority"],
     due_date: "",
     client_id: clientId || "",
@@ -96,17 +91,18 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
         setFormData({
           title: task.title,
           description: task.description || "",
-          status: task.status,
+          custom_status_id: task.custom_status_id || "",
           priority: task.priority,
           due_date: task.due_date || "",
           client_id: task.client_id || "",
           assigned_to: task.assigned_to || "",
         });
       } else {
+        const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
         setFormData({
           title: "",
           description: "",
-          status: initialStatus || "pending",
+          custom_status_id: defaultStatusId,
           priority: "medium",
           due_date: "",
           client_id: clientId || "",
@@ -114,7 +110,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
         });
       }
     }
-  }, [open, task, clientId, initialStatus]);
+  }, [open, task, clientId, initialStatus, customStatuses]);
 
   const fetchUsers = async () => {
     const { data } = await supabase
@@ -151,18 +147,22 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
         return;
       }
 
+      // Check if selected status is a completed status
+      const selectedStatus = customStatuses.find(s => s.id === formData.custom_status_id);
+      const isCompleted = selectedStatus?.is_completed_status || false;
+
       if (task) {
         const updateData = {
           title: formData.title.trim(),
           description: formData.description.trim() || null,
-          status: formData.status,
+          custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
           due_date: formData.due_date || null,
           client_id: formData.client_id || null,
           assigned_to: formData.assigned_to,
-          completed_at: formData.status === "done" && !task.completed_at 
+          completed_at: isCompleted && !task.completed_at 
             ? new Date().toISOString() 
-            : formData.status !== "done" ? null : task.completed_at,
+            : !isCompleted ? null : task.completed_at,
         };
         const { error } = await supabase
           .from("internal_tasks")
@@ -171,11 +171,11 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
         if (error) throw error;
         
         logAudit({
-          action: formData.status === "done" ? "complete" : "update",
+          action: isCompleted ? "complete" : "update",
           entityType: "task",
           entityId: task.id,
           entityName: formData.title.trim(),
-          details: { status: formData.status, priority: formData.priority }
+          details: { custom_status_id: formData.custom_status_id, priority: formData.priority }
         });
         
         toast.success("Tarefa atualizada!");
@@ -184,13 +184,13 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           account_id: currentUser.account_id,
           title: formData.title.trim(),
           description: formData.description.trim() || null,
-          status: formData.status,
+          custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
           due_date: formData.due_date || null,
           client_id: formData.client_id || null,
           assigned_to: formData.assigned_to,
           created_by: currentUser.id,
-          completed_at: formData.status === "done" ? new Date().toISOString() : null,
+          completed_at: isCompleted ? new Date().toISOString() : null,
         };
         const { data: newTask, error } = await supabase
           .from("internal_tasks")
@@ -204,7 +204,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           entityType: "task",
           entityId: newTask.id,
           entityName: formData.title.trim(),
-          details: { status: formData.status, priority: formData.priority, client_id: formData.client_id || null }
+          details: { custom_status_id: formData.custom_status_id, priority: formData.priority, client_id: formData.client_id || null }
         });
         
         toast.success("Tarefa criada!");
@@ -326,18 +326,24 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
             <div className="space-y-2">
               <Label>Status</Label>
               <Select
-                value={formData.status}
-                onValueChange={(value: Task["status"]) => 
-                  setFormData({ ...formData, status: value })
+                value={formData.custom_status_id}
+                onValueChange={(value) => 
+                  setFormData({ ...formData, custom_status_id: value })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
+                  {customStatuses.map((status) => (
+                    <SelectItem key={status.id} value={status.id}>
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: status.color }}
+                        />
+                        {status.name}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
