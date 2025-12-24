@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.members-book]
 verify_jwt = false
+
+[functions.support-webhook]
+verify_jwt = false

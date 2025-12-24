@@ -52,7 +52,8 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
 import { CouponsManager } from "@/components/admin/CouponsManager";
-import { Tag } from "lucide-react";
+import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager";
+import { Tag, Headset } from "lucide-react";
 
 interface SubscriptionPlan {
   id: string;
@@ -291,6 +292,10 @@ export default function Admin() {
             <Tag className="h-4 w-4" />
             Cupons
           </TabsTrigger>
+          <TabsTrigger value="support" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Headset className="h-4 w-4" />
+            Suporte
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -323,6 +328,10 @@ export default function Admin() {
 
         <TabsContent value="coupons" className="mt-0">
           <CouponsManager />
+        </TabsContent>
+
+        <TabsContent value="support" className="mt-0">
+          <SupportTicketsManager />
         </TabsContent>
       </Tabs>
     </div>
