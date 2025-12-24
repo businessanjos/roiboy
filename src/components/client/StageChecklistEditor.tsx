@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Pencil, CheckSquare, GripVertical, Layers, Check, X, Calendar, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckSquare, GripVertical, Layers, Check, X, Calendar, AlertCircle, ExternalLink } from "lucide-react";
 import { format, isPast, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -28,6 +29,8 @@ import {
   useStageChecklistItems,
   useManageChecklistItems,
   StageChecklistItem,
+  ChecklistActionType,
+  CHECKLIST_ACTION_LABELS,
 } from "@/hooks/useStageChecklist";
 import {
   DndContext,
@@ -219,6 +222,7 @@ export function StageChecklistEditor({
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemDescription, setNewItemDescription] = useState("");
   const [newItemDueDate, setNewItemDueDate] = useState("");
+  const [newItemActionType, setNewItemActionType] = useState<ChecklistActionType | "">("");
   const [editingItem, setEditingItem] = useState<StageChecklistItem | null>(null);
 
   // Stage management state
@@ -250,10 +254,12 @@ export function StageChecklistEditor({
         description: newItemDescription.trim() || undefined,
         dueDate: newItemDueDate || undefined,
         stageName: stage?.name,
+        actionType: newItemActionType || undefined,
       });
       setNewItemTitle("");
       setNewItemDescription("");
       setNewItemDueDate("");
+      setNewItemActionType("");
       setNewItemStageId(null);
       toast.success(newItemDueDate ? "Item adicionado e tarefa criada" : "Item adicionado");
     } catch (error) {
@@ -275,6 +281,7 @@ export function StageChecklistEditor({
         dueDate: editingItem.due_date,
         stageName: stage?.name,
         currentLinkedTaskId: editingItem.linked_task_id,
+        actionType: editingItem.action_type,
       });
       setEditingItem(null);
       toast.success("Item atualizado");
@@ -576,6 +583,28 @@ export function StageChecklistEditor({
                                         className="flex-1"
                                       />
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                      <Select
+                                        value={editingItem.action_type || ""}
+                                        onValueChange={(value) =>
+                                          setEditingItem({
+                                            ...editingItem,
+                                            action_type: value as ChecklistActionType || null,
+                                          })
+                                        }
+                                      >
+                                        <SelectTrigger className="flex-1">
+                                          <SelectValue placeholder="Vincular a uma ação (opcional)" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="">Nenhuma ação</SelectItem>
+                                          {Object.entries(CHECKLIST_ACTION_LABELS).map(([key, label]) => (
+                                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
                                     <div className="flex gap-2">
                                       <Button
                                         size="sm"
@@ -619,6 +648,12 @@ export function StageChecklistEditor({
                                           <span>
                                             {format(parseISO(item.due_date), "dd/MM/yyyy", { locale: ptBR })}
                                           </span>
+                                        </div>
+                                      )}
+                                      {item.action_type && (
+                                        <div className="flex items-center gap-1 mt-1 text-xs text-primary">
+                                          <ExternalLink className="h-3 w-3" />
+                                          <span>{CHECKLIST_ACTION_LABELS[item.action_type]}</span>
                                         </div>
                                       )}
                                     </div>
@@ -668,6 +703,23 @@ export function StageChecklistEditor({
                                     className="flex-1"
                                   />
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                  <Select
+                                    value={newItemActionType}
+                                    onValueChange={(value) => setNewItemActionType(value as ChecklistActionType | "")}
+                                  >
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="Vincular a uma ação (opcional)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="">Nenhuma ação</SelectItem>
+                                      {Object.entries(CHECKLIST_ACTION_LABELS).map(([key, label]) => (
+                                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
@@ -684,6 +736,7 @@ export function StageChecklistEditor({
                                       setNewItemTitle("");
                                       setNewItemDescription("");
                                       setNewItemDueDate("");
+                                      setNewItemActionType("");
                                     }}
                                   >
                                     Cancelar
