@@ -1194,11 +1194,12 @@ export default function Clients() {
             <Button
               variant={viewMode === "onboarding" ? "secondary" : "ghost"}
               size="sm"
-              className="rounded-none"
+              className="rounded-none gap-2"
               onClick={() => setViewMode("onboarding")}
               title="Onboarding Orquestrado"
             >
               <CheckCircle2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Onboarding</span>
             </Button>
           </div>
 
