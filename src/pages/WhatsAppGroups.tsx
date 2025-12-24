@@ -57,6 +57,7 @@ import {
   Pencil,
   Save,
   ImagePlus,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -267,7 +268,7 @@ export default function WhatsAppGroups() {
     mutationFn: async ({ groupId, mediaUrl, mediaType, caption }: { 
       groupId: string; 
       mediaUrl: string; 
-      mediaType: "image" | "audio";
+      mediaType: "image" | "audio" | "document";
       caption?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
@@ -373,9 +374,31 @@ export default function WhatsAppGroups() {
     // Check file type
     const isImage = file.type.startsWith("image/");
     const isAudio = file.type.startsWith("audio/");
+    const isDocument = !isImage && !isAudio && (
+      file.type === "application/pdf" ||
+      file.type === "application/msword" ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.type === "application/vnd.ms-excel" ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.type === "application/vnd.ms-powerpoint" ||
+      file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      file.type === "text/plain" ||
+      file.type === "application/zip" ||
+      file.type === "application/x-rar-compressed" ||
+      file.name.endsWith('.pdf') ||
+      file.name.endsWith('.doc') ||
+      file.name.endsWith('.docx') ||
+      file.name.endsWith('.xls') ||
+      file.name.endsWith('.xlsx') ||
+      file.name.endsWith('.ppt') ||
+      file.name.endsWith('.pptx') ||
+      file.name.endsWith('.txt') ||
+      file.name.endsWith('.zip') ||
+      file.name.endsWith('.rar')
+    );
     
-    if (!isImage && !isAudio) {
-      toast.error("Apenas imagens e áudios são suportados");
+    if (!isImage && !isAudio && !isDocument) {
+      toast.error("Tipo de arquivo não suportado. Use imagens, áudios ou documentos (PDF, Word, Excel, etc.)");
       return;
     }
 
@@ -539,7 +562,9 @@ export default function WhatsAppGroups() {
       setIsUploadingMedia(true);
       try {
         const mediaUrl = await uploadMediaToStorage(mediaFile);
-        const mediaType = mediaFile.type.startsWith("image/") ? "image" : "audio";
+        const isImage = mediaFile.type.startsWith("image/");
+        const isAudio = mediaFile.type.startsWith("audio/");
+        const mediaType = isImage ? "image" : isAudio ? "audio" : "document";
         
         sendMediaToGroupMutation.mutate({ 
           groupId: selectedGroupId, 
@@ -1213,7 +1238,12 @@ export default function WhatsAppGroups() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = "image/*";
+                          fileInputRef.current.click();
+                        }
+                      }}
                       disabled={isSendingAny || !!mediaFile}
                     >
                       <Image className="h-4 w-4 mr-2" />
@@ -1227,13 +1257,27 @@ export default function WhatsAppGroups() {
                         if (fileInputRef.current) {
                           fileInputRef.current.accept = "audio/*";
                           fileInputRef.current.click();
-                          fileInputRef.current.accept = "image/*,audio/*";
                         }
                       }}
                       disabled={isSendingAny || !!mediaFile}
                     >
                       <Mic className="h-4 w-4 mr-2" />
-                      Arquivo de Áudio
+                      Áudio
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar";
+                          fileInputRef.current.click();
+                        }
+                      }}
+                      disabled={isSendingAny || !!mediaFile}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Arquivo
                     </Button>
                     <Button
                       type="button"
@@ -1256,8 +1300,10 @@ export default function WhatsAppGroups() {
                       <div className="flex items-center gap-2">
                         {mediaFile.type.startsWith("image/") ? (
                           <Image className="h-4 w-4 text-muted-foreground" />
-                        ) : (
+                        ) : mediaFile.type.startsWith("audio/") ? (
                           <Mic className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <FileText className="h-4 w-4 text-muted-foreground" />
                         )}
                         <span className="text-sm font-medium truncate max-w-[200px]">
                           {mediaFile.name}
