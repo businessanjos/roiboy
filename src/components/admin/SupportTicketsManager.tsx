@@ -37,6 +37,10 @@ interface SupportTicket {
   updated_at: string;
   resolved_at: string | null;
   assigned_to: string | null;
+  needs_human_attention?: boolean;
+  escalated_at?: string | null;
+  escalation_reason?: string | null;
+  first_response_at?: string | null;
   account?: { name: string };
 }
 
@@ -139,7 +143,7 @@ export function SupportTicketsManager() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Send message mutation
+  // Send message mutation - now uses edge function to also send via WhatsApp
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!selectedTicket) throw new Error("No ticket selected");
@@ -150,12 +154,13 @@ export function SupportTicketsManager() {
         .eq("auth_user_id", (await supabase.auth.getUser()).data.user?.id)
         .single();
 
-      const { error } = await supabase.from("support_messages").insert({
-        ticket_id: selectedTicket.id,
-        sender_type: "admin",
-        sender_id: userData?.id,
-        content,
-        message_type: "text"
+      // Call edge function to save and send message via WhatsApp
+      const { data, error } = await supabase.functions.invoke("send-support-message", {
+        body: {
+          ticket_id: selectedTicket.id,
+          content,
+          sender_id: userData?.id
+        }
       });
 
       if (error) throw error;
@@ -167,11 +172,18 @@ export function SupportTicketsManager() {
           .update({ status: "in_progress" })
           .eq("id", selectedTicket.id);
       }
+
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setNewMessage("");
       queryClient.invalidateQueries({ queryKey: ["support-messages", selectedTicket?.id] });
       queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
+      if (data?.whatsapp_sent) {
+        toast.success("Mensagem enviada via WhatsApp");
+      } else {
+        toast.success("Mensagem salva (WhatsApp não enviado)");
+      }
     },
     onError: () => {
       toast.error("Erro ao enviar mensagem");
@@ -219,7 +231,7 @@ export function SupportTicketsManager() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -250,6 +262,19 @@ export function SupportTicketsManager() {
                 <p className="text-2xl font-bold text-yellow-500">{inProgressTickets}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-orange-500/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Precisa Atenção</p>
+                <p className="text-2xl font-bold text-orange-500">
+                  {tickets.filter(t => t.needs_human_attention).length}
+                </p>
+              </div>
+              <AlertCircle className="h-8 w-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
@@ -311,12 +336,17 @@ export function SupportTicketsManager() {
                         className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                           selectedTicket?.id === ticket.id
                             ? "bg-accent border-primary"
+                            : ticket.needs_human_attention
+                            ? "border-orange-500 bg-orange-500/10 hover:bg-orange-500/20"
                             : "hover:bg-accent/50"
                         }`}
                         onClick={() => setSelectedTicket(ticket)}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
+                            {ticket.needs_human_attention && (
+                              <AlertCircle className="h-4 w-4 text-orange-500" />
+                            )}
                             <StatusIcon className={`h-4 w-4 ${STATUS_CONFIG[ticket.status as keyof typeof STATUS_CONFIG]?.color.replace('bg-', 'text-')}`} />
                             <span className="font-medium text-sm truncate max-w-[150px]">
                               {ticket.client_name || ticket.client_phone}
@@ -326,6 +356,11 @@ export function SupportTicketsManager() {
                             {PRIORITY_CONFIG[ticket.priority as keyof typeof PRIORITY_CONFIG]?.label}
                           </Badge>
                         </div>
+                        {ticket.needs_human_attention && (
+                          <p className="text-xs text-orange-600 font-medium mb-1">
+                            ⚠️ Precisa de atenção humana
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground truncate mb-1">
                           {ticket.subject || "Sem assunto"}
                         </p>
