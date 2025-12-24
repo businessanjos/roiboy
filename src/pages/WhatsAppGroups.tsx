@@ -53,10 +53,14 @@ import { toast } from "sonner";
 
 interface WhatsAppGroup {
   id: string;
+  group_jid: string;
+  name: string;
+  description?: string;
+  owner_phone?: string;
+  participant_count: number;
+  created_at: string;
+  // Legacy fields from API
   subject?: string;
-  name?: string;
-  owner?: string;
-  creation?: number;
   participants?: Array<{ id: string; admin?: string }>;
   size?: number;
 }
@@ -90,18 +94,18 @@ export default function WhatsAppGroups() {
   const [removingParticipant, setRemovingParticipant] = useState<string | null>(null);
   const [clientsToAdd, setClientsToAdd] = useState<string[]>([]);
 
-  // Fetch groups
+  // Fetch groups from database
   const { data: groups = [], isLoading: loadingGroups, refetch: refetchGroups } = useQuery({
     queryKey: ["whatsapp-groups"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "list_groups" },
-      });
+      const { data, error } = await supabase
+        .from("whatsapp_groups")
+        .select("*")
+        .order("created_at", { ascending: false });
       
       if (error) throw error;
       
-      const groupsList = data?.data?.groups || [];
-      return groupsList as WhatsAppGroup[];
+      return data as WhatsAppGroup[];
     },
     refetchOnWindowFocus: false,
   });
@@ -122,7 +126,7 @@ export default function WhatsAppGroups() {
 
   // Filter groups by search
   const filteredGroups = groups.filter(g => {
-    const name = g.subject || g.name || "";
+    const name = g.name || g.subject || "";
     return name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
@@ -253,13 +257,13 @@ export default function WhatsAppGroups() {
       .filter(c => clientsToAdd.includes(c.id))
       .map(c => c.phone_e164);
     
-    addParticipantMutation.mutate({ groupId: managingGroup.id, participants: phones });
+    addParticipantMutation.mutate({ groupId: managingGroup.group_jid || managingGroup.id, participants: phones });
   };
 
   const handleRemoveParticipant = () => {
     if (!managingGroup || !removingParticipant) return;
     removeParticipantMutation.mutate({ 
-      groupId: managingGroup.id, 
+      groupId: managingGroup.group_jid || managingGroup.id, 
       participants: [removingParticipant] 
     });
   };
@@ -371,17 +375,17 @@ export default function WhatsAppGroups() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{group.subject || group.name || "Sem nome"}</span>
+                            <span className="font-medium">{group.name || group.subject || "Sem nome"}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
-                            {group.size || group.participants?.length || 0} membros
+                            {group.participant_count || group.size || group.participants?.length || 0} membros
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <code className="text-xs bg-muted px-2 py-1 rounded">
-                            {group.id.split("@")[0]}
+                            {(group.group_jid || group.id).split("@")[0]}
                           </code>
                         </TableCell>
                         <TableCell>
@@ -398,7 +402,7 @@ export default function WhatsAppGroups() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                setSelectedGroupId(group.id);
+                                setSelectedGroupId(group.group_jid || group.id);
                                 setActiveTab("send");
                               }}
                               title="Enviar mensagem"

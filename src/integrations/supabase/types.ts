@@ -4233,6 +4233,50 @@ export type Database = {
           },
         ]
       }
+      whatsapp_groups: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          group_jid: string
+          id: string
+          name: string
+          owner_phone: string | null
+          participant_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          group_jid: string
+          id?: string
+          name: string
+          owner_phone?: string | null
+          participant_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          group_jid?: string
+          id?: string
+          name?: string
+          owner_phone?: string | null
+          participant_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_groups_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       events_checkin_view: {
