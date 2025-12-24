@@ -2893,6 +2893,7 @@ export type Database = {
         Row: {
           account_id: string
           assigned_to: string | null
+          checklist_item_id: string | null
           client_id: string | null
           completed_at: string | null
           created_at: string
@@ -2909,6 +2910,7 @@ export type Database = {
         Insert: {
           account_id: string
           assigned_to?: string | null
+          checklist_item_id?: string | null
           client_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -2925,6 +2927,7 @@ export type Database = {
         Update: {
           account_id?: string
           assigned_to?: string | null
+          checklist_item_id?: string | null
           client_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -2944,6 +2947,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_tasks_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "stage_checklist_items"
             referencedColumns: ["id"]
           },
           {
@@ -4164,6 +4174,7 @@ export type Database = {
           due_date: string | null
           id: string
           is_active: boolean
+          linked_task_id: string | null
           stage_id: string
           title: string
           updated_at: string
@@ -4176,6 +4187,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_active?: boolean
+          linked_task_id?: string | null
           stage_id: string
           title: string
           updated_at?: string
@@ -4188,6 +4200,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_active?: boolean
+          linked_task_id?: string | null
           stage_id?: string
           title?: string
           updated_at?: string
@@ -4198,6 +4211,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_checklist_items_linked_task_id_fkey"
+            columns: ["linked_task_id"]
+            isOneToOne: false
+            referencedRelation: "internal_tasks"
             referencedColumns: ["id"]
           },
           {

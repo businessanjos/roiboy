@@ -9,6 +9,7 @@ export interface StageChecklistItem {
   display_order: number;
   is_active: boolean;
   due_date: string | null;
+  linked_task_id: string | null;
 }
 
 export interface ClientChecklistProgress {
@@ -215,6 +216,114 @@ export function useManageChecklistItems(accountId: string) {
   });
 
   return { addItem, updateItem, deleteItem };
+}
+
+// Create or update linked task for a checklist item
+export async function syncChecklistToTask({
+  checklistItem,
+  clientId,
+  clientName,
+  accountId,
+  stageName,
+}: {
+  checklistItem: StageChecklistItem;
+  clientId: string;
+  clientName: string;
+  accountId: string;
+  stageName: string;
+}): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Get user record
+  const { data: userData } = await supabase
+    .from("users")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .single();
+
+  if (!userData) return null;
+
+  // Check if task already exists
+  if (checklistItem.linked_task_id) {
+    // Update existing task
+    await supabase
+      .from("internal_tasks")
+      .update({
+        title: `[${stageName}] ${checklistItem.title}`,
+        description: checklistItem.description || `Item do checklist de onboarding: ${checklistItem.title}`,
+        due_date: checklistItem.due_date,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", checklistItem.linked_task_id);
+
+    return checklistItem.linked_task_id;
+  }
+
+  // Create new task
+  const { data: newTask, error } = await supabase
+    .from("internal_tasks")
+    .insert({
+      account_id: accountId,
+      title: `[${stageName}] ${checklistItem.title}`,
+      description: checklistItem.description || `Item do checklist de onboarding: ${checklistItem.title}`,
+      status: "pending",
+      priority: "medium",
+      due_date: checklistItem.due_date,
+      client_id: clientId,
+      created_by: userData.id,
+      checklist_item_id: checklistItem.id,
+    })
+    .select("id")
+    .single();
+
+  if (error || !newTask) return null;
+
+  // Link task back to checklist item
+  await supabase
+    .from("stage_checklist_items")
+    .update({ linked_task_id: newTask.id })
+    .eq("id", checklistItem.id);
+
+  return newTask.id;
+}
+
+// Hook to sync checklist items to tasks for a specific client
+export function useSyncChecklistToTasks() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      items,
+      clientId,
+      clientName,
+      accountId,
+      stageName,
+    }: {
+      items: StageChecklistItem[];
+      clientId: string;
+      clientName: string;
+      accountId: string;
+      stageName: string;
+    }) => {
+      // Only sync items that have due dates
+      const itemsWithDates = items.filter(item => item.due_date);
+      
+      for (const item of itemsWithDates) {
+        await syncChecklistToTask({
+          checklistItem: item,
+          clientId,
+          clientName,
+          accountId,
+          stageName,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stage-checklist-items"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
 }
 
 // Helper to calculate checklist completion status

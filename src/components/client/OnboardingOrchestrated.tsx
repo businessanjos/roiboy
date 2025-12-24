@@ -10,10 +10,12 @@ import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowRight, CheckSquare, AlertTriangle, ChevronRight, Package, User } from "lucide-react";
+import { ArrowRight, CheckSquare, AlertTriangle, ChevronRight, Package, User, CalendarClock, Link2 } from "lucide-react";
 import { toast } from "sonner";
-import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage } from "@/hooks/useStageChecklist";
+import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage, syncChecklistToTask, StageChecklistItem } from "@/hooks/useStageChecklist";
 import { StageChecklistEditor } from "./StageChecklistEditor";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ClientStage {
   id: string;
@@ -340,7 +342,8 @@ export function OnboardingOrchestrated({
                                     >
                                       <Checkbox
                                         checked={isCompleted}
-                                        onCheckedChange={() => {
+                                        onCheckedChange={async () => {
+                                          // Toggle the item
                                           toggleChecklistItem.mutate({
                                             clientId: client.id,
                                             checklistItemId: item.id,
@@ -350,17 +353,74 @@ export function OnboardingOrchestrated({
                                             allStageItems: stageItems,
                                             allProgress: checklistProgress,
                                           });
+                                          
+                                          // If completing and has due date, sync to tasks
+                                          if (!isCompleted && item.due_date && !item.linked_task_id) {
+                                            await syncChecklistToTask({
+                                              checklistItem: item,
+                                              clientId: client.id,
+                                              clientName: client.full_name,
+                                              accountId,
+                                              stageName: stage?.name || "",
+                                            });
+                                          }
                                         }}
                                         className="mt-0.5"
                                       />
                                       <div className="flex-1 min-w-0">
-                                        <p className={`text-sm ${isCompleted ? "line-through text-muted-foreground" : ""}`}>
-                                          {item.title}
-                                        </p>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className={`text-sm ${isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                                            {item.title}
+                                          </p>
+                                          {item.linked_task_id && (
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger>
+                                                  <Link2 className="h-3 w-3 text-primary" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p className="text-xs">Vinculado a uma tarefa</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          )}
+                                        </div>
                                         {item.description && (
                                           <p className="text-xs text-muted-foreground mt-0.5">
                                             {item.description}
                                           </p>
+                                        )}
+                                        {item.due_date && (
+                                          <div className="flex items-center gap-1 mt-1">
+                                            <CalendarClock className="h-3 w-3 text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground">
+                                              {format(parseISO(item.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                                            </span>
+                                            {!item.linked_task_id && (
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-5 px-1.5 text-xs"
+                                                onClick={async (e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  const taskId = await syncChecklistToTask({
+                                                    checklistItem: item,
+                                                    clientId: client.id,
+                                                    clientName: client.full_name,
+                                                    accountId,
+                                                    stageName: stage?.name || "",
+                                                  });
+                                                  if (taskId) {
+                                                    toast.success("Tarefa criada!");
+                                                  }
+                                                }}
+                                              >
+                                                <Link2 className="h-3 w-3 mr-1" />
+                                                Criar tarefa
+                                              </Button>
+                                            )}
+                                          </div>
                                         )}
                                       </div>
                                     </label>
