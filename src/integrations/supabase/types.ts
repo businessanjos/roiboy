@@ -4316,6 +4316,39 @@ export type Database = {
         }
         Relationships: []
       }
+      support_knowledge_base: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           content: string
@@ -4368,10 +4401,15 @@ export type Database = {
         Row: {
           account_id: string
           assigned_to: string | null
+          avg_response_time_seconds: number | null
           client_name: string | null
           client_phone: string
           created_at: string
+          escalated_at: string | null
+          escalation_reason: string | null
+          first_response_at: string | null
           id: string
+          needs_human_attention: boolean | null
           priority: string | null
           resolved_at: string | null
           status: string
@@ -4381,10 +4419,15 @@ export type Database = {
         Insert: {
           account_id: string
           assigned_to?: string | null
+          avg_response_time_seconds?: number | null
           client_name?: string | null
           client_phone: string
           created_at?: string
+          escalated_at?: string | null
+          escalation_reason?: string | null
+          first_response_at?: string | null
           id?: string
+          needs_human_attention?: boolean | null
           priority?: string | null
           resolved_at?: string | null
           status?: string
@@ -4394,10 +4437,15 @@ export type Database = {
         Update: {
           account_id?: string
           assigned_to?: string | null
+          avg_response_time_seconds?: number | null
           client_name?: string | null
           client_phone?: string
           created_at?: string
+          escalated_at?: string | null
+          escalation_reason?: string | null
+          first_response_at?: string | null
           id?: string
+          needs_human_attention?: boolean | null
           priority?: string | null
           resolved_at?: string | null
           status?: string
