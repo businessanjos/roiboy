@@ -56,6 +56,9 @@ import {
   Heart,
   Ban,
   AlertTriangle,
+  Zap,
+  UserPlus,
+  Contact,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -278,6 +281,7 @@ export default function RoyZapp() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
   const [teamRoles, setTeamRoles] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [allClients, setAllClients] = useState<{ id: string; full_name: string; phone_e164: string; avatar_url: string | null }[]>([]);
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -381,6 +385,19 @@ export default function RoyZapp() {
   const [riskLevel, setRiskLevel] = useState("medium");
   const [riskReason, setRiskReason] = useState("");
   const [uploadingRisk, setUploadingRisk] = useState(false);
+
+  // Contact picker dialog state
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
+  const [sendingContact, setSendingContact] = useState(false);
+
+  // Quick replies state
+  const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
+  const [quickReplies, setQuickReplies] = useState<{ id: string; title: string; content: string }[]>([]);
+  const [quickReplyDialogOpen, setQuickReplyDialogOpen] = useState(false);
+  const [editingQuickReply, setEditingQuickReply] = useState<{ id: string; title: string; content: string } | null>(null);
+  const [quickReplyForm, setQuickReplyForm] = useState({ title: "", content: "" });
+  const [savingQuickReply, setSavingQuickReply] = useState(false);
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -643,6 +660,17 @@ export default function RoyZapp() {
         .order("name");
       
       setAvailableProducts(productsData || []);
+      
+      // Fetch all clients for contact picker
+      const { data: clientsData } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164, avatar_url")
+        .eq("account_id", currentUser.account_id)
+        .eq("status", "active")
+        .order("full_name")
+        .limit(500);
+      
+      setAllClients(clientsData || []);
       // Fetch products for all clients in the conversations
       const clientIds = (assignmentsData || [])
         .map((a: ConversationAssignment) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
@@ -1424,6 +1452,171 @@ export default function RoyZapp() {
       sendMessage();
     }
   };
+
+  // Send contact to conversation
+  const sendContact = async (client: { id: string; full_name: string; phone_e164: string }) => {
+    if (!selectedConversation || sendingContact) return;
+    
+    const contactInfo = getContactInfo(selectedConversation);
+    const phone = contactInfo.phone;
+    const isGroup = contactInfo.isGroup;
+    const groupJid = selectedConversation.zapp_conversation?.group_jid;
+    
+    if (!phone && !groupJid) {
+      toast.error("Número de telefone não encontrado");
+      return;
+    }
+
+    setSendingContact(true);
+    
+    // Format contact as vCard text message for now (UAZAPI contact sending)
+    const contactMessage = `📇 *Contato*\n*Nome:* ${client.full_name}\n*Telefone:* ${client.phone_e164}`;
+    
+    const tempMessageId = `temp-contact-${Date.now()}`;
+    const now = new Date().toISOString();
+    
+    const optimisticMessage: Message = {
+      id: tempMessageId,
+      content: contactMessage,
+      is_from_client: false,
+      created_at: now,
+      message_type: "text",
+      media_url: null,
+      media_type: null,
+      media_mimetype: null,
+      media_filename: null,
+      audio_duration_sec: null,
+      sender_name: null,
+    };
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    setContactPickerOpen(false);
+    
+    try {
+      const action = isGroup && groupJid ? "send_to_group" : "send_text";
+      const payload: Record<string, string> = {
+        action,
+        message: contactMessage,
+      };
+      
+      if (isGroup && groupJid) {
+        payload.group_id = groupJid;
+      } else {
+        payload.phone = phone;
+      }
+      
+      const { error } = await supabase.functions.invoke("uazapi-manager", {
+        body: payload,
+      });
+      
+      if (error) throw error;
+      
+      // Save message to zapp_messages
+      if (selectedConversation.zapp_conversation_id) {
+        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+          account_id: currentUser!.account_id,
+          zapp_conversation_id: selectedConversation.zapp_conversation_id,
+          direction: "outbound",
+          content: contactMessage,
+          message_type: "text",
+          sent_at: now,
+        }).select("id").single();
+        
+        if (insertedMessage) {
+          setMessages(prev => prev.map(m => 
+            m.id === tempMessageId ? { ...m, id: insertedMessage.id } : m
+          ));
+        }
+        
+        await supabase.from("zapp_conversations").update({
+          last_message_at: now,
+          last_message_preview: `📇 ${client.full_name}`,
+          unread_count: 0,
+        }).eq("id", selectedConversation.zapp_conversation_id);
+      }
+      
+      toast.success("Contato enviado!");
+    } catch (error: any) {
+      console.error("Error sending contact:", error);
+      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
+      toast.error(error.message || "Erro ao enviar contato");
+    } finally {
+      setSendingContact(false);
+    }
+  };
+
+  // Use quick reply
+  const useQuickReply = (reply: { title: string; content: string }) => {
+    setMessageInput(reply.content);
+    setQuickRepliesOpen(false);
+    messageInputRef.current?.focus();
+  };
+
+  // Load quick replies from localStorage (for simplicity, can move to DB later)
+  useEffect(() => {
+    const saved = localStorage.getItem(`zapp_quick_replies_${currentUser?.account_id}`);
+    if (saved) {
+      try {
+        setQuickReplies(JSON.parse(saved));
+      } catch {
+        setQuickReplies([]);
+      }
+    }
+  }, [currentUser?.account_id]);
+
+  // Save quick reply
+  const saveQuickReply = () => {
+    if (!quickReplyForm.title.trim() || !quickReplyForm.content.trim()) {
+      toast.error("Preencha título e conteúdo");
+      return;
+    }
+    
+    setSavingQuickReply(true);
+    
+    let updated: { id: string; title: string; content: string }[];
+    if (editingQuickReply) {
+      updated = quickReplies.map(r => 
+        r.id === editingQuickReply.id 
+          ? { ...r, title: quickReplyForm.title, content: quickReplyForm.content }
+          : r
+      );
+    } else {
+      updated = [...quickReplies, {
+        id: `qr-${Date.now()}`,
+        title: quickReplyForm.title,
+        content: quickReplyForm.content,
+      }];
+    }
+    
+    setQuickReplies(updated);
+    localStorage.setItem(`zapp_quick_replies_${currentUser?.account_id}`, JSON.stringify(updated));
+    
+    setQuickReplyDialogOpen(false);
+    setEditingQuickReply(null);
+    setQuickReplyForm({ title: "", content: "" });
+    setSavingQuickReply(false);
+    toast.success(editingQuickReply ? "Resposta atualizada!" : "Resposta rápida criada!");
+  };
+
+  // Delete quick reply
+  const deleteQuickReply = (id: string) => {
+    const updated = quickReplies.filter(r => r.id !== id);
+    setQuickReplies(updated);
+    localStorage.setItem(`zapp_quick_replies_${currentUser?.account_id}`, JSON.stringify(updated));
+    toast.success("Resposta removida!");
+  };
+
+  // Filter clients for contact picker
+  const filteredContactClients = useMemo(() => {
+    if (!contactSearch.trim()) return [];
+    const search = contactSearch.toLowerCase();
+    return allClients
+      .filter(c => 
+        c.full_name.toLowerCase().includes(search) || 
+        c.phone_e164.includes(search)
+      )
+      .slice(0, 10);
+  }, [allClients, contactSearch]);
 
   // Insert formatting
   const insertFormatting = useCallback((formatType: 'bold' | 'italic' | 'strikethrough' | 'monospace') => {
@@ -3196,6 +3389,21 @@ export default function RoyZapp() {
                 <ImageIcon className="h-4 w-4 mr-2 text-[#007bfc]" />
                 Fotos e vídeos
               </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-zapp-border" />
+              <DropdownMenuItem 
+                onClick={() => setContactPickerOpen(true)}
+                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              >
+                <Contact className="h-4 w-4 mr-2 text-[#02a698]" />
+                Contato
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setQuickRepliesOpen(true)}
+                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              >
+                <Zap className="h-4 w-4 mr-2 text-[#ffb000]" />
+                Resposta rápida
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
@@ -3764,6 +3972,176 @@ export default function RoyZapp() {
         onOpenChange={setClientEditSheetOpen}
         onClientUpdated={() => fetchData()}
       />
+
+      {/* Contact Picker Dialog */}
+      <Dialog open={contactPickerOpen} onOpenChange={setContactPickerOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle>Enviar Contato</DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Busque e selecione um contato para enviar
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="Buscar por nome ou telefone..."
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+            />
+            <ScrollArea className="h-64">
+              {contactSearch.trim() === "" ? (
+                <p className="text-center text-[#8696a0] py-8">Digite para buscar contatos</p>
+              ) : filteredContactClients.length === 0 ? (
+                <p className="text-center text-[#8696a0] py-8">Nenhum contato encontrado</p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredContactClients.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => sendContact(client)}
+                      disabled={sendingContact}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#202c33] transition-colors text-left"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={client.avatar_url || undefined} />
+                        <AvatarFallback className="bg-zapp-accent text-white">
+                          {client.full_name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[#e9edef] font-medium truncate">{client.full_name}</p>
+                        <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
+                      </div>
+                      {sendingContact && <Loader2 className="h-4 w-4 animate-spin text-zapp-accent" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Replies Dialog */}
+      <Dialog open={quickRepliesOpen} onOpenChange={setQuickRepliesOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef] max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Respostas Rápidas</span>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingQuickReply(null);
+                  setQuickReplyForm({ title: "", content: "" });
+                  setQuickReplyDialogOpen(true);
+                }}
+                className="bg-[#00a884] hover:bg-[#00a884]/90"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Nova
+              </Button>
+            </DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Clique para usar uma resposta ou gerencie suas respostas salvas
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-72">
+            {quickReplies.length === 0 ? (
+              <div className="text-center py-8">
+                <Zap className="h-12 w-12 mx-auto text-[#8696a0] mb-3" />
+                <p className="text-[#8696a0]">Nenhuma resposta rápida criada</p>
+                <p className="text-[#8696a0] text-sm">Crie respostas para agilizar seu atendimento</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {quickReplies.map((reply) => (
+                  <div
+                    key={reply.id}
+                    className="group flex items-start gap-2 p-3 rounded-lg hover:bg-[#202c33] transition-colors"
+                  >
+                    <button
+                      onClick={() => useQuickReply(reply)}
+                      className="flex-1 text-left"
+                    >
+                      <p className="text-[#e9edef] font-medium">{reply.title}</p>
+                      <p className="text-[#8696a0] text-sm line-clamp-2">{reply.content}</p>
+                    </button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-[#8696a0] hover:text-[#e9edef]"
+                        onClick={() => {
+                          setEditingQuickReply(reply);
+                          setQuickReplyForm({ title: reply.title, content: reply.content });
+                          setQuickReplyDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-[#8696a0] hover:text-red-400"
+                        onClick={() => deleteQuickReply(reply.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Reply Edit Dialog */}
+      <Dialog open={quickReplyDialogOpen} onOpenChange={setQuickReplyDialogOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle>{editingQuickReply ? "Editar Resposta" : "Nova Resposta Rápida"}</DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Crie atalhos para mensagens que você envia frequentemente
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="qr-title" className="text-[#8696a0]">Título</Label>
+              <Input
+                id="qr-title"
+                value={quickReplyForm.title}
+                onChange={(e) => setQuickReplyForm({ ...quickReplyForm, title: e.target.value })}
+                placeholder="Ex: Saudação inicial"
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="qr-content" className="text-[#8696a0]">Conteúdo da mensagem</Label>
+              <Textarea
+                id="qr-content"
+                value={quickReplyForm.content}
+                onChange={(e) => setQuickReplyForm({ ...quickReplyForm, content: e.target.value })}
+                placeholder="Olá! Como posso ajudá-lo hoje?"
+                rows={4}
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef] font-mono text-sm"
+              />
+              <p className="text-xs text-[#8696a0]">
+                Dica: Use *negrito*, _itálico_, ~tachado~ para formatação WhatsApp
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuickReplyDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+              Cancelar
+            </Button>
+            <Button onClick={saveQuickReply} disabled={savingQuickReply} className="bg-[#00a884] hover:bg-[#00a884]/90">
+              {savingQuickReply ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
