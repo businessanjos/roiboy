@@ -185,7 +185,7 @@ interface ConversationAssignment {
   zapp_conversation_id: string | null;
   agent_id: string | null;
   department_id: string | null;
-  status: "pending" | "active" | "waiting" | "closed";
+  status: "triage" | "pending" | "active" | "waiting" | "closed";
   priority: number;
   assigned_at: string | null;
   first_response_at: string | null;
@@ -232,10 +232,11 @@ interface ConversationAssignment {
 
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
   pending: { label: "Aguardando", color: "text-amber-600", bgColor: "bg-amber-500" },
   active: { label: "Em atendimento", color: "text-emerald-600", bgColor: "bg-emerald-500" },
   waiting: { label: "Aguardando cliente", color: "text-blue-600", bgColor: "bg-blue-500" },
-  closed: { label: "Fechado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
+  closed: { label: "Finalizado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
 export default function RoyZapp() {
@@ -253,6 +254,7 @@ export default function RoyZapp() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterUnread, setFilterUnread] = useState(false);
   const [filterGroups, setFilterGroups] = useState(false);
   const [filterProductId, setFilterProductId] = useState<string>("all");
   const [filterTagId, setFilterTagId] = useState<string>("all");
@@ -902,6 +904,42 @@ export default function RoyZapp() {
     }
   };
 
+  // Update conversation status
+  const updateConversationStatus = async (assignmentId: string, newStatus: "triage" | "pending" | "active" | "waiting" | "closed") => {
+    try {
+      const updateData: Record<string, string | null> = { 
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      };
+      
+      // If closing, set closed_at timestamp
+      if (newStatus === "closed") {
+        updateData.closed_at = new Date().toISOString();
+      }
+      
+      const { error } = await supabase
+        .from("zapp_conversation_assignments")
+        .update(updateData)
+        .eq("id", assignmentId);
+
+      if (error) throw error;
+      
+      toast.success(`Status alterado para: ${STATUS_CONFIG[newStatus].label}`);
+      fetchData();
+      
+      // Update selected conversation locally
+      if (selectedConversation?.id === assignmentId) {
+        setSelectedConversation(prev => prev ? {
+          ...prev,
+          status: newStatus
+        } : null);
+      }
+    } catch (error: any) {
+      console.error("Error updating conversation status:", error);
+      toast.error(error.message || "Erro ao atualizar status");
+    }
+  };
+
   // Helper to get contact info from assignment (prefers zapp_conversation, falls back to conversation)
   const getContactInfo = useCallback((assignment: ConversationAssignment) => {
     const zc = assignment.zapp_conversation;
@@ -1159,6 +1197,9 @@ export default function RoyZapp() {
         contact.phone?.includes(searchQuery);
       const matchesStatus = filterStatus === "all" || a.status === filterStatus;
       
+      // Unread filter
+      const matchesUnread = !filterUnread || (contact.unreadCount > 0);
+      
       // Groups filter: use is_group from zapp_conversation
       const isGroup = contact.isGroup;
       const matchesGroups = !filterGroups || isGroup;
@@ -1175,9 +1216,9 @@ export default function RoyZapp() {
       // Agent filter
       const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
       
-      return matchesTab && matchesSearch && matchesStatus && matchesGroups && matchesProduct && matchesTag && matchesAgent;
+      return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesGroups && matchesProduct && matchesTag && matchesAgent;
     });
-  }, [assignments, searchQuery, filterStatus, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
 
   // Helper to get agent name by id
   const getAgentName = (agentId: string | null) => {
@@ -1417,10 +1458,16 @@ export default function RoyZapp() {
                 Todas
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "pending" && "bg-zapp-bg-dark")}
-                onClick={() => setFilterStatus("pending")}
+                className={cn("text-zapp-text", filterUnread && "bg-zapp-bg-dark")}
+                onClick={() => setFilterUnread(!filterUnread)}
               >
-                Aguardando
+                Não lidas
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn("text-zapp-text", filterStatus === "triage" && "bg-zapp-bg-dark")}
+                onClick={() => setFilterStatus("triage")}
+              >
+                Triagem
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className={cn("text-zapp-text", filterStatus === "active" && "bg-zapp-bg-dark")}
@@ -1429,10 +1476,10 @@ export default function RoyZapp() {
                 Em atendimento
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "waiting" && "bg-zapp-bg-dark")}
-                onClick={() => setFilterStatus("waiting")}
+                className={cn("text-zapp-text", filterStatus === "closed" && "bg-zapp-bg-dark")}
+                onClick={() => setFilterStatus("closed")}
               >
-                Aguardando cliente
+                Finalizado
               </DropdownMenuItem>
               
               {/* Product filters */}
@@ -2474,16 +2521,44 @@ export default function RoyZapp() {
                 Devolver
               </Button>
             )}
-            <Badge 
-              variant="outline" 
-              className={cn(
-                "text-xs",
-                STATUS_CONFIG[selectedConversation.status].color,
-                "border-current"
-              )}
-            >
-              {STATUS_CONFIG[selectedConversation.status].label}
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "text-xs cursor-pointer hover:opacity-80 transition-opacity",
+                    STATUS_CONFIG[selectedConversation.status]?.color || "text-muted-foreground",
+                    "border-current"
+                  )}
+                >
+                  {STATUS_CONFIG[selectedConversation.status]?.label || "Status"}
+                </Badge>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48">
+                <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Alterar status</div>
+                <DropdownMenuItem 
+                  className={cn("text-zapp-text flex items-center gap-2", selectedConversation.status === "triage" && "bg-zapp-bg-dark")}
+                  onClick={() => updateConversationStatus(selectedConversation.id, "triage")}
+                >
+                  <div className="w-2 h-2 rounded-full bg-purple-500" />
+                  Triagem
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className={cn("text-zapp-text flex items-center gap-2", selectedConversation.status === "active" && "bg-zapp-bg-dark")}
+                  onClick={() => updateConversationStatus(selectedConversation.id, "active")}
+                >
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Em atendimento
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className={cn("text-zapp-text flex items-center gap-2", selectedConversation.status === "closed" && "bg-zapp-bg-dark")}
+                  onClick={() => updateConversationStatus(selectedConversation.id, "closed")}
+                >
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground" />
+                  Finalizado
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="ghost"
               size="icon"

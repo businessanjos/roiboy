@@ -556,7 +556,8 @@ serve(async (req) => {
               .from("zapp_conversation_assignments")
               .update({
                 updated_at: timestamp,
-                status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
+                // If conversation was closed and client sends new message, reopen to triage
+                status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
               })
               .eq("id", existingAssignment.id);
             console.log("Updated existing zapp assignment");
@@ -566,7 +567,7 @@ serve(async (req) => {
               .insert({
                 account_id: accountId,
                 zapp_conversation_id: zappConversationId,
-                status: "waiting",
+                status: "triage", // New conversations start in triage
               });
 
             if (assignmentError) {
@@ -826,7 +827,8 @@ serve(async (req) => {
                 .from("zapp_conversation_assignments")
                 .update({
                   updated_at: timestamp,
-                  status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
+                  // If conversation was closed and client sends new message, reopen to triage
+                  status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
                 })
                 .eq("id", existingAssignment.id);
             } else {
@@ -835,7 +837,7 @@ serve(async (req) => {
                 .insert({
                   account_id: accountId,
                   zapp_conversation_id: zappConversationId,
-                  status: "waiting",
+                  status: "triage", // New conversations start in triage
                 });
             }
           }
