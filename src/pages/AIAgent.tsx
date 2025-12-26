@@ -19,6 +19,7 @@ import {
   Settings2,
   Loader2,
   Users,
+  Scale,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -30,6 +31,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { ScoreSettings } from '@/components/settings/ScoreSettings';
 
 interface AIAgentFunction {
   id: string;
@@ -115,6 +117,7 @@ export default function AIAgent() {
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
   const [hasPromptChanges, setHasPromptChanges] = useState<Record<string, boolean>>({});
   const [showSettings, setShowSettings] = useState(false);
+  const [showScoreSettings, setShowScoreSettings] = useState(false);
   
   // AI Settings state
   const [aiSettings, setAiSettings] = useState<AISettings>(defaultAI);
@@ -355,12 +358,20 @@ export default function AIAgent() {
         </div>
         <div className="flex gap-2">
           <Button 
+            variant={showScoreSettings ? "secondary" : "outline"} 
+            size="sm" 
+            onClick={() => setShowScoreSettings(!showScoreSettings)}
+          >
+            <Scale className="h-4 w-4 mr-2" />
+            Pesos e Limiares
+          </Button>
+          <Button 
             variant={showSettings ? "secondary" : "outline"} 
             size="sm" 
             onClick={() => setShowSettings(!showSettings)}
           >
             <Settings2 className="h-4 w-4 mr-2" />
-            Configurações
+            Configurações IA
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -386,7 +397,27 @@ export default function AIAgent() {
         </CardContent>
       </Card>
 
-      {/* Settings Panel */}
+      {/* Score Settings Panel */}
+      <Collapsible open={showScoreSettings} onOpenChange={setShowScoreSettings}>
+        <CollapsibleContent className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Scale className="h-5 w-5" />
+                Configurações de Score e Risco
+              </CardTitle>
+              <CardDescription>
+                Configure pesos de score, limiares de risco, V-NPS e taxonomia.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScoreSettings />
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* AI Settings Panel */}
       <Collapsible open={showSettings} onOpenChange={setShowSettings}>
         <CollapsibleContent className="space-y-4">
           {/* Model & General Settings */}
