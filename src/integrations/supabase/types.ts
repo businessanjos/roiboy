@@ -5098,7 +5098,9 @@ export type Database = {
           contact_name: string | null
           created_at: string
           external_thread_id: string | null
+          group_jid: string | null
           id: string
+          is_group: boolean
           last_message_at: string | null
           last_message_preview: string | null
           phone_e164: string
@@ -5112,7 +5114,9 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           external_thread_id?: string | null
+          group_jid?: string | null
           id?: string
+          is_group?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
           phone_e164: string
@@ -5126,7 +5130,9 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           external_thread_id?: string | null
+          group_jid?: string | null
           id?: string
+          is_group?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
           phone_e164?: string
@@ -5206,6 +5212,8 @@ export type Database = {
           external_message_id: string | null
           id: string
           message_type: string | null
+          sender_name: string | null
+          sender_phone: string | null
           sent_at: string
           zapp_conversation_id: string
         }
@@ -5217,6 +5225,8 @@ export type Database = {
           external_message_id?: string | null
           id?: string
           message_type?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
           sent_at?: string
           zapp_conversation_id: string
         }
@@ -5228,6 +5238,8 @@ export type Database = {
           external_message_id?: string | null
           id?: string
           message_type?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
           sent_at?: string
           zapp_conversation_id?: string
         }
