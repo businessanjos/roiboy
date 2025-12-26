@@ -57,9 +57,17 @@ interface UazapiWebhookPayload {
     // Nested message content
     conversation?: string;
     extendedTextMessage?: { text?: string };
-    imageMessage?: { caption?: string };
-    videoMessage?: { caption?: string };
-    audioMessage?: { seconds?: number };
+    imageMessage?: { caption?: string; url?: string; mimetype?: string; fileName?: string };
+    videoMessage?: { caption?: string; url?: string; mimetype?: string; fileName?: string };
+    audioMessage?: { seconds?: number; url?: string; mimetype?: string };
+    documentMessage?: { fileName?: string; url?: string; mimetype?: string; caption?: string };
+    stickerMessage?: { url?: string; mimetype?: string };
+    // Media URL at root level (UAZAPI sometimes puts it here)
+    mediaUrl?: string;
+    media_url?: string;
+    url?: string;
+    mimetype?: string;
+    fileName?: string;
   };
   // Alternative message format
   data?: {
@@ -251,8 +259,19 @@ serve(async (req) => {
         
         const contactName = (isGroupMessage ? msg.senderName : chat.name) || "Desconhecido";
         
-        // Extract content from various formats
+        // Extract content and media from various formats
         let content = "";
+        let mediaUrl = "";
+        let mediaType = "";
+        let mediaMimetype = "";
+        let mediaFilename = "";
+        let audioDurationSec: number | null = null;
+        
+        // Check for media URL at various locations
+        mediaUrl = msg.mediaUrl || msg.media_url || msg.url || "";
+        mediaMimetype = msg.mimetype || "";
+        mediaFilename = msg.fileName || "";
+        
         if (typeof msg.body === "string") {
           content = msg.body;
         } else if (typeof msg.content === "string") {
@@ -263,12 +282,35 @@ serve(async (req) => {
           content = msg.conversation;
         } else if (msg.extendedTextMessage?.text) {
           content = msg.extendedTextMessage.text;
-        } else if (msg.imageMessage?.caption) {
-          content = `[Imagem] ${msg.imageMessage.caption}`;
-        } else if (msg.videoMessage?.caption) {
-          content = `[Vídeo] ${msg.videoMessage.caption}`;
+        } else if (msg.imageMessage) {
+          mediaType = "image";
+          mediaUrl = mediaUrl || msg.imageMessage.url || "";
+          mediaMimetype = mediaMimetype || msg.imageMessage.mimetype || "";
+          mediaFilename = mediaFilename || msg.imageMessage.fileName || "";
+          content = msg.imageMessage.caption || "[Imagem]";
+        } else if (msg.videoMessage) {
+          mediaType = "video";
+          mediaUrl = mediaUrl || msg.videoMessage.url || "";
+          mediaMimetype = mediaMimetype || msg.videoMessage.mimetype || "";
+          mediaFilename = mediaFilename || msg.videoMessage.fileName || "";
+          content = msg.videoMessage.caption || "[Vídeo]";
         } else if (msg.audioMessage) {
+          mediaType = "audio";
+          mediaUrl = mediaUrl || msg.audioMessage.url || "";
+          mediaMimetype = mediaMimetype || msg.audioMessage.mimetype || "";
+          audioDurationSec = msg.audioMessage.seconds || null;
           content = "[Áudio]";
+        } else if (msg.documentMessage) {
+          mediaType = "document";
+          mediaUrl = mediaUrl || msg.documentMessage.url || "";
+          mediaMimetype = mediaMimetype || msg.documentMessage.mimetype || "";
+          mediaFilename = mediaFilename || msg.documentMessage.fileName || "";
+          content = msg.documentMessage.caption || `[Documento: ${mediaFilename}]`;
+        } else if (msg.stickerMessage) {
+          mediaType = "sticker";
+          mediaUrl = mediaUrl || msg.stickerMessage.url || "";
+          mediaMimetype = mediaMimetype || msg.stickerMessage.mimetype || "";
+          content = "[Figurinha]";
         } else if (typeof msg.body === "object" && msg.body !== null) {
           // Try to extract from nested structure
           const bodyObj = msg.body as Record<string, unknown>;
@@ -279,6 +321,18 @@ serve(async (req) => {
             if (ext.text) content = String(ext.text);
           }
         }
+        
+        // Detect media type from message type field if not already set
+        if (!mediaType && msg.type) {
+          const msgType = msg.type.toLowerCase();
+          if (msgType.includes("image")) mediaType = "image";
+          else if (msgType.includes("audio") || msgType.includes("ptt")) mediaType = "audio";
+          else if (msgType.includes("video")) mediaType = "video";
+          else if (msgType.includes("document")) mediaType = "document";
+          else if (msgType.includes("sticker")) mediaType = "sticker";
+        }
+        
+        console.log(`Media info - type: ${mediaType}, url: ${mediaUrl?.substring(0, 50)}..., mimetype: ${mediaMimetype}`);
         
         const messageId = msg.id || `${Date.now()}`;
         const timestamp = msg.timestamp 
@@ -428,18 +482,24 @@ serve(async (req) => {
               zapp_conversation_id: zappConversationId,
               direction: direction,
               content: content,
-              message_type: msg.audioMessage ? "audio" : "text",
+              message_type: mediaType || "text",
               external_message_id: messageId,
               sent_at: timestamp,
               // For group messages, store sender info
               sender_phone: isGroupMessage ? phone : null,
               sender_name: isGroupMessage ? contactName : null,
+              // Media fields
+              media_url: mediaUrl || null,
+              media_type: mediaType || null,
+              media_mimetype: mediaMimetype || null,
+              media_filename: mediaFilename || null,
+              audio_duration_sec: audioDurationSec,
             });
 
           if (zappMsgError) {
             console.error("Error saving zapp_message:", zappMsgError);
           } else {
-            console.log("Zapp message saved successfully!");
+            console.log(`Zapp message saved successfully! Media: ${mediaType || 'none'}, URL: ${mediaUrl ? 'yes' : 'no'}`);
           }
 
           // Create or update zapp_conversation_assignment for the queue
