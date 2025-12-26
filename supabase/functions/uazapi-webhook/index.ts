@@ -201,6 +201,25 @@ serve(async (req) => {
         const chat = payload.chat;
         const msg = payload.message;
         
+        // Check if this is a reaction (not a real message)
+        // UAZAPI includes 'reaction' field for message reactions
+        const msgReaction = (msg as Record<string, unknown>).reaction;
+        if (msgReaction && typeof msgReaction === "object" && msgReaction !== null) {
+          console.log(`Ignoring reaction message:`, JSON.stringify(msgReaction));
+          return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+        
+        // Also check messageType for reactions
+        const msgType = (msg as Record<string, unknown>).messageType as string;
+        if (msgType === "reaction" || msgType === "reactionMessage") {
+          console.log(`Ignoring reaction by messageType: ${msgType}`);
+          return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+        
         // Check if this is a group message
         const isGroupMessage = msg.isGroup || chat.wa_isGroup || (chat.wa_chatid?.includes("@g.us"));
         
