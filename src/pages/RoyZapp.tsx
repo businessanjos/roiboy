@@ -530,13 +530,13 @@ export default function RoyZapp() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-48px)] bg-[#111b21]">
+      <div className="flex items-center justify-center h-[calc(100vh-48px)] bg-zapp-bg">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-[#00a884] flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto rounded-full bg-zapp-accent flex items-center justify-center">
             <MessageSquare className="h-8 w-8 text-white" />
           </div>
-          <Loader2 className="h-6 w-6 animate-spin text-[#00a884] mx-auto" />
-          <p className="text-[#8696a0]">Carregando conversas...</p>
+          <Loader2 className="h-6 w-6 animate-spin text-zapp-accent mx-auto" />
+          <p className="text-zapp-text-muted">Carregando conversas...</p>
         </div>
       </div>
     );
@@ -544,7 +544,7 @@ export default function RoyZapp() {
 
   // Render sidebar navigation
   const renderSidebarNav = () => (
-    <div className="bg-[#202c33] border-b border-[#2a3942] p-2 flex items-center gap-1">
+    <div className="bg-zapp-panel-header border-b border-zapp-border p-2 flex items-center gap-1">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -552,7 +552,7 @@ export default function RoyZapp() {
             size="icon"
             className={cn(
               "rounded-full h-10 w-10",
-              activeView === "inbox" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+              activeView === "inbox" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
             )}
             onClick={() => setActiveView("inbox")}
           >
@@ -569,7 +569,7 @@ export default function RoyZapp() {
             size="icon"
             className={cn(
               "rounded-full h-10 w-10",
-              activeView === "team" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+              activeView === "team" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
             )}
             onClick={() => setActiveView("team")}
           >
@@ -586,7 +586,7 @@ export default function RoyZapp() {
             size="icon"
             className={cn(
               "rounded-full h-10 w-10",
-              activeView === "departments" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+              activeView === "departments" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
             )}
             onClick={() => setActiveView("departments")}
           >
@@ -603,7 +603,7 @@ export default function RoyZapp() {
             size="icon"
             className={cn(
               "rounded-full h-10 w-10",
-              activeView === "settings" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+              activeView === "settings" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
             )}
             onClick={() => setActiveView("settings")}
           >
@@ -618,8 +618,8 @@ export default function RoyZapp() {
       {/* Status indicators */}
       <div className="flex items-center gap-3 px-2 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-[#00a884]" />
-          <span className="text-[#8696a0]">{onlineAgents} online</span>
+          <div className="w-2 h-2 rounded-full bg-zapp-accent" />
+          <span className="text-zapp-text-muted">{onlineAgents} online</span>
         </div>
         {pendingConversations > 0 && (
           <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
@@ -632,70 +632,70 @@ export default function RoyZapp() {
 
   // Render conversation list
   const renderConversationList = () => (
-    <div className="flex flex-col h-full bg-[#111b21]">
+    <div className="flex flex-col h-full bg-zapp-bg">
       {/* Header */}
-      <div className="bg-[#202c33] px-4 py-3 flex items-center justify-between">
+      <div className="bg-zapp-panel-header px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             <AvatarImage src={currentUser?.avatar_url || undefined} />
-            <AvatarFallback className="bg-[#00a884] text-white text-sm">
+            <AvatarFallback className="bg-zapp-accent text-white text-sm">
               {currentUser ? getInitials(currentUser.name) : "?"}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="text-white font-medium">ROY zAPP</h2>
-            <p className="text-xs text-[#8696a0]">{activeConversations} em atendimento</p>
+            <h2 className="text-zapp-text font-medium">ROY zAPP</h2>
+            <p className="text-xs text-zapp-text-muted">{activeConversations} em atendimento</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942] rounded-full">
+              <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
                 <Filter className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#233138] border-[#2a3942]">
+            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border">
               <DropdownMenuItem 
-                className={cn("text-[#d1d7db]", filterStatus === "all" && "bg-[#2a3942]")}
+                className={cn("text-zapp-text", filterStatus === "all" && "bg-zapp-bg-dark")}
                 onClick={() => setFilterStatus("all")}
               >
                 Todas
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-[#d1d7db]", filterStatus === "pending" && "bg-[#2a3942]")}
+                className={cn("text-zapp-text", filterStatus === "pending" && "bg-zapp-bg-dark")}
                 onClick={() => setFilterStatus("pending")}
               >
                 Aguardando
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-[#d1d7db]", filterStatus === "active" && "bg-[#2a3942]")}
+                className={cn("text-zapp-text", filterStatus === "active" && "bg-zapp-bg-dark")}
                 onClick={() => setFilterStatus("active")}
               >
                 Em atendimento
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-[#d1d7db]", filterStatus === "waiting" && "bg-[#2a3942]")}
+                className={cn("text-zapp-text", filterStatus === "waiting" && "bg-zapp-bg-dark")}
                 onClick={() => setFilterStatus("waiting")}
               >
                 Aguardando cliente
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942] rounded-full">
+          <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
             <MoreVertical className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
       {/* Search */}
-      <div className="px-3 py-2 bg-[#111b21]">
+      <div className="px-3 py-2 bg-zapp-bg">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8696a0]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
           <Input
             placeholder="Pesquisar ou começar uma nova conversa"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-[#202c33] border-0 text-[#d1d7db] placeholder:text-[#8696a0] focus-visible:ring-0 rounded-lg h-9"
+            className="pl-10 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-9"
           />
         </div>
       </div>
@@ -705,52 +705,52 @@ export default function RoyZapp() {
       {/* Conversation list */}
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
-          <div className="divide-y divide-[#2a3942]">
+          <div className="divide-y divide-zapp-border">
             {filteredAssignments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="w-20 h-20 rounded-full bg-[#202c33] flex items-center justify-center mb-4">
-                  <MessageSquare className="h-10 w-10 text-[#8696a0]" />
+                <div className="w-20 h-20 rounded-full bg-zapp-panel flex items-center justify-center mb-4">
+                  <MessageSquare className="h-10 w-10 text-zapp-text-muted" />
                 </div>
-                <p className="text-[#8696a0] text-sm">Nenhuma conversa encontrada</p>
+                <p className="text-zapp-text-muted text-sm">Nenhuma conversa encontrada</p>
               </div>
             ) : (
               filteredAssignments.map((assignment) => (
                 <div
                   key={assignment.id}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[#202c33] transition-colors",
-                    selectedConversation?.id === assignment.id && "bg-[#2a3942]"
+                    "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zapp-panel transition-colors",
+                    selectedConversation?.id === assignment.id && "bg-zapp-bg-dark"
                   )}
                   onClick={() => setSelectedConversation(assignment)}
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={assignment.conversation?.client?.avatar_url || undefined} />
-                      <AvatarFallback className="bg-[#6b7c85] text-white text-sm">
+                      <AvatarFallback className="bg-muted text-muted-foreground text-sm">
                         {assignment.conversation?.client?.full_name
                           ? getInitials(assignment.conversation.client.full_name)
                           : "?"}
                       </AvatarFallback>
                     </Avatar>
                     {assignment.status === "pending" && (
-                      <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-[#111b21]" />
+                      <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-zapp-bg" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-[#e9edef] font-medium truncate">
+                      <span className="text-zapp-text font-medium truncate">
                         {assignment.conversation?.client?.full_name || "Cliente"}
                       </span>
-                      <span className="text-[#8696a0] text-xs">
+                      <span className="text-zapp-text-muted text-xs">
                         {formatTime(assignment.created_at)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
                       <div className="flex items-center gap-1.5 min-w-0">
                         {assignment.status === "active" && (
-                          <CheckCheck className="h-4 w-4 text-[#53bdeb] flex-shrink-0" />
+                          <CheckCheck className="h-4 w-4 text-info flex-shrink-0" />
                         )}
-                        <span className="text-[#8696a0] text-sm truncate">
+                        <span className="text-zapp-text-muted text-sm truncate">
                           {assignment.last_message || assignment.conversation?.client?.phone_e164 || "Nova conversa"}
                         </span>
                       </div>
@@ -762,7 +762,7 @@ export default function RoyZapp() {
                           />
                         )}
                         {assignment.unread_count && assignment.unread_count > 0 && (
-                          <Badge className="bg-[#00a884] text-white text-[10px] px-1.5 py-0 h-5 min-w-5 flex items-center justify-center">
+                          <Badge className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-5 min-w-5 flex items-center justify-center">
                             {assignment.unread_count}
                           </Badge>
                         )}
@@ -786,10 +786,10 @@ export default function RoyZapp() {
   const renderTeamList = () => (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[#e9edef] font-medium">Equipe de Atendimento</h3>
+        <h3 className="text-zapp-text font-medium">Equipe de Atendimento</h3>
         <Button
           size="sm"
-          className="bg-[#00a884] hover:bg-[#00a884]/90 text-white"
+          className="bg-zapp-accent hover:bg-zapp-accent-hover text-white"
           onClick={() => openAgentDialog()}
           disabled={availableUsers.length === 0}
         >
@@ -800,40 +800,40 @@ export default function RoyZapp() {
 
       {agents.length === 0 ? (
         <div className="text-center py-8">
-          <Users className="h-12 w-12 text-[#8696a0] mx-auto mb-3" />
-          <p className="text-[#8696a0] text-sm">Nenhum atendente cadastrado</p>
+          <Users className="h-12 w-12 text-zapp-text-muted mx-auto mb-3" />
+          <p className="text-zapp-text-muted text-sm">Nenhum atendente cadastrado</p>
         </div>
       ) : (
         <div className="space-y-2">
           {agents.map((agent) => (
             <div
               key={agent.id}
-              className="flex items-center gap-3 p-3 bg-[#202c33] rounded-lg"
+              className="flex items-center gap-3 p-3 bg-zapp-panel rounded-lg"
             >
               <div className="relative">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={agent.user?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-[#6b7c85] text-white text-xs">
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                     {agent.user ? getInitials(agent.user.name) : "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div
                   className={cn(
-                    "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#202c33]",
-                    agent.is_online ? "bg-[#00a884]" : "bg-[#6b7c85]"
+                    "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-zapp-panel",
+                    agent.is_online ? "bg-zapp-accent" : "bg-muted"
                   )}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[#e9edef] text-sm font-medium truncate">
+                  <span className="text-zapp-text text-sm font-medium truncate">
                     {agent.user?.name}
                   </span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-[#2a3942] text-[#8696a0]">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-zapp-border text-zapp-text-muted">
                     {ROLE_LABELS[agent.role]}
                   </Badge>
                 </div>
-                <p className="text-[#8696a0] text-xs truncate">
+                <p className="text-zapp-text-muted text-xs truncate">
                   {agent.department?.name || "Todos os departamentos"} • {agent.current_chats}/{agent.max_concurrent_chats}
                 </p>
               </div>
@@ -841,22 +841,22 @@ export default function RoyZapp() {
                 <Switch
                   checked={agent.is_online}
                   onCheckedChange={() => toggleAgentOnline(agent)}
-                  className="data-[state=checked]:bg-[#00a884]"
+                  className="data-[state=checked]:bg-zapp-accent"
                 />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#8696a0] hover:bg-[#2a3942]">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zapp-text-muted hover:bg-zapp-bg-dark">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[#233138] border-[#2a3942]">
-                    <DropdownMenuItem className="text-[#d1d7db]" onClick={() => openAgentDialog(agent)}>
+                  <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border">
+                    <DropdownMenuItem className="text-zapp-text" onClick={() => openAgentDialog(agent)}>
                       <Pencil className="h-4 w-4 mr-2" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-[#2a3942]" />
+                    <DropdownMenuSeparator className="bg-zapp-border" />
                     <DropdownMenuItem 
-                      className="text-red-400"
+                      className="text-destructive"
                       onClick={() => setDeletingAgentId(agent.id)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -876,10 +876,10 @@ export default function RoyZapp() {
   const renderDepartmentList = () => (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-[#e9edef] font-medium">Departamentos</h3>
+        <h3 className="text-zapp-text font-medium">Departamentos</h3>
         <Button
           size="sm"
-          className="bg-[#00a884] hover:bg-[#00a884]/90 text-white"
+          className="bg-zapp-accent hover:bg-zapp-accent-hover text-white"
           onClick={() => openDepartmentDialog()}
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -889,15 +889,15 @@ export default function RoyZapp() {
 
       {departments.length === 0 ? (
         <div className="text-center py-8">
-          <Building2 className="h-12 w-12 text-[#8696a0] mx-auto mb-3" />
-          <p className="text-[#8696a0] text-sm">Nenhum departamento cadastrado</p>
+          <Building2 className="h-12 w-12 text-zapp-text-muted mx-auto mb-3" />
+          <p className="text-zapp-text-muted text-sm">Nenhum departamento cadastrado</p>
         </div>
       ) : (
         <div className="space-y-2">
           {departments.map((dept) => (
             <div
               key={dept.id}
-              className="p-3 bg-[#202c33] rounded-lg"
+              className="p-3 bg-zapp-panel rounded-lg"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -905,22 +905,22 @@ export default function RoyZapp() {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: dept.color }}
                   />
-                  <span className="text-[#e9edef] font-medium">{dept.name}</span>
+                  <span className="text-zapp-text font-medium">{dept.name}</span>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#8696a0] hover:bg-[#2a3942]">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zapp-text-muted hover:bg-zapp-bg-dark">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[#233138] border-[#2a3942]">
-                    <DropdownMenuItem className="text-[#d1d7db]" onClick={() => openDepartmentDialog(dept)}>
+                  <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border">
+                    <DropdownMenuItem className="text-zapp-text" onClick={() => openDepartmentDialog(dept)}>
                       <Pencil className="h-4 w-4 mr-2" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-[#2a3942]" />
+                    <DropdownMenuSeparator className="bg-zapp-border" />
                     <DropdownMenuItem 
-                      className="text-red-400"
+                      className="text-destructive"
                       onClick={() => setDeletingDepartmentId(dept.id)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -930,9 +930,9 @@ export default function RoyZapp() {
                 </DropdownMenu>
               </div>
               {dept.description && (
-                <p className="text-[#8696a0] text-xs mt-1">{dept.description}</p>
+                <p className="text-zapp-text-muted text-xs mt-1">{dept.description}</p>
               )}
-              <div className="flex items-center gap-4 mt-2 text-xs text-[#8696a0]">
+              <div className="flex items-center gap-4 mt-2 text-xs text-zapp-text-muted">
                 <span>{agents.filter((a) => a.department_id === dept.id).length} atendentes</span>
                 <span>•</span>
                 <span>{dept.auto_distribution ? "Distribuição automática" : "Manual"}</span>
@@ -947,31 +947,31 @@ export default function RoyZapp() {
   // Render settings panel
   const renderSettingsPanel = () => (
     <div className="p-4 space-y-6">
-      <h3 className="text-[#e9edef] font-medium">Configurações</h3>
+      <h3 className="text-zapp-text font-medium">Configurações</h3>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-3 bg-[#202c33] rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
           <div>
-            <p className="text-[#e9edef] text-sm">Distribuição round-robin</p>
-            <p className="text-[#8696a0] text-xs">Distribui igualmente entre atendentes</p>
+            <p className="text-zapp-text text-sm">Distribuição round-robin</p>
+            <p className="text-zapp-text-muted text-xs">Distribui igualmente entre atendentes</p>
           </div>
-          <Switch defaultChecked className="data-[state=checked]:bg-[#00a884]" />
+          <Switch defaultChecked className="data-[state=checked]:bg-zapp-accent" />
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-[#202c33] rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
           <div>
-            <p className="text-[#e9edef] text-sm">Respeitar limite</p>
-            <p className="text-[#8696a0] text-xs">Não atribuir se atingiu o máximo</p>
+            <p className="text-zapp-text text-sm">Respeitar limite</p>
+            <p className="text-zapp-text-muted text-xs">Não atribuir se atingiu o máximo</p>
           </div>
-          <Switch defaultChecked className="data-[state=checked]:bg-[#00a884]" />
+          <Switch defaultChecked className="data-[state=checked]:bg-zapp-accent" />
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-[#202c33] rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
           <div>
-            <p className="text-[#e9edef] text-sm">Som de nova conversa</p>
-            <p className="text-[#8696a0] text-xs">Tocar som ao receber mensagem</p>
+            <p className="text-zapp-text text-sm">Som de nova conversa</p>
+            <p className="text-zapp-text-muted text-xs">Tocar som ao receber mensagem</p>
           </div>
-          <Switch defaultChecked className="data-[state=checked]:bg-[#00a884]" />
+          <Switch defaultChecked className="data-[state=checked]:bg-zapp-accent" />
         </div>
       </div>
     </div>
@@ -981,35 +981,30 @@ export default function RoyZapp() {
   const renderChatView = () => {
     if (!selectedConversation) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#222e35] relative overflow-hidden">
-          {/* Background pattern */}
-          <div className="absolute inset-0 opacity-5" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
-          
+        <div className="flex-1 flex flex-col items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
           <div className="relative z-10 text-center px-8 max-w-md">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[#00a884]/10 flex items-center justify-center">
-              <MessageSquare className="h-12 w-12 text-[#00a884]" />
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-zapp-accent/10 flex items-center justify-center">
+              <MessageSquare className="h-12 w-12 text-zapp-accent" />
             </div>
-            <h2 className="text-[#e9edef] text-2xl font-light mb-3">ROY zAPP</h2>
-            <p className="text-[#8696a0] text-sm leading-relaxed">
+            <h2 className="text-zapp-text text-2xl font-light mb-3">ROY zAPP</h2>
+            <p className="text-zapp-text-muted text-sm leading-relaxed">
               Selecione uma conversa para começar a atender. Suas mensagens serão enviadas em nome da conta principal do WhatsApp.
             </p>
           </div>
 
           {/* Stats bar */}
-          <div className="absolute bottom-0 left-0 right-0 bg-[#202c33] px-6 py-4 flex items-center justify-center gap-8 text-sm">
+          <div className="absolute bottom-0 left-0 right-0 bg-zapp-panel-header px-6 py-4 flex items-center justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#00a884]" />
-              <span className="text-[#8696a0]">{onlineAgents} atendentes online</span>
+              <div className="w-3 h-3 rounded-full bg-zapp-accent" />
+              <span className="text-zapp-text-muted">{onlineAgents} atendentes online</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-500" />
-              <span className="text-[#8696a0]">{pendingConversations} aguardando</span>
+              <span className="text-zapp-text-muted">{pendingConversations} aguardando</span>
             </div>
             <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-[#00a884]" />
-              <span className="text-[#8696a0]">{activeConversations} em atendimento</span>
+              <MessageSquare className="h-4 w-4 text-zapp-accent" />
+              <span className="text-zapp-text-muted">{activeConversations} em atendimento</span>
             </div>
           </div>
         </div>
@@ -1017,11 +1012,9 @@ export default function RoyZapp() {
     }
 
     return (
-      <div className="flex-1 flex flex-col bg-[#0b141a]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='412' height='412' viewBox='0 0 412 412' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M0 0h206v206H0V0zm206 206h206v206H206V206z'/%3E%3C/g%3E%3C/svg%3E")`,
-      }}>
+      <div className="flex-1 flex flex-col bg-zapp-bg">
         {/* Chat header */}
-        <div className="bg-[#202c33] px-4 py-2 flex items-center gap-3 border-b border-[#2a3942]">
+        <div className="bg-zapp-panel-header px-4 py-2 flex items-center gap-3 border-b border-zapp-border">
           <Button
             variant="ghost"
             size="icon"
@@ -1162,10 +1155,10 @@ export default function RoyZapp() {
   };
 
   return (
-    <div className="h-[calc(100vh-48px)] flex bg-[#111b21] overflow-hidden">
+    <div className="h-[calc(100vh-48px)] flex bg-zapp-bg overflow-hidden">
       {/* Left panel - Conversation list */}
       <div className={cn(
-        "w-full lg:w-[400px] flex-shrink-0 border-r border-[#2a3942] flex flex-col",
+        "w-full lg:w-[400px] flex-shrink-0 border-r border-zapp-border flex flex-col",
         selectedConversation && "hidden lg:flex"
       )}>
         {renderConversationList()}
