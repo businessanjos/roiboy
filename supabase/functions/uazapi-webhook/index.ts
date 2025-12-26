@@ -203,29 +203,34 @@ serve(async (req) => {
         console.log("Chat phone:", chat.phone, "Sender:", msg.sender, "Sender PN:", msg.sender_pn);
         console.log("Message body type:", typeof msg.body, "Message content type:", typeof msg.content);
         
-        // Skip outgoing messages
-        if (msg.fromMe) {
-          console.log("Skipping outgoing message");
-          return new Response(JSON.stringify({ ignored: true, reason: "outgoing" }), { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          });
-        }
+        // Determine message direction (fromMe = sent by us)
+        const direction = msg.fromMe ? "outbound" : "inbound";
+        console.log(`Message direction: ${direction}`);
+        
+        // For outbound messages, we still need to process them to show in conversation
         
         // Extract phone - for group messages, use sender; for direct messages, use chat.phone
+        // For outbound messages, we use the destination (chat.phone/wa_chatid)
         let phone = "";
         
         if (isGroupMessage) {
-          // For group messages, extract sender's phone from sender or sender_pn field
-          phone = normalizePhone(msg.sender_pn) || normalizePhone(msg.sender);
-          
-          // sender might be in format "5511999999999@s.whatsapp.net"
-          if (!phone && msg.sender) {
-            const senderMatch = msg.sender.match(/^(\d{10,15})/);
-            if (senderMatch) {
-              phone = `+${senderMatch[1]}`;
+          if (direction === "outbound") {
+            // For outbound group messages, we don't need sender phone
+            // We use the group's info instead
+            phone = ""; // Will be handled separately for groups
+          } else {
+            // For inbound group messages, extract sender's phone from sender or sender_pn field
+            phone = normalizePhone(msg.sender_pn) || normalizePhone(msg.sender);
+            
+            // sender might be in format "5511999999999@s.whatsapp.net"
+            if (!phone && msg.sender) {
+              const senderMatch = msg.sender.match(/^(\d{10,15})/);
+              if (senderMatch) {
+                phone = `+${senderMatch[1]}`;
+              }
             }
+            console.log(`Group message - extracted sender phone: ${phone}`);
           }
-          console.log(`Group message - extracted sender phone: ${phone}`);
         } else {
           // For direct messages, use chat.phone
           phone = normalizePhone(chat.phone) || normalizePhone(chat.jid) || normalizePhone(chat.number);
@@ -236,6 +241,11 @@ serve(async (req) => {
             if (idMatch) {
               phone = `+${idMatch[1]}`;
             }
+          }
+          
+          // Try to extract from wa_chatid for direct messages
+          if (!phone && chat.wa_chatid && !isGroupJid(chat.wa_chatid)) {
+            phone = extractPhoneFromJid(chat.wa_chatid);
           }
         }
         
@@ -277,14 +287,32 @@ serve(async (req) => {
 
         console.log(`Extracted - phone: ${phone}, content: ${content.substring(0, 50)}...`);
 
-        if (!phone || !content) {
-          console.log(`Skipping message: no phone (${phone}) or content (${content})`);
+        // For outbound messages in groups, we don't need a phone, just the group identifier
+        // For direct outbound messages, we need phone
+        // For inbound messages, we always need phone and content
+        if (direction === "inbound" && (!phone || !content)) {
+          console.log(`Skipping inbound message: no phone (${phone}) or content (${content})`);
           return new Response(JSON.stringify({ ignored: true, reason: "missing_data" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
+        
+        if (direction === "outbound" && !content) {
+          console.log(`Skipping outbound message: no content`);
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_content" }), { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+        
+        // For direct outbound messages, we need the destination phone
+        if (direction === "outbound" && !isGroupMessage && !phone) {
+          console.log(`Skipping outbound direct message: no destination phone`);
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_phone" }), { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
 
-        console.log(`Processing message from ${phone} (${contactName}): ${content.substring(0, 50)}...`);
+        console.log(`Processing ${direction} message ${isGroupMessage ? 'in group' : 'from/to ' + phone} (${contactName}): ${content.substring(0, 50)}...`);
 
         // ============================================
         // ZAPP: Save ALL conversations (client or not)
@@ -327,17 +355,26 @@ serve(async (req) => {
         if (existingZappConvo) {
           zappConversationId = existingZappConvo.id;
           
-          // Update last message info and increment unread count
+          // Update last message info
+          // Only increment unread count for inbound messages
+          const updateData: Record<string, unknown> = {
+            last_message_at: timestamp,
+            last_message_preview: direction === "outbound"
+              ? `Você: ${content.substring(0, 80)}`
+              : (isGroupMessage 
+                  ? `${contactName}: ${content.substring(0, 80)}`
+                  : content.substring(0, 100)),
+          };
+          
+          // Only update contact_name for inbound messages
+          if (direction === "inbound") {
+            updateData.contact_name = isGroupMessage ? groupName : contactName;
+            updateData.unread_count = (existingZappConvo.unread_count || 0) + 1;
+          }
+          
           await supabase
             .from("zapp_conversations")
-            .update({
-              last_message_at: timestamp,
-              last_message_preview: isGroupMessage 
-                ? `${contactName}: ${content.substring(0, 80)}`
-                : content.substring(0, 100),
-              contact_name: isGroupMessage ? groupName : contactName,
-              unread_count: (existingZappConvo.unread_count || 0) + 1,
-            })
+            .update(updateData)
             .eq("id", zappConversationId);
         } else {
           // Find client if exists (to link) - only for direct messages
@@ -364,10 +401,12 @@ serve(async (req) => {
               is_group: isGroupMessage,
               group_jid: groupJid,
               last_message_at: timestamp,
-              last_message_preview: isGroupMessage 
-                ? `${contactName}: ${content.substring(0, 80)}`
-                : content.substring(0, 100),
-              unread_count: 1,
+              last_message_preview: direction === "outbound"
+                ? `Você: ${content.substring(0, 80)}`
+                : (isGroupMessage 
+                    ? `${contactName}: ${content.substring(0, 80)}`
+                    : content.substring(0, 100)),
+              unread_count: direction === "inbound" ? 1 : 0,
             })
             .select("id")
             .single();
@@ -387,7 +426,7 @@ serve(async (req) => {
             .insert({
               account_id: accountId,
               zapp_conversation_id: zappConversationId,
-              direction: "inbound",
+              direction: direction,
               content: content,
               message_type: msg.audioMessage ? "audio" : "text",
               external_message_id: messageId,
@@ -438,89 +477,94 @@ serve(async (req) => {
         }
 
         // ============================================
-        // CLIENT ANALYSIS: Only for registered clients
+        // CLIENT ANALYSIS: Only for registered clients (inbound messages)
         // ============================================
         
-        const { data: existingClient } = await supabase
-          .from("clients")
-          .select("id")
-          .eq("account_id", accountId)
-          .eq("phone_e164", phone)
-          .maybeSingle();
-
-        if (existingClient) {
-          const clientId = existingClient.id;
-          console.log(`Found existing client: ${clientId} - saving to message_events for AI analysis`);
-
-          // Find or create conversation (for client analysis)
-          let conversationId: string | null = null;
-          
-          const { data: existingConvo } = await supabase
-            .from("conversations")
+        // Only process client analysis for inbound messages with a phone
+        if (direction === "inbound" && phone) {
+          const { data: existingClient } = await supabase
+            .from("clients")
             .select("id")
             .eq("account_id", accountId)
-            .eq("client_id", clientId)
-            .eq("channel", "whatsapp")
+            .eq("phone_e164", phone)
             .maybeSingle();
 
-          if (existingConvo) {
-            conversationId = existingConvo.id;
-          } else {
-            const { data: newConvo } = await supabase
+          if (existingClient) {
+            const clientId = existingClient.id;
+            console.log(`Found existing client: ${clientId} - saving to message_events for AI analysis`);
+
+            // Find or create conversation (for client analysis)
+            let conversationId: string | null = null;
+            
+            const { data: existingConvo } = await supabase
               .from("conversations")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("client_id", clientId)
+              .eq("channel", "whatsapp")
+              .maybeSingle();
+
+            if (existingConvo) {
+              conversationId = existingConvo.id;
+            } else {
+              const { data: newConvo } = await supabase
+                .from("conversations")
+                .insert({
+                  account_id: accountId,
+                  client_id: clientId,
+                  channel: "whatsapp",
+                  external_thread_id: chat.id,
+                })
+                .select("id")
+                .single();
+
+              if (newConvo) {
+                conversationId = newConvo.id;
+              }
+            }
+
+            // Insert message event for AI analysis
+            const { error: messageError } = await supabase
+              .from("message_events")
               .insert({
                 account_id: accountId,
                 client_id: clientId,
-                channel: "whatsapp",
-                external_thread_id: chat.id,
-              })
-              .select("id")
-              .single();
-
-            if (newConvo) {
-              conversationId = newConvo.id;
-            }
-          }
-
-          // Insert message event for AI analysis
-          const { error: messageError } = await supabase
-            .from("message_events")
-            .insert({
-              account_id: accountId,
-              client_id: clientId,
-              conversation_id: conversationId,
-              source: "whatsapp_text",
-              direction: "client_to_team",
-              content_text: content,
-              sent_at: timestamp,
-            });
-
-          if (messageError) {
-            console.error("Error inserting message_event:", messageError);
-          }
-
-          // Trigger AI analysis for text messages
-          if (content.length > 10 && !content.startsWith("[")) {
-            try {
-              await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${supabaseKey}`,
-                },
-                body: JSON.stringify({
-                  account_id: accountId,
-                  client_id: clientId,
-                  message_content: content,
-                }),
+                conversation_id: conversationId,
+                source: "whatsapp_text",
+                direction: "client_to_team",
+                content_text: content,
+                sent_at: timestamp,
               });
-              console.log("AI analysis triggered");
-            } catch (err) {
-              console.log("AI analysis trigger error (non-blocking):", err);
+
+            if (messageError) {
+              console.error("Error inserting message_event:", messageError);
             }
+
+            // Trigger AI analysis for text messages
+            if (content.length > 10 && !content.startsWith("[")) {
+              try {
+                await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${supabaseKey}`,
+                  },
+                  body: JSON.stringify({
+                    account_id: accountId,
+                    client_id: clientId,
+                    message_content: content,
+                  }),
+                });
+                console.log("AI analysis triggered");
+              } catch (err) {
+                console.log("AI analysis trigger error (non-blocking):", err);
+              }
+            }
+          } else {
+            console.log(`Message from ${phone} saved to Zapp only (not a registered client)`);
           }
-        } else {
-          console.log(`Message from ${phone} saved to Zapp only (not a registered client)`);
+        } else if (direction === "outbound") {
+          console.log(`Outbound message saved to Zapp`);
         }
 
         return new Response(
