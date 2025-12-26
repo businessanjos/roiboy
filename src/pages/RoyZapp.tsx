@@ -184,6 +184,7 @@ export default function RoyZapp() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   const [messageInput, setMessageInput] = useState("");
+  const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
 
   // Department dialog state
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -488,20 +489,31 @@ export default function RoyZapp() {
     (user) => !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id
   );
 
-  // Filtered conversations
+  // Get current user's agent record
+  const currentAgent = useMemo(() => {
+    return agents.find((a) => a.user_id === currentUser?.id);
+  }, [agents, currentUser?.id]);
+
+  // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
+      // Tab filter: "mine" = assigned to current agent, "queue" = pending without agent
+      const matchesTab = inboxTab === "mine" 
+        ? a.agent_id === currentAgent?.id
+        : a.status === "pending" && !a.agent_id;
+      
       const matchesSearch = searchQuery === "" ||
         a.conversation?.client?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.conversation?.client?.phone_e164?.includes(searchQuery);
       const matchesStatus = filterStatus === "all" || a.status === filterStatus;
-      return matchesSearch && matchesStatus;
+      return matchesTab && matchesSearch && matchesStatus;
     });
-  }, [assignments, searchQuery, filterStatus]);
+  }, [assignments, searchQuery, filterStatus, inboxTab, currentAgent?.id]);
 
   // Stats
   const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
-  const pendingConversations = assignments.filter((a) => a.status === "pending").length;
+  const pendingConversations = assignments.filter((a) => a.status === "pending" && !a.agent_id).length;
+  const myConversations = assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
   const activeConversations = assignments.filter((a) => a.status === "active").length;
 
   const getInitials = (name: string) =>
@@ -687,12 +699,58 @@ export default function RoyZapp() {
         </div>
       </div>
 
+      {/* Tabs: Minhas | Fila */}
+      <div className="flex border-b border-zapp-border bg-zapp-bg">
+        <button
+          onClick={() => setInboxTab("mine")}
+          className={cn(
+            "flex-1 py-3 text-sm font-medium transition-colors relative",
+            inboxTab === "mine" 
+              ? "text-zapp-accent" 
+              : "text-zapp-text-muted hover:text-zapp-text"
+          )}
+        >
+          <span className="flex items-center justify-center gap-2">
+            Minhas
+            {myConversations > 0 && (
+              <Badge variant="secondary" className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
+                {myConversations}
+              </Badge>
+            )}
+          </span>
+          {inboxTab === "mine" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
+          )}
+        </button>
+        <button
+          onClick={() => setInboxTab("queue")}
+          className={cn(
+            "flex-1 py-3 text-sm font-medium transition-colors relative",
+            inboxTab === "queue" 
+              ? "text-zapp-accent" 
+              : "text-zapp-text-muted hover:text-zapp-text"
+          )}
+        >
+          <span className="flex items-center justify-center gap-2">
+            Fila
+            {pendingConversations > 0 && (
+              <Badge variant="secondary" className="bg-amber-500 text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
+                {pendingConversations}
+              </Badge>
+            )}
+          </span>
+          {inboxTab === "queue" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
+          )}
+        </button>
+      </div>
+
       {/* Search */}
       <div className="px-3 py-2 bg-zapp-bg">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
           <Input
-            placeholder="Pesquisar ou começar uma nova conversa"
+            placeholder="Pesquisar conversa..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-9"
