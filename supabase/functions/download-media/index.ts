@@ -46,7 +46,7 @@ serve(async (req) => {
     // Fetch messages that need processing
     const { data: messages, error: fetchError } = await supabase
       .from("zapp_messages")
-      .select("id, media_type, media_encrypted_url, media_key, media_mimetype, conversation_id")
+      .select("id, media_type, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id")
       .in("id", idsToProcess)
       .eq("media_download_status", "pending")
       .not("media_encrypted_url", "is", null);
@@ -160,11 +160,11 @@ serve(async (req) => {
 
         // Upload to storage if data is valid
         if (finalData.byteLength > 100) {
-          // Get account_id from conversation
+        // Get account_id from conversation
           const { data: convo } = await supabase
             .from("zapp_conversations")
             .select("account_id")
-            .eq("id", msg.conversation_id)
+            .eq("id", msg.zapp_conversation_id)
             .single();
 
           const accountId = convo?.account_id || "unknown";
