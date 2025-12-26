@@ -47,9 +47,6 @@ interface AIAgentFunction {
 interface AISettings {
   model: string;
   system_prompt: string;
-  roi_prompt: string;
-  risk_prompt: string;
-  life_events_prompt: string;
   analysis_frequency: string;
   min_message_length: number;
   confidence_threshold: number;
@@ -59,13 +56,17 @@ interface AISettings {
 const defaultAI: AISettings = {
   model: "google/gemini-2.5-flash",
   system_prompt: "Você é um analisador de mensagens de WhatsApp especializado em detectar percepção de ROI, riscos de churn e momentos de vida importantes dos clientes.",
-  roi_prompt: "Identifique menções a ganhos tangíveis (receita, economia, tempo) ou intangíveis (confiança, clareza, tranquilidade) que o cliente obteve.",
-  risk_prompt: "Detecte sinais de frustração, insatisfação, comparação com concorrentes, hesitação em continuar, ou mudanças de tom negativas.",
-  life_events_prompt: "Identifique menções a eventos de vida significativos como aniversários, casamentos, gravidez, mudança de emprego, viagens importantes.",
   analysis_frequency: "realtime",
   min_message_length: 20,
   confidence_threshold: 0.7,
   auto_analysis_enabled: true,
+};
+
+// Mapeamento de function_key para campos de prompt no account_settings
+const FUNCTION_PROMPT_FIELDS: Record<string, string> = {
+  roi_detection: 'ai_roi_prompt',
+  risk_detection: 'ai_risk_prompt',
+  life_events: 'ai_life_events_prompt',
 };
 
 const AI_MODELS = [
@@ -107,13 +108,16 @@ export default function AIAgent() {
   const queryClient = useQueryClient();
   const [expandedFunctions, setExpandedFunctions] = useState<Record<string, boolean>>({});
   const [editedInstructions, setEditedInstructions] = useState<Record<string, string>>({});
+  const [editedPrompts, setEditedPrompts] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
+  const [hasPromptChanges, setHasPromptChanges] = useState<Record<string, boolean>>({});
   const [showSettings, setShowSettings] = useState(false);
   
   // AI Settings state
   const [aiSettings, setAiSettings] = useState<AISettings>(defaultAI);
   const [hasSettingsChanges, setHasSettingsChanges] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [savingPrompt, setSavingPrompt] = useState<string | null>(null);
 
   // Fetch AI functions
   const { data: functions, isLoading, refetch } = useQuery({
@@ -166,13 +170,17 @@ export default function AIAgent() {
       setAiSettings({
         model: (accountSettings as any).ai_model || defaultAI.model,
         system_prompt: (accountSettings as any).ai_system_prompt || defaultAI.system_prompt,
-        roi_prompt: (accountSettings as any).ai_roi_prompt || defaultAI.roi_prompt,
-        risk_prompt: (accountSettings as any).ai_risk_prompt || defaultAI.risk_prompt,
-        life_events_prompt: (accountSettings as any).ai_life_events_prompt || defaultAI.life_events_prompt,
         analysis_frequency: (accountSettings as any).ai_analysis_frequency || defaultAI.analysis_frequency,
         min_message_length: (accountSettings as any).ai_min_message_length ?? defaultAI.min_message_length,
         confidence_threshold: Number((accountSettings as any).ai_confidence_threshold) || defaultAI.confidence_threshold,
         auto_analysis_enabled: (accountSettings as any).ai_auto_analysis_enabled ?? defaultAI.auto_analysis_enabled,
+      });
+      
+      // Initialize prompts for specific functions
+      setEditedPrompts({
+        roi_detection: (accountSettings as any).ai_roi_prompt || '',
+        risk_detection: (accountSettings as any).ai_risk_prompt || '',
+        life_events: (accountSettings as any).ai_life_events_prompt || '',
       });
     }
   }, [accountSettings]);
@@ -201,9 +209,6 @@ export default function AIAgent() {
         .update({
           ai_model: aiSettings.model,
           ai_system_prompt: aiSettings.system_prompt,
-          ai_roi_prompt: aiSettings.roi_prompt,
-          ai_risk_prompt: aiSettings.risk_prompt,
-          ai_life_events_prompt: aiSettings.life_events_prompt,
           ai_analysis_frequency: aiSettings.analysis_frequency,
           ai_min_message_length: aiSettings.min_message_length,
           ai_confidence_threshold: aiSettings.confidence_threshold,
@@ -278,6 +283,37 @@ export default function AIAgent() {
 
   const toggleExpanded = (id: string) => {
     setExpandedFunctions(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Handle prompt changes for functions with specific prompts
+  const handlePromptChange = (functionKey: string, value: string) => {
+    setEditedPrompts(prev => ({ ...prev, [functionKey]: value }));
+    const original = (accountSettings as any)?.[FUNCTION_PROMPT_FIELDS[functionKey]] || '';
+    setHasPromptChanges(prev => ({ ...prev, [functionKey]: value !== original }));
+  };
+
+  // Save prompt for a specific function
+  const handleSavePrompt = async (functionKey: string) => {
+    const field = FUNCTION_PROMPT_FIELDS[functionKey];
+    if (!field) return;
+
+    setSavingPrompt(functionKey);
+    try {
+      const { error } = await supabase
+        .from('account_settings')
+        .update({ [field]: editedPrompts[functionKey] } as any)
+        .eq('account_id', accountId);
+
+      if (error) throw error;
+
+      setHasPromptChanges(prev => ({ ...prev, [functionKey]: false }));
+      queryClient.invalidateQueries({ queryKey: ['account-settings-ai'] });
+      toast.success('Composição salva');
+    } catch (err) {
+      console.error('Error saving prompt:', err);
+      toast.error('Erro ao salvar composição');
+    }
+    setSavingPrompt(null);
   };
 
   if (isLoading) {
@@ -539,10 +575,47 @@ export default function AIAgent() {
                     )}
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3 space-y-3">
+                <CollapsibleContent className="pt-3 space-y-4">
+                  {/* Composição/Prompt específico da função (se aplicável) */}
+                  {FUNCTION_PROMPT_FIELDS[fn.function_key] && (
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <MessageSquareText className="h-4 w-4" />
+                        Composição do Prompt
+                      </label>
+                      <Textarea
+                        value={editedPrompts[fn.function_key] || ''}
+                        onChange={(e) => handlePromptChange(fn.function_key, e.target.value)}
+                        placeholder="Defina como a IA deve identificar e classificar este tipo de evento..."
+                        className="min-h-[100px] font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Este prompt é enviado diretamente para a IA definir o contexto de análise desta função.
+                      </p>
+                      {hasPromptChanges[fn.function_key] && (
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleSavePrompt(fn.function_key)}
+                            disabled={savingPrompt === fn.function_key}
+                          >
+                            {savingPrompt === fn.function_key ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Salvar composição
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Instruções da função */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Instruções para a IA
+                      Instruções detalhadas
                     </label>
                     <Textarea
                       value={editedInstructions[fn.id] || ''}
