@@ -4229,20 +4229,20 @@ export default function RoyZapp() {
 
       {/* Transfer Dialog */}
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+        <DialogContent className="bg-zapp-bg border-zapp-border text-zapp-text">
           <DialogHeader>
-            <DialogTitle>Transferir Conversa</DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
+            <DialogTitle className="text-zapp-text">Transferir Conversa</DialogTitle>
+            <DialogDescription className="text-zapp-text-muted">
               Selecione para quem transferir
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Tabs defaultValue="agent" onValueChange={(v) => setTransferTarget({ ...transferTarget, type: v as "agent" | "department" })}>
-              <TabsList className="w-full bg-[#202c33]">
-                <TabsTrigger value="agent" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+              <TabsList className="w-full bg-zapp-bg-dark">
+                <TabsTrigger value="agent" className="flex-1 data-[state=active]:bg-zapp-accent data-[state=active]:text-zapp-bg-dark ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                   Atendente
                 </TabsTrigger>
-                <TabsTrigger value="department" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <TabsTrigger value="department" className="flex-1 data-[state=active]:bg-zapp-accent data-[state=active]:text-zapp-bg-dark ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                   Departamento
                 </TabsTrigger>
               </TabsList>
@@ -4251,14 +4251,14 @@ export default function RoyZapp() {
                   value={transferTarget.id}
                   onValueChange={(value) => setTransferTarget({ ...transferTarget, id: value })}
                 >
-                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectTrigger className="bg-zapp-bg-dark border-zapp-border text-zapp-text">
                     <SelectValue placeholder="Selecione um atendente" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                  <SelectContent className="bg-zapp-panel border-zapp-border">
                     {agents.filter(a => a.is_online && a.id !== selectedConversation?.agent_id).map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id} className="text-[#e9edef]">
+                      <SelectItem key={agent.id} value={agent.id} className="text-zapp-text">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-[#00a884]" />
+                          <div className="w-2 h-2 rounded-full bg-zapp-accent" />
                           {agent.user?.name}
                         </div>
                       </SelectItem>
@@ -4271,12 +4271,12 @@ export default function RoyZapp() {
                   value={transferTarget.id}
                   onValueChange={(value) => setTransferTarget({ ...transferTarget, id: value })}
                 >
-                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectTrigger className="bg-zapp-bg-dark border-zapp-border text-zapp-text">
                     <SelectValue placeholder="Selecione um departamento" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                  <SelectContent className="bg-zapp-panel border-zapp-border">
                     {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id} className="text-[#e9edef]">
+                      <SelectItem key={dept.id} value={dept.id} className="text-zapp-text">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dept.color }} />
                           {dept.name}
@@ -4289,10 +4289,10 @@ export default function RoyZapp() {
             </Tabs>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTransferDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+            <Button variant="outline" onClick={() => setTransferDialogOpen(false)} className="border-zapp-border text-zapp-text-muted hover:bg-zapp-hover">
               Cancelar
             </Button>
-            <Button className="bg-[#00a884] hover:bg-[#00a884]/90 text-white border-0 ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" disabled={!transferTarget.id}>
+            <Button className="bg-zapp-accent hover:bg-zapp-accent-hover text-zapp-bg-dark border-0 ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" disabled={!transferTarget.id}>
               Transferir
             </Button>
           </DialogFooter>
