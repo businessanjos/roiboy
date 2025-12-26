@@ -261,6 +261,20 @@ export default function RoyZapp() {
   const [showFormatting, setShowFormatting] = useState(false);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
+  
+  // Distribution settings state (persisted to localStorage)
+  const [roundRobinEnabled, setRoundRobinEnabled] = useState(() => {
+    const saved = localStorage.getItem("zapp_roundRobin");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [respectLimitEnabled, setRespectLimitEnabled] = useState(() => {
+    const saved = localStorage.getItem("zapp_respectLimit");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem("zapp_sound");
+    return saved !== null ? saved === "true" : true;
+  });
 
   // Department dialog state
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -2021,7 +2035,14 @@ export default function RoyZapp() {
             <p className="text-zapp-text text-sm">Distribuição round-robin</p>
             <p className="text-zapp-text-muted text-xs">Distribui igualmente entre atendentes</p>
           </div>
-          <Switch defaultChecked className="data-[state=checked]:bg-zapp-accent" />
+          <Switch 
+            checked={roundRobinEnabled} 
+            onCheckedChange={(checked) => {
+              setRoundRobinEnabled(checked);
+              localStorage.setItem("zapp_roundRobin", String(checked));
+            }}
+            className="data-[state=checked]:bg-zapp-accent" 
+          />
         </div>
 
         <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
@@ -2029,7 +2050,14 @@ export default function RoyZapp() {
             <p className="text-zapp-text text-sm">Respeitar limite</p>
             <p className="text-zapp-text-muted text-xs">Não atribuir se atingiu o máximo</p>
           </div>
-          <Switch defaultChecked className="data-[state=checked]:bg-zapp-accent" />
+          <Switch 
+            checked={respectLimitEnabled} 
+            onCheckedChange={(checked) => {
+              setRespectLimitEnabled(checked);
+              localStorage.setItem("zapp_respectLimit", String(checked));
+            }}
+            className="data-[state=checked]:bg-zapp-accent" 
+          />
         </div>
 
         <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
@@ -2037,7 +2065,14 @@ export default function RoyZapp() {
             <p className="text-zapp-text text-sm">Som de nova conversa</p>
             <p className="text-zapp-text-muted text-xs">Tocar som ao receber mensagem</p>
           </div>
-          <Switch defaultChecked className="data-[state=checked]:bg-zapp-accent" />
+          <Switch 
+            checked={soundEnabled} 
+            onCheckedChange={(checked) => {
+              setSoundEnabled(checked);
+              localStorage.setItem("zapp_sound", String(checked));
+            }}
+            className="data-[state=checked]:bg-zapp-accent" 
+          />
         </div>
       </div>
     </div>
