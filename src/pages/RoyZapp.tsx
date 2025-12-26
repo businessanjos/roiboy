@@ -1449,55 +1449,6 @@ export default function RoyZapp() {
         <TooltipContent side="bottom">{filterGroups ? "Mostrar todas" : "Filtrar grupos"}</TooltipContent>
       </Tooltip>
 
-      {/* More menu with Team, Departments and Settings */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              (activeView === "team" || activeView === "departments" || activeView === "settings") 
-                ? "bg-zapp-panel text-zapp-accent" 
-                : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-          >
-            <MoreVertical className="h-5 w-5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="bg-zapp-panel border-zapp-border z-50">
-          <DropdownMenuItem 
-            className={cn(
-              "text-zapp-text hover:bg-zapp-hover",
-              activeView === "team" && "bg-zapp-bg-dark"
-            )}
-            onClick={() => setActiveView("team")}
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Equipe
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className={cn(
-              "text-zapp-text hover:bg-zapp-hover",
-              activeView === "departments" && "bg-zapp-bg-dark"
-            )}
-            onClick={() => setActiveView("departments")}
-          >
-            <Building2 className="h-4 w-4 mr-2" />
-            Departamentos
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className={cn(
-              "text-zapp-text hover:bg-zapp-hover",
-              activeView === "settings" && "bg-zapp-bg-dark"
-            )}
-            onClick={() => setActiveView("settings")}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Configurações
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
 
       <div className="flex-1" />
 
@@ -1661,9 +1612,52 @@ export default function RoyZapp() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
-            <MoreVertical className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={cn(
+                  "text-zapp-text-muted hover:bg-zapp-panel rounded-full",
+                  (activeView === "team" || activeView === "departments" || activeView === "settings") && "text-zapp-accent"
+                )}
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text hover:bg-zapp-hover",
+                  activeView === "team" && "bg-zapp-bg-dark"
+                )}
+                onClick={() => setActiveView("team")}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Equipe
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text hover:bg-zapp-hover",
+                  activeView === "departments" && "bg-zapp-bg-dark"
+                )}
+                onClick={() => setActiveView("departments")}
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Departamentos
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text hover:bg-zapp-hover",
+                  activeView === "settings" && "bg-zapp-bg-dark"
+                )}
+                onClick={() => setActiveView("settings")}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configurações
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
