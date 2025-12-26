@@ -4825,9 +4825,12 @@ export type Database = {
           description: string | null
           group_jid: string
           id: string
+          last_sentiment_check: string | null
           name: string
           owner_phone: string | null
           participant_count: number | null
+          sentiment: string | null
+          sentiment_reason: string | null
           updated_at: string
         }
         Insert: {
@@ -4837,9 +4840,12 @@ export type Database = {
           description?: string | null
           group_jid: string
           id?: string
+          last_sentiment_check?: string | null
           name: string
           owner_phone?: string | null
           participant_count?: number | null
+          sentiment?: string | null
+          sentiment_reason?: string | null
           updated_at?: string
         }
         Update: {
@@ -4849,9 +4855,12 @@ export type Database = {
           description?: string | null
           group_jid?: string
           id?: string
+          last_sentiment_check?: string | null
           name?: string
           owner_phone?: string | null
           participant_count?: number | null
+          sentiment?: string | null
+          sentiment_reason?: string | null
           updated_at?: string
         }
         Relationships: [
