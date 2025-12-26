@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -210,6 +211,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
+  const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings">("inbox");
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -217,7 +219,6 @@ export default function RoyZapp() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
   const [teamRoles, setTeamRoles] = useState<{ id: string; name: string; color: string }[]>([]);
-  const [allowedRoleIds, setAllowedRoleIds] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,7 +251,6 @@ export default function RoyZapp() {
   });
   const [savingAgent, setSavingAgent] = useState(false);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
-  const [savingAllowedRoles, setSavingAllowedRoles] = useState(false);
 
   // WhatsApp connection state
   const [whatsappConnected, setWhatsappConnected] = useState(false);
@@ -349,7 +349,6 @@ export default function RoyZapp() {
         { data: agentsData, error: agentsError },
         { data: usersData, error: usersError },
         { data: rolesData, error: rolesError },
-        { data: settingsData, error: settingsError },
         { data: assignmentsData, error: assignmentsError },
         { data: tagsData, error: tagsError },
       ] = await Promise.all([
@@ -378,11 +377,6 @@ export default function RoyZapp() {
           .eq("account_id", currentUser.account_id)
           .order("display_order"),
         supabase
-          .from("account_settings")
-          .select("zapp_allowed_roles")
-          .eq("account_id", currentUser.account_id)
-          .single(),
-        supabase
           .from("zapp_conversation_assignments")
           .select(`
             *,
@@ -406,7 +400,6 @@ export default function RoyZapp() {
       if (agentsError) throw agentsError;
       if (usersError) throw usersError;
       if (rolesError) throw rolesError;
-      // settingsError is ok if no settings exist yet
       if (assignmentsError) throw assignmentsError;
       if (tagsError) throw tagsError;
 
@@ -414,7 +407,6 @@ export default function RoyZapp() {
       setAgents(agentsData || []);
       setTeamUsers((usersData || []) as TeamUser[]);
       setTeamRoles(rolesData || []);
-      setAllowedRoleIds((settingsData?.zapp_allowed_roles as string[]) || []);
       setAssignments(assignmentsData || []);
       setTags(tagsData || []);
     } catch (error: any) {
@@ -775,7 +767,10 @@ export default function RoyZapp() {
     }
   };
 
-  if (loading) {
+  // Check access permission
+  const hasZappAccess = isAdmin || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
+
+  if (permissionsLoading || loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-48px)] bg-zapp-bg">
         <div className="text-center space-y-4">
@@ -783,7 +778,31 @@ export default function RoyZapp() {
             <MessageSquare className="h-8 w-8 text-white" />
           </div>
           <Loader2 className="h-6 w-6 animate-spin text-zapp-accent mx-auto" />
-          <p className="text-zapp-text-muted">Carregando conversas...</p>
+          <p className="text-zapp-text-muted">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasZappAccess) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-48px)] bg-zapp-bg">
+        <div className="text-center space-y-4 max-w-md px-4">
+          <div className="w-20 h-20 mx-auto rounded-full bg-red-500/10 flex items-center justify-center">
+            <X className="h-10 w-10 text-red-500" />
+          </div>
+          <h2 className="text-zapp-text text-xl font-semibold">Acesso Restrito</h2>
+          <p className="text-zapp-text-muted">
+            Você não tem permissão para acessar o ROY zAPP. Entre em contato com um administrador para solicitar acesso.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/dashboard")}
+            className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao Dashboard
+          </Button>
         </div>
       </div>
     );
@@ -1446,33 +1465,6 @@ export default function RoyZapp() {
     </div>
   );
 
-  // Save allowed roles
-  const saveAllowedRoles = async (roleIds: string[]) => {
-    if (!currentUser?.account_id) return;
-    setSavingAllowedRoles(true);
-    try {
-      const { error } = await supabase
-        .from("account_settings")
-        .update({ zapp_allowed_roles: roleIds })
-        .eq("account_id", currentUser.account_id);
-
-      if (error) throw error;
-      setAllowedRoleIds(roleIds);
-      toast.success("Configurações salvas!");
-    } catch (error: any) {
-      console.error("Error saving allowed roles:", error);
-      toast.error("Erro ao salvar configurações");
-    } finally {
-      setSavingAllowedRoles(false);
-    }
-  };
-
-  const toggleRoleAllowed = (roleId: string) => {
-    const newRoles = allowedRoleIds.includes(roleId)
-      ? allowedRoleIds.filter(id => id !== roleId)
-      : [...allowedRoleIds, roleId];
-    saveAllowedRoles(newRoles);
-  };
 
   // Render settings panel
   const renderSettingsPanel = () => (
@@ -1543,43 +1535,23 @@ export default function RoyZapp() {
         </div>
       </div>
 
-      {/* Allowed Roles Section */}
+      {/* Access Configuration Notice */}
       <div className="space-y-3 pt-4 border-t border-zapp-border">
         <div>
-          <p className="text-zapp-text text-sm font-medium">Cargos que podem atender</p>
-          <p className="text-zapp-text-muted text-xs">Selecione quais cargos da equipe podem ser atendentes no zAPP</p>
+          <p className="text-zapp-text text-sm font-medium">Controle de Acesso</p>
+          <p className="text-zapp-text-muted text-xs">
+            O acesso ao ROY zAPP é controlado pela permissão "Acessar ROY zAPP" configurada na página de Equipe → Cargos.
+          </p>
         </div>
-        
-        <div className="space-y-2">
-          {teamRoles.map((role) => (
-            <div
-              key={role.id}
-              className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: role.color }}
-                />
-                <span className="text-zapp-text text-sm">{role.name}</span>
-                <span className="text-zapp-text-muted text-xs">
-                  ({teamUsers.filter(u => u.team_role_id === role.id).length} usuários)
-                </span>
-              </div>
-              <Switch
-                checked={allowedRoleIds.includes(role.id)}
-                onCheckedChange={() => toggleRoleAllowed(role.id)}
-                disabled={savingAllowedRoles}
-                className="data-[state=checked]:bg-zapp-accent"
-              />
-            </div>
-          ))}
-          {teamRoles.length === 0 && (
-            <p className="text-zapp-text-muted text-sm text-center py-4">
-              Nenhum cargo cadastrado. Configure os cargos em Equipe.
-            </p>
-          )}
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/team")}
+          className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
+        >
+          <Users className="h-4 w-4 mr-2" />
+          Gerenciar Cargos
+        </Button>
       </div>
 
       {/* Distribution Settings */}
