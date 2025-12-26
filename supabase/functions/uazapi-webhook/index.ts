@@ -473,33 +473,74 @@ serve(async (req) => {
           }
         }
 
-        // Save message to zapp_messages
+        // Save message to zapp_messages (check for duplicates first)
         if (zappConversationId) {
-          const { error: zappMsgError } = await supabase
+          // Check if message already exists (by external_message_id or by content+timestamp for messages sent from UI)
+          const { data: existingMsg } = await supabase
             .from("zapp_messages")
-            .insert({
-              account_id: accountId,
-              zapp_conversation_id: zappConversationId,
-              direction: direction,
-              content: content,
-              message_type: mediaType || "text",
-              external_message_id: messageId,
-              sent_at: timestamp,
-              // For group messages, store sender info
-              sender_phone: isGroupMessage ? phone : null,
-              sender_name: isGroupMessage ? contactName : null,
-              // Media fields
-              media_url: mediaUrl || null,
-              media_type: mediaType || null,
-              media_mimetype: mediaMimetype || null,
-              media_filename: mediaFilename || null,
-              audio_duration_sec: audioDurationSec,
-            });
+            .select("id")
+            .eq("zapp_conversation_id", zappConversationId)
+            .eq("external_message_id", messageId)
+            .maybeSingle();
 
-          if (zappMsgError) {
-            console.error("Error saving zapp_message:", zappMsgError);
+          if (existingMsg) {
+            console.log(`Message already exists with external_message_id ${messageId}, skipping insert`);
           } else {
-            console.log(`Zapp message saved successfully! Media: ${mediaType || 'none'}, URL: ${mediaUrl ? 'yes' : 'no'}`);
+            // For outbound messages, also check for recent duplicates without external_message_id
+            // This handles messages sent from the UI that are then echoed back by the webhook
+            let isDuplicate = false;
+            if (direction === "outbound") {
+              const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+              const { data: recentDupe } = await supabase
+                .from("zapp_messages")
+                .select("id")
+                .eq("zapp_conversation_id", zappConversationId)
+                .eq("direction", "outbound")
+                .eq("content", content)
+                .is("external_message_id", null)
+                .gte("created_at", twoMinutesAgo)
+                .limit(1)
+                .maybeSingle();
+
+              if (recentDupe) {
+                // Update the existing message with the external_message_id
+                await supabase
+                  .from("zapp_messages")
+                  .update({ external_message_id: messageId })
+                  .eq("id", recentDupe.id);
+                console.log(`Updated existing message ${recentDupe.id} with external_message_id ${messageId}`);
+                isDuplicate = true;
+              }
+            }
+
+            if (!isDuplicate) {
+              const { error: zappMsgError } = await supabase
+                .from("zapp_messages")
+                .insert({
+                  account_id: accountId,
+                  zapp_conversation_id: zappConversationId,
+                  direction: direction,
+                  content: content,
+                  message_type: mediaType || "text",
+                  external_message_id: messageId,
+                  sent_at: timestamp,
+                  // For group messages, store sender info
+                  sender_phone: isGroupMessage ? phone : null,
+                  sender_name: isGroupMessage ? contactName : null,
+                  // Media fields
+                  media_url: mediaUrl || null,
+                  media_type: mediaType || null,
+                  media_mimetype: mediaMimetype || null,
+                  media_filename: mediaFilename || null,
+                  audio_duration_sec: audioDurationSec,
+                });
+
+              if (zappMsgError) {
+                console.error("Error saving zapp_message:", zappMsgError);
+              } else {
+                console.log(`Zapp message saved successfully! Media: ${mediaType || 'none'}, URL: ${mediaUrl ? 'yes' : 'no'}`);
+              }
+            }
           }
 
           // Create or update zapp_conversation_assignment for the queue
