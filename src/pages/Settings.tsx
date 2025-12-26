@@ -7,12 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, Play, ThumbsUp, Brain, Download, Upload, Shield, Book } from "lucide-react";
+import { Settings2, Scale, AlertTriangle, Save, RotateCcw, Loader2, RefreshCw, ThumbsUp, Shield, Book, Play } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { AIPromptTest } from "@/components/settings/AIPromptTest";
 import { SessionsManager } from "@/components/settings/SessionsManager";
 import { SecurityAuditViewer } from "@/components/settings/SecurityAuditViewer";
 import { MembersBookSettings } from "@/components/settings/MembersBookSettings";
@@ -42,18 +38,6 @@ interface VNPSSettings {
   eligible_min_escore: number;
 }
 
-interface AISettings {
-  model: string;
-  system_prompt: string;
-  roi_prompt: string;
-  risk_prompt: string;
-  life_events_prompt: string;
-  analysis_frequency: string;
-  min_message_length: number;
-  confidence_threshold: number;
-  auto_analysis_enabled: boolean;
-}
-
 const defaultWeights: ScoreWeights = {
   whatsapp_text: 1.0,
   whatsapp_audio: 1.5,
@@ -79,39 +63,12 @@ const defaultVNPS: VNPSSettings = {
   eligible_min_escore: 60,
 };
 
-const defaultAI: AISettings = {
-  model: "google/gemini-2.5-flash",
-  system_prompt: "Você é um analisador de mensagens de WhatsApp especializado em detectar percepção de ROI, riscos de churn e momentos de vida importantes dos clientes.",
-  roi_prompt: "Identifique menções a ganhos tangíveis (receita, economia, tempo) ou intangíveis (confiança, clareza, tranquilidade) que o cliente obteve.",
-  risk_prompt: "Detecte sinais de frustração, insatisfação, comparação com concorrentes, hesitação em continuar, ou mudanças de tom negativas.",
-  life_events_prompt: "Identifique menções a eventos de vida significativos como aniversários, casamentos, gravidez, mudança de emprego, viagens importantes.",
-  analysis_frequency: "realtime",
-  min_message_length: 20,
-  confidence_threshold: 0.7,
-  auto_analysis_enabled: true,
-};
-
-const AI_MODELS = [
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Rápido e eficiente (recomendado)" },
-  { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", description: "Mais rápido, menor custo" },
-  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Máxima qualidade" },
-  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", description: "Equilíbrio custo/qualidade" },
-  { value: "openai/gpt-5", label: "GPT-5", description: "Maior precisão" },
-];
-
-const ANALYSIS_FREQUENCIES = [
-  { value: "realtime", label: "Tempo real", description: "Analisa cada mensagem imediatamente" },
-  { value: "batch_hourly", label: "A cada hora", description: "Análise em lote a cada hora" },
-  { value: "batch_daily", label: "Diária", description: "Uma vez por dia (menor custo)" },
-];
-
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [weights, setWeights] = useState<ScoreWeights>(defaultWeights);
   const [thresholds, setThresholds] = useState<RiskThresholds>(defaultThresholds);
   const [vnpsSettings, setVnpsSettings] = useState<VNPSSettings>(defaultVNPS);
-  const [aiSettings, setAiSettings] = useState<AISettings>(defaultAI);
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -161,20 +118,6 @@ export default function Settings() {
             eligible_min_escore: data.vnps_eligible_min_escore,
           });
         }
-        // Load AI settings if they exist
-        if ((data as any).ai_model !== undefined) {
-          setAiSettings({
-            model: (data as any).ai_model || defaultAI.model,
-            system_prompt: (data as any).ai_system_prompt || defaultAI.system_prompt,
-            roi_prompt: (data as any).ai_roi_prompt || defaultAI.roi_prompt,
-            risk_prompt: (data as any).ai_risk_prompt || defaultAI.risk_prompt,
-            life_events_prompt: (data as any).ai_life_events_prompt || defaultAI.life_events_prompt,
-            analysis_frequency: (data as any).ai_analysis_frequency || defaultAI.analysis_frequency,
-            min_message_length: (data as any).ai_min_message_length ?? defaultAI.min_message_length,
-            confidence_threshold: Number((data as any).ai_confidence_threshold) || defaultAI.confidence_threshold,
-            auto_analysis_enabled: (data as any).ai_auto_analysis_enabled ?? defaultAI.auto_analysis_enabled,
-          });
-        }
       }
     } catch (err) {
       console.error("Error:", err);
@@ -194,11 +137,6 @@ export default function Settings() {
 
   const updateVnps = (key: keyof VNPSSettings, value: number) => {
     setVnpsSettings((prev) => ({ ...prev, [key]: value }));
-    setHasChanges(true);
-  };
-
-  const updateAI = <K extends keyof AISettings>(key: K, value: AISettings[K]) => {
-    setAiSettings((prev) => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
 
@@ -223,16 +161,6 @@ export default function Settings() {
       vnps_eligible_min_score: vnpsSettings.eligible_min_score,
       vnps_eligible_max_risk: vnpsSettings.eligible_max_risk,
       vnps_eligible_min_escore: vnpsSettings.eligible_min_escore,
-      // AI settings
-      ai_model: aiSettings.model,
-      ai_system_prompt: aiSettings.system_prompt,
-      ai_roi_prompt: aiSettings.roi_prompt,
-      ai_risk_prompt: aiSettings.risk_prompt,
-      ai_life_events_prompt: aiSettings.life_events_prompt,
-      ai_analysis_frequency: aiSettings.analysis_frequency,
-      ai_min_message_length: aiSettings.min_message_length,
-      ai_confidence_threshold: aiSettings.confidence_threshold,
-      ai_auto_analysis_enabled: aiSettings.auto_analysis_enabled,
     };
 
     try {
@@ -282,7 +210,6 @@ export default function Settings() {
     setWeights(defaultWeights);
     setThresholds(defaultThresholds);
     setVnpsSettings(defaultVNPS);
-    setAiSettings(defaultAI);
     setHasChanges(true);
     toast({
       title: "Valores resetados",
@@ -357,10 +284,6 @@ export default function Settings() {
           <TabsTrigger value="vnps" className="gap-2">
             <ThumbsUp className="h-4 w-4" />
             V-NPS
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-2">
-            <Brain className="h-4 w-4" />
-            IA
           </TabsTrigger>
           <TabsTrigger value="taxonomy" className="gap-2">
             <Settings2 className="h-4 w-4" />
@@ -828,315 +751,6 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="ai" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Modelo de IA</CardTitle>
-              <CardDescription>
-                Escolha o modelo para análise de mensagens e detecção de eventos.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Modelo</Label>
-                <Select value={aiSettings.model} onValueChange={(v) => updateAI("model", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AI_MODELS.map((model) => (
-                      <SelectItem key={model.value} value={model.value}>
-                        <div className="flex flex-col">
-                          <span>{model.label}</span>
-                          <span className="text-xs text-muted-foreground">{model.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Análise automática</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Analisar mensagens automaticamente ao receber
-                  </p>
-                </div>
-                <Switch
-                  checked={aiSettings.auto_analysis_enabled}
-                  onCheckedChange={(v) => updateAI("auto_analysis_enabled", v)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Frequência de análise</Label>
-                <Select value={aiSettings.analysis_frequency} onValueChange={(v) => updateAI("analysis_frequency", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ANALYSIS_FREQUENCIES.map((freq) => (
-                      <SelectItem key={freq.value} value={freq.value}>
-                        <div className="flex flex-col">
-                          <span>{freq.label}</span>
-                          <span className="text-xs text-muted-foreground">{freq.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Thresholds de Detecção</CardTitle>
-              <CardDescription>
-                Configure os limiares para a análise de IA.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Tamanho mínimo da mensagem</Label>
-                  <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                    {aiSettings.min_message_length} chars
-                  </span>
-                </div>
-                <Slider
-                  value={[aiSettings.min_message_length]}
-                  onValueChange={([v]) => updateAI("min_message_length", v)}
-                  max={100}
-                  min={5}
-                  step={5}
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Mensagens menores serão ignoradas pela análise de IA.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Confiança mínima para eventos</Label>
-                  <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                    {(aiSettings.confidence_threshold * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <Slider
-                  value={[aiSettings.confidence_threshold * 100]}
-                  onValueChange={([v]) => updateAI("confidence_threshold", v / 100)}
-                  max={100}
-                  min={30}
-                  step={5}
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Eventos abaixo deste nível de confiança não serão registrados.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Prompts Customizados</CardTitle>
-              <CardDescription>
-                Personalize as instruções da IA para análise de mensagens.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Prompt do Sistema</Label>
-                <Textarea
-                  value={aiSettings.system_prompt}
-                  onChange={(e) => updateAI("system_prompt", e.target.value)}
-                  rows={3}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Instrução base que define o papel da IA.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Detecção de ROI</Label>
-                <Textarea
-                  value={aiSettings.roi_prompt}
-                  onChange={(e) => updateAI("roi_prompt", e.target.value)}
-                  rows={3}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Instruções para identificar percepção de valor e ROI.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Detecção de Riscos</Label>
-                <Textarea
-                  value={aiSettings.risk_prompt}
-                  onChange={(e) => updateAI("risk_prompt", e.target.value)}
-                  rows={3}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Instruções para identificar sinais de churn e insatisfação.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Detecção de Momentos CX</Label>
-                <Textarea
-                  value={aiSettings.life_events_prompt}
-                  onChange={(e) => updateAI("life_events_prompt", e.target.value)}
-                  rows={3}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Instruções para identificar eventos de vida significativos.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Custos Estimados</CardTitle>
-              <CardDescription>
-                Estimativa de consumo baseada no modelo selecionado.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="p-3 rounded-lg border text-center">
-                  <div className="text-2xl font-bold text-primary">~$0.001</div>
-                  <div className="text-xs text-muted-foreground">por mensagem</div>
-                </div>
-                <div className="p-3 rounded-lg border text-center">
-                  <div className="text-2xl font-bold text-primary">~$1</div>
-                  <div className="text-xs text-muted-foreground">1000 msgs</div>
-                </div>
-                <div className="p-3 rounded-lg border text-center">
-                  <div className="text-2xl font-bold text-primary">~$30</div>
-                  <div className="text-xs text-muted-foreground">30k msgs/mês</div>
-                </div>
-                <div className="p-3 rounded-lg border text-center">
-                  <div className="text-2xl font-bold text-muted-foreground">Lovable AI</div>
-                  <div className="text-xs text-muted-foreground">billing incluso</div>
-                </div>
-              </div>
-              <div className="mt-4 rounded-lg bg-muted/50 p-4">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Nota:</strong> O custo real depende do tamanho das mensagens e da frequência de análise.
-                  Lovable AI já inclui o billing no seu plano.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Backup de Configurações</CardTitle>
-              <CardDescription>
-                Exporte ou importe configurações de IA para backup ou compartilhamento.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const exportData = {
-                    version: "1.0",
-                    exportedAt: new Date().toISOString(),
-                    aiSettings: {
-                      model: aiSettings.model,
-                      system_prompt: aiSettings.system_prompt,
-                      roi_prompt: aiSettings.roi_prompt,
-                      risk_prompt: aiSettings.risk_prompt,
-                      life_events_prompt: aiSettings.life_events_prompt,
-                      analysis_frequency: aiSettings.analysis_frequency,
-                      min_message_length: aiSettings.min_message_length,
-                      confidence_threshold: aiSettings.confidence_threshold,
-                      auto_analysis_enabled: aiSettings.auto_analysis_enabled,
-                    },
-                  };
-                  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `roiboy-ai-config-${new Date().toISOString().split("T")[0]}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                  toast({
-                    title: "Configurações exportadas",
-                    description: "Arquivo JSON baixado com sucesso.",
-                  });
-                }}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar JSON
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = ".json";
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      try {
-                        const data = JSON.parse(event.target?.result as string);
-                        if (data.aiSettings) {
-                          setAiSettings({
-                            model: data.aiSettings.model || defaultAI.model,
-                            system_prompt: data.aiSettings.system_prompt || defaultAI.system_prompt,
-                            roi_prompt: data.aiSettings.roi_prompt || defaultAI.roi_prompt,
-                            risk_prompt: data.aiSettings.risk_prompt || defaultAI.risk_prompt,
-                            life_events_prompt: data.aiSettings.life_events_prompt || defaultAI.life_events_prompt,
-                            analysis_frequency: data.aiSettings.analysis_frequency || defaultAI.analysis_frequency,
-                            min_message_length: data.aiSettings.min_message_length ?? defaultAI.min_message_length,
-                            confidence_threshold: data.aiSettings.confidence_threshold ?? defaultAI.confidence_threshold,
-                            auto_analysis_enabled: data.aiSettings.auto_analysis_enabled ?? defaultAI.auto_analysis_enabled,
-                          });
-                          setHasChanges(true);
-                          toast({
-                            title: "Configurações importadas",
-                            description: "Clique em Salvar para aplicar as mudanças.",
-                          });
-                        } else {
-                          throw new Error("Formato inválido");
-                        }
-                      } catch (err) {
-                        toast({
-                          title: "Erro ao importar",
-                          description: "Arquivo JSON inválido ou formato incorreto.",
-                          variant: "destructive",
-                        });
-                      }
-                    };
-                    reader.readAsText(file);
-                  };
-                  input.click();
-                }}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Importar JSON
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* AI Prompt Test */}
-          <AIPromptTest aiSettings={aiSettings} />
         </TabsContent>
 
         <TabsContent value="taxonomy" className="space-y-4">
