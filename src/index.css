@@ -89,6 +89,20 @@
     --sidebar-accent-foreground: 20 10% 11%;
     --sidebar-border: 48 20% 82%;
     --sidebar-ring: 39 55% 63%;
+
+    /* ROY zAPP - WhatsApp Theme */
+    --zapp-bg: 48 26% 88%;
+    --zapp-bg-dark: 47 20% 82%;
+    --zapp-panel: 47 30% 92%;
+    --zapp-panel-header: 48 26% 85%;
+    --zapp-text: 20 10% 11%;
+    --zapp-text-muted: 60 4% 35%;
+    --zapp-accent: 152 69% 31%;
+    --zapp-accent-hover: 152 69% 26%;
+    --zapp-message-out: 152 40% 85%;
+    --zapp-message-in: 0 0% 100%;
+    --zapp-border: 48 20% 78%;
+    --zapp-input: 0 0% 100%;
   }
 
   .dark {
@@ -165,6 +179,20 @@
     --sidebar-accent-foreground: 45 20% 85%;
     --sidebar-border: 20 8% 18%;
     --sidebar-ring: 39 60% 55%;
+
+    /* ROY zAPP - WhatsApp Theme Dark */
+    --zapp-bg: 200 13% 7%;
+    --zapp-bg-dark: 200 13% 10%;
+    --zapp-panel: 200 11% 13%;
+    --zapp-panel-header: 200 11% 16%;
+    --zapp-text: 0 0% 93%;
+    --zapp-text-muted: 200 10% 54%;
+    --zapp-accent: 152 69% 34%;
+    --zapp-accent-hover: 152 69% 29%;
+    --zapp-message-out: 160 56% 18%;
+    --zapp-message-in: 200 11% 13%;
+    --zapp-border: 200 10% 18%;
+    --zapp-input: 200 11% 18%;
   }
 }
 
