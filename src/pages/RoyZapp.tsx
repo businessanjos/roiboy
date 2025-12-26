@@ -430,8 +430,39 @@ export default function RoyZapp() {
           console.log("Realtime new message:", payload);
           const newMsg = payload.new as any;
           setMessages((prev) => {
-            // Avoid duplicates
+            // Avoid duplicates - check by id or if it's a temp message being replaced
             if (prev.some(m => m.id === newMsg.id)) return prev;
+            
+            // For outbound messages, check if we already have an optimistic version
+            // (temp messages start with "temp-")
+            if (newMsg.direction === "outbound") {
+              const hasOptimistic = prev.some(m => 
+                m.id.startsWith("temp-") && 
+                m.content === newMsg.content &&
+                !m.is_from_client
+              );
+              if (hasOptimistic) {
+                // Replace optimistic message with real one
+                return prev.map(m => 
+                  m.id.startsWith("temp-") && m.content === newMsg.content && !m.is_from_client
+                    ? {
+                        id: newMsg.id,
+                        content: newMsg.content,
+                        is_from_client: false,
+                        created_at: newMsg.sent_at,
+                        message_type: newMsg.message_type || "text",
+                        media_url: newMsg.media_url,
+                        media_type: newMsg.media_type,
+                        media_mimetype: newMsg.media_mimetype,
+                        media_filename: newMsg.media_filename,
+                        audio_duration_sec: newMsg.audio_duration_sec,
+                        sender_name: newMsg.sender_name,
+                      }
+                    : m
+                );
+              }
+            }
+            
             return [...prev, {
               id: newMsg.id,
               content: newMsg.content,
@@ -1087,6 +1118,27 @@ export default function RoyZapp() {
       return;
     }
     
+    const messageContent = messageInput.trim();
+    const tempMessageId = `temp-${Date.now()}`;
+    const now = new Date().toISOString();
+    
+    // Optimistic update - add message to UI immediately
+    const optimisticMessage: Message = {
+      id: tempMessageId,
+      content: messageContent,
+      is_from_client: false,
+      created_at: now,
+      message_type: "text",
+      media_url: null,
+      media_type: null,
+      media_mimetype: null,
+      media_filename: null,
+      audio_duration_sec: null,
+      sender_name: null,
+    };
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    setMessageInput("");
     setSendingMessage(true);
     
     try {
@@ -1094,7 +1146,7 @@ export default function RoyZapp() {
       const action = isGroup && groupJid ? "send_to_group" : "send_text";
       const payload: Record<string, string> = {
         action,
-        message: messageInput.trim(),
+        message: messageContent,
       };
       
       if (isGroup && groupJid) {
@@ -1111,27 +1163,34 @@ export default function RoyZapp() {
       
       // Save message to zapp_messages
       if (selectedConversation.zapp_conversation_id) {
-        await supabase.from("zapp_messages").insert({
+        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
-          content: messageInput.trim(),
+          content: messageContent,
           message_type: "text",
-          sent_at: new Date().toISOString(),
-        });
+          sent_at: now,
+        }).select("id").single();
+        
+        // Replace temp message with real one
+        if (insertedMessage) {
+          setMessages(prev => prev.map(m => 
+            m.id === tempMessageId ? { ...m, id: insertedMessage.id } : m
+          ));
+        }
         
         // Update conversation last message
         await supabase.from("zapp_conversations").update({
-          last_message_at: new Date().toISOString(),
-          last_message_preview: messageInput.trim().substring(0, 100),
+          last_message_at: now,
+          last_message_preview: messageContent.substring(0, 100),
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
       }
-      
-      // Clear input - realtime subscription will add the message to state
-      setMessageInput("");
     } catch (error: any) {
       console.error("Error sending message:", error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
+      setMessageInput(messageContent); // Restore input
       toast.error(error.message || "Erro ao enviar mensagem");
     } finally {
       setSendingMessage(false);
