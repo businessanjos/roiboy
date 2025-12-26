@@ -105,6 +105,7 @@ export default {
           "message-in": "hsl(var(--zapp-message-in))",
           border: "hsl(var(--zapp-border))",
           input: "hsl(var(--zapp-input))",
+          hover: "hsl(var(--zapp-hover))",
         },
       },
       borderRadius: {
