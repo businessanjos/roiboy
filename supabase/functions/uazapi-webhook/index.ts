@@ -366,11 +366,11 @@ serve(async (req) => {
             .maybeSingle();
 
           if (existingAssignment) {
-            // Update last_message_at to bring it to top of queue
+            // Update updated_at to bring it to top of queue
             await supabase
               .from("zapp_conversation_assignments")
               .update({
-                last_message_at: timestamp,
+                updated_at: timestamp,
                 // If closed, reopen as waiting
                 status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
               })
@@ -384,7 +384,6 @@ serve(async (req) => {
                 account_id: accountId,
                 conversation_id: conversationId,
                 status: "waiting",
-                last_message_at: timestamp,
               });
 
             if (assignmentError) {
@@ -517,7 +516,7 @@ serve(async (req) => {
               await supabase
                 .from("zapp_conversation_assignments")
                 .update({
-                  last_message_at: timestamp,
+                  updated_at: timestamp,
                   status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
                 })
                 .eq("id", existingAssignment.id);
@@ -528,7 +527,6 @@ serve(async (req) => {
                   account_id: accountId,
                   conversation_id: conversationId,
                   status: "waiting",
-                  last_message_at: timestamp,
                 });
             }
           }
