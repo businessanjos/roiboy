@@ -241,6 +241,32 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   closed: { label: "Finalizado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
+// Generate a consistent color for a sender name in group chats
+const getSenderColor = (name: string): string => {
+  const colors = [
+    '#E91E63', // Pink
+    '#9C27B0', // Purple
+    '#673AB7', // Deep Purple
+    '#3F51B5', // Indigo
+    '#2196F3', // Blue
+    '#00BCD4', // Cyan
+    '#009688', // Teal
+    '#4CAF50', // Green
+    '#8BC34A', // Light Green
+    '#FF9800', // Orange
+    '#FF5722', // Deep Orange
+    '#795548', // Brown
+  ];
+  
+  // Simple hash function based on name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  return colors[Math.abs(hash) % colors.length];
+};
+
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
@@ -2623,7 +2649,10 @@ export default function RoyZapp() {
                       )}>
                         {/* Sender name for group messages */}
                         {message.is_from_client && contactInfo.isGroup && message.sender_name && (
-                          <p className="text-xs font-medium text-zapp-accent mb-1">
+                          <p 
+                            className="text-xs font-medium mb-1"
+                            style={{ color: getSenderColor(message.sender_name) }}
+                          >
                             {message.sender_name}
                           </p>
                         )}
