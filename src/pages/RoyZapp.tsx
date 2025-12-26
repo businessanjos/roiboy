@@ -413,6 +413,62 @@ export default function RoyZapp() {
     }
   }, [currentUser?.account_id]);
 
+  // Optimized fetch for realtime updates - only fetches assignments
+  const fetchAssignmentsOnly = useCallback(async () => {
+    if (!currentUser?.account_id) return;
+    
+    try {
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from("zapp_conversation_assignments")
+        .select(`
+          *,
+          agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
+          department:zapp_departments(*),
+          conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
+          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, client:clients(id, full_name, phone_e164, avatar_url))
+        `)
+        .eq("account_id", currentUser.account_id)
+        .neq("status", "closed")
+        .order("updated_at", { ascending: false })
+        .limit(100);
+
+      if (assignmentsError) throw assignmentsError;
+      
+      setAssignments(assignmentsData || []);
+      
+      // Update client products for new clients
+      const clientIds = (assignmentsData || [])
+        .map((a: ConversationAssignment) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
+        .filter((id: string | null | undefined): id is string => !!id);
+      
+      if (clientIds.length > 0) {
+        const { data: cpData } = await supabase
+          .from("client_products")
+          .select("client_id, product:products(id, name, color)")
+          .in("client_id", clientIds);
+        
+        if (cpData) {
+          const productsMap: Record<string, { id: string; name: string; color?: string }[]> = {};
+          cpData.forEach((cp: any) => {
+            if (cp.client_id && cp.product) {
+              if (!productsMap[cp.client_id]) {
+                productsMap[cp.client_id] = [];
+              }
+              productsMap[cp.client_id].push({ 
+                id: cp.product.id, 
+                name: cp.product.name,
+                color: cp.product.color 
+              });
+            }
+          });
+          setClientProducts(prev => ({ ...prev, ...productsMap }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+    }
+  }, [currentUser?.account_id]);
+
   // Realtime subscription for conversations and assignments
   useEffect(() => {
     if (!currentUser?.account_id) return;
@@ -429,8 +485,8 @@ export default function RoyZapp() {
         },
         (payload) => {
           console.log("Realtime conversation update:", payload);
-          // Refetch assignments to get updated conversation data
-          fetchData();
+          // Only fetch assignments, not full data reload
+          fetchAssignmentsOnly();
         }
       )
       .on(
@@ -443,8 +499,8 @@ export default function RoyZapp() {
         },
         (payload) => {
           console.log("Realtime assignment update:", payload);
-          // Refetch assignments when new conversation comes in
-          fetchData();
+          // Only fetch assignments, not full data reload
+          fetchAssignmentsOnly();
         }
       )
       .subscribe();
@@ -452,7 +508,7 @@ export default function RoyZapp() {
     return () => {
       supabase.removeChannel(conversationsChannel);
     };
-  }, [currentUser?.account_id]);
+  }, [currentUser?.account_id, fetchAssignmentsOnly]);
 
   // Realtime subscription for messages in selected conversation
   useEffect(() => {
