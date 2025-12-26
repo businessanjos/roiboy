@@ -3390,10 +3390,10 @@ export default function RoyZapp() {
           <div className="space-y-4 py-4">
             <Tabs defaultValue="agent" onValueChange={(v) => setTransferTarget({ ...transferTarget, type: v as "agent" | "department" })}>
               <TabsList className="w-full bg-[#202c33]">
-                <TabsTrigger value="agent" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white">
+                <TabsTrigger value="agent" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                   Atendente
                 </TabsTrigger>
-                <TabsTrigger value="department" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white">
+                <TabsTrigger value="department" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                   Departamento
                 </TabsTrigger>
               </TabsList>
