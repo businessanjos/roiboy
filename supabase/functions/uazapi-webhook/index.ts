@@ -355,6 +355,46 @@ serve(async (req) => {
         
         console.log("Message saved successfully!");
 
+        // Create or update zapp_conversation_assignment for the queue
+        if (conversationId) {
+          // Check if there's already an assignment for this conversation
+          const { data: existingAssignment } = await supabase
+            .from("zapp_conversation_assignments")
+            .select("id, status")
+            .eq("account_id", accountId)
+            .eq("conversation_id", conversationId)
+            .maybeSingle();
+
+          if (existingAssignment) {
+            // Update last_message_at to bring it to top of queue
+            await supabase
+              .from("zapp_conversation_assignments")
+              .update({
+                last_message_at: timestamp,
+                // If closed, reopen as waiting
+                status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
+              })
+              .eq("id", existingAssignment.id);
+            console.log("Updated existing conversation assignment");
+          } else {
+            // Create new assignment in waiting status (fila)
+            const { error: assignmentError } = await supabase
+              .from("zapp_conversation_assignments")
+              .insert({
+                account_id: accountId,
+                conversation_id: conversationId,
+                status: "waiting",
+                last_message_at: timestamp,
+              });
+
+            if (assignmentError) {
+              console.error("Error creating conversation assignment:", assignmentError);
+            } else {
+              console.log("Created new conversation assignment in queue");
+            }
+          }
+        }
+
         // Trigger AI analysis for text messages
         if (content.length > 10 && !content.startsWith("[")) {
           try {
@@ -463,6 +503,35 @@ serve(async (req) => {
               content_text: content,
               sent_at: timestamp,
             });
+
+          // Create or update zapp_conversation_assignment for the queue
+          if (conversationId) {
+            const { data: existingAssignment } = await supabase
+              .from("zapp_conversation_assignments")
+              .select("id, status")
+              .eq("account_id", accountId)
+              .eq("conversation_id", conversationId)
+              .maybeSingle();
+
+            if (existingAssignment) {
+              await supabase
+                .from("zapp_conversation_assignments")
+                .update({
+                  last_message_at: timestamp,
+                  status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
+                })
+                .eq("id", existingAssignment.id);
+            } else {
+              await supabase
+                .from("zapp_conversation_assignments")
+                .insert({
+                  account_id: accountId,
+                  conversation_id: conversationId,
+                  status: "waiting",
+                  last_message_at: timestamp,
+                });
+            }
+          }
 
           processedCount++;
         }
