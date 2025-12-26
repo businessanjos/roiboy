@@ -2115,7 +2115,7 @@ export default function RoyZapp() {
     return (
       <div className="h-full w-full flex flex-col bg-zapp-bg overflow-hidden">
         {/* Chat header */}
-        <div className="bg-zapp-panel-header px-4 py-2 flex items-center gap-3 border-b border-zapp-border">
+        <div className="bg-zapp-panel-header px-4 py-3 flex items-center gap-3 border-b border-zapp-border">
           <Button
             variant="ghost"
             size="icon"
