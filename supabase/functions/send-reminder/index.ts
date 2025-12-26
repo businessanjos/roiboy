@@ -43,6 +43,15 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
+    // Check for health check request
+    const body = await req.json().catch(() => ({}));
+    if (body.healthCheck) {
+      return new Response(
+        JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get auth header to identify user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -81,7 +90,7 @@ serve(async (req) => {
     const accountId = userData.account_id;
     const userId = userData.id;
 
-    const payload: CampaignRequest = await req.json();
+    const payload = body as CampaignRequest;
     const { 
       event_id, 
       campaign_name, 
