@@ -1220,23 +1220,6 @@ export default function RoyZapp() {
         </TooltipTrigger>
         <TooltipContent side="bottom">Conversas</TooltipContent>
       </Tooltip>
-      
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "team" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("team")}
-          >
-            <Users className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Equipe</TooltipContent>
-      </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -1255,7 +1238,7 @@ export default function RoyZapp() {
         <TooltipContent side="bottom">Tags</TooltipContent>
       </Tooltip>
 
-      {/* More menu with Departments and Settings */}
+      {/* More menu with Team, Departments and Settings */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -1263,7 +1246,7 @@ export default function RoyZapp() {
             size="icon"
             className={cn(
               "rounded-full h-10 w-10",
-              (activeView === "departments" || activeView === "settings") 
+              (activeView === "team" || activeView === "departments" || activeView === "settings") 
                 ? "bg-zapp-panel text-zapp-accent" 
                 : "text-zapp-text-muted hover:bg-zapp-panel"
             )}
@@ -1271,7 +1254,17 @@ export default function RoyZapp() {
             <MoreVertical className="h-5 w-5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="bg-zapp-panel border-zapp-border">
+        <DropdownMenuContent align="start" className="bg-zapp-panel border-zapp-border z-50">
+          <DropdownMenuItem 
+            className={cn(
+              "text-zapp-text hover:bg-zapp-hover",
+              activeView === "team" && "bg-zapp-bg-dark"
+            )}
+            onClick={() => setActiveView("team")}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Equipe
+          </DropdownMenuItem>
           <DropdownMenuItem 
             className={cn(
               "text-zapp-text hover:bg-zapp-hover",
