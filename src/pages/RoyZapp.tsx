@@ -997,18 +997,8 @@ export default function RoyZapp() {
         }).eq("id", selectedConversation.zapp_conversation_id);
       }
       
-      // Add message to local state
-      const newMessage: Message = {
-        id: crypto.randomUUID(),
-        content: messageInput.trim(),
-        is_from_client: false,
-        created_at: new Date().toISOString(),
-        message_type: "text",
-      };
-      setMessages(prev => [...prev, newMessage]);
+      // Clear input - realtime subscription will add the message to state
       setMessageInput("");
-      
-      toast.success("Mensagem enviada!");
     } catch (error: any) {
       console.error("Error sending message:", error);
       toast.error(error.message || "Erro ao enviar mensagem");
