@@ -3443,7 +3443,7 @@ export default function RoyZapp() {
             <Button variant="outline" onClick={() => setTransferDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
               Cancelar
             </Button>
-            <Button className="bg-[#00a884] hover:bg-[#00a884]/90" disabled={!transferTarget.id}>
+            <Button className="bg-[#00a884] hover:bg-[#00a884]/90 text-white border-0" disabled={!transferTarget.id}>
               Transferir
             </Button>
           </DialogFooter>
