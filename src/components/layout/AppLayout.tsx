@@ -30,9 +30,9 @@ export function AppLayout() {
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
       <TrialBanner />
       <MobileHeader />
-      <div className="flex flex-1 w-full min-h-0 overflow-hidden">
+      <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 min-w-0 h-full overflow-auto">
+        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
           <Outlet />
         </main>
       </div>
