@@ -3394,6 +3394,7 @@ export type Database = {
         Row: {
           account_id: string
           billing_period: Database["public"]["Enums"]["billing_period"]
+          color: string | null
           created_at: string
           description: string | null
           id: string
@@ -3407,6 +3408,7 @@ export type Database = {
         Insert: {
           account_id: string
           billing_period?: Database["public"]["Enums"]["billing_period"]
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -3420,6 +3422,7 @@ export type Database = {
         Update: {
           account_id?: string
           billing_period?: Database["public"]["Enums"]["billing_period"]
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
