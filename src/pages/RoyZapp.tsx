@@ -97,7 +97,6 @@ interface Agent {
   account_id: string;
   user_id: string;
   department_id: string | null;
-  role: "admin" | "supervisor" | "agent";
   is_active: boolean;
   is_online: boolean;
   max_concurrent_chats: number;
@@ -110,6 +109,7 @@ interface Agent {
     name: string;
     email: string;
     avatar_url: string | null;
+    team_role_id?: string | null;
   };
   department?: Department | null;
 }
@@ -120,6 +120,12 @@ interface TeamUser {
   email: string;
   avatar_url: string | null;
   role: string;
+  team_role_id: string | null;
+  team_role?: {
+    id: string;
+    name: string;
+    color: string;
+  } | null;
 }
 
 interface Message {
@@ -158,11 +164,6 @@ interface ConversationAssignment {
   unread_count?: number;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
-  supervisor: "Supervisor",
-  agent: "Atendente",
-};
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   pending: { label: "Aguardando", color: "text-amber-600", bgColor: "bg-amber-500" },
@@ -177,6 +178,8 @@ export default function RoyZapp() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
+  const [teamRoles, setTeamRoles] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [allowedRoleIds, setAllowedRoleIds] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,11 +207,11 @@ export default function RoyZapp() {
   const [agentForm, setAgentForm] = useState({
     user_id: "",
     department_id: "",
-    role: "agent" as "admin" | "supervisor" | "agent",
     max_concurrent_chats: 5,
   });
   const [savingAgent, setSavingAgent] = useState(false);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
+  const [savingAllowedRoles, setSavingAllowedRoles] = useState(false);
 
   // Transfer dialog
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -235,6 +238,8 @@ export default function RoyZapp() {
         { data: depts, error: deptsError },
         { data: agentsData, error: agentsError },
         { data: usersData, error: usersError },
+        { data: rolesData, error: rolesError },
+        { data: settingsData, error: settingsError },
         { data: assignmentsData, error: assignmentsError },
       ] = await Promise.all([
         supabase
@@ -246,21 +251,31 @@ export default function RoyZapp() {
           .from("zapp_agents")
           .select(`
             *,
-            user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url),
+            user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id),
             department:zapp_departments(*)
           `)
           .eq("account_id", currentUser.account_id)
           .order("created_at"),
         supabase
           .from("users")
-          .select("id, name, email, avatar_url, role")
+          .select("id, name, email, avatar_url, role, team_role_id, team_role:team_roles(id, name, color)")
           .eq("account_id", currentUser.account_id)
           .order("name"),
+        supabase
+          .from("team_roles")
+          .select("id, name, color")
+          .eq("account_id", currentUser.account_id)
+          .order("display_order"),
+        supabase
+          .from("account_settings")
+          .select("zapp_allowed_roles")
+          .eq("account_id", currentUser.account_id)
+          .single(),
         supabase
           .from("zapp_conversation_assignments")
           .select(`
             *,
-            agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url)),
+            agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
             department:zapp_departments(*),
             conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url))
           `)
@@ -273,11 +288,15 @@ export default function RoyZapp() {
       if (deptsError) throw deptsError;
       if (agentsError) throw agentsError;
       if (usersError) throw usersError;
+      if (rolesError) throw rolesError;
+      // settingsError is ok if no settings exist yet
       if (assignmentsError) throw assignmentsError;
 
       setDepartments(depts || []);
       setAgents(agentsData || []);
-      setTeamUsers(usersData || []);
+      setTeamUsers((usersData || []) as TeamUser[]);
+      setTeamRoles(rolesData || []);
+      setAllowedRoleIds((settingsData?.zapp_allowed_roles as string[]) || []);
       setAssignments(assignmentsData || []);
     } catch (error: any) {
       console.error("Error fetching zapp data:", error);
@@ -397,7 +416,6 @@ export default function RoyZapp() {
       setAgentForm({
         user_id: agent.user_id,
         department_id: agent.department_id || "",
-        role: agent.role,
         max_concurrent_chats: agent.max_concurrent_chats,
       });
     } else {
@@ -405,7 +423,6 @@ export default function RoyZapp() {
       setAgentForm({
         user_id: "",
         department_id: "",
-        role: "agent",
         max_concurrent_chats: 5,
       });
     }
@@ -425,7 +442,6 @@ export default function RoyZapp() {
           .from("zapp_agents")
           .update({
             department_id: agentForm.department_id || null,
-            role: agentForm.role,
             max_concurrent_chats: agentForm.max_concurrent_chats,
           })
           .eq("id", editingAgent.id);
@@ -437,7 +453,6 @@ export default function RoyZapp() {
           account_id: currentUser.account_id,
           user_id: agentForm.user_id,
           department_id: agentForm.department_id || null,
-          role: agentForm.role,
           max_concurrent_chats: agentForm.max_concurrent_chats,
         });
 
@@ -887,9 +902,18 @@ export default function RoyZapp() {
                   <span className="text-zapp-text text-sm font-medium truncate">
                     {agent.user?.name}
                   </span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-zapp-border text-zapp-text-muted">
-                    {ROLE_LABELS[agent.role]}
-                  </Badge>
+                  {teamUsers.find(u => u.id === agent.user_id)?.team_role && (
+                    <Badge 
+                      variant="outline" 
+                      className="text-[10px] px-1.5 py-0 border-zapp-border"
+                      style={{ 
+                        borderColor: teamUsers.find(u => u.id === agent.user_id)?.team_role?.color,
+                        color: teamUsers.find(u => u.id === agent.user_id)?.team_role?.color
+                      }}
+                    >
+                      {teamUsers.find(u => u.id === agent.user_id)?.team_role?.name}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-zapp-text-muted text-xs truncate">
                   {agent.department?.name || "Todos os departamentos"} • {agent.current_chats}/{agent.max_concurrent_chats}
@@ -1002,12 +1026,82 @@ export default function RoyZapp() {
     </div>
   );
 
+  // Save allowed roles
+  const saveAllowedRoles = async (roleIds: string[]) => {
+    if (!currentUser?.account_id) return;
+    setSavingAllowedRoles(true);
+    try {
+      const { error } = await supabase
+        .from("account_settings")
+        .update({ zapp_allowed_roles: roleIds })
+        .eq("account_id", currentUser.account_id);
+
+      if (error) throw error;
+      setAllowedRoleIds(roleIds);
+      toast.success("Configurações salvas!");
+    } catch (error: any) {
+      console.error("Error saving allowed roles:", error);
+      toast.error("Erro ao salvar configurações");
+    } finally {
+      setSavingAllowedRoles(false);
+    }
+  };
+
+  const toggleRoleAllowed = (roleId: string) => {
+    const newRoles = allowedRoleIds.includes(roleId)
+      ? allowedRoleIds.filter(id => id !== roleId)
+      : [...allowedRoleIds, roleId];
+    saveAllowedRoles(newRoles);
+  };
+
   // Render settings panel
   const renderSettingsPanel = () => (
     <div className="p-4 space-y-6">
       <h3 className="text-zapp-text font-medium">Configurações</h3>
 
-      <div className="space-y-4">
+      {/* Allowed Roles Section */}
+      <div className="space-y-3">
+        <div>
+          <p className="text-zapp-text text-sm font-medium">Cargos que podem atender</p>
+          <p className="text-zapp-text-muted text-xs">Selecione quais cargos da equipe podem ser atendentes no zAPP</p>
+        </div>
+        
+        <div className="space-y-2">
+          {teamRoles.map((role) => (
+            <div
+              key={role.id}
+              className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ backgroundColor: role.color }}
+                />
+                <span className="text-zapp-text text-sm">{role.name}</span>
+                <span className="text-zapp-text-muted text-xs">
+                  ({teamUsers.filter(u => u.team_role_id === role.id).length} usuários)
+                </span>
+              </div>
+              <Switch
+                checked={allowedRoleIds.includes(role.id)}
+                onCheckedChange={() => toggleRoleAllowed(role.id)}
+                disabled={savingAllowedRoles}
+                className="data-[state=checked]:bg-zapp-accent"
+              />
+            </div>
+          ))}
+          {teamRoles.length === 0 && (
+            <p className="text-zapp-text-muted text-sm text-center py-4">
+              Nenhum cargo cadastrado. Configure os cargos em Equipe.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Distribution Settings */}
+      <div className="space-y-4 pt-4 border-t border-zapp-border">
+        <p className="text-zapp-text text-sm font-medium">Distribuição</p>
+        
         <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
           <div>
             <p className="text-zapp-text text-sm">Distribuição round-robin</p>
@@ -1334,22 +1428,6 @@ export default function RoyZapp() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-[#8696a0]">Cargo</Label>
-              <Select
-                value={agentForm.role}
-                onValueChange={(value: "admin" | "supervisor" | "agent") => setAgentForm({ ...agentForm, role: value })}
-              >
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                  <SelectItem value="admin" className="text-[#e9edef]">Administrador</SelectItem>
-                  <SelectItem value="supervisor" className="text-[#e9edef]">Supervisor</SelectItem>
-                  <SelectItem value="agent" className="text-[#e9edef]">Atendente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="space-y-2">
               <Label className="text-[#8696a0]">Departamento</Label>

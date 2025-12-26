@@ -93,6 +93,7 @@ export type Database = {
           weight_live_interaction: number
           weight_whatsapp_audio: number
           weight_whatsapp_text: number
+          zapp_allowed_roles: Json | null
         }
         Insert: {
           account_id: string
@@ -127,6 +128,7 @@ export type Database = {
           weight_live_interaction?: number
           weight_whatsapp_audio?: number
           weight_whatsapp_text?: number
+          zapp_allowed_roles?: Json | null
         }
         Update: {
           account_id?: string
@@ -161,6 +163,7 @@ export type Database = {
           weight_live_interaction?: number
           weight_whatsapp_audio?: number
           weight_whatsapp_text?: number
+          zapp_allowed_roles?: Json | null
         }
         Relationships: [
           {
@@ -4884,7 +4887,6 @@ export type Database = {
           is_online: boolean
           last_activity_at: string | null
           max_concurrent_chats: number
-          role: Database["public"]["Enums"]["zapp_agent_role"]
           updated_at: string
           user_id: string
         }
@@ -4898,7 +4900,6 @@ export type Database = {
           is_online?: boolean
           last_activity_at?: string | null
           max_concurrent_chats?: number
-          role?: Database["public"]["Enums"]["zapp_agent_role"]
           updated_at?: string
           user_id: string
         }
@@ -4912,7 +4913,6 @@ export type Database = {
           is_online?: boolean
           last_activity_at?: string | null
           max_concurrent_chats?: number
-          role?: Database["public"]["Enums"]["zapp_agent_role"]
           updated_at?: string
           user_id?: string
         }
