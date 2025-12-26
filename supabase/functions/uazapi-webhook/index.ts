@@ -454,6 +454,57 @@ serve(async (req) => {
         
         console.log(`Media info - type: ${mediaType}, url: ${mediaUrl?.substring(0, 50)}..., mimetype: ${mediaMimetype}`);
         
+        // ============================================
+        // MEDIA DOWNLOAD: Download WhatsApp media to Supabase Storage
+        // WhatsApp media URLs are temporary and expire after a few hours
+        // ============================================
+        let permanentMediaUrl = mediaUrl;
+        if (mediaUrl && mediaType && mediaUrl.includes("whatsapp.net")) {
+          console.log(`Downloading temporary WhatsApp media to permanent storage...`);
+          try {
+            // Download the media from WhatsApp's temporary URL
+            const mediaResponse = await fetch(mediaUrl);
+            if (mediaResponse.ok) {
+              const mediaBlob = await mediaResponse.blob();
+              const arrayBuffer = await mediaBlob.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+              
+              // Generate a unique filename based on timestamp and type
+              const timestamp = Date.now();
+              const extension = mediaMimetype 
+                ? mediaMimetype.split("/")[1]?.split(";")[0] || "bin" 
+                : (mediaType === "image" ? "jpg" : mediaType === "video" ? "mp4" : mediaType === "audio" ? "ogg" : "bin");
+              const fileName = `${accountId}/${mediaType}_${timestamp}.${extension}`;
+              
+              // Upload to Supabase Storage
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from("zapp-media")
+                .upload(fileName, uint8Array, {
+                  contentType: mediaMimetype || `${mediaType}/*`,
+                  upsert: false,
+                });
+              
+              if (uploadError) {
+                console.error(`Error uploading media to storage:`, uploadError);
+                // Keep original URL as fallback (may still work for a short time)
+              } else {
+                // Get the public URL
+                const { data: publicUrlData } = supabase.storage
+                  .from("zapp-media")
+                  .getPublicUrl(fileName);
+                
+                permanentMediaUrl = publicUrlData.publicUrl;
+                console.log(`Media uploaded successfully: ${permanentMediaUrl}`);
+              }
+            } else {
+              console.error(`Failed to download WhatsApp media: ${mediaResponse.status} ${mediaResponse.statusText}`);
+            }
+          } catch (downloadError) {
+            console.error(`Error downloading/uploading media:`, downloadError);
+            // Keep original URL as fallback
+          }
+        }
+        
         const messageId = msg.id || `${Date.now()}`;
         const timestamp = msg.timestamp 
           ? new Date(Number(msg.timestamp) * 1000).toISOString()
@@ -647,8 +698,8 @@ serve(async (req) => {
                   // For group messages, store sender info
                   sender_phone: isGroupMessage ? phone : null,
                   sender_name: isGroupMessage ? contactName : null,
-                  // Media fields
-                  media_url: mediaUrl || null,
+                  // Media fields - use permanentMediaUrl for persistent storage
+                  media_url: permanentMediaUrl || null,
                   media_type: mediaType || null,
                   media_mimetype: mediaMimetype || null,
                   media_filename: mediaFilename || null,
@@ -658,7 +709,7 @@ serve(async (req) => {
               if (zappMsgError) {
                 console.error("Error saving zapp_message:", zappMsgError);
               } else {
-                console.log(`Zapp message saved successfully! Media: ${mediaType || 'none'}, URL: ${mediaUrl ? 'yes' : 'no'}`);
+                console.log(`Zapp message saved successfully! Media: ${mediaType || 'none'}, URL: ${permanentMediaUrl ? 'yes' : 'no'}`);
               }
             }
           }
