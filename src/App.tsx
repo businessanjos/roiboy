@@ -54,6 +54,7 @@ const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
 const AIAgent = lazy(() => import("./pages/AIAgent"));
 const RoyZapp = lazy(() => import("./pages/RoyZapp"));
+const BillingPortal = lazy(() => import("./pages/BillingPortal"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,6 +123,7 @@ const App = () => (
                             <Route path="/whatsapp-groups" element={<WhatsAppGroups />} />
                             <Route path="/roy-zapp" element={<RoyZapp />} />
                             <Route path="/ai-agent" element={<AIAgent />} />
+                            <Route path="/billing" element={<BillingPortal />} />
                             <Route path="/admin" element={<Admin />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
