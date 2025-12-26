@@ -26,6 +26,7 @@ import {
   UsersRound,
   Bot,
   MessageSquare,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ const navItems: NavItem[] = [
 // Simplified navigation for super admins - only admin-related items
 const superAdminNavItems: NavItem[] = [
   { to: "/admin", icon: Shield, label: "Administração" },
+  { to: "/admin?tab=status", icon: Activity, label: "Status do Sistema" },
 ];
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
