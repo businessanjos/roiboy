@@ -211,10 +211,13 @@ serve(async (req) => {
           });
         }
         
-        // Also check messageType for reactions
-        const msgType = (msg as Record<string, unknown>).messageType as string;
-        if (msgType === "reaction" || msgType === "reactionMessage") {
-          console.log(`Ignoring reaction by messageType: ${msgType}`);
+        // Also check messageType and type for reactions (case-insensitive)
+        const msgTypeCheck = (msg as Record<string, unknown>).messageType as string;
+        const typeCheck = (msg as Record<string, unknown>).type as string;
+        const isReaction = (msgTypeCheck && msgTypeCheck.toLowerCase().includes("reaction")) || 
+                           (typeCheck && typeCheck.toLowerCase().includes("reaction"));
+        if (isReaction) {
+          console.log(`Ignoring reaction by messageType: ${msgTypeCheck}, type: ${typeCheck}`);
           return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
