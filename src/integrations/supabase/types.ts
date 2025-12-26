@@ -5763,7 +5763,12 @@ export type Database = {
         | "gestor"
       vnps_class: "detractor" | "neutral" | "promoter"
       zapp_agent_role: "admin" | "supervisor" | "agent"
-      zapp_assignment_status: "pending" | "active" | "waiting" | "closed"
+      zapp_assignment_status:
+        | "pending"
+        | "active"
+        | "waiting"
+        | "closed"
+        | "triage"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -6061,7 +6066,13 @@ export const Constants = {
       ],
       vnps_class: ["detractor", "neutral", "promoter"],
       zapp_agent_role: ["admin", "supervisor", "agent"],
-      zapp_assignment_status: ["pending", "active", "waiting", "closed"],
+      zapp_assignment_status: [
+        "pending",
+        "active",
+        "waiting",
+        "closed",
+        "triage",
+      ],
     },
   },
 } as const
