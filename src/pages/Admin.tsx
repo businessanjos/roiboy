@@ -55,7 +55,8 @@ import { CouponsManager } from "@/components/admin/CouponsManager";
 import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager";
 import { SupportWhatsAppConfig } from "@/components/admin/SupportWhatsAppConfig";
 import { SupportKnowledgeBase } from "@/components/admin/SupportKnowledgeBase";
-import { Tag, Headset, BookOpen } from "lucide-react";
+import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
+import { Tag, Headset, BookOpen, Activity as ActivityIcon } from "lucide-react";
 
 interface SubscriptionPlan {
   id: string;
@@ -298,6 +299,10 @@ export default function Admin() {
             <Headset className="h-4 w-4" />
             Suporte
           </TabsTrigger>
+          <TabsTrigger value="status" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <ActivityIcon className="h-4 w-4" />
+            Status
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -358,6 +363,10 @@ export default function Admin() {
               <SupportWhatsAppConfig />
             </TabsContent>
           </Tabs>
+        </TabsContent>
+
+        <TabsContent value="status" className="mt-0">
+          <SystemStatusMonitor />
         </TabsContent>
       </Tabs>
     </div>
