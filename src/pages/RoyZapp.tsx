@@ -530,7 +530,7 @@ export default function RoyZapp() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-120px)] bg-[#111b21]">
+      <div className="flex items-center justify-center h-[calc(100vh-48px)] bg-[#111b21]">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-full bg-[#00a884] flex items-center justify-center">
             <MessageSquare className="h-8 w-8 text-white" />
@@ -1162,7 +1162,7 @@ export default function RoyZapp() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-120px)] flex bg-[#111b21] overflow-hidden">
+    <div className="h-[calc(100vh-48px)] flex bg-[#111b21] overflow-hidden">
       {/* Left panel - Conversation list */}
       <div className={cn(
         "w-full lg:w-[400px] flex-shrink-0 border-r border-[#2a3942] flex flex-col",
