@@ -294,7 +294,10 @@ export default function RoyZapp() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showFormatting, setShowFormatting] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const messageInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
   // Distribution settings state (persisted to localStorage)
@@ -1276,6 +1279,142 @@ export default function RoyZapp() {
     } finally {
       setSendingMessage(false);
     }
+  };
+
+  // Send media message (image/document)
+  const sendMediaMessage = async (file: File, mediaType: "image" | "document") => {
+    if (!selectedConversation || uploadingMedia) return;
+    
+    const contactInfo = getContactInfo(selectedConversation);
+    const phone = contactInfo.phone;
+    const isGroup = contactInfo.isGroup;
+    const groupJid = selectedConversation.zapp_conversation?.group_jid;
+    
+    if (!phone && !groupJid) {
+      toast.error("Número de telefone não encontrado");
+      return;
+    }
+
+    setUploadingMedia(true);
+    const tempMessageId = `temp-media-${Date.now()}`;
+    const now = new Date().toISOString();
+    
+    // Create optimistic message
+    const optimisticMessage: Message = {
+      id: tempMessageId,
+      content: mediaType === "image" ? "[Imagem]" : `[Arquivo] ${file.name}`,
+      is_from_client: false,
+      created_at: now,
+      message_type: mediaType,
+      media_url: URL.createObjectURL(file), // Temporary URL for preview
+      media_type: mediaType,
+      media_mimetype: file.type,
+      media_filename: file.name,
+      audio_duration_sec: null,
+      sender_name: null,
+    };
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    try {
+      // Upload file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUser!.account_id}/${Date.now()}.${fileExt}`;
+      const bucket = mediaType === "image" ? "avatars" : "client-followups";
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
+      const mediaUrl = urlData.publicUrl;
+      
+      // Call UAZAPI to send media
+      const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
+      const payload: Record<string, string> = {
+        action,
+        media_url: mediaUrl,
+        media_type: mediaType,
+        caption: "",
+        file_name: file.name,
+      };
+      
+      if (isGroup && groupJid) {
+        payload.group_id = groupJid;
+      } else {
+        payload.phone = phone;
+      }
+      
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: payload,
+      });
+      
+      if (error) throw error;
+      
+      if (data && !data.success) {
+        throw new Error(data.message || "Falha ao enviar mídia");
+      }
+      
+      // Save message to zapp_messages
+      if (selectedConversation.zapp_conversation_id) {
+        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+          account_id: currentUser!.account_id,
+          zapp_conversation_id: selectedConversation.zapp_conversation_id,
+          direction: "outbound",
+          content: mediaType === "image" ? "[Imagem]" : `[Arquivo] ${file.name}`,
+          message_type: mediaType,
+          media_url: mediaUrl,
+          media_type: mediaType,
+          media_mimetype: file.type,
+          media_filename: file.name,
+          sent_at: now,
+        }).select("id").single();
+        
+        // Replace temp message with real one
+        if (insertedMessage) {
+          setMessages(prev => prev.map(m => 
+            m.id === tempMessageId ? { ...m, id: insertedMessage.id, media_url: mediaUrl } : m
+          ));
+        }
+        
+        // Update conversation last message
+        await supabase.from("zapp_conversations").update({
+          last_message_at: now,
+          last_message_preview: mediaType === "image" ? "📷 Imagem" : `📎 ${file.name}`,
+          unread_count: 0,
+        }).eq("id", selectedConversation.zapp_conversation_id);
+      }
+      
+      toast.success(mediaType === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+    } catch (error: any) {
+      console.error("Error sending media:", error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
+      toast.error(error.message || "Erro ao enviar mídia");
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
+  // Handle file input change
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaType: "image" | "document") => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Máximo 50MB.");
+        return;
+      }
+      sendMediaMessage(file, mediaType);
+    }
+    // Reset input
+    e.target.value = "";
   };
 
   // Handle key press in input
@@ -3011,9 +3150,54 @@ export default function RoyZapp() {
             <TooltipContent side="top">Formatação</TooltipContent>
           </Tooltip>
           
-          <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0">
-            <Paperclip className="h-6 w-6" />
-          </Button>
+          {/* Hidden file inputs */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleFileSelect(e, "image")}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+            className="hidden"
+            onChange={(e) => handleFileSelect(e, "document")}
+          />
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                disabled={uploadingMedia}
+              >
+                {uploadingMedia ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Paperclip className="h-6 w-6" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="bg-zapp-panel border-zapp-border">
+              <DropdownMenuItem 
+                onClick={() => imageInputRef.current?.click()}
+                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              >
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Enviar imagem
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => fileInputRef.current?.click()}
+                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Enviar arquivo
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <Input
             ref={messageInputRef}
