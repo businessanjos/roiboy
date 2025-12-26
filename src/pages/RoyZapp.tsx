@@ -1432,6 +1432,23 @@ export default function RoyZapp() {
         <TooltipContent side="bottom">Tags</TooltipContent>
       </Tooltip>
 
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "rounded-full h-10 w-10",
+              filterGroups ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
+            )}
+            onClick={() => setFilterGroups(!filterGroups)}
+          >
+            <Users2 className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{filterGroups ? "Mostrar todas" : "Filtrar grupos"}</TooltipContent>
+      </Tooltip>
+
       {/* More menu with Team, Departments and Settings */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -1694,27 +1711,6 @@ export default function RoyZapp() {
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
           )}
         </button>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setFilterGroups(!filterGroups)}
-              className={cn(
-                "px-3 py-3 text-sm font-medium transition-colors relative flex items-center justify-center",
-                filterGroups 
-                  ? "text-zapp-accent" 
-                  : "text-zapp-text-muted hover:text-zapp-text"
-              )}
-            >
-              <Users2 className="h-4 w-4" />
-              {filterGroups && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
-              )}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            {filterGroups ? "Mostrar todas" : "Filtrar grupos"}
-          </TooltipContent>
-        </Tooltip>
       </div>
 
       {/* Search */}
