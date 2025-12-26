@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale";
 import {
   MessageSquare,
   Users,
+  Users2,
   Search,
   MoreVertical,
   Phone,
@@ -185,6 +186,7 @@ export default function RoyZapp() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterGroups, setFilterGroups] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
@@ -521,9 +523,16 @@ export default function RoyZapp() {
         a.conversation?.client?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.conversation?.client?.phone_e164?.includes(searchQuery);
       const matchesStatus = filterStatus === "all" || a.status === filterStatus;
-      return matchesTab && matchesSearch && matchesStatus;
+      
+      // Groups filter: WhatsApp group IDs typically contain @g.us
+      const isGroup = a.conversation?.client?.phone_e164?.includes("@g.us") || 
+                      a.conversation?.client?.phone_e164?.includes("-") ||
+                      (a.conversation?.client?.phone_e164?.length || 0) > 15;
+      const matchesGroups = !filterGroups || isGroup;
+      
+      return matchesTab && matchesSearch && matchesStatus && matchesGroups;
     });
-  }, [assignments, searchQuery, filterStatus, inboxTab, currentAgent?.id]);
+  }, [assignments, searchQuery, filterStatus, filterGroups, inboxTab, currentAgent?.id]);
 
   // Stats
   const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
@@ -675,6 +684,26 @@ export default function RoyZapp() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={cn(
+                  "rounded-full",
+                  filterGroups 
+                    ? "text-zapp-accent bg-zapp-panel" 
+                    : "text-zapp-text-muted hover:bg-zapp-panel"
+                )}
+                onClick={() => setFilterGroups(!filterGroups)}
+              >
+                <Users2 className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {filterGroups ? "Mostrar todas" : "Filtrar grupos"}
+            </TooltipContent>
+          </Tooltip>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
