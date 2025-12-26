@@ -5,15 +5,17 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
 import { 
   Bot, 
-  Brain, 
-  MessageSquareText, 
-  Tags, 
-  FileText, 
+  TrendingUp, 
+  AlertTriangle, 
+  Heart, 
+  Activity, 
+  ThumbsUp, 
+  Headphones,
   ChevronDown, 
   ChevronUp,
   Save,
   RefreshCw,
-  Sparkles
+  MessageSquareText
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -38,17 +40,21 @@ interface AIAgentFunction {
 }
 
 const FUNCTION_ICONS: Record<string, React.ReactNode> = {
-  message_analysis: <Brain className="h-5 w-5" />,
-  sentiment_analysis: <Sparkles className="h-5 w-5" />,
-  auto_tagging: <Tags className="h-5 w-5" />,
-  summary_generation: <FileText className="h-5 w-5" />,
+  roi_detection: <TrendingUp className="h-5 w-5" />,
+  risk_detection: <AlertTriangle className="h-5 w-5" />,
+  life_events: <Heart className="h-5 w-5" />,
+  engagement_score: <Activity className="h-5 w-5" />,
+  vnps_eligibility: <ThumbsUp className="h-5 w-5" />,
+  support_requests: <Headphones className="h-5 w-5" />,
 };
 
 const FUNCTION_COLORS: Record<string, string> = {
-  message_analysis: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  sentiment_analysis: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  auto_tagging: 'bg-green-500/10 text-green-500 border-green-500/20',
-  summary_generation: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  roi_detection: 'bg-green-500/10 text-green-500 border-green-500/20',
+  risk_detection: 'bg-red-500/10 text-red-500 border-red-500/20',
+  life_events: 'bg-pink-500/10 text-pink-500 border-pink-500/20',
+  engagement_score: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  vnps_eligibility: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+  support_requests: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
 };
 
 export default function AIAgent() {
@@ -223,7 +229,7 @@ export default function AIAgent() {
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <div className={`p-2 rounded-lg border ${FUNCTION_COLORS[fn.function_key] || 'bg-muted'}`}>
-                    {FUNCTION_ICONS[fn.function_key] || <Brain className="h-5 w-5" />}
+                    {FUNCTION_ICONS[fn.function_key] || <Bot className="h-5 w-5" />}
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
