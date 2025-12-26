@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Users,
   Users2,
+  User,
   Search,
   MoreVertical,
   Phone,
@@ -610,10 +611,10 @@ export default function RoyZapp() {
   // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
-      // Tab filter: "mine" = assigned to current agent, "queue" = pending without agent
+      // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
       const matchesTab = inboxTab === "mine" 
         ? a.agent_id === currentAgent?.id
-        : a.status === "pending" && !a.agent_id;
+        : true; // Queue shows ALL conversations
       
       const matchesSearch = searchQuery === "" ||
         a.conversation?.client?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -630,11 +631,19 @@ export default function RoyZapp() {
     });
   }, [assignments, searchQuery, filterStatus, filterGroups, inboxTab, currentAgent?.id]);
 
+  // Helper to get agent name by id
+  const getAgentName = (agentId: string | null) => {
+    if (!agentId) return null;
+    const agent = agents.find(a => a.id === agentId);
+    return agent?.user?.name || null;
+  };
+
   // Stats
   const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
-  const pendingConversations = assignments.filter((a) => a.status === "pending" && !a.agent_id).length;
+  const totalQueueConversations = assignments.filter((a) => a.status !== "closed").length;
   const myConversations = assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
   const activeConversations = assignments.filter((a) => a.status === "active").length;
+  const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
 
   const getInitials = (name: string) =>
     name
@@ -770,9 +779,9 @@ export default function RoyZapp() {
           <div className="w-2 h-2 rounded-full bg-zapp-accent" />
           <span className="text-zapp-text-muted">{onlineAgents} online</span>
         </div>
-        {pendingConversations > 0 && (
+        {totalQueueConversations > 0 && (
           <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
-            {pendingConversations}
+            {totalQueueConversations}
           </Badge>
         )}
       </div>
@@ -890,9 +899,9 @@ export default function RoyZapp() {
         >
           <span className="flex items-center justify-center gap-2">
             Fila
-            {pendingConversations > 0 && (
+            {totalQueueConversations > 0 && (
               <Badge variant="secondary" className="bg-amber-500 text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
-                {pendingConversations}
+                {totalQueueConversations}
               </Badge>
             )}
           </span>
@@ -983,6 +992,17 @@ export default function RoyZapp() {
                         )}
                       </div>
                     </div>
+                    {/* Show agent indicator in queue tab when someone is handling */}
+                    {inboxTab === "queue" && assignment.agent_id && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <User className="h-3 w-3 text-zapp-accent" />
+                        <span className="text-[11px] text-zapp-accent truncate">
+                          {assignment.agent_id === currentAgent?.id 
+                            ? "Você" 
+                            : getAgentName(assignment.agent_id) || "Atendente"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
@@ -1504,7 +1524,7 @@ export default function RoyZapp() {
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-500" />
-              <span className="text-zapp-text-muted">{pendingConversations} aguardando</span>
+              <span className="text-zapp-text-muted">{totalQueueConversations} na fila</span>
             </div>
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-zapp-accent" />
