@@ -455,53 +455,138 @@ serve(async (req) => {
         console.log(`Media info - type: ${mediaType}, url: ${mediaUrl?.substring(0, 50)}..., mimetype: ${mediaMimetype}`);
         
         // ============================================
-        // MEDIA DOWNLOAD: Download WhatsApp media to Supabase Storage
-        // WhatsApp media URLs are temporary and expire after a few hours
+        // MEDIA DOWNLOAD: Download and decrypt WhatsApp media to Supabase Storage
+        // WhatsApp media URLs are encrypted and temporary - we need to decrypt them
         // ============================================
         let permanentMediaUrl = mediaUrl;
         if (mediaUrl && mediaType && mediaUrl.includes("whatsapp.net")) {
-          console.log(`Downloading temporary WhatsApp media to permanent storage...`);
+          console.log(`Attempting to download WhatsApp media...`);
+          
+          // Get mediaKey from content object for decryption
+          const mediaKey = contentObj?.mediaKey ? String(contentObj.mediaKey) : null;
+          
           try {
-            // Download the media from WhatsApp's temporary URL
+            // Try to download the media
             const mediaResponse = await fetch(mediaUrl);
+            console.log(`Media download response status: ${mediaResponse.status}`);
+            
             if (mediaResponse.ok) {
-              const mediaBlob = await mediaResponse.blob();
-              const arrayBuffer = await mediaBlob.arrayBuffer();
-              const uint8Array = new Uint8Array(arrayBuffer);
+              const encryptedData = await mediaResponse.arrayBuffer();
+              console.log(`Downloaded encrypted data: ${encryptedData.byteLength} bytes`);
               
-              // Generate a unique filename based on timestamp and type
-              const timestamp = Date.now();
-              const extension = mediaMimetype 
-                ? mediaMimetype.split("/")[1]?.split(";")[0] || "bin" 
-                : (mediaType === "image" ? "jpg" : mediaType === "video" ? "mp4" : mediaType === "audio" ? "ogg" : "bin");
-              const fileName = `${accountId}/${mediaType}_${timestamp}.${extension}`;
+              let finalData: Uint8Array;
               
-              // Upload to Supabase Storage
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from("zapp-media")
-                .upload(fileName, uint8Array, {
-                  contentType: mediaMimetype || `${mediaType}/*`,
-                  upsert: false,
-                });
-              
-              if (uploadError) {
-                console.error(`Error uploading media to storage:`, uploadError);
-                // Keep original URL as fallback (may still work for a short time)
+              // If we have a mediaKey, we need to decrypt
+              if (mediaKey && encryptedData.byteLength > 10) {
+                console.log(`Decrypting media with mediaKey...`);
+                try {
+                  // Decode the base64 mediaKey
+                  const keyBytes = Uint8Array.from(atob(mediaKey), c => c.charCodeAt(0));
+                  
+                  // WhatsApp media decryption info strings
+                  const mediaTypeInfo: Record<string, string> = {
+                    'image': 'WhatsApp Image Keys',
+                    'video': 'WhatsApp Video Keys',
+                    'audio': 'WhatsApp Audio Keys',
+                    'document': 'WhatsApp Document Keys',
+                    'sticker': 'WhatsApp Image Keys', // Stickers use image keys
+                  };
+                  
+                  const info = new TextEncoder().encode(mediaTypeInfo[mediaType] || 'WhatsApp Image Keys');
+                  
+                  // Import the media key for HKDF
+                  const importedKey = await crypto.subtle.importKey(
+                    'raw',
+                    keyBytes,
+                    { name: 'HKDF' },
+                    false,
+                    ['deriveBits']
+                  );
+                  
+                  // Derive 112 bytes using HKDF-SHA256
+                  const derivedBits = await crypto.subtle.deriveBits(
+                    {
+                      name: 'HKDF',
+                      hash: 'SHA-256',
+                      salt: new Uint8Array(0),
+                      info: info,
+                    },
+                    importedKey,
+                    112 * 8 // 112 bytes in bits
+                  );
+                  
+                  const derivedBytes = new Uint8Array(derivedBits);
+                  const iv = derivedBytes.slice(0, 16);
+                  const cipherKey = derivedBytes.slice(16, 48);
+                  
+                  // Remove the last 10 bytes (MAC) from the encrypted data
+                  const ciphertext = new Uint8Array(encryptedData).slice(0, -10);
+                  
+                  // Import cipher key for AES-CBC decryption
+                  const aesKey = await crypto.subtle.importKey(
+                    'raw',
+                    cipherKey,
+                    { name: 'AES-CBC' },
+                    false,
+                    ['decrypt']
+                  );
+                  
+                  // Decrypt the data
+                  const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-CBC', iv: iv },
+                    aesKey,
+                    ciphertext
+                  );
+                  
+                  finalData = new Uint8Array(decrypted);
+                  console.log(`Media decrypted successfully: ${finalData.byteLength} bytes`);
+                } catch (decryptError) {
+                  console.error(`Decryption failed, using raw data:`, decryptError);
+                  // If decryption fails, try to use the raw data (might already be decrypted)
+                  finalData = new Uint8Array(encryptedData);
+                }
               } else {
-                // Get the public URL
-                const { data: publicUrlData } = supabase.storage
-                  .from("zapp-media")
-                  .getPublicUrl(fileName);
+                // No mediaKey, assume data is already decrypted or use as-is
+                finalData = new Uint8Array(encryptedData);
+                console.log(`No mediaKey found, using raw data: ${finalData.byteLength} bytes`);
+              }
+              
+              // Only upload if we have valid data
+              if (finalData.byteLength > 100) {
+                // Generate a unique filename based on timestamp and type
+                const timestamp = Date.now();
+                const extension = mediaMimetype 
+                  ? mediaMimetype.split("/")[1]?.split(";")[0] || "bin" 
+                  : (mediaType === "image" ? "jpg" : mediaType === "video" ? "mp4" : mediaType === "audio" ? "ogg" : "bin");
+                const fileName = `${accountId}/${mediaType}_${timestamp}.${extension}`;
                 
-                permanentMediaUrl = publicUrlData.publicUrl;
-                console.log(`Media uploaded successfully: ${permanentMediaUrl}`);
+                // Upload to Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                  .from("zapp-media")
+                  .upload(fileName, finalData, {
+                    contentType: mediaMimetype || `${mediaType}/*`,
+                    upsert: false,
+                  });
+                
+                if (uploadError) {
+                  console.error(`Error uploading media to storage:`, uploadError);
+                } else {
+                  // Get the public URL
+                  const { data: publicUrlData } = supabase.storage
+                    .from("zapp-media")
+                    .getPublicUrl(fileName);
+                  
+                  permanentMediaUrl = publicUrlData.publicUrl;
+                  console.log(`Media uploaded successfully: ${permanentMediaUrl}`);
+                }
+              } else {
+                console.log(`Data too small (${finalData.byteLength} bytes), keeping original URL`);
               }
             } else {
               console.error(`Failed to download WhatsApp media: ${mediaResponse.status} ${mediaResponse.statusText}`);
             }
           } catch (downloadError) {
-            console.error(`Error downloading/uploading media:`, downloadError);
-            // Keep original URL as fallback
+            console.error(`Error downloading/processing media:`, downloadError);
           }
         }
         
