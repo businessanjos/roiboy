@@ -2536,7 +2536,7 @@ export default function RoyZapp() {
                   {STATUS_CONFIG[selectedConversation.status]?.label || "Status"}
                 </Badge>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48">
+              <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">
                 <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Alterar status</div>
                 <DropdownMenuItem 
                   className={cn("text-zapp-text flex items-center gap-2", selectedConversation.status === "triage" && "bg-zapp-bg-dark")}
