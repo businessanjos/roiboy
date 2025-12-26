@@ -858,14 +858,18 @@ export default function WhatsAppGroups() {
       
       if (error) throw error;
       
-      const fetchedGroups = (data?.groups || []).map((g: {
+      // Handle response format: { success: true, data: { groups: [...] } }
+      const groupsArray = data?.data?.groups || data?.groups || [];
+      console.log("Fetched groups from API:", groupsArray.length);
+      
+      const fetchedGroups = groupsArray.map((g: {
         JID?: string; jid?: string; id?: string;
         Name?: string; name?: string; Subject?: string; subject?: string;
-        Size?: number; size?: number; Participants?: unknown[];
+        Size?: number; size?: number; Participants?: unknown[]; ParticipantCount?: number;
       }) => ({
         jid: g.JID || g.jid || g.id || "",
         name: g.Name || g.name || g.Subject || g.subject || "Sem nome",
-        size: g.Size || g.size || g.Participants?.length || 0,
+        size: g.Size || g.size || g.ParticipantCount || g.Participants?.length || 0,
       })).filter((g: {jid: string}) => g.jid.includes("@g.us"));
       
       // Filter out groups that are already synced
