@@ -34,15 +34,17 @@ import {
   Target,
   Zap,
   Crown,
-  Heart
+  Heart,
+  MessageSquare
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { RoyAssistant, ONBOARDING_MESSAGES } from "@/components/onboarding/RoyAssistant";
+import { OnboardingWhatsAppStep } from "@/components/onboarding/OnboardingWhatsAppStep";
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 interface OnboardingData {
   // Step 1: Account
@@ -129,32 +131,39 @@ export default function Onboarding() {
       unlocked: completedSteps.includes(2)
     },
     {
+      id: "whatsapp_connected",
+      title: "Conectado",
+      description: "Integrou o WhatsApp",
+      icon: MessageSquare,
+      unlocked: completedSteps.includes(3) && !skippedSteps.includes(3)
+    },
+    {
       id: "first_client",
       title: "Primeiro Cliente",
       description: "Cadastrou seu primeiro cliente",
       icon: Target,
-      unlocked: completedSteps.includes(3) && !skippedSteps.includes(3)
+      unlocked: completedSteps.includes(4) && !skippedSteps.includes(4)
     },
     {
       id: "product_pro",
       title: "Catálogo Iniciado",
       description: "Cadastrou seu primeiro produto",
       icon: Package,
-      unlocked: completedSteps.includes(4) && !skippedSteps.includes(4)
+      unlocked: completedSteps.includes(5) && !skippedSteps.includes(5)
     },
     {
       id: "event_planner",
       title: "Organizador",
       description: "Criou seu primeiro evento",
       icon: Calendar,
-      unlocked: completedSteps.includes(5) && !skippedSteps.includes(5)
+      unlocked: completedSteps.includes(6) && !skippedSteps.includes(6)
     },
     {
       id: "team_builder",
       title: "Líder de Equipe",
       description: "Convidou membros para a equipe",
       icon: Crown,
-      unlocked: completedSteps.includes(6) && !skippedSteps.includes(6) && data.inviteEmails.trim().length > 0
+      unlocked: completedSteps.includes(7) && !skippedSteps.includes(7) && data.inviteEmails.trim().length > 0
     }
   ];
 
@@ -238,8 +247,8 @@ export default function Onboarding() {
         })
         .eq("account_id", currentUser.account_id);
 
-      // Create first client if provided
-      if (data.clientName && data.clientPhone && !skippedSteps.includes(3)) {
+      // Create first client if provided (now step 4)
+      if (data.clientName && data.clientPhone && !skippedSteps.includes(4)) {
         const phone = data.clientPhone.replace(/\D/g, "");
         const phoneE164 = phone.startsWith("55") ? `+${phone}` : `+55${phone}`;
         
@@ -254,8 +263,8 @@ export default function Onboarding() {
           });
       }
 
-      // Create first product if provided
-      if (data.productName && !skippedSteps.includes(4)) {
+      // Create first product if provided (now step 5)
+      if (data.productName && !skippedSteps.includes(5)) {
         await supabase
           .from("products")
           .insert({
@@ -267,8 +276,8 @@ export default function Onboarding() {
           });
       }
 
-      // Create first event if provided
-      if (data.eventTitle && data.eventDate && !skippedSteps.includes(5)) {
+      // Create first event if provided (now step 6)
+      if (data.eventTitle && data.eventDate && !skippedSteps.includes(6)) {
         const scheduledAt = data.eventTime 
           ? new Date(`${data.eventDate}T${data.eventTime}:00`)
           : new Date(`${data.eventDate}T09:00:00`);
@@ -286,8 +295,8 @@ export default function Onboarding() {
           });
       }
 
-      // TODO: Implement invite logic
-      if (data.inviteEmails.trim() && !skippedSteps.includes(6)) {
+      // Team invites (now step 7)
+      if (data.inviteEmails.trim() && !skippedSteps.includes(7)) {
         const emails = data.inviteEmails.split(",").map(e => e.trim()).filter(Boolean);
         console.log("Would invite:", emails);
       }
@@ -336,14 +345,14 @@ export default function Onboarding() {
     nextStep();
   };
 
-  const canSkip = currentStep >= 3 && currentStep <= 6;
+  const canSkip = currentStep >= 3 && currentStep <= 7;
 
   if (userLoading || settingsLoading) {
     return <LoadingScreen message="Preparando onboarding..." />;
   }
 
-  const stepIcons = [Building2, Sparkles, User, Package, Calendar, UserPlus];
-  const stepLabels = ["Conta", "IA", "Cliente", "Produto", "Evento", "Equipe"];
+  const stepIcons = [Building2, Sparkles, MessageSquare, User, Package, Calendar, UserPlus];
+  const stepLabels = ["Conta", "IA", "WhatsApp", "Cliente", "Produto", "Evento", "Equipe"];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4 relative overflow-hidden">
@@ -489,24 +498,33 @@ export default function Onboarding() {
                     />
                   )}
                   {currentStep === 3 && (
+                    <OnboardingWhatsAppStep
+                      onConnected={() => {
+                        if (!completedSteps.includes(3)) {
+                          setCompletedSteps(prev => [...prev, 3]);
+                        }
+                      }}
+                    />
+                  )}
+                  {currentStep === 4 && (
                     <StepClient
                       data={data}
                       onChange={(updates) => setData({ ...data, ...updates })}
                     />
                   )}
-                  {currentStep === 4 && (
+                  {currentStep === 5 && (
                     <StepProduct
                       data={data}
                       onChange={(updates) => setData({ ...data, ...updates })}
                     />
                   )}
-                  {currentStep === 5 && (
+                  {currentStep === 6 && (
                     <StepEvent
                       data={data}
                       onChange={(updates) => setData({ ...data, ...updates })}
                     />
                   )}
-                  {currentStep === 6 && (
+                  {currentStep === 7 && (
                     <StepTeam
                       data={data}
                       onChange={(updates) => setData({ ...data, ...updates })}
