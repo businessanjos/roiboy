@@ -184,6 +184,7 @@ interface Message {
   audio_duration_sec?: number | null;
   sender_name?: string | null;
   delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
+  media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
 }
 
 interface ConversationAssignment {
@@ -837,13 +838,14 @@ export default function RoyZapp() {
     try {
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status")
+        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status")
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: true })
         .limit(100);
 
       if (error) throw error;
-      setMessages((data || []).map((m: any) => ({
+      
+      const msgs = (data || []).map((m: any) => ({
         id: m.id,
         content: m.content,
         is_from_client: m.direction === "inbound",
@@ -856,7 +858,31 @@ export default function RoyZapp() {
         audio_duration_sec: m.audio_duration_sec,
         sender_name: m.sender_name,
         delivery_status: m.delivery_status,
-      })));
+        media_download_status: m.media_download_status,
+      }));
+      
+      setMessages(msgs);
+      
+      // Trigger lazy download for pending media
+      const pendingMediaIds = (data || [])
+        .filter((m: any) => m.media_download_status === "pending")
+        .map((m: any) => m.id);
+      
+      if (pendingMediaIds.length > 0) {
+        console.log(`Triggering lazy download for ${pendingMediaIds.length} media messages`);
+        // Fire and forget - don't await
+        supabase.functions.invoke("download-media", {
+          body: { message_ids: pendingMediaIds }
+        }).then(({ data: downloadResult, error: downloadError }) => {
+          if (downloadError) {
+            console.error("Error triggering media download:", downloadError);
+          } else if (downloadResult?.successful > 0) {
+            console.log(`Downloaded ${downloadResult.successful} media files`);
+            // Refresh messages to show downloaded media
+            fetchMessages(zappConversationId);
+          }
+        });
+      }
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
@@ -3482,7 +3508,19 @@ export default function RoyZapp() {
                             {message.sender_name}
                           </p>
                         )}
-                        {/* Media content */}
+                        {/* Media content - show loading state for pending downloads */}
+                        {message.media_download_status === "pending" && message.media_type && (
+                          <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
+                            <span className="text-xs text-zapp-text-muted">Carregando mídia...</span>
+                          </div>
+                        )}
+                        {message.media_download_status === "failed" && message.media_type && (
+                          <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
+                            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                            <span className="text-xs text-zapp-text-muted">Falha ao carregar mídia</span>
+                          </div>
+                        )}
                         {message.media_url && message.media_type === "image" && (
                           <div className="mb-2 rounded-lg overflow-hidden">
                             <img 

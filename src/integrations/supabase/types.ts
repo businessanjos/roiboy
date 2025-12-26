@@ -5240,7 +5240,10 @@ export type Database = {
           direction: string
           external_message_id: string | null
           id: string
+          media_download_status: string | null
+          media_encrypted_url: string | null
           media_filename: string | null
+          media_key: string | null
           media_mimetype: string | null
           media_type: string | null
           media_url: string | null
@@ -5259,7 +5262,10 @@ export type Database = {
           direction: string
           external_message_id?: string | null
           id?: string
+          media_download_status?: string | null
+          media_encrypted_url?: string | null
           media_filename?: string | null
+          media_key?: string | null
           media_mimetype?: string | null
           media_type?: string | null
           media_url?: string | null
@@ -5278,7 +5284,10 @@ export type Database = {
           direction?: string
           external_message_id?: string | null
           id?: string
+          media_download_status?: string | null
+          media_encrypted_url?: string | null
           media_filename?: string | null
+          media_key?: string | null
           media_mimetype?: string | null
           media_type?: string | null
           media_url?: string | null
