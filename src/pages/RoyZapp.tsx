@@ -48,6 +48,13 @@ import {
   FileText,
   Download,
   Image as ImageIcon,
+  Archive,
+  BellOff,
+  Pin,
+  Tag,
+  MailOpen,
+  Heart,
+  Ban,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -209,6 +216,11 @@ interface ConversationAssignment {
     unread_count: number;
     is_group: boolean;
     group_jid: string | null;
+    is_archived?: boolean;
+    is_muted?: boolean;
+    is_pinned?: boolean;
+    is_favorite?: boolean;
+    is_blocked?: boolean;
     client?: {
       id: string;
       full_name: string;
@@ -473,7 +485,7 @@ export default function RoyZapp() {
             agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
             department:zapp_departments(*),
             conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, client:clients(id, full_name, phone_e164, avatar_url))
+            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, client:clients(id, full_name, phone_e164, avatar_url))
           `)
           .eq("account_id", currentUser.account_id)
           .neq("status", "closed")
@@ -827,8 +839,90 @@ export default function RoyZapp() {
       lastMessage: zc?.last_message_preview || null,
       unreadCount: zc?.unread_count || 0,
       lastMessageAt: zc?.last_message_at || assignment.updated_at,
+      isPinned: zc?.is_pinned || false,
+      isMuted: zc?.is_muted || false,
+      isArchived: zc?.is_archived || false,
+      isFavorite: zc?.is_favorite || false,
+      isBlocked: zc?.is_blocked || false,
     };
   }, []);
+
+  // Conversation management functions
+  const updateConversationFlag = async (
+    conversationId: string, 
+    field: "is_archived" | "is_muted" | "is_pinned" | "is_favorite" | "is_blocked",
+    value: boolean
+  ) => {
+    try {
+      const updateData: Record<string, any> = { [field]: value };
+      
+      // Add timestamp for pinned
+      if (field === "is_pinned") {
+        updateData.pinned_at = value ? new Date().toISOString() : null;
+      }
+      if (field === "is_archived") {
+        updateData.archived_at = value ? new Date().toISOString() : null;
+      }
+      
+      const { error } = await supabase
+        .from("zapp_conversations")
+        .update(updateData)
+        .eq("id", conversationId);
+
+      if (error) throw error;
+      
+      const messages: Record<string, { on: string; off: string }> = {
+        is_archived: { on: "Conversa arquivada!", off: "Conversa desarquivada!" },
+        is_muted: { on: "Notificações silenciadas!", off: "Notificações reativadas!" },
+        is_pinned: { on: "Conversa fixada!", off: "Conversa desafixada!" },
+        is_favorite: { on: "Adicionado aos favoritos!", off: "Removido dos favoritos!" },
+        is_blocked: { on: "Contato bloqueado!", off: "Contato desbloqueado!" },
+      };
+      
+      toast.success(value ? messages[field].on : messages[field].off);
+      fetchData();
+    } catch (error: any) {
+      console.error(`Error updating ${field}:`, error);
+      toast.error("Erro ao atualizar conversa");
+    }
+  };
+
+  const markAsUnread = async (conversationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("zapp_conversations")
+        .update({ unread_count: 1 })
+        .eq("id", conversationId);
+
+      if (error) throw error;
+      toast.success("Marcada como não lida!");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error marking as unread:", error);
+      toast.error("Erro ao marcar como não lida");
+    }
+  };
+
+  const deleteConversation = async (assignmentId: string) => {
+    try {
+      // Close the assignment (soft delete)
+      const { error } = await supabase
+        .from("zapp_conversation_assignments")
+        .update({ status: "closed", closed_at: new Date().toISOString() })
+        .eq("id", assignmentId);
+
+      if (error) throw error;
+      
+      toast.success("Conversa apagada!");
+      if (selectedConversation?.id === assignmentId) {
+        setSelectedConversation(null);
+      }
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting conversation:", error);
+      toast.error("Erro ao apagar conversa");
+    }
+  };
 
   // Send message via UAZAPI
   const sendMessage = async () => {
@@ -1311,11 +1405,12 @@ export default function RoyZapp() {
             ) : (
               filteredAssignments.map((assignment) => {
                 const contact = getContactInfo(assignment);
+                const zappConvId = assignment.zapp_conversation?.id;
                 return (
                   <div
                     key={assignment.id}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zapp-panel transition-colors",
+                      "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zapp-panel transition-colors group",
                       selectedConversation?.id === assignment.id && "bg-zapp-bg-dark"
                     )}
                     onClick={() => setSelectedConversation(assignment)}
@@ -1342,12 +1437,125 @@ export default function RoyZapp() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-zapp-text font-medium truncate">
-                          {contact.name}
-                        </span>
-                        <span className="text-zapp-text-muted text-xs">
-                          {formatTime(contact.lastMessageAt)}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {contact.isPinned && (
+                            <Pin className="h-3 w-3 text-zapp-text-muted flex-shrink-0" />
+                          )}
+                          {contact.isMuted && (
+                            <BellOff className="h-3 w-3 text-zapp-text-muted flex-shrink-0" />
+                          )}
+                          {contact.isFavorite && (
+                            <Heart className="h-3 w-3 text-red-400 fill-red-400 flex-shrink-0" />
+                          )}
+                          <span className="text-zapp-text font-medium truncate">
+                            {contact.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-zapp-text-muted text-xs">
+                            {formatTime(contact.lastMessageAt)}
+                          </span>
+                          {/* Dropdown menu */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zapp-text-muted hover:bg-zapp-hover"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56">
+                              {zappConvId && (
+                                <>
+                                  <DropdownMenuItem 
+                                    className="text-zapp-text hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateConversationFlag(zappConvId, "is_archived", !contact.isArchived);
+                                    }}
+                                  >
+                                    <Archive className="h-4 w-4 mr-3" />
+                                    {contact.isArchived ? "Desarquivar conversa" : "Arquivar conversa"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-zapp-text hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateConversationFlag(zappConvId, "is_muted", !contact.isMuted);
+                                    }}
+                                  >
+                                    <BellOff className="h-4 w-4 mr-3" />
+                                    {contact.isMuted ? "Reativar notificações" : "Silenciar notificações"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-zapp-text hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateConversationFlag(zappConvId, "is_pinned", !contact.isPinned);
+                                    }}
+                                  >
+                                    <Pin className="h-4 w-4 mr-3" />
+                                    {contact.isPinned ? "Desafixar conversa" : "Fixar conversa"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-zapp-text hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // TODO: Open tag dialog
+                                      toast.info("Em breve: Etiquetar conversa");
+                                    }}
+                                  >
+                                    <Tag className="h-4 w-4 mr-3" />
+                                    Etiquetar conversa
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-zapp-text hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markAsUnread(zappConvId);
+                                    }}
+                                  >
+                                    <MailOpen className="h-4 w-4 mr-3" />
+                                    Marcar como não lida
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-zapp-text hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateConversationFlag(zappConvId, "is_favorite", !contact.isFavorite);
+                                    }}
+                                  >
+                                    <Heart className={cn("h-4 w-4 mr-3", contact.isFavorite && "fill-current text-red-400")} />
+                                    {contact.isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-zapp-border" />
+                                  <DropdownMenuItem 
+                                    className="text-zapp-text hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateConversationFlag(zappConvId, "is_blocked", !contact.isBlocked);
+                                    }}
+                                  >
+                                    <Ban className="h-4 w-4 mr-3" />
+                                    {contact.isBlocked ? "Desbloquear" : "Bloquear"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-red-400 hover:bg-zapp-hover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteConversation(assignment.id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-3" />
+                                    Apagar conversa
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between mt-0.5">
                         <div className="flex items-center gap-1.5 min-w-0">
