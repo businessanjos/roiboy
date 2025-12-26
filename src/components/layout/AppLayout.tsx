@@ -27,12 +27,12 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-background">
+    <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
       <TrialBanner />
       <MobileHeader />
-      <div className="flex flex-1 w-full">
+      <div className="flex flex-1 w-full min-h-0">
         <Sidebar />
-        <main className="flex-1 min-w-0 overflow-auto">
+        <main className="flex-1 min-w-0 min-h-0 overflow-auto">
           <Outlet />
         </main>
       </div>

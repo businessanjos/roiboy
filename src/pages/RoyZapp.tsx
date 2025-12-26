@@ -1112,7 +1112,7 @@ export default function RoyZapp() {
 
   if (permissionsLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-48px)] bg-zapp-bg">
+      <div className="flex items-center justify-center h-full bg-zapp-bg">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-full bg-zapp-accent flex items-center justify-center">
             <MessageSquare className="h-8 w-8 text-white" />
@@ -1126,7 +1126,7 @@ export default function RoyZapp() {
 
   if (!hasZappAccess) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-48px)] bg-zapp-bg">
+      <div className="flex items-center justify-center h-full bg-zapp-bg">
         <div className="text-center space-y-4 max-w-md px-4">
           <div className="w-20 h-20 mx-auto rounded-full bg-red-500/10 flex items-center justify-center">
             <X className="h-10 w-10 text-red-500" />
@@ -2449,10 +2449,10 @@ export default function RoyZapp() {
   };
 
   return (
-    <div className="h-[calc(100vh-48px)] flex bg-zapp-bg overflow-hidden">
+    <div className="h-full flex bg-zapp-bg overflow-hidden">
       {/* Left panel - Conversation list */}
       <div className={cn(
-        "w-full lg:w-[400px] flex-shrink-0 border-r border-zapp-border flex flex-col",
+        "w-full lg:w-[400px] flex-shrink-0 border-r border-zapp-border flex flex-col h-full",
         selectedConversation && "hidden lg:flex"
       )}>
         {renderConversationList()}
@@ -2460,7 +2460,7 @@ export default function RoyZapp() {
 
       {/* Right panel - Chat view */}
       <div className={cn(
-        "flex-1 flex flex-col",
+        "flex-1 flex flex-col h-full min-h-0",
         !selectedConversation && "hidden lg:flex"
       )}>
         {renderChatView()}
