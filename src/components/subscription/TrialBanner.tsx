@@ -23,10 +23,10 @@ export function TrialBanner() {
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-4 px-4 py-2.5 text-sm border-b",
-        isLastDay && "bg-gradient-to-r from-destructive/20 to-destructive/10 border-destructive/30 text-destructive",
-        isUrgent && !isLastDay && "bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300",
-        !isUrgent && "bg-gradient-to-r from-violet-500/15 to-indigo-500/10 border-violet-500/20 text-violet-700 dark:text-violet-300"
+        "flex items-center justify-between gap-4 px-4 py-2 text-sm border-b backdrop-blur-sm",
+        isLastDay && "bg-destructive/15 border-destructive/25 text-destructive",
+        isUrgent && !isLastDay && "bg-status-warning/15 border-status-warning/25 text-status-warning dark:text-status-warning",
+        !isUrgent && "bg-primary/10 border-primary/20 text-primary"
       )}
     >
       <div className="flex items-center gap-2">
@@ -39,19 +39,18 @@ export function TrialBanner() {
         )}
         <span className="font-medium">
           {isLastDay
-            ? "⚠️ Último dia do seu período de teste!"
+            ? "Último dia do seu período de teste!"
             : daysRemaining !== null
-            ? `✨ ${daysRemaining} ${daysRemaining === 1 ? "dia restante" : "dias restantes"} do período de teste`
-            : "✨ Você está no período de teste"}
+            ? `${daysRemaining} ${daysRemaining === 1 ? "dia restante" : "dias restantes"} do período de teste`
+            : "Você está no período de teste"}
         </span>
       </div>
       <Button 
         asChild 
         size="sm" 
+        variant={isUrgent ? "default" : "outline"}
         className={cn(
-          isUrgent 
-            ? "bg-amber-600 hover:bg-amber-700 text-white" 
-            : "bg-violet-600 hover:bg-violet-700 text-white border-0"
+          !isUrgent && "border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground"
         )}
       >
         <Link to="/choose-plan">
