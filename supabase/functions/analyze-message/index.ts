@@ -197,14 +197,127 @@ async function getAISettings(supabase: any, accountId: string): Promise<AISettin
   }
 
   return {
-    model: data?.ai_model || "google/gemini-2.5-flash",
+    model: data?.ai_model || "auto",
     system_prompt: data?.ai_system_prompt || DEFAULT_SYSTEM_PROMPT,
     roi_prompt: data?.ai_roi_prompt || DEFAULT_ROI_PROMPT,
     risk_prompt: data?.ai_risk_prompt || DEFAULT_RISK_PROMPT,
     life_events_prompt: data?.ai_life_events_prompt || DEFAULT_LIFE_EVENTS_PROMPT,
-    min_message_length: data?.ai_min_message_length ?? 80, // AUMENTADO de 50 para 80
-    confidence_threshold: data?.ai_confidence_threshold ?? 0.85, // AUMENTADO de 0.75 para 0.85
+    min_message_length: data?.ai_min_message_length ?? 80,
+    confidence_threshold: data?.ai_confidence_threshold ?? 0.85,
     auto_analysis_enabled: data?.ai_auto_analysis_enabled ?? true,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SELEÇÃO INTELIGENTE DE MODELO (Auto: Flash → Pro quando necessário)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface ModelDecision {
+  model: string;
+  reason: string;
+  escalated: boolean;
+}
+
+function selectModelForMessage(baseModel: string, content: string, contextMessages?: string[]): ModelDecision {
+  // Se não for modo automático, usar o modelo selecionado
+  if (baseModel !== "auto") {
+    return { model: baseModel, reason: "fixed_model", escalated: false };
+  }
+
+  const text = content.toLowerCase();
+  const textLength = content.length;
+  const wordCount = content.split(/\s+/).filter(w => w.length > 2).length;
+  
+  // CRITÉRIOS DE ESCALAÇÃO PARA PRO:
+  
+  // 1. Mensagens muito longas (>500 chars ou >80 palavras) - análise mais complexa
+  if (textLength > 500 || wordCount > 80) {
+    return { 
+      model: "google/gemini-2.5-pro", 
+      reason: "long_message", 
+      escalated: true 
+    };
+  }
+  
+  // 2. Keywords que indicam conteúdo de alto valor para análise precisa
+  const highValueKeywords = [
+    // ROI potencial - precisamos de precisão para não criar falsos positivos
+    /fatur(amento|ei|ou)/i,
+    /lucr(o|ei|ou|amos)/i,
+    /vend(i|eu|emos|as)/i,
+    /fech(ei|ou|amos|aram) (contrato|cliente|venda|negócio)/i,
+    /aument(ei|ou|amos)/i,
+    /cresci(mento)?/i,
+    /resultado(s)? (concreto|real|específico)/i,
+    /consegu(i|imos|iram)/i,
+    
+    // Risco potencial - precisamos de precisão para não criar falsos positivos
+    /cancel(ar|amento|ei)/i,
+    /desist(ir|iu|imos)/i,
+    /insatisf(eito|ação)/i,
+    /não (vou|consigo|posso) (pagar|continuar)/i,
+    /reclamar|reclamação/i,
+    /problema (sério|grave|financeiro)/i,
+    
+    // Eventos de vida importantes
+    /promov(ido|eu|eram)/i,
+    /nasceu|nascimento/i,
+    /casei|casamento|noiv/i,
+    /formatura|formei|graduação/i,
+  ];
+  
+  if (highValueKeywords.some(pattern => pattern.test(text))) {
+    return { 
+      model: "google/gemini-2.5-pro", 
+      reason: "high_value_content", 
+      escalated: true 
+    };
+  }
+  
+  // 3. Presença de números específicos (valores, percentuais) - exige precisão
+  const hasSpecificNumbers = /\d+[.,]?\d*\s*(%|mil|k|reais|R\$|\$|por ?cento)/i.test(text);
+  if (hasSpecificNumbers) {
+    return { 
+      model: "google/gemini-2.5-pro", 
+      reason: "specific_numbers", 
+      escalated: true 
+    };
+  }
+  
+  // 4. Contexto rico (múltiplas mensagens anteriores relevantes)
+  if (contextMessages && contextMessages.length >= 3) {
+    const totalContextLength = contextMessages.join(" ").length;
+    if (totalContextLength > 800) {
+      return { 
+        model: "google/gemini-2.5-pro", 
+        reason: "rich_context", 
+        escalated: true 
+      };
+    }
+  }
+  
+  // 5. Mensagens ambíguas que podem ser ROI ou Risco (requer nuance)
+  const ambiguousPatterns = [
+    /não (sei|tenho certeza) se/i,
+    /pensan(do|do em)/i,
+    /considerar|considerando/i,
+    /avaliar|avaliando/i,
+    /talvez|pode ser que/i,
+  ];
+  
+  if (ambiguousPatterns.some(p => p.test(text)) && textLength > 150) {
+    return { 
+      model: "google/gemini-2.5-pro", 
+      reason: "ambiguous_content", 
+      escalated: true 
+    };
+  }
+  
+  // Caso padrão: usar Flash (mais rápido e econômico)
+  return { 
+    model: "google/gemini-2.5-flash", 
+    reason: "standard", 
+    escalated: false 
   };
 }
 
@@ -447,8 +560,6 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Analyzing message for client ${client_id} using model ${aiSettings.model}:`, content_text.substring(0, 100));
-
     // Get recent context from this client (apenas mensagens do cliente)
     const { data: recentMessages } = await supabase
       .from("message_events")
@@ -457,9 +568,20 @@ serve(async (req) => {
       .order("sent_at", { ascending: false })
       .limit(3);
 
+    const contextMessages = recentMessages?.map(m => m.content_text || "") || [];
     const contextStr = recentMessages?.map(m => 
       `[${m.direction === 'client_to_team' ? 'Cliente' : 'Equipe'}]: ${m.content_text?.substring(0, 150) || '(sem texto)'}`
     ).join("\n") || "";
+
+    // SELEÇÃO INTELIGENTE DE MODELO
+    const modelDecision = selectModelForMessage(aiSettings.model, content_text, contextMessages);
+    console.log(`Model decision for client ${client_id}:`, {
+      baseModel: aiSettings.model,
+      selectedModel: modelDecision.model,
+      reason: modelDecision.reason,
+      escalated: modelDecision.escalated,
+      messagePreview: content_text.substring(0, 80)
+    });
 
     const userPrompt = `Analise esta mensagem DO CLIENTE e identifique APENAS eventos com ALTA CERTEZA:
 
@@ -483,7 +605,7 @@ LEMBRE-SE:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: aiSettings.model,
+        model: modelDecision.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -799,10 +921,10 @@ LEMBRE-SE:
 
     console.log(`Analysis complete. Created: ${results.roi_events} ROI, ${results.risk_events} Risk, ${results.life_events} Life. Filtered: ${results.filtered_by_confidence} (confidence), ${results.filtered_by_duplicate} (duplicate), ${results.filtered_by_validation} (validation)`);
 
-    // Log AI usage
+    // Log AI usage (registra o modelo EFETIVAMENTE usado, não o configurado)
     const { error: logError } = await supabase.from("ai_usage_logs").insert({
       account_id,
-      model: aiSettings.model,
+      model: modelDecision.model, // Modelo real usado
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       message_id: message_event_id || null,
@@ -845,7 +967,10 @@ LEMBRE-SE:
         results, 
         classification,
         settings_used: {
-          model: aiSettings.model,
+          configured_model: aiSettings.model,
+          actual_model: modelDecision.model,
+          escalated: modelDecision.escalated,
+          escalation_reason: modelDecision.reason,
           min_message_length: aiSettings.min_message_length,
           confidence_threshold: aiSettings.confidence_threshold,
         },
