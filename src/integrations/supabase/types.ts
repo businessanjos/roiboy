@@ -4947,7 +4947,7 @@ export type Database = {
           assigned_at: string | null
           closed_at: string | null
           closed_by: string | null
-          conversation_id: string
+          conversation_id: string | null
           created_at: string
           department_id: string | null
           first_response_at: string | null
@@ -4955,6 +4955,7 @@ export type Database = {
           priority: number
           status: Database["public"]["Enums"]["zapp_assignment_status"]
           updated_at: string
+          zapp_conversation_id: string | null
         }
         Insert: {
           account_id: string
@@ -4962,7 +4963,7 @@ export type Database = {
           assigned_at?: string | null
           closed_at?: string | null
           closed_by?: string | null
-          conversation_id: string
+          conversation_id?: string | null
           created_at?: string
           department_id?: string | null
           first_response_at?: string | null
@@ -4970,6 +4971,7 @@ export type Database = {
           priority?: number
           status?: Database["public"]["Enums"]["zapp_assignment_status"]
           updated_at?: string
+          zapp_conversation_id?: string | null
         }
         Update: {
           account_id?: string
@@ -4977,7 +4979,7 @@ export type Database = {
           assigned_at?: string | null
           closed_at?: string | null
           closed_by?: string | null
-          conversation_id?: string
+          conversation_id?: string | null
           created_at?: string
           department_id?: string | null
           first_response_at?: string | null
@@ -4985,6 +4987,7 @@ export type Database = {
           priority?: number
           status?: Database["public"]["Enums"]["zapp_assignment_status"]
           updated_at?: string
+          zapp_conversation_id?: string | null
         }
         Relationships: [
           {
@@ -5020,6 +5023,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "zapp_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_assignments_zapp_conversation_id_fkey"
+            columns: ["zapp_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -5080,6 +5090,66 @@ export type Database = {
           },
         ]
       }
+      zapp_conversations: {
+        Row: {
+          account_id: string
+          channel: string
+          client_id: string | null
+          contact_name: string | null
+          created_at: string
+          external_thread_id: string | null
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          phone_e164: string
+          unread_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          channel?: string
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          external_thread_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          phone_e164: string
+          unread_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          channel?: string
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          external_thread_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          phone_e164?: string
+          unread_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_conversations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_departments: {
         Row: {
           account_id: string
@@ -5123,6 +5193,57 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_messages: {
+        Row: {
+          account_id: string
+          content: string | null
+          created_at: string
+          direction: string
+          external_message_id: string | null
+          id: string
+          message_type: string | null
+          sent_at: string
+          zapp_conversation_id: string
+        }
+        Insert: {
+          account_id: string
+          content?: string | null
+          created_at?: string
+          direction: string
+          external_message_id?: string | null
+          id?: string
+          message_type?: string | null
+          sent_at?: string
+          zapp_conversation_id: string
+        }
+        Update: {
+          account_id?: string
+          content?: string | null
+          created_at?: string
+          direction?: string
+          external_message_id?: string | null
+          id?: string
+          message_type?: string | null
+          sent_at?: string
+          zapp_conversation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_messages_zapp_conversation_id_fkey"
+            columns: ["zapp_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
             referencedColumns: ["id"]
           },
         ]

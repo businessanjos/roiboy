@@ -284,7 +284,131 @@ serve(async (req) => {
 
         console.log(`Processing message from ${phone} (${contactName}): ${content.substring(0, 50)}...`);
 
-        // Find existing client only (do NOT create new clients)
+        // ============================================
+        // ZAPP: Save ALL conversations (client or not)
+        // ============================================
+        
+        // Find or create zapp_conversation (for ALL contacts)
+        let zappConversationId: string | null = null;
+        
+        const { data: existingZappConvo } = await supabase
+          .from("zapp_conversations")
+          .select("id")
+          .eq("account_id", accountId)
+          .eq("phone_e164", phone)
+          .maybeSingle();
+
+        if (existingZappConvo) {
+          zappConversationId = existingZappConvo.id;
+          
+          // Update last message info and increment unread count
+          // First get current unread count
+          const { data: currentConvo } = await supabase
+            .from("zapp_conversations")
+            .select("unread_count")
+            .eq("id", zappConversationId)
+            .single();
+          
+          await supabase
+            .from("zapp_conversations")
+            .update({
+              last_message_at: timestamp,
+              last_message_preview: content.substring(0, 100),
+              contact_name: contactName,
+              unread_count: (currentConvo?.unread_count || 0) + 1,
+            })
+            .eq("id", zappConversationId);
+        } else {
+          // Find client if exists (to link)
+          const { data: existingClient } = await supabase
+            .from("clients")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("phone_e164", phone)
+            .maybeSingle();
+          
+          const { data: newZappConvo, error: zappConvoError } = await supabase
+            .from("zapp_conversations")
+            .insert({
+              account_id: accountId,
+              client_id: existingClient?.id || null,
+              phone_e164: phone,
+              contact_name: contactName,
+              channel: "whatsapp",
+              external_thread_id: chat.id,
+              last_message_at: timestamp,
+              last_message_preview: content.substring(0, 100),
+              unread_count: 1,
+            })
+            .select("id")
+            .single();
+
+          if (newZappConvo) {
+            zappConversationId = newZappConvo.id;
+            console.log(`Created new zapp_conversation: ${zappConversationId}`);
+          } else if (zappConvoError) {
+            console.error("Error creating zapp_conversation:", zappConvoError);
+          }
+        }
+
+        // Save message to zapp_messages
+        if (zappConversationId) {
+          const { error: zappMsgError } = await supabase
+            .from("zapp_messages")
+            .insert({
+              account_id: accountId,
+              zapp_conversation_id: zappConversationId,
+              direction: "inbound",
+              content: content,
+              message_type: msg.audioMessage ? "audio" : "text",
+              external_message_id: messageId,
+              sent_at: timestamp,
+            });
+
+          if (zappMsgError) {
+            console.error("Error saving zapp_message:", zappMsgError);
+          } else {
+            console.log("Zapp message saved successfully!");
+          }
+
+          // Create or update zapp_conversation_assignment for the queue
+          const { data: existingAssignment } = await supabase
+            .from("zapp_conversation_assignments")
+            .select("id, status")
+            .eq("account_id", accountId)
+            .eq("zapp_conversation_id", zappConversationId)
+            .maybeSingle();
+
+          if (existingAssignment) {
+            await supabase
+              .from("zapp_conversation_assignments")
+              .update({
+                updated_at: timestamp,
+                status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
+              })
+              .eq("id", existingAssignment.id);
+            console.log("Updated existing zapp assignment");
+          } else {
+            const { error: assignmentError } = await supabase
+              .from("zapp_conversation_assignments")
+              .insert({
+                account_id: accountId,
+                zapp_conversation_id: zappConversationId,
+                status: "waiting",
+              });
+
+            if (assignmentError) {
+              console.error("Error creating zapp assignment:", assignmentError);
+            } else {
+              console.log("Created new zapp assignment in queue");
+            }
+          }
+        }
+
+        // ============================================
+        // CLIENT ANALYSIS: Only for registered clients
+        // ============================================
+        
         const { data: existingClient } = await supabase
           .from("clients")
           .select("id")
@@ -292,131 +416,83 @@ serve(async (req) => {
           .eq("phone_e164", phone)
           .maybeSingle();
 
-        if (!existingClient) {
-          console.log(`Ignoring message from unregistered phone: ${phone}`);
-          return new Response(
-            JSON.stringify({ success: true, skipped: true, reason: "phone_not_registered" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        if (existingClient) {
+          const clientId = existingClient.id;
+          console.log(`Found existing client: ${clientId} - saving to message_events for AI analysis`);
 
-        const clientId = existingClient.id;
-        console.log(`Found existing client: ${clientId}`);
-
-        // Find or create conversation
-        let conversationId: string | null = null;
-        
-        const { data: existingConvo } = await supabase
-          .from("conversations")
-          .select("id")
-          .eq("account_id", accountId)
-          .eq("client_id", clientId)
-          .eq("channel", "whatsapp")
-          .maybeSingle();
-
-        if (existingConvo) {
-          conversationId = existingConvo.id;
-        } else {
-          const { data: newConvo } = await supabase
+          // Find or create conversation (for client analysis)
+          let conversationId: string | null = null;
+          
+          const { data: existingConvo } = await supabase
             .from("conversations")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("client_id", clientId)
+            .eq("channel", "whatsapp")
+            .maybeSingle();
+
+          if (existingConvo) {
+            conversationId = existingConvo.id;
+          } else {
+            const { data: newConvo } = await supabase
+              .from("conversations")
+              .insert({
+                account_id: accountId,
+                client_id: clientId,
+                channel: "whatsapp",
+                external_thread_id: chat.id,
+              })
+              .select("id")
+              .single();
+
+            if (newConvo) {
+              conversationId = newConvo.id;
+            }
+          }
+
+          // Insert message event for AI analysis
+          const { error: messageError } = await supabase
+            .from("message_events")
             .insert({
               account_id: accountId,
               client_id: clientId,
-              channel: "whatsapp",
-              external_thread_id: chat.id,
-            })
-            .select("id")
-            .single();
+              conversation_id: conversationId,
+              source: "whatsapp_text",
+              direction: "client_to_team",
+              content_text: content,
+              sent_at: timestamp,
+            });
 
-          if (newConvo) {
-            conversationId = newConvo.id;
+          if (messageError) {
+            console.error("Error inserting message_event:", messageError);
           }
-        }
 
-        // Insert message event
-        const { error: messageError } = await supabase
-          .from("message_events")
-          .insert({
-            account_id: accountId,
-            client_id: clientId,
-            conversation_id: conversationId,
-            source: "whatsapp_text",
-            direction: "client_to_team",
-            content_text: content,
-            sent_at: timestamp,
-          });
-
-        if (messageError) {
-          console.error("Error inserting message:", messageError);
-          return new Response(JSON.stringify({ error: messageError.message }), { 
-            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          });
-        }
-        
-        console.log("Message saved successfully!");
-
-        // Create or update zapp_conversation_assignment for the queue
-        if (conversationId) {
-          // Check if there's already an assignment for this conversation
-          const { data: existingAssignment } = await supabase
-            .from("zapp_conversation_assignments")
-            .select("id, status")
-            .eq("account_id", accountId)
-            .eq("conversation_id", conversationId)
-            .maybeSingle();
-
-          if (existingAssignment) {
-            // Update updated_at to bring it to top of queue
-            await supabase
-              .from("zapp_conversation_assignments")
-              .update({
-                updated_at: timestamp,
-                // If closed, reopen as waiting
-                status: existingAssignment.status === "closed" ? "waiting" : existingAssignment.status,
-              })
-              .eq("id", existingAssignment.id);
-            console.log("Updated existing conversation assignment");
-          } else {
-            // Create new assignment in waiting status (fila)
-            const { error: assignmentError } = await supabase
-              .from("zapp_conversation_assignments")
-              .insert({
-                account_id: accountId,
-                conversation_id: conversationId,
-                status: "waiting",
+          // Trigger AI analysis for text messages
+          if (content.length > 10 && !content.startsWith("[")) {
+            try {
+              await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({
+                  account_id: accountId,
+                  client_id: clientId,
+                  message_content: content,
+                }),
               });
-
-            if (assignmentError) {
-              console.error("Error creating conversation assignment:", assignmentError);
-            } else {
-              console.log("Created new conversation assignment in queue");
+              console.log("AI analysis triggered");
+            } catch (err) {
+              console.log("AI analysis trigger error (non-blocking):", err);
             }
           }
-        }
-
-        // Trigger AI analysis for text messages
-        if (content.length > 10 && !content.startsWith("[")) {
-          try {
-            await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${supabaseKey}`,
-              },
-              body: JSON.stringify({
-                account_id: accountId,
-                client_id: clientId,
-                message_content: content,
-              }),
-            });
-            console.log("AI analysis triggered");
-          } catch (err) {
-            console.log("AI analysis trigger error (non-blocking):", err);
-          }
+        } else {
+          console.log(`Message from ${phone} saved to Zapp only (not a registered client)`);
         }
 
         return new Response(
-          JSON.stringify({ success: true, client_id: clientId, message_saved: true }),
+          JSON.stringify({ success: true, zapp_conversation_id: zappConversationId, phone }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -444,72 +520,86 @@ serve(async (req) => {
 
           console.log(`Processing alt format message from ${phone}: ${content.substring(0, 50)}...`);
 
-          // Find existing client only (do NOT create new clients)
-          const { data: existingClient } = await supabase
-            .from("clients")
-            .select("id")
+          const timestamp = msg.messageTimestamp 
+            ? new Date(Number(msg.messageTimestamp) * 1000).toISOString()
+            : new Date().toISOString();
+          
+          const messageId = msg.key.id || `${Date.now()}`;
+
+          // ============================================
+          // ZAPP: Save ALL conversations (client or not)
+          // ============================================
+          
+          let zappConversationId: string | null = null;
+          
+          const { data: existingZappConvo } = await supabase
+            .from("zapp_conversations")
+            .select("id, unread_count")
             .eq("account_id", accountId)
             .eq("phone_e164", phone)
             .maybeSingle();
 
-          if (!existingClient) {
-            console.log(`Ignoring message from unregistered phone: ${phone}`);
-            continue;
-          }
-
-          const clientId = existingClient.id;
-
-          // Find or create conversation
-          let conversationId: string | null = null;
-          
-          const { data: existingConvo } = await supabase
-            .from("conversations")
-            .select("id")
-            .eq("account_id", accountId)
-            .eq("client_id", clientId)
-            .eq("channel", "whatsapp")
-            .maybeSingle();
-
-          if (existingConvo) {
-            conversationId = existingConvo.id;
+          if (existingZappConvo) {
+            zappConversationId = existingZappConvo.id;
+            
+            await supabase
+              .from("zapp_conversations")
+              .update({
+                last_message_at: timestamp,
+                last_message_preview: content.substring(0, 100),
+                contact_name: contactName,
+                unread_count: (existingZappConvo.unread_count || 0) + 1,
+              })
+              .eq("id", zappConversationId);
           } else {
-            const { data: newConvo } = await supabase
-              .from("conversations")
+            const { data: existingClientForZapp } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("phone_e164", phone)
+              .maybeSingle();
+            
+            const { data: newZappConvo } = await supabase
+              .from("zapp_conversations")
               .insert({
                 account_id: accountId,
-                client_id: clientId,
+                client_id: existingClientForZapp?.id || null,
+                phone_e164: phone,
+                contact_name: contactName,
                 channel: "whatsapp",
                 external_thread_id: msg.key.remoteJid,
+                last_message_at: timestamp,
+                last_message_preview: content.substring(0, 100),
+                unread_count: 1,
               })
               .select("id")
               .single();
 
-            if (newConvo) conversationId = newConvo.id;
+            if (newZappConvo) {
+              zappConversationId = newZappConvo.id;
+            }
           }
 
-          const timestamp = msg.messageTimestamp 
-            ? new Date(Number(msg.messageTimestamp) * 1000).toISOString()
-            : new Date().toISOString();
+          // Save to zapp_messages
+          if (zappConversationId) {
+            await supabase
+              .from("zapp_messages")
+              .insert({
+                account_id: accountId,
+                zapp_conversation_id: zappConversationId,
+                direction: "inbound",
+                content: content,
+                message_type: msg.message?.audioMessage ? "audio" : "text",
+                external_message_id: messageId,
+                sent_at: timestamp,
+              });
 
-          await supabase
-            .from("message_events")
-            .insert({
-              account_id: accountId,
-              client_id: clientId,
-              conversation_id: conversationId,
-              source: "whatsapp_text",
-              direction: "client_to_team",
-              content_text: content,
-              sent_at: timestamp,
-            });
-
-          // Create or update zapp_conversation_assignment for the queue
-          if (conversationId) {
+            // Create or update zapp assignment
             const { data: existingAssignment } = await supabase
               .from("zapp_conversation_assignments")
               .select("id, status")
               .eq("account_id", accountId)
-              .eq("conversation_id", conversationId)
+              .eq("zapp_conversation_id", zappConversationId)
               .maybeSingle();
 
             if (existingAssignment) {
@@ -525,10 +615,64 @@ serve(async (req) => {
                 .from("zapp_conversation_assignments")
                 .insert({
                   account_id: accountId,
-                  conversation_id: conversationId,
+                  zapp_conversation_id: zappConversationId,
                   status: "waiting",
                 });
             }
+          }
+
+          // ============================================
+          // CLIENT ANALYSIS: Only for registered clients
+          // ============================================
+          
+          const { data: existingClient } = await supabase
+            .from("clients")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("phone_e164", phone)
+            .maybeSingle();
+
+          if (existingClient) {
+            const clientId = existingClient.id;
+
+            let conversationId: string | null = null;
+            
+            const { data: existingConvo } = await supabase
+              .from("conversations")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("client_id", clientId)
+              .eq("channel", "whatsapp")
+              .maybeSingle();
+
+            if (existingConvo) {
+              conversationId = existingConvo.id;
+            } else {
+              const { data: newConvo } = await supabase
+                .from("conversations")
+                .insert({
+                  account_id: accountId,
+                  client_id: clientId,
+                  channel: "whatsapp",
+                  external_thread_id: msg.key.remoteJid,
+                })
+                .select("id")
+                .single();
+
+              if (newConvo) conversationId = newConvo.id;
+            }
+
+            await supabase
+              .from("message_events")
+              .insert({
+                account_id: accountId,
+                client_id: clientId,
+                conversation_id: conversationId,
+                source: "whatsapp_text",
+                direction: "client_to_team",
+                content_text: content,
+                sent_at: timestamp,
+              });
           }
 
           processedCount++;

@@ -158,7 +158,8 @@ interface Message {
 
 interface ConversationAssignment {
   id: string;
-  conversation_id: string;
+  conversation_id: string | null;
+  zapp_conversation_id: string | null;
   agent_id: string | null;
   department_id: string | null;
   status: "pending" | "active" | "waiting" | "closed";
@@ -167,8 +168,10 @@ interface ConversationAssignment {
   first_response_at: string | null;
   closed_at: string | null;
   created_at: string;
+  updated_at: string;
   agent?: Agent | null;
   department?: Department | null;
+  // Old conversation link (for clients)
   conversation?: {
     id: string;
     client_id: string;
@@ -179,9 +182,22 @@ interface ConversationAssignment {
       avatar_url: string | null;
     };
   };
-  last_message?: string;
-  last_message_time?: string;
-  unread_count?: number;
+  // New zapp_conversation link (for all contacts)
+  zapp_conversation?: {
+    id: string;
+    phone_e164: string;
+    contact_name: string | null;
+    client_id: string | null;
+    last_message_at: string | null;
+    last_message_preview: string | null;
+    unread_count: number;
+    client?: {
+      id: string;
+      full_name: string;
+      phone_e164: string;
+      avatar_url: string | null;
+    } | null;
+  };
 }
 
 
@@ -264,8 +280,8 @@ export default function RoyZapp() {
   }, [currentUser?.account_id]);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.conversation_id);
+    if (selectedConversation?.zapp_conversation_id) {
+      fetchMessages(selectedConversation.zapp_conversation_id);
     }
   }, [selectedConversation]);
 
@@ -372,11 +388,12 @@ export default function RoyZapp() {
             *,
             agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
             department:zapp_departments(*),
-            conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url))
+            conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
+            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, client:clients(id, full_name, phone_e164, avatar_url))
           `)
           .eq("account_id", currentUser.account_id)
           .neq("status", "closed")
-          .order("created_at", { ascending: false })
+          .order("updated_at", { ascending: false })
           .limit(100),
         supabase
           .from("zapp_tags")
@@ -408,22 +425,22 @@ export default function RoyZapp() {
     }
   };
 
-  const fetchMessages = async (conversationId: string) => {
+  const fetchMessages = async (zappConversationId: string) => {
     try {
       const { data, error } = await supabase
-        .from("message_events")
-        .select("id, raw_text, is_from_client, created_at, message_type")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true })
+        .from("zapp_messages")
+        .select("id, content, direction, sent_at, message_type")
+        .eq("zapp_conversation_id", zappConversationId)
+        .order("sent_at", { ascending: true })
         .limit(100);
 
       if (error) throw error;
       setMessages((data || []).map((m: any) => ({
         id: m.id,
-        content: m.raw_text,
-        is_from_client: m.is_from_client,
-        created_at: m.created_at,
-        message_type: m.message_type,
+        content: m.content,
+        is_from_client: m.direction === "inbound",
+        created_at: m.sent_at,
+        message_type: m.message_type || "text",
       })));
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -680,6 +697,22 @@ export default function RoyZapp() {
     return agents.find((a) => a.user_id === currentUser?.id);
   }, [agents, currentUser?.id]);
 
+  // Helper to get contact info from assignment (prefers zapp_conversation, falls back to conversation)
+  const getContactInfo = (assignment: ConversationAssignment) => {
+    const zc = assignment.zapp_conversation;
+    const c = assignment.conversation?.client;
+    
+    return {
+      name: zc?.client?.full_name || zc?.contact_name || c?.full_name || "Contato",
+      phone: zc?.phone_e164 || c?.phone_e164 || "",
+      avatar: zc?.client?.avatar_url || c?.avatar_url || null,
+      isClient: !!(zc?.client_id || c?.id),
+      lastMessage: zc?.last_message_preview || null,
+      unreadCount: zc?.unread_count || 0,
+      lastMessageAt: zc?.last_message_at || assignment.updated_at,
+    };
+  };
+
   // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
@@ -688,15 +721,16 @@ export default function RoyZapp() {
         ? a.agent_id === currentAgent?.id
         : true; // Queue shows ALL conversations
       
+      const contact = getContactInfo(a);
       const matchesSearch = searchQuery === "" ||
-        a.conversation?.client?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.conversation?.client?.phone_e164?.includes(searchQuery);
+        contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        contact.phone?.includes(searchQuery);
       const matchesStatus = filterStatus === "all" || a.status === filterStatus;
       
       // Groups filter: WhatsApp group IDs typically contain @g.us
-      const isGroup = a.conversation?.client?.phone_e164?.includes("@g.us") || 
-                      a.conversation?.client?.phone_e164?.includes("-") ||
-                      (a.conversation?.client?.phone_e164?.length || 0) > 15;
+      const isGroup = contact.phone?.includes("@g.us") || 
+                      contact.phone?.includes("-") ||
+                      (contact.phone?.length || 0) > 15;
       const matchesGroups = !filterGroups || isGroup;
       
       return matchesTab && matchesSearch && matchesStatus && matchesGroups;
@@ -1010,74 +1044,80 @@ export default function RoyZapp() {
                 <p className="text-zapp-text-muted text-sm">Nenhuma conversa encontrada</p>
               </div>
             ) : (
-              filteredAssignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zapp-panel transition-colors",
-                    selectedConversation?.id === assignment.id && "bg-zapp-bg-dark"
-                  )}
-                  onClick={() => setSelectedConversation(assignment)}
-                >
-                  <div className="relative">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={assignment.conversation?.client?.avatar_url || undefined} />
-                      <AvatarFallback className="bg-muted text-muted-foreground text-sm">
-                        {assignment.conversation?.client?.full_name
-                          ? getInitials(assignment.conversation.client.full_name)
-                          : "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {assignment.status === "pending" && (
-                      <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-zapp-bg" />
+              filteredAssignments.map((assignment) => {
+                const contact = getContactInfo(assignment);
+                return (
+                  <div
+                    key={assignment.id}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zapp-panel transition-colors",
+                      selectedConversation?.id === assignment.id && "bg-zapp-bg-dark"
                     )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-zapp-text font-medium truncate">
-                        {assignment.conversation?.client?.full_name || "Cliente"}
-                      </span>
-                      <span className="text-zapp-text-muted text-xs">
-                        {formatTime(assignment.created_at)}
-                      </span>
+                    onClick={() => setSelectedConversation(assignment)}
+                  >
+                    <div className="relative">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={contact.avatar || undefined} />
+                        <AvatarFallback className="bg-muted text-muted-foreground text-sm">
+                          {contact.name ? getInitials(contact.name) : "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {assignment.status === "pending" && (
+                        <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-zapp-bg" />
+                      )}
+                      {!contact.isClient && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-500 border-2 border-zapp-bg flex items-center justify-center">
+                          <span className="text-[8px] text-white font-bold">?</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {assignment.status === "active" && (
-                          <CheckCheck className="h-4 w-4 text-info flex-shrink-0" />
-                        )}
-                        <span className="text-zapp-text-muted text-sm truncate">
-                          {assignment.last_message || assignment.conversation?.client?.phone_e164 || "Nova conversa"}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-zapp-text font-medium truncate">
+                          {contact.name}
+                        </span>
+                        <span className="text-zapp-text-muted text-xs">
+                          {formatTime(contact.lastMessageAt)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {assignment.department && (
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: assignment.department.color }}
-                          />
-                        )}
-                        {assignment.unread_count && assignment.unread_count > 0 && (
-                          <Badge className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-5 min-w-5 flex items-center justify-center">
-                            {assignment.unread_count}
-                          </Badge>
-                        )}
+                      <div className="flex items-center justify-between mt-0.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {assignment.status === "active" && (
+                            <CheckCheck className="h-4 w-4 text-info flex-shrink-0" />
+                          )}
+                          <span className="text-zapp-text-muted text-sm truncate">
+                            {contact.lastMessage || contact.phone || "Nova conversa"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {assignment.department && (
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: assignment.department.color }}
+                            />
+                          )}
+                          {contact.unreadCount > 0 && (
+                            <Badge className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-5 min-w-5 flex items-center justify-center">
+                              {contact.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
+                      {/* Show agent indicator in queue tab when someone is handling */}
+                      {inboxTab === "queue" && assignment.agent_id && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <User className="h-3 w-3 text-zapp-accent" />
+                          <span className="text-[11px] text-zapp-accent truncate">
+                            {assignment.agent_id === currentAgent?.id 
+                              ? "Você" 
+                              : getAgentName(assignment.agent_id) || "Atendente"}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {/* Show agent indicator in queue tab when someone is handling */}
-                    {inboxTab === "queue" && assignment.agent_id && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <User className="h-3 w-3 text-zapp-accent" />
-                        <span className="text-[11px] text-zapp-accent truncate">
-                          {assignment.agent_id === currentAgent?.id 
-                            ? "Você" 
-                            : getAgentName(assignment.agent_id) || "Atendente"}
-                        </span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
