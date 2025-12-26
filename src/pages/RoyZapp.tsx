@@ -183,6 +183,7 @@ interface Message {
   media_filename?: string | null;
   audio_duration_sec?: number | null;
   sender_name?: string | null;
+  delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
 }
 
 interface ConversationAssignment {
@@ -492,6 +493,7 @@ export default function RoyZapp() {
                         media_filename: newMsg.media_filename,
                         audio_duration_sec: newMsg.audio_duration_sec,
                         sender_name: newMsg.sender_name,
+                        delivery_status: newMsg.delivery_status || "sent",
                       }
                     : m
                 );
@@ -510,8 +512,30 @@ export default function RoyZapp() {
               media_filename: newMsg.media_filename,
               audio_duration_sec: newMsg.audio_duration_sec,
               sender_name: newMsg.sender_name,
+              delivery_status: newMsg.delivery_status || "sent",
             }];
           });
+        }
+      )
+      // Also listen for updates (delivery status changes)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'zapp_messages',
+          filter: `zapp_conversation_id=eq.${selectedConversation.zapp_conversation_id}`
+        },
+        (payload) => {
+          console.log("Realtime message update:", payload);
+          const updatedMsg = payload.new as any;
+          setMessages((prev) => 
+            prev.map(m => 
+              m.id === updatedMsg.id 
+                ? { ...m, delivery_status: updatedMsg.delivery_status }
+                : m
+            )
+          );
         }
       )
       .subscribe();
@@ -751,7 +775,7 @@ export default function RoyZapp() {
     try {
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name")
+        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status")
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: true })
         .limit(100);
@@ -769,6 +793,7 @@ export default function RoyZapp() {
         media_filename: m.media_filename,
         audio_duration_sec: m.audio_duration_sec,
         sender_name: m.sender_name,
+        delivery_status: m.delivery_status,
       })));
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -3243,7 +3268,20 @@ export default function RoyZapp() {
                             {format(new Date(message.created_at), "HH:mm")}
                           </span>
                           {!message.is_from_client && (
-                            <CheckCheck className="h-3.5 w-3.5 text-primary" />
+                            <>
+                              {message.delivery_status === "failed" ? (
+                                <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                              ) : message.delivery_status === "read" ? (
+                                <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+                              ) : message.delivery_status === "delivered" ? (
+                                <CheckCheck className="h-3.5 w-3.5 text-zapp-text-muted" />
+                              ) : message.delivery_status === "pending" ? (
+                                <Clock className="h-3 w-3 text-zapp-text-muted" />
+                              ) : (
+                                // sent or default
+                                <Check className="h-3.5 w-3.5 text-zapp-text-muted" />
+                              )}
+                            </>
                           )}
                         </div>
                       </div>

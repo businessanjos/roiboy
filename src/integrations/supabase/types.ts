@@ -5236,6 +5236,7 @@ export type Database = {
           audio_duration_sec: number | null
           content: string | null
           created_at: string
+          delivery_status: string | null
           direction: string
           external_message_id: string | null
           id: string
@@ -5254,6 +5255,7 @@ export type Database = {
           audio_duration_sec?: number | null
           content?: string | null
           created_at?: string
+          delivery_status?: string | null
           direction: string
           external_message_id?: string | null
           id?: string
@@ -5272,6 +5274,7 @@ export type Database = {
           audio_duration_sec?: number | null
           content?: string | null
           created_at?: string
+          delivery_status?: string | null
           direction?: string
           external_message_id?: string | null
           id?: string

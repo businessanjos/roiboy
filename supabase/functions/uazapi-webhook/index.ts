@@ -1019,6 +1019,62 @@ serve(async (req) => {
       );
     }
 
+    // Handle message status updates (ack events)
+    if (eventType === "messages.ack" || eventType === "message.ack" || eventType === "ack" || eventType === "messages.update") {
+      console.log("Message status update received:", JSON.stringify(payload).substring(0, 500));
+      
+      // UAZAPI sends status updates in various formats
+      // Try to extract message ID and status
+      let messageId = "";
+      let status = "";
+      
+      // Use type assertion to handle dynamic payload structure
+      const payloadAny = payload as any;
+      
+      // Format 1: { data: { messages: [{ key: { id }, update: { status } }] } }
+      if (payloadAny.data?.messages) {
+        for (const msgUpdate of payloadAny.data.messages) {
+          messageId = msgUpdate.key?.id || "";
+          // UAZAPI ack values: 0=error, 1=pending, 2=sent, 3=delivered, 4=read
+          const ack = msgUpdate.update?.status || msgUpdate.ack;
+          status = ack === 4 ? "read" : ack === 3 ? "delivered" : ack === 2 ? "sent" : ack === 1 ? "pending" : "failed";
+        }
+      } else if (payloadAny.data?.id || payloadAny.message?.id) {
+        // Format 2: { data: { id, ack } }
+        messageId = payloadAny.data?.id || payloadAny.message?.id || "";
+        const ack = payloadAny.data?.ack || payloadAny.ack || 0;
+        status = ack === 4 ? "read" : ack === 3 ? "delivered" : ack === 2 ? "sent" : ack === 1 ? "pending" : "failed";
+      } else if (payloadAny.ack !== undefined) {
+        // Format 3: { id, ack } at root level
+        messageId = payloadAny.id || "";
+        const ack = payloadAny.ack;
+        status = ack === 4 ? "read" : ack === 3 ? "delivered" : ack === 2 ? "sent" : ack === 1 ? "pending" : "failed";
+      }
+      
+      if (messageId && status) {
+        console.log(`Updating message ${messageId} status to: ${status}`);
+        
+        const { error: updateError } = await supabase
+          .from("zapp_messages")
+          .update({ delivery_status: status })
+          .eq("account_id", accountId)
+          .eq("external_message_id", messageId);
+        
+        if (updateError) {
+          console.error("Error updating message status:", updateError);
+        } else {
+          console.log(`Message ${messageId} status updated to ${status}`);
+        }
+      } else {
+        console.log("Could not extract message ID or status from payload");
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, event: eventType }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log(`Unhandled event type: ${eventType}`);
     return new Response(
       JSON.stringify({ success: true, event: eventType, handled: false }),
