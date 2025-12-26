@@ -5024,6 +5024,62 @@ export type Database = {
           },
         ]
       }
+      zapp_conversation_tags: {
+        Row: {
+          account_id: string
+          assignment_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          account_id: string
+          assignment_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          account_id?: string
+          assignment_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_conversation_tags_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_tags_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversation_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_departments: {
         Row: {
           account_id: string
@@ -5064,6 +5120,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "zapp_departments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_tags: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_tags_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
