@@ -770,7 +770,7 @@ serve(async (req) => {
         if (direction === "inbound" && phone) {
           const { data: existingClient } = await supabase
             .from("clients")
-            .select("id")
+            .select("id, avatar_url")
             .eq("account_id", accountId)
             .eq("phone_e164", phone)
             .maybeSingle();
@@ -778,6 +778,21 @@ serve(async (req) => {
           if (existingClient) {
             const clientId = existingClient.id;
             console.log(`Found existing client: ${clientId} - saving to message_events for AI analysis`);
+            
+            // Auto-update client avatar from WhatsApp profile picture if available
+            const profilePicUrl = chat.image || chat.imagePreview;
+            if (profilePicUrl && !existingClient.avatar_url) {
+              const { error: avatarError } = await supabase
+                .from("clients")
+                .update({ avatar_url: profilePicUrl })
+                .eq("id", clientId);
+              
+              if (avatarError) {
+                console.log("Error updating client avatar:", avatarError.message);
+              } else {
+                console.log(`Updated client ${clientId} avatar from WhatsApp profile picture`);
+              }
+            }
 
             // Find or create conversation (for client analysis)
             let conversationId: string | null = null;
