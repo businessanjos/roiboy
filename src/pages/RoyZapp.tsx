@@ -104,6 +104,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { ClientQuickEditSheet } from "@/components/client/ClientQuickEditSheet";
 
 interface ZappTag {
   id: string;
@@ -331,6 +332,10 @@ export default function RoyZapp() {
   
   // Client products state (for badges)
   const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
+  
+  // Client quick edit sheet
+  const [clientEditSheetOpen, setClientEditSheetOpen] = useState(false);
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -2446,7 +2451,8 @@ export default function RoyZapp() {
             className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => {
               if (clientId) {
-                navigate(`/clients/${clientId}`);
+                setEditingClientId(clientId);
+                setClientEditSheetOpen(true);
               }
             }}
           >
@@ -3228,6 +3234,14 @@ export default function RoyZapp() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Client Quick Edit Sheet */}
+      <ClientQuickEditSheet
+        clientId={editingClientId}
+        open={clientEditSheetOpen}
+        onOpenChange={setClientEditSheetOpen}
+        onClientUpdated={() => fetchData()}
+      />
     </div>
   );
 }
