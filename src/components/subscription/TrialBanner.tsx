@@ -46,7 +46,7 @@ export function TrialBanner() {
         </span>
       </div>
       <Button asChild size="sm" variant={isUrgent ? "default" : "outline"}>
-        <Link to="/account-settings">
+        <Link to="/choose-plan">
           {isUrgent ? "Assinar agora" : "Ver planos"}
         </Link>
       </Button>
