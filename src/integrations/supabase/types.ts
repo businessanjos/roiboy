@@ -5565,11 +5565,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_ai_analysis_queue: { Args: never; Returns: undefined }
       cleanup_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
       generate_checkin_code: { Args: never; Returns: string }
       generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
+      get_ai_queue_stats: { Args: never; Returns: Json }
       get_event_by_registration_code: {
         Args: { p_code: string }
         Returns: {
