@@ -1430,7 +1430,7 @@ export default function RoyZapp() {
                     onClick={() => setSelectedConversation(assignment)}
                   >
                     <div className="relative">
-                      <Avatar className="h-12 w-12">
+                      <Avatar className="h-10 w-10">
                         <AvatarImage src={contact.avatar || undefined} />
                         <AvatarFallback className="bg-muted text-muted-foreground text-sm">
                           {contact.name ? getInitials(contact.name) : "?"}
@@ -1461,7 +1461,7 @@ export default function RoyZapp() {
                           {contact.isFavorite && (
                             <Heart className="h-3 w-3 text-red-400 fill-red-400 flex-shrink-0" />
                           )}
-                          <span className="text-zapp-text font-medium truncate">
+                          <span className="text-zapp-text font-medium truncate text-sm">
                             {contact.name}
                           </span>
                         </div>
@@ -1576,7 +1576,7 @@ export default function RoyZapp() {
                           {assignment.status === "active" && (
                             <CheckCheck className="h-4 w-4 text-info flex-shrink-0" />
                           )}
-                          <span className="text-zapp-text-muted text-sm truncate">
+                          <span className="text-zapp-text-muted text-xs truncate">
                             {contact.lastMessage || contact.phone || "Nova conversa"}
                           </span>
                         </div>
