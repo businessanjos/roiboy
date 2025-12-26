@@ -1,29 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { format, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   MessageSquare,
   Users,
-  Inbox,
-  ArrowRightLeft,
-  Building2,
-  UserCheck,
+  Search,
+  MoreVertical,
+  Phone,
+  Video,
+  Send,
+  Paperclip,
+  Smile,
+  Mic,
+  Check,
+  CheckCheck,
+  Circle,
   Settings,
   Plus,
   Trash2,
   Pencil,
-  Circle,
-  Phone,
-  Clock,
-  TrendingUp,
-  CheckCircle2,
-  AlertCircle,
+  Building2,
+  UserCheck,
+  ArrowLeft,
+  Filter,
+  ArrowRightLeft,
   Loader2,
+  Clock,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -33,10 +46,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -45,13 +54,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,7 +70,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface Department {
@@ -108,6 +122,14 @@ interface TeamUser {
   role: string;
 }
 
+interface Message {
+  id: string;
+  content: string | null;
+  is_from_client: boolean;
+  created_at: string;
+  message_type: string;
+}
+
 interface ConversationAssignment {
   id: string;
   conversation_id: string;
@@ -131,42 +153,37 @@ interface ConversationAssignment {
       avatar_url: string | null;
     };
   };
+  last_message?: string;
+  last_message_time?: string;
+  unread_count?: number;
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "Administrador",
+  admin: "Admin",
   supervisor: "Supervisor",
   agent: "Atendente",
 };
 
-const ROLE_COLORS: Record<string, string> = {
-  admin: "bg-red-500/10 text-red-500 border-red-500/20",
-  supervisor: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  agent: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Aguardando",
-  active: "Em atendimento",
-  waiting: "Esperando cliente",
-  closed: "Fechado",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  active: "bg-green-500/10 text-green-500 border-green-500/20",
-  waiting: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  closed: "bg-muted text-muted-foreground border-border",
+const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  pending: { label: "Aguardando", color: "text-amber-600", bgColor: "bg-amber-500" },
+  active: { label: "Em atendimento", color: "text-emerald-600", bgColor: "bg-emerald-500" },
+  waiting: { label: "Aguardando cliente", color: "text-blue-600", bgColor: "bg-blue-500" },
+  closed: { label: "Fechado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
-  const [activeTab, setActiveTab] = useState("inbox");
+  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "settings">("inbox");
   const [departments, setDepartments] = useState<Department[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
+  const [messageInput, setMessageInput] = useState("");
 
   // Department dialog state
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -174,7 +191,7 @@ export default function RoyZapp() {
   const [departmentForm, setDepartmentForm] = useState({
     name: "",
     description: "",
-    color: "#6366f1",
+    color: "#25D366",
     auto_distribution: true,
   });
   const [savingDepartment, setSavingDepartment] = useState(false);
@@ -192,11 +209,21 @@ export default function RoyZapp() {
   const [savingAgent, setSavingAgent] = useState(false);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
 
+  // Transfer dialog
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<{ type: "agent" | "department"; id: string }>({ type: "agent", id: "" });
+
   useEffect(() => {
     if (currentUser?.account_id) {
       fetchData();
     }
   }, [currentUser?.account_id]);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation.conversation_id);
+    }
+  }, [selectedConversation]);
 
   const fetchData = async () => {
     if (!currentUser?.account_id) return;
@@ -239,7 +266,7 @@ export default function RoyZapp() {
           .eq("account_id", currentUser.account_id)
           .neq("status", "closed")
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(100),
       ]);
 
       if (deptsError) throw deptsError;
@@ -259,6 +286,28 @@ export default function RoyZapp() {
     }
   };
 
+  const fetchMessages = async (conversationId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("message_events")
+        .select("id, raw_text, is_from_client, created_at, message_type")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true })
+        .limit(100);
+
+      if (error) throw error;
+      setMessages((data || []).map((m: any) => ({
+        id: m.id,
+        content: m.raw_text,
+        is_from_client: m.is_from_client,
+        created_at: m.created_at,
+        message_type: m.message_type,
+      })));
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    }
+  };
+
   // Department functions
   const openDepartmentDialog = (dept?: Department) => {
     if (dept) {
@@ -274,7 +323,7 @@ export default function RoyZapp() {
       setDepartmentForm({
         name: "",
         description: "",
-        color: "#6366f1",
+        color: "#25D366",
         auto_distribution: true,
       });
     }
@@ -439,6 +488,17 @@ export default function RoyZapp() {
     (user) => !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id
   );
 
+  // Filtered conversations
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter((a) => {
+      const matchesSearch = searchQuery === "" ||
+        a.conversation?.client?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.conversation?.client?.phone_e164?.includes(searchQuery);
+      const matchesStatus = filterStatus === "all" || a.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [assignments, searchQuery, filterStatus]);
+
   // Stats
   const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
   const pendingConversations = assignments.filter((a) => a.status === "pending").length;
@@ -452,545 +512,739 @@ export default function RoyZapp() {
       .toUpperCase()
       .slice(0, 2);
 
+  const formatTime = (date: string) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return format(d, "HH:mm");
+    } else if (diffDays === 1) {
+      return "Ontem";
+    } else if (diffDays < 7) {
+      return format(d, "EEEE", { locale: ptBR });
+    } else {
+      return format(d, "dd/MM/yyyy");
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)] bg-[#111b21]">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-[#00a884] flex items-center justify-center">
+            <MessageSquare className="h-8 w-8 text-white" />
+          </div>
+          <Loader2 className="h-6 w-6 animate-spin text-[#00a884] mx-auto" />
+          <p className="text-[#8696a0]">Carregando conversas...</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6 p-6">
+  // Render sidebar navigation
+  const renderSidebarNav = () => (
+    <div className="bg-[#202c33] border-b border-[#2a3942] p-2 flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "rounded-full h-10 w-10",
+              activeView === "inbox" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+            )}
+            onClick={() => setActiveView("inbox")}
+          >
+            <MessageSquare className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Conversas</TooltipContent>
+      </Tooltip>
+      
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "rounded-full h-10 w-10",
+              activeView === "team" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+            )}
+            onClick={() => setActiveView("team")}
+          >
+            <Users className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Equipe</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "rounded-full h-10 w-10",
+              activeView === "departments" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+            )}
+            onClick={() => setActiveView("departments")}
+          >
+            <Building2 className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Departamentos</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "rounded-full h-10 w-10",
+              activeView === "settings" ? "bg-[#2a3942] text-[#00a884]" : "text-[#aebac1] hover:bg-[#2a3942]"
+            )}
+            onClick={() => setActiveView("settings")}
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Configurações</TooltipContent>
+      </Tooltip>
+
+      <div className="flex-1" />
+
+      {/* Status indicators */}
+      <div className="flex items-center gap-3 px-2 text-xs">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-[#00a884]" />
+          <span className="text-[#8696a0]">{onlineAgents} online</span>
+        </div>
+        {pendingConversations > 0 && (
+          <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
+            {pendingConversations}
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+
+  // Render conversation list
+  const renderConversationList = () => (
+    <div className="flex flex-col h-full bg-[#111b21]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" />
-            ROY zAPP
-          </h1>
-          <p className="text-muted-foreground">
-            Central de atendimento multiusuário via WhatsApp
-          </p>
+      <div className="bg-[#202c33] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={currentUser?.avatar_url || undefined} />
+            <AvatarFallback className="bg-[#00a884] text-white text-sm">
+              {currentUser ? getInitials(currentUser.name) : "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h2 className="text-white font-medium">ROY zAPP</h2>
+            <p className="text-xs text-[#8696a0]">{activeConversations} em atendimento</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942] rounded-full">
+                <Filter className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-[#233138] border-[#2a3942]">
+              <DropdownMenuItem 
+                className={cn("text-[#d1d7db]", filterStatus === "all" && "bg-[#2a3942]")}
+                onClick={() => setFilterStatus("all")}
+              >
+                Todas
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn("text-[#d1d7db]", filterStatus === "pending" && "bg-[#2a3942]")}
+                onClick={() => setFilterStatus("pending")}
+              >
+                Aguardando
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn("text-[#d1d7db]", filterStatus === "active" && "bg-[#2a3942]")}
+                onClick={() => setFilterStatus("active")}
+              >
+                Em atendimento
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn("text-[#d1d7db]", filterStatus === "waiting" && "bg-[#2a3942]")}
+                onClick={() => setFilterStatus("waiting")}
+              >
+                Aguardando cliente
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942] rounded-full">
+            <MoreVertical className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-green-500/10">
-                <UserCheck className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{onlineAgents}</p>
-                <p className="text-sm text-muted-foreground">Atendentes online</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-amber-500/10">
-                <Clock className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pendingConversations}</p>
-                <p className="text-sm text-muted-foreground">Aguardando</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-blue-500/10">
-                <MessageSquare className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeConversations}</p>
-                <p className="text-sm text-muted-foreground">Em atendimento</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{departments.length}</p>
-                <p className="text-sm text-muted-foreground">Departamentos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Search */}
+      <div className="px-3 py-2 bg-[#111b21]">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8696a0]" />
+          <Input
+            placeholder="Pesquisar ou começar uma nova conversa"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-[#202c33] border-0 text-[#d1d7db] placeholder:text-[#8696a0] focus-visible:ring-0 rounded-lg h-9"
+          />
+        </div>
       </div>
 
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-lg grid-cols-4">
-          <TabsTrigger value="inbox" className="flex items-center gap-2">
-            <Inbox className="h-4 w-4" />
-            <span className="hidden sm:inline">Inbox</span>
-          </TabsTrigger>
-          <TabsTrigger value="agents" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Atendentes</span>
-          </TabsTrigger>
-          <TabsTrigger value="departments" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Filas</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Config</span>
-          </TabsTrigger>
-        </TabsList>
+      {renderSidebarNav()}
 
-        {/* Inbox Tab */}
-        <TabsContent value="inbox" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Conversas Ativas</CardTitle>
-              <CardDescription>
-                Gerencie as conversas em andamento e atribua atendentes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {assignments.length === 0 ? (
-                <div className="text-center py-8">
-                  <Inbox className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhuma conversa ativa no momento</p>
+      {/* Conversation list */}
+      <ScrollArea className="flex-1">
+        {activeView === "inbox" && (
+          <div className="divide-y divide-[#2a3942]">
+            {filteredAssignments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                <div className="w-20 h-20 rounded-full bg-[#202c33] flex items-center justify-center mb-4">
+                  <MessageSquare className="h-10 w-10 text-[#8696a0]" />
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Departamento</TableHead>
-                      <TableHead>Atendente</TableHead>
-                      <TableHead>Iniciada em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignments.map((assignment) => (
-                      <TableRow key={assignment.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={assignment.conversation?.client?.avatar_url || undefined} />
-                              <AvatarFallback className="text-xs">
-                                {assignment.conversation?.client?.full_name
-                                  ? getInitials(assignment.conversation.client.full_name)
-                                  : "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-sm">
-                                {assignment.conversation?.client?.full_name || "Desconhecido"}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {assignment.conversation?.client?.phone_e164}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={STATUS_COLORS[assignment.status]}>
-                            {STATUS_LABELS[assignment.status]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {assignment.department ? (
-                            <Badge
-                              variant="outline"
-                              style={{
-                                borderColor: assignment.department.color,
-                                color: assignment.department.color,
-                              }}
-                            >
-                              {assignment.department.name}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {assignment.agent?.user ? (
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={assignment.agent.user.avatar_url || undefined} />
-                                <AvatarFallback className="text-xs">
-                                  {getInitials(assignment.agent.user.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{assignment.agent.user.name}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Não atribuído</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {new Date(assignment.created_at).toLocaleString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">
-                            <ArrowRightLeft className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Agents Tab */}
-        <TabsContent value="agents" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Equipe de Atendimento</h3>
-              <p className="text-sm text-muted-foreground">
-                Gerencie os atendentes e suas permissões
-              </p>
-            </div>
-            <Button onClick={() => openAgentDialog()} disabled={availableUsers.length === 0}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Atendente
-            </Button>
-          </div>
-
-          <div className="grid gap-4">
-            {agents.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhum atendente cadastrado</p>
-                  <Button className="mt-4" onClick={() => openAgentDialog()}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Primeiro Atendente
-                  </Button>
-                </CardContent>
-              </Card>
+                <p className="text-[#8696a0] text-sm">Nenhuma conversa encontrada</p>
+              </div>
             ) : (
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Atendente</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Departamento</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Atendimentos</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agents.map((agent) => (
-                      <TableRow key={agent.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={agent.user?.avatar_url || undefined} />
-                                <AvatarFallback className="text-xs">
-                                  {agent.user ? getInitials(agent.user.name) : "?"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <Circle
-                                className={cn(
-                                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
-                                  agent.is_online ? "fill-green-500 text-green-500" : "fill-muted text-muted"
-                                )}
-                              />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{agent.user?.name}</p>
-                              <p className="text-xs text-muted-foreground">{agent.user?.email}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={ROLE_COLORS[agent.role]}>
-                            {ROLE_LABELS[agent.role]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {agent.department ? (
-                            <Badge
-                              variant="outline"
-                              style={{
-                                borderColor: agent.department.color,
-                                color: agent.department.color,
-                              }}
-                            >
-                              {agent.department.name}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Todos</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Switch
-                            checked={agent.is_online}
-                            onCheckedChange={() => toggleAgentOnline(agent)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {agent.current_chats}/{agent.max_concurrent_chats}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openAgentDialog(agent)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeletingAgentId(agent.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Departments Tab */}
-        <TabsContent value="departments" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Departamentos / Filas</h3>
-              <p className="text-sm text-muted-foreground">
-                Organize os atendimentos por departamento
-              </p>
-            </div>
-            <Button onClick={() => openDepartmentDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Departamento
-            </Button>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {departments.length === 0 ? (
-              <Card className="col-span-full">
-                <CardContent className="py-8 text-center">
-                  <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhum departamento cadastrado</p>
-                  <Button className="mt-4" onClick={() => openDepartmentDialog()}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Primeiro Departamento
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              departments.map((dept) => (
-                <Card key={dept.id} className="relative overflow-hidden">
-                  <div
-                    className="absolute top-0 left-0 right-0 h-1"
-                    style={{ backgroundColor: dept.color }}
-                  />
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: dept.color }}
-                        />
-                        <CardTitle className="text-base">{dept.name}</CardTitle>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openDepartmentDialog(dept)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeletingDepartmentId(dept.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {dept.description && (
-                      <CardDescription className="text-xs">{dept.description}</CardDescription>
+              filteredAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[#202c33] transition-colors",
+                    selectedConversation?.id === assignment.id && "bg-[#2a3942]"
+                  )}
+                  onClick={() => setSelectedConversation(assignment)}
+                >
+                  <div className="relative">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={assignment.conversation?.client?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-[#6b7c85] text-white text-sm">
+                        {assignment.conversation?.client?.full_name
+                          ? getInitials(assignment.conversation.client.full_name)
+                          : "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    {assignment.status === "pending" && (
+                      <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-[#111b21]" />
                     )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Distribuição automática</span>
-                      <Badge variant={dept.auto_distribution ? "default" : "secondary"}>
-                        {dept.auto_distribution ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm mt-2">
-                      <span className="text-muted-foreground">Atendentes</span>
-                      <span className="font-medium">
-                        {agents.filter((a) => a.department_id === dept.id).length}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#e9edef] font-medium truncate">
+                        {assignment.conversation?.client?.full_name || "Cliente"}
+                      </span>
+                      <span className="text-[#8696a0] text-xs">
+                        {formatTime(assignment.created_at)}
                       </span>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {assignment.status === "active" && (
+                          <CheckCheck className="h-4 w-4 text-[#53bdeb] flex-shrink-0" />
+                        )}
+                        <span className="text-[#8696a0] text-sm truncate">
+                          {assignment.last_message || assignment.conversation?.client?.phone_e164 || "Nova conversa"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {assignment.department && (
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: assignment.department.color }}
+                          />
+                        )}
+                        {assignment.unread_count && assignment.unread_count > 0 && (
+                          <Badge className="bg-[#00a884] text-white text-[10px] px-1.5 py-0 h-5 min-w-5 flex items-center justify-center">
+                            {assignment.unread_count}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))
             )}
           </div>
-        </TabsContent>
+        )}
 
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Configurações do ROY zAPP</CardTitle>
-              <CardDescription>
-                Configure as opções gerais do sistema de atendimento
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h4 className="font-medium">Distribuição Automática</h4>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Round-robin</p>
-                    <p className="text-xs text-muted-foreground">
-                      Distribui conversas igualmente entre atendentes online
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Respeitar limite de atendimentos</p>
-                    <p className="text-xs text-muted-foreground">
-                      Não atribuir se atendente atingiu o máximo
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </div>
+        {activeView === "team" && renderTeamList()}
+        {activeView === "departments" && renderDepartmentList()}
+        {activeView === "settings" && renderSettingsPanel()}
+      </ScrollArea>
+    </div>
+  );
 
-              <div className="space-y-4">
-                <h4 className="font-medium">Notificações</h4>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Som de nova conversa</p>
-                    <p className="text-xs text-muted-foreground">
-                      Tocar som ao receber nova conversa
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
+  // Render team list
+  const renderTeamList = () => (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[#e9edef] font-medium">Equipe de Atendimento</h3>
+        <Button
+          size="sm"
+          className="bg-[#00a884] hover:bg-[#00a884]/90 text-white"
+          onClick={() => openAgentDialog()}
+          disabled={availableUsers.length === 0}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Adicionar
+        </Button>
+      </div>
+
+      {agents.length === 0 ? (
+        <div className="text-center py-8">
+          <Users className="h-12 w-12 text-[#8696a0] mx-auto mb-3" />
+          <p className="text-[#8696a0] text-sm">Nenhum atendente cadastrado</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {agents.map((agent) => (
+            <div
+              key={agent.id}
+              className="flex items-center gap-3 p-3 bg-[#202c33] rounded-lg"
+            >
+              <div className="relative">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={agent.user?.avatar_url || undefined} />
+                  <AvatarFallback className="bg-[#6b7c85] text-white text-xs">
+                    {agent.user ? getInitials(agent.user.name) : "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div
+                  className={cn(
+                    "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#202c33]",
+                    agent.is_online ? "bg-[#00a884]" : "bg-[#6b7c85]"
+                  )}
+                />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#e9edef] text-sm font-medium truncate">
+                    {agent.user?.name}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-[#2a3942] text-[#8696a0]">
+                    {ROLE_LABELS[agent.role]}
+                  </Badge>
+                </div>
+                <p className="text-[#8696a0] text-xs truncate">
+                  {agent.department?.name || "Todos os departamentos"} • {agent.current_chats}/{agent.max_concurrent_chats}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <Switch
+                  checked={agent.is_online}
+                  onCheckedChange={() => toggleAgentOnline(agent)}
+                  className="data-[state=checked]:bg-[#00a884]"
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#8696a0] hover:bg-[#2a3942]">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-[#233138] border-[#2a3942]">
+                    <DropdownMenuItem className="text-[#d1d7db]" onClick={() => openAgentDialog(agent)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[#2a3942]" />
+                    <DropdownMenuItem 
+                      className="text-red-400"
+                      onClick={() => setDeletingAgentId(agent.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remover
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Render department list
+  const renderDepartmentList = () => (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[#e9edef] font-medium">Departamentos</h3>
+        <Button
+          size="sm"
+          className="bg-[#00a884] hover:bg-[#00a884]/90 text-white"
+          onClick={() => openDepartmentDialog()}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Novo
+        </Button>
+      </div>
+
+      {departments.length === 0 ? (
+        <div className="text-center py-8">
+          <Building2 className="h-12 w-12 text-[#8696a0] mx-auto mb-3" />
+          <p className="text-[#8696a0] text-sm">Nenhum departamento cadastrado</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {departments.map((dept) => (
+            <div
+              key={dept.id}
+              className="p-3 bg-[#202c33] rounded-lg"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: dept.color }}
+                  />
+                  <span className="text-[#e9edef] font-medium">{dept.name}</span>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#8696a0] hover:bg-[#2a3942]">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-[#233138] border-[#2a3942]">
+                    <DropdownMenuItem className="text-[#d1d7db]" onClick={() => openDepartmentDialog(dept)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[#2a3942]" />
+                    <DropdownMenuItem 
+                      className="text-red-400"
+                      onClick={() => setDeletingDepartmentId(dept.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              {dept.description && (
+                <p className="text-[#8696a0] text-xs mt-1">{dept.description}</p>
+              )}
+              <div className="flex items-center gap-4 mt-2 text-xs text-[#8696a0]">
+                <span>{agents.filter((a) => a.department_id === dept.id).length} atendentes</span>
+                <span>•</span>
+                <span>{dept.auto_distribution ? "Distribuição automática" : "Manual"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Render settings panel
+  const renderSettingsPanel = () => (
+    <div className="p-4 space-y-6">
+      <h3 className="text-[#e9edef] font-medium">Configurações</h3>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between p-3 bg-[#202c33] rounded-lg">
+          <div>
+            <p className="text-[#e9edef] text-sm">Distribuição round-robin</p>
+            <p className="text-[#8696a0] text-xs">Distribui igualmente entre atendentes</p>
+          </div>
+          <Switch defaultChecked className="data-[state=checked]:bg-[#00a884]" />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-[#202c33] rounded-lg">
+          <div>
+            <p className="text-[#e9edef] text-sm">Respeitar limite</p>
+            <p className="text-[#8696a0] text-xs">Não atribuir se atingiu o máximo</p>
+          </div>
+          <Switch defaultChecked className="data-[state=checked]:bg-[#00a884]" />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-[#202c33] rounded-lg">
+          <div>
+            <p className="text-[#e9edef] text-sm">Som de nova conversa</p>
+            <p className="text-[#8696a0] text-xs">Tocar som ao receber mensagem</p>
+          </div>
+          <Switch defaultChecked className="data-[state=checked]:bg-[#00a884]" />
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render chat view
+  const renderChatView = () => {
+    if (!selectedConversation) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#222e35] relative overflow-hidden">
+          {/* Background pattern */}
+          <div className="absolute inset-0 opacity-5" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }} />
+          
+          <div className="relative z-10 text-center px-8 max-w-md">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[#00a884]/10 flex items-center justify-center">
+              <MessageSquare className="h-12 w-12 text-[#00a884]" />
+            </div>
+            <h2 className="text-[#e9edef] text-2xl font-light mb-3">ROY zAPP</h2>
+            <p className="text-[#8696a0] text-sm leading-relaxed">
+              Selecione uma conversa para começar a atender. Suas mensagens serão enviadas em nome da conta principal do WhatsApp.
+            </p>
+          </div>
+
+          {/* Stats bar */}
+          <div className="absolute bottom-0 left-0 right-0 bg-[#202c33] px-6 py-4 flex items-center justify-center gap-8 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#00a884]" />
+              <span className="text-[#8696a0]">{onlineAgents} atendentes online</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-500" />
+              <span className="text-[#8696a0]">{pendingConversations} aguardando</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-[#00a884]" />
+              <span className="text-[#8696a0]">{activeConversations} em atendimento</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex-1 flex flex-col bg-[#0b141a]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='412' height='412' viewBox='0 0 412 412' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M0 0h206v206H0V0zm206 206h206v206H206V206z'/%3E%3C/g%3E%3C/svg%3E")`,
+      }}>
+        {/* Chat header */}
+        <div className="bg-[#202c33] px-4 py-2 flex items-center gap-3 border-b border-[#2a3942]">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden text-[#aebac1] hover:bg-[#2a3942]"
+            onClick={() => setSelectedConversation(null)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={selectedConversation.conversation?.client?.avatar_url || undefined} />
+            <AvatarFallback className="bg-[#6b7c85] text-white text-sm">
+              {selectedConversation.conversation?.client?.full_name
+                ? getInitials(selectedConversation.conversation.client.full_name)
+                : "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[#e9edef] font-medium truncate">
+              {selectedConversation.conversation?.client?.full_name || "Cliente"}
+            </h3>
+            <p className="text-[#8696a0] text-xs">
+              {selectedConversation.conversation?.client?.phone_e164}
+              {selectedConversation.agent?.user && (
+                <span> • Atendido por {selectedConversation.agent.user.name}</span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "text-xs",
+                STATUS_CONFIG[selectedConversation.status].color,
+                "border-current"
+              )}
+            >
+              {STATUS_CONFIG[selectedConversation.status].label}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-[#aebac1] hover:bg-[#2a3942]"
+              onClick={() => setTransferDialogOpen(true)}
+            >
+              <ArrowRightLeft className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942]">
+              <Phone className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942]">
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1 px-4 py-2">
+          <div className="space-y-1 max-w-3xl mx-auto">
+            {messages.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-[#8696a0] text-sm">Nenhuma mensagem ainda</p>
+              </div>
+            ) : (
+              messages.map((message, index) => {
+                const showTimestamp = index === 0 ||
+                  new Date(message.created_at).toDateString() !== new Date(messages[index - 1].created_at).toDateString();
+
+                return (
+                  <div key={message.id}>
+                    {showTimestamp && (
+                      <div className="flex justify-center my-3">
+                        <span className="bg-[#182229] text-[#8696a0] text-xs px-3 py-1 rounded-lg shadow">
+                          {format(new Date(message.created_at), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </span>
+                      </div>
+                    )}
+                    <div className={cn(
+                      "flex mb-1",
+                      message.is_from_client ? "justify-start" : "justify-end"
+                    )}>
+                      <div className={cn(
+                        "max-w-[65%] px-3 py-2 rounded-lg relative shadow",
+                        message.is_from_client
+                          ? "bg-[#202c33] rounded-tl-none"
+                          : "bg-[#005c4b] rounded-tr-none"
+                      )}>
+                        <p className="text-[#e9edef] text-sm whitespace-pre-wrap break-words">
+                          {message.content || "[Mensagem de mídia]"}
+                        </p>
+                        <div className={cn(
+                          "flex items-center justify-end gap-1 mt-1",
+                          message.is_from_client ? "text-[#8696a0]" : "text-[#ffffff99]"
+                        )}>
+                          <span className="text-[10px]">
+                            {format(new Date(message.created_at), "HH:mm")}
+                          </span>
+                          {!message.is_from_client && (
+                            <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Message input */}
+        <div className="bg-[#202c33] px-4 py-3 flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="text-[#8696a0] hover:bg-[#2a3942] flex-shrink-0">
+            <Smile className="h-6 w-6" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-[#8696a0] hover:bg-[#2a3942] flex-shrink-0">
+            <Paperclip className="h-6 w-6" />
+          </Button>
+          <Input
+            placeholder="Digite uma mensagem"
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            className="flex-1 bg-[#2a3942] border-0 text-[#d1d7db] placeholder:text-[#8696a0] focus-visible:ring-0 rounded-lg h-10"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-[#8696a0] hover:bg-[#2a3942] flex-shrink-0"
+          >
+            {messageInput.trim() ? (
+              <Send className="h-6 w-6 text-[#00a884]" />
+            ) : (
+              <Mic className="h-6 w-6" />
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-[calc(100vh-4rem)] flex bg-[#111b21] -m-6 overflow-hidden">
+      {/* Left panel - Conversation list */}
+      <div className={cn(
+        "w-full lg:w-[400px] flex-shrink-0 border-r border-[#2a3942] flex flex-col",
+        selectedConversation && "hidden lg:flex"
+      )}>
+        {renderConversationList()}
+      </div>
+
+      {/* Right panel - Chat view */}
+      <div className={cn(
+        "flex-1 flex flex-col",
+        !selectedConversation && "hidden lg:flex"
+      )}>
+        {renderChatView()}
+      </div>
 
       {/* Department Dialog */}
       <Dialog open={departmentDialogOpen} onOpenChange={setDepartmentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
           <DialogHeader>
             <DialogTitle>
               {editingDepartment ? "Editar Departamento" : "Novo Departamento"}
             </DialogTitle>
-            <DialogDescription>
-              Departamentos organizam as conversas por área de atendimento
+            <DialogDescription className="text-[#8696a0]">
+              Departamentos organizam as conversas por área
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="dept-name">Nome</Label>
+              <Label htmlFor="dept-name" className="text-[#8696a0]">Nome</Label>
               <Input
                 id="dept-name"
                 value={departmentForm.name}
                 onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })}
-                placeholder="Ex: Vendas, Suporte, Financeiro"
+                placeholder="Ex: Vendas, Suporte"
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dept-description">Descrição</Label>
+              <Label htmlFor="dept-description" className="text-[#8696a0]">Descrição</Label>
               <Textarea
                 id="dept-description"
                 value={departmentForm.description}
-                onChange={(e) =>
-                  setDepartmentForm({ ...departmentForm, description: e.target.value })
-                }
-                placeholder="Descreva a função deste departamento"
+                onChange={(e) => setDepartmentForm({ ...departmentForm, description: e.target.value })}
+                placeholder="Descreva a função"
                 rows={2}
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dept-color">Cor</Label>
+              <Label className="text-[#8696a0]">Cor</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  id="dept-color"
                   value={departmentForm.color}
                   onChange={(e) => setDepartmentForm({ ...departmentForm, color: e.target.value })}
-                  className="h-10 w-10 rounded border cursor-pointer"
+                  className="h-10 w-10 rounded border-0 cursor-pointer"
                 />
                 <Input
                   value={departmentForm.color}
                   onChange={(e) => setDepartmentForm({ ...departmentForm, color: e.target.value })}
-                  className="flex-1"
+                  className="flex-1 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
                 />
               </div>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <Label>Distribuição Automática</Label>
-                <p className="text-xs text-muted-foreground">
-                  Atribuir conversas automaticamente aos atendentes
-                </p>
+                <Label className="text-[#e9edef]">Distribuição Automática</Label>
+                <p className="text-xs text-[#8696a0]">Atribuir conversas automaticamente</p>
               </div>
               <Switch
                 checked={departmentForm.auto_distribution}
-                onCheckedChange={(checked) =>
-                  setDepartmentForm({ ...departmentForm, auto_distribution: checked })
-                }
+                onCheckedChange={(checked) => setDepartmentForm({ ...departmentForm, auto_distribution: checked })}
+                className="data-[state=checked]:bg-[#00a884]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDepartmentDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDepartmentDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
               Cancelar
             </Button>
-            <Button onClick={saveDepartment} disabled={savingDepartment}>
+            <Button onClick={saveDepartment} disabled={savingDepartment} className="bg-[#00a884] hover:bg-[#00a884]/90">
               {savingDepartment ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -999,38 +1253,30 @@ export default function RoyZapp() {
 
       {/* Agent Dialog */}
       <Dialog open={agentDialogOpen} onOpenChange={setAgentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
           <DialogHeader>
             <DialogTitle>
               {editingAgent ? "Editar Atendente" : "Adicionar Atendente"}
             </DialogTitle>
-            <DialogDescription>
-              Configure as permissões e departamento do atendente
+            <DialogDescription className="text-[#8696a0]">
+              Configure as permissões do atendente
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Usuário</Label>
+              <Label className="text-[#8696a0]">Usuário</Label>
               <Select
                 value={agentForm.user_id}
                 onValueChange={(value) => setAgentForm({ ...agentForm, user_id: value })}
                 disabled={!!editingAgent}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um usuário" />
+                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#233138] border-[#3b4a54]">
                   {availableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={user.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs">
-                            {getInitials(user.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{user.name}</span>
-                      </div>
+                    <SelectItem key={user.id} value={user.id} className="text-[#e9edef]">
+                      {user.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1038,44 +1284,36 @@ export default function RoyZapp() {
             </div>
 
             <div className="space-y-2">
-              <Label>Cargo</Label>
+              <Label className="text-[#8696a0]">Cargo</Label>
               <Select
                 value={agentForm.role}
-                onValueChange={(value: "admin" | "supervisor" | "agent") =>
-                  setAgentForm({ ...agentForm, role: value })
-                }
+                onValueChange={(value: "admin" | "supervisor" | "agent") => setAgentForm({ ...agentForm, role: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                  <SelectItem value="agent">Atendente</SelectItem>
+                <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                  <SelectItem value="admin" className="text-[#e9edef]">Administrador</SelectItem>
+                  <SelectItem value="supervisor" className="text-[#e9edef]">Supervisor</SelectItem>
+                  <SelectItem value="agent" className="text-[#e9edef]">Atendente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Departamento</Label>
+              <Label className="text-[#8696a0]">Departamento</Label>
               <Select
                 value={agentForm.department_id}
                 onValueChange={(value) => setAgentForm({ ...agentForm, department_id: value })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os departamentos" />
+                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectValue placeholder="Todos" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos os departamentos</SelectItem>
+                <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                  <SelectItem value="" className="text-[#e9edef]">Todos</SelectItem>
                   {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: dept.color }}
-                        />
-                        {dept.name}
-                      </div>
+                    <SelectItem key={dept.id} value={dept.id} className="text-[#e9edef]">
+                      {dept.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1083,46 +1321,113 @@ export default function RoyZapp() {
             </div>
 
             <div className="space-y-2">
-              <Label>Máximo de atendimentos simultâneos</Label>
+              <Label className="text-[#8696a0]">Máx. atendimentos simultâneos</Label>
               <Input
                 type="number"
                 min={1}
                 max={20}
                 value={agentForm.max_concurrent_chats}
-                onChange={(e) =>
-                  setAgentForm({ ...agentForm, max_concurrent_chats: parseInt(e.target.value) || 5 })
-                }
+                onChange={(e) => setAgentForm({ ...agentForm, max_concurrent_chats: parseInt(e.target.value) || 5 })}
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAgentDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setAgentDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
               Cancelar
             </Button>
-            <Button onClick={saveAgent} disabled={savingAgent}>
+            <Button onClick={saveAgent} disabled={savingAgent} className="bg-[#00a884] hover:bg-[#00a884]/90">
               {savingAgent ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Department Confirmation */}
-      <AlertDialog
-        open={!!deletingDepartmentId}
-        onOpenChange={(open) => !open && setDeletingDepartmentId(null)}
-      >
-        <AlertDialogContent>
+      {/* Transfer Dialog */}
+      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle>Transferir Conversa</DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Selecione para quem transferir
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Tabs defaultValue="agent" onValueChange={(v) => setTransferTarget({ ...transferTarget, type: v as "agent" | "department" })}>
+              <TabsList className="w-full bg-[#202c33]">
+                <TabsTrigger value="agent" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white">
+                  Atendente
+                </TabsTrigger>
+                <TabsTrigger value="department" className="flex-1 data-[state=active]:bg-[#00a884] data-[state=active]:text-white">
+                  Departamento
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="agent" className="mt-4">
+                <Select
+                  value={transferTarget.id}
+                  onValueChange={(value) => setTransferTarget({ ...transferTarget, id: value })}
+                >
+                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                    <SelectValue placeholder="Selecione um atendente" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                    {agents.filter(a => a.is_online && a.id !== selectedConversation?.agent_id).map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id} className="text-[#e9edef]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-[#00a884]" />
+                          {agent.user?.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TabsContent>
+              <TabsContent value="department" className="mt-4">
+                <Select
+                  value={transferTarget.id}
+                  onValueChange={(value) => setTransferTarget({ ...transferTarget, id: value })}
+                >
+                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                    <SelectValue placeholder="Selecione um departamento" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id} className="text-[#e9edef]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dept.color }} />
+                          {dept.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </TabsContent>
+            </Tabs>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+              Cancelar
+            </Button>
+            <Button className="bg-[#00a884] hover:bg-[#00a884]/90" disabled={!transferTarget.id}>
+              Transferir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmations */}
+      <AlertDialog open={!!deletingDepartmentId} onOpenChange={(open) => !open && setDeletingDepartmentId(null)}>
+        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir departamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. As conversas e atendentes deste departamento serão
-              desvinculados.
+            <AlertDialogTitle className="text-[#e9edef]">Excluir departamento?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8696a0]">
+              Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-red-500 hover:bg-red-600"
               onClick={() => deletingDepartmentId && deleteDepartment(deletingDepartmentId)}
             >
               Excluir
@@ -1131,22 +1436,18 @@ export default function RoyZapp() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Agent Confirmation */}
-      <AlertDialog
-        open={!!deletingAgentId}
-        onOpenChange={(open) => !open && setDeletingAgentId(null)}
-      >
-        <AlertDialogContent>
+      <AlertDialog open={!!deletingAgentId} onOpenChange={(open) => !open && setDeletingAgentId(null)}>
+        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover atendente?</AlertDialogTitle>
-            <AlertDialogDescription>
-              O usuário será removido da equipe de atendimento e não poderá mais atender conversas.
+            <AlertDialogTitle className="text-[#e9edef]">Remover atendente?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8696a0]">
+              O usuário não poderá mais atender conversas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-red-500 hover:bg-red-600"
               onClick={() => deletingAgentId && deleteAgent(deletingAgentId)}
             >
               Remover
