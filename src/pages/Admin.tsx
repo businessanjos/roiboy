@@ -267,6 +267,10 @@ export default function Admin() {
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
           </TabsTrigger>
+          <TabsTrigger value="status" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <ActivityIcon className="h-4 w-4" />
+            Status
+          </TabsTrigger>
           <TabsTrigger value="plans" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Package className="h-4 w-4" />
             Planos
@@ -299,14 +303,14 @@ export default function Admin() {
             <Headset className="h-4 w-4" />
             Suporte
           </TabsTrigger>
-          <TabsTrigger value="status" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <ActivityIcon className="h-4 w-4" />
-            Status
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
           <DashboardTab accounts={accounts} users={allUsers} plans={plans} />
+        </TabsContent>
+
+        <TabsContent value="status" className="mt-0">
+          <SystemStatusMonitor />
         </TabsContent>
 
         <TabsContent value="plans" className="mt-0">
@@ -363,10 +367,6 @@ export default function Admin() {
               <SupportWhatsAppConfig />
             </TabsContent>
           </Tabs>
-        </TabsContent>
-
-        <TabsContent value="status" className="mt-0">
-          <SystemStatusMonitor />
         </TabsContent>
       </Tabs>
     </div>
