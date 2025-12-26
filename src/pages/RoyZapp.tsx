@@ -178,6 +178,7 @@ interface Message {
   media_mimetype?: string | null;
   media_filename?: string | null;
   audio_duration_sec?: number | null;
+  sender_name?: string | null;
 }
 
 interface ConversationAssignment {
@@ -416,6 +417,7 @@ export default function RoyZapp() {
               media_mimetype: newMsg.media_mimetype,
               media_filename: newMsg.media_filename,
               audio_duration_sec: newMsg.audio_duration_sec,
+              sender_name: newMsg.sender_name,
             }];
           });
         }
@@ -646,7 +648,7 @@ export default function RoyZapp() {
     try {
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec")
+        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name")
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: true })
         .limit(100);
@@ -663,6 +665,7 @@ export default function RoyZapp() {
         media_mimetype: m.media_mimetype,
         media_filename: m.media_filename,
         audio_duration_sec: m.audio_duration_sec,
+        sender_name: m.sender_name,
       })));
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -2618,6 +2621,12 @@ export default function RoyZapp() {
                           ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
                           : "bg-zapp-message-out text-zapp-text rounded-tr-none"
                       )}>
+                        {/* Sender name for group messages */}
+                        {message.is_from_client && contactInfo.isGroup && message.sender_name && (
+                          <p className="text-xs font-medium text-zapp-accent mb-1">
+                            {message.sender_name}
+                          </p>
+                        )}
                         {/* Media content */}
                         {message.media_url && message.media_type === "image" && (
                           <div className="mb-2 rounded-lg overflow-hidden">
