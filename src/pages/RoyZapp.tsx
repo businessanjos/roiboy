@@ -406,11 +406,50 @@ export default function RoyZapp() {
       if (tagsError) throw tagsError;
 
       setDepartments(depts || []);
-      setAgents(agentsData || []);
       setTeamUsers((usersData || []) as TeamUser[]);
       setTeamRoles(rolesData || []);
       setAssignments(assignmentsData || []);
       setTags(tagsData || []);
+      
+      // Check if current user is already an agent, if not, auto-register
+      let finalAgents = agentsData || [];
+      const existingAgent = finalAgents.find((a: Agent) => a.user_id === currentUser.id);
+      
+      if (!existingAgent) {
+        // Auto-register current user as agent
+        const { data: newAgent, error: createError } = await supabase
+          .from("zapp_agents")
+          .insert({
+            account_id: currentUser.account_id,
+            user_id: currentUser.id,
+            is_online: true,
+            last_activity_at: new Date().toISOString(),
+          })
+          .select(`
+            *,
+            user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id),
+            department:zapp_departments(*)
+          `)
+          .single();
+        
+        if (!createError && newAgent) {
+          finalAgents = [...finalAgents, newAgent];
+          console.log("Auto-registered as agent:", newAgent.id);
+        } else if (createError) {
+          console.error("Error auto-registering agent:", createError);
+        }
+      } else {
+        // Update last activity and online status
+        await supabase
+          .from("zapp_agents")
+          .update({ 
+            is_online: true, 
+            last_activity_at: new Date().toISOString() 
+          })
+          .eq("id", existingAgent.id);
+      }
+      
+      setAgents(finalAgents);
     } catch (error: any) {
       console.error("Error fetching zapp data:", error);
       toast.error("Erro ao carregar dados");
