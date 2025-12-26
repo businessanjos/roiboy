@@ -1,5 +1,6 @@
 export { RoyAssistant, ONBOARDING_MESSAGES } from "./RoyAssistant";
 export { OnboardingProgress } from "./OnboardingProgress";
+export { OnboardingWhatsAppStep } from "./OnboardingWhatsAppStep";
 export { StepPreview } from "./StepPreview";
 export { TemplateSelector, QuickTemplateBar, BUSINESS_TYPES } from "./OnboardingTemplates";
 export type { ProductTemplate, EventTemplate } from "./OnboardingTemplates";

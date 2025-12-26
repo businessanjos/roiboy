@@ -218,6 +218,15 @@ export const ONBOARDING_MESSAGES: Record<number, RoyMessage> = {
     ]
   },
   3: {
+    text: "Conecte seu WhatsApp para monitorar conversas e receber análises automáticas. Esta é a principal fonte de dados do Roy!",
+    emoji: "📱",
+    tips: [
+      "Você pode usar QR Code ou código de pareamento para conectar.",
+      "As mensagens são analisadas por IA para detectar ROI e riscos.",
+      "Você pode pular e conectar depois em Integrações."
+    ]
+  },
+  4: {
     text: "Hora de cadastrar seu primeiro cliente! Esse é o começo do seu relacionamento gerenciado pelo Roy.",
     emoji: "🎯",
     tips: [
@@ -226,7 +235,7 @@ export const ONBOARDING_MESSAGES: Record<number, RoyMessage> = {
       "O e-mail é usado para notificações e convites para eventos."
     ]
   },
-  4: {
+  5: {
     text: "Excelente! Agora cadastre um produto ou serviço que você oferece. Isso ajuda a organizar contratos e métricas.",
     emoji: "📦",
     tips: [
@@ -235,7 +244,7 @@ export const ONBOARDING_MESSAGES: Record<number, RoyMessage> = {
       "Use templates prontos para começar mais rápido!"
     ]
   },
-  5: {
+  6: {
     text: "Que tal agendar seu primeiro evento? Lives e encontros são ótimos para engajar clientes!",
     emoji: "🗓️",
     tips: [
@@ -244,7 +253,7 @@ export const ONBOARDING_MESSAGES: Record<number, RoyMessage> = {
       "Use o check-in para controlar quem compareceu."
     ]
   },
-  6: {
+  7: {
     text: "Última etapa! Convide sua equipe para colaborar. Quanto mais mãos, melhor o atendimento!",
     emoji: "🚀",
     tips: [
