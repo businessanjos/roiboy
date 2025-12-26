@@ -275,6 +275,10 @@ export default function RoyZapp() {
     const saved = localStorage.getItem("zapp_sound");
     return saved !== null ? saved === "true" : true;
   });
+  
+  // Import conversations state
+  const [importingConversations, setImportingConversations] = useState(false);
+  const [importLimit, setImportLimit] = useState("50");
 
   // Department dialog state
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -1059,6 +1063,37 @@ export default function RoyZapp() {
   const currentAgent = useMemo(() => {
     return agents.find((a) => a.user_id === currentUser?.id);
   }, [agents, currentUser?.id]);
+
+  // Import recent conversations from WhatsApp
+  const importRecentConversations = async () => {
+    if (!currentUser?.account_id) return;
+    
+    setImportingConversations(true);
+    try {
+      const limit = parseInt(importLimit) || 50;
+      
+      const response = await supabase.functions.invoke("uazapi-manager", {
+        body: { 
+          action: "import-conversations",
+          limit: limit
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      
+      const result = response.data;
+      const imported = result?.imported || 0;
+      const skipped = result?.skipped || 0;
+      
+      toast.success(`Importadas ${imported} conversas (${skipped} já existiam)`);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error importing conversations:", error);
+      toast.error(error.message || "Erro ao importar conversas");
+    } finally {
+      setImportingConversations(false);
+    }
+  };
 
 
   // Filtered conversations based on tab (mine vs queue)
@@ -2073,6 +2108,61 @@ export default function RoyZapp() {
             }}
             className="data-[state=checked]:bg-zapp-accent" 
           />
+        </div>
+      </div>
+
+      {/* Import Conversations */}
+      <div className="space-y-4 pt-4 border-t border-zapp-border">
+        <div>
+          <p className="text-zapp-text text-sm font-medium">Importar Conversas</p>
+          <p className="text-zapp-text-muted text-xs">
+            Carrega as últimas conversas do WhatsApp para o sistema
+          </p>
+        </div>
+        
+        <div className="p-4 bg-zapp-panel rounded-lg space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <Label htmlFor="importLimit" className="text-zapp-text text-xs">
+                Quantidade de conversas
+              </Label>
+              <Select value={importLimit} onValueChange={setImportLimit}>
+                <SelectTrigger className="mt-1 bg-zapp-input border-zapp-border text-zapp-text">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="20">20 conversas</SelectItem>
+                  <SelectItem value="50">50 conversas</SelectItem>
+                  <SelectItem value="100">100 conversas</SelectItem>
+                  <SelectItem value="200">200 conversas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <Button
+            onClick={importRecentConversations}
+            disabled={importingConversations || !whatsappConnected}
+            className="w-full bg-zapp-accent hover:bg-zapp-accent-hover text-white"
+          >
+            {importingConversations ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Importando...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Carregar Conversas
+              </>
+            )}
+          </Button>
+          
+          {!whatsappConnected && (
+            <p className="text-amber-500 text-xs text-center">
+              Conecte o WhatsApp primeiro para importar conversas
+            </p>
+          )}
         </div>
       </div>
     </div>

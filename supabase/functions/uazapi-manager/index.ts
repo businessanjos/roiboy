@@ -15,7 +15,9 @@ interface UazapiRequest {
     | "list_groups" | "sync_groups" | "save_selected_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
     | "send_media" | "send_media_to_group"
     | "update_group_name" | "update_group_description" | "update_group_image"
-    | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status";
+    | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status"
+    | "import-conversations";
+  limit?: number;
   instance_name?: string;
   phone?: string;
   message?: string;
@@ -2389,6 +2391,159 @@ serve(async (req) => {
           .eq("key", "support_whatsapp");
 
         result = { success: true };
+        break;
+      }
+
+      case "import-conversations": {
+        // Get recent chats from UAZAPI and import them
+        const importLimit = payload.limit || 50;
+        
+        if (!savedInstanceToken) {
+          return new Response(
+            JSON.stringify({ error: "WhatsApp not connected" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Helper to normalize phone
+        const normalizePhoneNum = (p: string | undefined): string => {
+          if (!p) return "";
+          const digits = p.replace(/\D/g, "");
+          return digits ? `+${digits}` : "";
+        };
+        
+        // Fetch recent chats from UAZAPI
+        let chats: Array<{
+          id?: string;
+          phone?: string;
+          name?: string;
+          wa_name?: string;
+          wa_isGroup?: boolean;
+          wa_chatid?: string;
+          wa_lastMsgTimestamp?: number;
+          lead_fullName?: string;
+          image?: string;
+        }> = [];
+        
+        try {
+          // Try different endpoints to get chats
+          const endpoints = ["/chats/list", "/chats", "/chat/list"];
+          for (const endpoint of endpoints) {
+            try {
+              const response = await uazapiInstanceRequest(endpoint, "GET", savedInstanceToken) as {
+                data?: Array<unknown>;
+                chats?: Array<unknown>;
+              } | Array<unknown>;
+              
+              if (Array.isArray(response)) {
+                chats = response.slice(0, importLimit) as typeof chats;
+                break;
+              } else if (response.data && Array.isArray(response.data)) {
+                chats = response.data.slice(0, importLimit) as typeof chats;
+                break;
+              } else if (response.chats && Array.isArray(response.chats)) {
+                chats = response.chats.slice(0, importLimit) as typeof chats;
+                break;
+              }
+            } catch (e) {
+              console.log(`Endpoint ${endpoint} failed:`, (e as Error).message);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch chats:", e);
+        }
+        
+        console.log(`Found ${chats.length} chats to import`);
+        
+        let imported = 0;
+        let skipped = 0;
+        
+        for (const chat of chats) {
+          const isGroup = chat.wa_isGroup || chat.id?.includes("@g.us") || false;
+          const groupJid = isGroup ? (chat.wa_chatid || chat.id || null) : null;
+          const chatPhone = isGroup ? "" : normalizePhoneNum(chat.phone || chat.id?.split("@")[0]);
+          const contactName = chat.wa_name || chat.name || chat.lead_fullName || (isGroup ? "Grupo" : chatPhone);
+          
+          if (!isGroup && !phone) continue;
+          if (isGroup && !groupJid) continue;
+          
+          // Check if conversation already exists
+          let exists = false;
+          if (isGroup && groupJid) {
+            const { data } = await supabase
+              .from("zapp_conversations")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("group_jid", groupJid)
+              .maybeSingle();
+            exists = !!data;
+          } else {
+            const { data } = await supabase
+              .from("zapp_conversations")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("phone_e164", chatPhone)
+              .eq("is_group", false)
+              .maybeSingle();
+            exists = !!data;
+          }
+          
+          if (exists) {
+            skipped++;
+            continue;
+          }
+          
+          // Find client if exists (only for direct messages)
+          let clientId = null;
+          if (!isGroup && chatPhone) {
+            const { data: existingClient } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("phone_e164", chatPhone)
+              .maybeSingle();
+            clientId = existingClient?.id || null;
+          }
+          
+          // Create conversation
+          const { data: newConvo, error: convoError } = await supabase
+            .from("zapp_conversations")
+            .insert({
+              account_id: accountId,
+              client_id: clientId,
+              phone_e164: isGroup ? "" : chatPhone,
+              contact_name: contactName,
+              channel: "whatsapp",
+              external_thread_id: chat.id || null,
+              is_group: isGroup,
+              group_jid: groupJid,
+              last_message_at: chat.wa_lastMsgTimestamp 
+                ? new Date(chat.wa_lastMsgTimestamp * 1000).toISOString() 
+                : new Date().toISOString(),
+              unread_count: 0,
+            })
+            .select("id")
+            .single();
+          
+          if (convoError) {
+            console.error(`Error creating conversation for ${contactName}:`, convoError);
+            continue;
+          }
+          
+          // Create assignment for queue
+          if (newConvo) {
+            await supabase
+              .from("zapp_conversation_assignments")
+              .insert({
+                account_id: accountId,
+                zapp_conversation_id: newConvo.id,
+                status: "waiting",
+              });
+            imported++;
+          }
+        }
+        
+        result = { imported, skipped, total: chats.length };
         break;
       }
 
