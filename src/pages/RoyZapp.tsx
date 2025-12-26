@@ -2583,7 +2583,7 @@ export default function RoyZapp() {
 
         {/* Messages */}
         <ScrollArea className="flex-1 px-4 py-2">
-          <div className="space-y-1 max-w-3xl mx-auto">
+          <div className="space-y-1">
             {messages.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
