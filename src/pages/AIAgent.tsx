@@ -15,7 +15,9 @@ import {
   ChevronUp,
   Save,
   RefreshCw,
-  MessageSquareText
+  MessageSquareText,
+  Settings2,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -24,6 +26,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 
 interface AIAgentFunction {
   id: string;
@@ -38,6 +43,44 @@ interface AIAgentFunction {
   created_at: string;
   updated_at: string;
 }
+
+interface AISettings {
+  model: string;
+  system_prompt: string;
+  roi_prompt: string;
+  risk_prompt: string;
+  life_events_prompt: string;
+  analysis_frequency: string;
+  min_message_length: number;
+  confidence_threshold: number;
+  auto_analysis_enabled: boolean;
+}
+
+const defaultAI: AISettings = {
+  model: "google/gemini-2.5-flash",
+  system_prompt: "Você é um analisador de mensagens de WhatsApp especializado em detectar percepção de ROI, riscos de churn e momentos de vida importantes dos clientes.",
+  roi_prompt: "Identifique menções a ganhos tangíveis (receita, economia, tempo) ou intangíveis (confiança, clareza, tranquilidade) que o cliente obteve.",
+  risk_prompt: "Detecte sinais de frustração, insatisfação, comparação com concorrentes, hesitação em continuar, ou mudanças de tom negativas.",
+  life_events_prompt: "Identifique menções a eventos de vida significativos como aniversários, casamentos, gravidez, mudança de emprego, viagens importantes.",
+  analysis_frequency: "realtime",
+  min_message_length: 20,
+  confidence_threshold: 0.7,
+  auto_analysis_enabled: true,
+};
+
+const AI_MODELS = [
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Rápido e eficiente (recomendado)" },
+  { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", description: "Mais rápido, menor custo" },
+  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Máxima qualidade" },
+  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", description: "Equilíbrio custo/qualidade" },
+  { value: "openai/gpt-5", label: "GPT-5", description: "Maior precisão" },
+];
+
+const ANALYSIS_FREQUENCIES = [
+  { value: "realtime", label: "Tempo real", description: "Analisa cada mensagem imediatamente" },
+  { value: "batch_hourly", label: "A cada hora", description: "Análise em lote a cada hora" },
+  { value: "batch_daily", label: "Diária", description: "Uma vez por dia (menor custo)" },
+];
 
 const FUNCTION_ICONS: Record<string, React.ReactNode> = {
   roi_detection: <TrendingUp className="h-5 w-5" />,
@@ -65,6 +108,12 @@ export default function AIAgent() {
   const [expandedFunctions, setExpandedFunctions] = useState<Record<string, boolean>>({});
   const [editedInstructions, setEditedInstructions] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // AI Settings state
+  const [aiSettings, setAiSettings] = useState<AISettings>(defaultAI);
+  const [hasSettingsChanges, setHasSettingsChanges] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Fetch AI functions
   const { data: functions, isLoading, refetch } = useQuery({
@@ -96,6 +145,38 @@ export default function AIAgent() {
     enabled: !!accountId,
   });
 
+  // Fetch account settings for AI configuration
+  const { data: accountSettings } = useQuery({
+    queryKey: ['account-settings-ai', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('account_settings')
+        .select('*')
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!accountId,
+  });
+
+  // Initialize AI settings when account settings load
+  useEffect(() => {
+    if (accountSettings) {
+      setAiSettings({
+        model: (accountSettings as any).ai_model || defaultAI.model,
+        system_prompt: (accountSettings as any).ai_system_prompt || defaultAI.system_prompt,
+        roi_prompt: (accountSettings as any).ai_roi_prompt || defaultAI.roi_prompt,
+        risk_prompt: (accountSettings as any).ai_risk_prompt || defaultAI.risk_prompt,
+        life_events_prompt: (accountSettings as any).ai_life_events_prompt || defaultAI.life_events_prompt,
+        analysis_frequency: (accountSettings as any).ai_analysis_frequency || defaultAI.analysis_frequency,
+        min_message_length: (accountSettings as any).ai_min_message_length ?? defaultAI.min_message_length,
+        confidence_threshold: Number((accountSettings as any).ai_confidence_threshold) || defaultAI.confidence_threshold,
+        auto_analysis_enabled: (accountSettings as any).ai_auto_analysis_enabled ?? defaultAI.auto_analysis_enabled,
+      });
+    }
+  }, [accountSettings]);
+
   // Initialize edited instructions when functions load
   useEffect(() => {
     if (functions) {
@@ -106,6 +187,41 @@ export default function AIAgent() {
       setEditedInstructions(instructions);
     }
   }, [functions]);
+
+  const updateAI = <K extends keyof AISettings>(key: K, value: AISettings[K]) => {
+    setAiSettings((prev) => ({ ...prev, [key]: value }));
+    setHasSettingsChanges(true);
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const { error } = await supabase
+        .from('account_settings')
+        .update({
+          ai_model: aiSettings.model,
+          ai_system_prompt: aiSettings.system_prompt,
+          ai_roi_prompt: aiSettings.roi_prompt,
+          ai_risk_prompt: aiSettings.risk_prompt,
+          ai_life_events_prompt: aiSettings.life_events_prompt,
+          ai_analysis_frequency: aiSettings.analysis_frequency,
+          ai_min_message_length: aiSettings.min_message_length,
+          ai_confidence_threshold: aiSettings.confidence_threshold,
+          ai_auto_analysis_enabled: aiSettings.auto_analysis_enabled,
+        } as any)
+        .eq('account_id', accountId);
+
+      if (error) throw error;
+      
+      setHasSettingsChanges(false);
+      queryClient.invalidateQueries({ queryKey: ['account-settings-ai'] });
+      toast.success('Configurações salvas');
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      toast.error('Erro ao salvar configurações');
+    }
+    setSavingSettings(false);
+  };
 
   // Toggle function enabled/disabled
   const toggleMutation = useMutation({
@@ -198,10 +314,20 @@ export default function AIAgent() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant={showSettings ? "secondary" : "outline"} 
+            size="sm" 
+            onClick={() => setShowSettings(!showSettings)}
+          >
+            <Settings2 className="h-4 w-4 mr-2" />
+            Configurações
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Info Card */}
@@ -221,7 +347,155 @@ export default function AIAgent() {
         </CardContent>
       </Card>
 
+      {/* Settings Panel */}
+      <Collapsible open={showSettings} onOpenChange={setShowSettings}>
+        <CollapsibleContent className="space-y-4">
+          {/* Model & General Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5" />
+                Configurações Gerais da IA
+              </CardTitle>
+              <CardDescription>
+                Configure o modelo, frequência de análise e thresholds de detecção.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Modelo de IA</Label>
+                  <Select value={aiSettings.model} onValueChange={(v) => updateAI("model", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AI_MODELS.map((model) => (
+                        <SelectItem key={model.value} value={model.value}>
+                          <div className="flex flex-col">
+                            <span>{model.label}</span>
+                            <span className="text-xs text-muted-foreground">{model.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Frequência de análise</Label>
+                  <Select value={aiSettings.analysis_frequency} onValueChange={(v) => updateAI("analysis_frequency", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ANALYSIS_FREQUENCIES.map((freq) => (
+                        <SelectItem key={freq.value} value={freq.value}>
+                          <div className="flex flex-col">
+                            <span>{freq.label}</span>
+                            <span className="text-xs text-muted-foreground">{freq.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between py-2 border-t border-b">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Análise automática</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Analisar mensagens automaticamente ao receber
+                  </p>
+                </div>
+                <Switch
+                  checked={aiSettings.auto_analysis_enabled}
+                  onCheckedChange={(v) => updateAI("auto_analysis_enabled", v)}
+                />
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Tamanho mínimo da mensagem</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {aiSettings.min_message_length} chars
+                    </span>
+                  </div>
+                  <Slider
+                    value={[aiSettings.min_message_length]}
+                    onValueChange={([v]) => updateAI("min_message_length", v)}
+                    max={100}
+                    min={5}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mensagens menores serão ignoradas pela análise.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Confiança mínima para eventos</Label>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {(aiSettings.confidence_threshold * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <Slider
+                    value={[aiSettings.confidence_threshold * 100]}
+                    onValueChange={([v]) => updateAI("confidence_threshold", v / 100)}
+                    max={100}
+                    min={30}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Eventos abaixo deste nível não serão registrados.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Prompt do Sistema (Global)</Label>
+                <Textarea
+                  value={aiSettings.system_prompt}
+                  onChange={(e) => updateAI("system_prompt", e.target.value)}
+                  rows={3}
+                  className="font-mono text-sm"
+                  placeholder="Instrução base que define o papel da IA..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Instrução base que define o comportamento geral da IA.
+                </p>
+              </div>
+
+              {hasSettingsChanges && (
+                <div className="flex justify-end pt-2">
+                  <Button onClick={handleSaveSettings} disabled={savingSettings}>
+                    {savingSettings ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Salvar configurações
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Functions List */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Funções do Agente</h2>
+        <p className="text-sm text-muted-foreground">
+          Ative ou desative cada função e personalize as instruções específicas.
+        </p>
+      </div>
+      
       <div className="grid gap-4">
         {functions?.map((fn) => (
           <Card key={fn.id} className={fn.is_enabled ? 'border-primary/30' : ''}>
