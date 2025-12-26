@@ -223,7 +223,7 @@ export function SystemStatusMonitor() {
     const start = Date.now();
     
     try {
-      // For edge functions, we do a simple health check with OPTIONS or empty POST
+      // For edge functions, we do a simple health check
       const url = `${supabaseUrl}${func.endpoint}`;
       
       const headers: Record<string, string> = {
@@ -237,17 +237,41 @@ export function SystemStatusMonitor() {
         }
       }
 
-      // Send OPTIONS request to check if function is reachable
-      const response = await fetch(url, {
-        method: "OPTIONS",
-        headers,
-      });
+      // Use HEAD request first, fallback to OPTIONS, then POST with empty body
+      // Edge functions typically respond to any HTTP method when deployed
+      let response: Response;
+      
+      try {
+        // Try OPTIONS first (CORS preflight)
+        response = await fetch(url, {
+          method: "OPTIONS",
+          headers,
+        });
+        
+        // If OPTIONS returns 405 or fails, try a POST with minimal body
+        if (!response.ok && response.status !== 204) {
+          response = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ healthCheck: true }),
+          });
+        }
+      } catch {
+        // Network error - try POST as last resort
+        response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ healthCheck: true }),
+        });
+      }
 
       const responseTime = Date.now() - start;
       
-      // Edge functions return 204 for OPTIONS if online
-      // Some may return 200 or other success codes
-      const isOnline = response.ok || response.status === 204;
+      // Consider online if we get any response (even 4xx means the function is running)
+      // Only network errors or 5xx should be considered offline
+      // 401/403 means function is running but needs auth
+      // 400 means function is running but got invalid payload
+      const isOnline = response.status < 500 || response.status === 204;
       
       return {
         id: func.id,
