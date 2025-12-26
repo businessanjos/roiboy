@@ -576,96 +576,106 @@ serve(async (req) => {
       }
 
       case "status": {
-        // Get instance status - try multiple endpoints
-        const savedToken = (existingWhatsapp?.config as { instance_token?: string })?.instance_token;
-        let statusResult: unknown = null;
+        // Get instance status - FIRST try listing all instances which is most reliable
         let connectionState = "unknown";
+        let instanceToken = savedInstanceToken;
+        let profileName = "";
+        let profilePicUrl = "";
+        let instanceOwner = "";
         
-        console.log(`Status check - savedToken: ${savedToken ? "found" : "not found"}`);
+        console.log(`Status check - savedToken: ${instanceToken ? "found" : "not found"}`);
         
-        // Try with instance token first (more reliable)
-        if (savedToken) {
+        // Try fetching from /instance/all first - this is the most reliable method
+        try {
+          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+            name?: string; 
+            token?: string; 
+            status?: string;
+            owner?: string;
+            profileName?: string;
+            profilePicUrl?: string;
+          }>;
+          
+          console.log(`Status check: Found ${allInstances.length} instances from /instance/all`);
+          
+          // Find our instance by name
+          let targetInstance = allInstances.find(i => i.name === instanceName);
+          
+          // If not found by saved name, try to find any connected instance for this account
+          if (!targetInstance) {
+            // Account prefix pattern
+            const accountPrefix = `roy-${accountId.slice(0, 8)}`;
+            targetInstance = allInstances.find(i => i.name?.startsWith(accountPrefix));
+            
+            // If still not found, use any connected instance
+            if (!targetInstance) {
+              targetInstance = allInstances.find(i => i.status === "connected");
+            }
+          }
+          
+          if (targetInstance) {
+            connectionState = targetInstance.status || "unknown";
+            instanceToken = targetInstance.token || instanceToken;
+            profileName = targetInstance.profileName || "";
+            profilePicUrl = targetInstance.profilePicUrl || "";
+            instanceOwner = targetInstance.owner || "";
+            
+            console.log(`Found instance ${targetInstance.name} with status: ${connectionState}, profileName: ${profileName}`);
+            
+            // Save the correct token if we found one and it was missing
+            if (instanceToken && !savedInstanceToken) {
+              await supabase
+                .from("integrations")
+                .update({
+                  config: {
+                    ...(existingWhatsapp?.config as object || {}),
+                    instance_name: targetInstance.name,
+                    instance_token: instanceToken,
+                    token_recovered_at: new Date().toISOString(),
+                  },
+                })
+                .eq("account_id", accountId)
+                .eq("type", "whatsapp");
+              console.log(`Token recovered and saved for instance ${targetInstance.name}`);
+            }
+          }
+        } catch (err) {
+          console.log("Failed to fetch from /instance/all:", (err as Error).message);
+        }
+        
+        // If still unknown, try with instance token endpoints
+        if (connectionState === "unknown" && instanceToken) {
           const tokenEndpoints = [
             { url: `/status`, method: "GET" },
             { url: `/connectionState`, method: "GET" },
             { url: `/instance/status`, method: "GET" },
             { url: `/instance/connectionState`, method: "GET" },
-            { url: `/info`, method: "GET" },
-            { url: `/instance/info`, method: "GET" },
           ];
           
           for (const endpoint of tokenEndpoints) {
             if (connectionState !== "unknown") break;
             try {
               console.log(`Trying instance token: ${endpoint.method} ${endpoint.url}`);
-              statusResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, savedToken);
+              const statusResult = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken);
               console.log(`Status result from ${endpoint.url}:`, JSON.stringify(statusResult));
               
-              // Handle multiple response formats from UAZAPI
               const data = statusResult as { 
                 state?: string; 
                 instance?: { state?: string; status?: string }; 
-                status?: string | { checked_instance?: { connection_status?: string; is_healthy?: boolean } }; 
+                status?: string | { checked_instance?: { connection_status?: string } }; 
                 connected?: boolean;
-                info?: string;
-                connection?: string;
               };
               
-              // Check for health check response format
               if (typeof data.status === 'object' && data.status?.checked_instance) {
                 const instanceStatus = data.status.checked_instance;
                 connectionState = instanceStatus.connection_status === "connected" ? "open" : instanceStatus.connection_status || "unknown";
               } else if (data.instance?.status) {
-                connectionState = data.instance.status === "disconnected" ? "disconnected" : data.instance.status;
+                connectionState = data.instance.status;
               } else {
-                connectionState = data.state || data.connection || data.instance?.state || (typeof data.status === 'string' ? data.status : undefined) || (data.connected ? "open" : "unknown");
-              }
-              
-              if (connectionState !== "unknown") {
-                console.log(`Connection state found: ${connectionState}`);
+                connectionState = data.state || data.instance?.state || (typeof data.status === 'string' ? data.status : undefined) || (data.connected ? "open" : "unknown");
               }
             } catch (err) {
               console.log(`Instance ${endpoint.url} failed:`, (err as Error).message);
-            }
-          }
-        }
-        
-        // Fallback to admin endpoints with multiple methods
-        if (connectionState === "unknown") {
-          const adminEndpoints = [
-            { url: `/instance/info/${instanceName}`, method: "GET" },
-            { url: `/instance/connectionState/${instanceName}`, method: "GET" },
-            { url: `/instance/status/${instanceName}`, method: "GET" },
-            { url: `/connectionState/${instanceName}`, method: "GET" },
-            { url: `/info/${instanceName}`, method: "GET" },
-            { url: `/status/${instanceName}`, method: "GET" },
-          ];
-          
-          for (const endpoint of adminEndpoints) {
-            if (connectionState !== "unknown") break;
-            try {
-              console.log(`Trying admin: ${endpoint.method} ${endpoint.url}`);
-              statusResult = await uazapiAdminRequest(endpoint.url, endpoint.method);
-              console.log(`Admin status result:`, JSON.stringify(statusResult));
-              
-              const data = statusResult as { 
-                state?: string; 
-                instance?: { state?: string; status?: string }; 
-                status?: string;
-                connection?: string;
-              };
-              
-              if (data.instance?.status) {
-                connectionState = data.instance.status;
-              } else {
-                connectionState = data.state || data.connection || data.instance?.state || data.status || "unknown";
-              }
-              
-              if (connectionState !== "unknown") {
-                console.log(`Admin connection state found: ${connectionState}`);
-              }
-            } catch (err) {
-              console.log(`Admin ${endpoint.url} failed:`, (err as Error).message);
             }
           }
         }
@@ -674,20 +684,24 @@ serve(async (req) => {
         
         // If connected, ensure webhook is configured
         let webhookConfigured = false;
-        if (isConnected && savedToken) {
+        if (isConnected && instanceToken) {
           const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-          webhookConfigured = await configureWebhook(savedToken, instanceName, supabaseUrl);
+          webhookConfigured = await configureWebhook(instanceToken, instanceName, supabaseUrl);
         }
         
         // Update integration status based on result
         await supabase
           .from("integrations")
           .update({
-            status: isConnected ? "connected" : (connectionState === "unknown" ? "connected" : "disconnected"),
+            status: isConnected ? "connected" : (connectionState === "unknown" ? (existingWhatsapp?.status || "disconnected") : "disconnected"),
             config: {
               ...(existingWhatsapp?.config as object || {}),
+              instance_token: instanceToken || (existingWhatsapp?.config as { instance_token?: string })?.instance_token,
               last_status_check: new Date().toISOString(),
               connection_state: connectionState,
+              profile_name: profileName || (existingWhatsapp?.config as { profile_name?: string })?.profile_name,
+              profile_pic_url: profilePicUrl || (existingWhatsapp?.config as { profile_pic_url?: string })?.profile_pic_url,
+              phone_number: instanceOwner || (existingWhatsapp?.config as { phone_number?: string })?.phone_number,
               webhook_configured: webhookConfigured || (existingWhatsapp?.config as { webhook_configured?: boolean })?.webhook_configured,
             },
           })
@@ -698,6 +712,8 @@ serve(async (req) => {
           state: connectionState, 
           connected: isConnected,
           instance_name: instanceName,
+          profile_name: profileName,
+          phone_number: instanceOwner,
           webhook_configured: webhookConfigured,
         };
         break;
