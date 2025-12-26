@@ -23,10 +23,10 @@ export function TrialBanner() {
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-4 px-4 py-2 text-sm border-b backdrop-blur-sm",
-        isLastDay && "bg-destructive/15 border-destructive/25 text-destructive",
-        isUrgent && !isLastDay && "bg-status-warning/15 border-status-warning/25 text-status-warning dark:text-status-warning",
-        !isUrgent && "bg-primary/10 border-primary/20 text-primary"
+        "flex items-center justify-between gap-4 px-4 py-2 text-sm border-b",
+        isLastDay && "bg-destructive text-destructive-foreground border-destructive",
+        isUrgent && !isLastDay && "bg-status-warning text-white border-status-warning",
+        !isUrgent && "bg-primary/90 text-primary-foreground border-primary"
       )}
     >
       <div className="flex items-center gap-2">
@@ -48,9 +48,11 @@ export function TrialBanner() {
       <Button 
         asChild 
         size="sm" 
-        variant={isUrgent ? "default" : "outline"}
+        variant="secondary"
         className={cn(
-          !isUrgent && "border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground"
+          isLastDay && "bg-white text-destructive hover:bg-white/90",
+          isUrgent && !isLastDay && "bg-white text-status-warning hover:bg-white/90",
+          !isUrgent && "bg-white text-primary hover:bg-white/90"
         )}
       >
         <Link to="/choose-plan">
