@@ -55,6 +55,7 @@ import {
   MailOpen,
   Heart,
   Ban,
+  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -363,6 +364,20 @@ export default function RoyZapp() {
   // Client quick edit sheet
   const [clientEditSheetOpen, setClientEditSheetOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
+
+  // ROI dialog state
+  const [roiDialogOpen, setRoiDialogOpen] = useState(false);
+  const [roiType, setRoiType] = useState("tangible");
+  const [roiCategory, setRoiCategory] = useState("revenue");
+  const [roiEvidence, setRoiEvidence] = useState("");
+  const [roiImpact, setRoiImpact] = useState("medium");
+  const [uploadingRoi, setUploadingRoi] = useState(false);
+
+  // Risk dialog state
+  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
+  const [riskLevel, setRiskLevel] = useState("medium");
+  const [riskReason, setRiskReason] = useState("");
+  const [uploadingRisk, setUploadingRisk] = useState(false);
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -1002,6 +1017,72 @@ export default function RoyZapp() {
     } catch (error: any) {
       console.error("Error updating conversation status:", error);
       toast.error(error.message || "Erro ao atualizar status");
+    }
+  };
+
+  // Add ROI event
+  const handleAddRoi = async () => {
+    const clientId = selectedConversation?.zapp_conversation?.client_id;
+    if (!clientId || !currentUser?.account_id || !roiEvidence.trim()) {
+      toast.error("Preencha a evidência do ROI");
+      return;
+    }
+
+    setUploadingRoi(true);
+    try {
+      const { error } = await supabase.from("roi_events").insert({
+        account_id: currentUser.account_id,
+        client_id: clientId,
+        source: "manual" as const,
+        roi_type: roiType as "tangible" | "intangible",
+        category: roiCategory as any,
+        evidence_snippet: roiEvidence,
+        impact: roiImpact as "low" | "medium" | "high",
+        happened_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+
+      toast.success("ROI adicionado com sucesso!");
+      setRoiDialogOpen(false);
+      setRoiEvidence("");
+    } catch (error) {
+      console.error("Error adding ROI:", error);
+      toast.error("Erro ao adicionar ROI");
+    } finally {
+      setUploadingRoi(false);
+    }
+  };
+
+  // Add Risk event
+  const handleAddRisk = async () => {
+    const clientId = selectedConversation?.zapp_conversation?.client_id;
+    if (!clientId || !currentUser?.account_id || !riskReason.trim()) {
+      toast.error("Preencha o motivo do risco");
+      return;
+    }
+
+    setUploadingRisk(true);
+    try {
+      const { error } = await supabase.from("risk_events").insert({
+        account_id: currentUser.account_id,
+        client_id: clientId,
+        source: "system" as const,
+        risk_level: riskLevel as "low" | "medium" | "high",
+        reason: riskReason,
+        happened_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+
+      toast.success("Risco adicionado com sucesso!");
+      setRiskDialogOpen(false);
+      setRiskReason("");
+    } catch (error) {
+      console.error("Error adding risk:", error);
+      toast.error("Erro ao adicionar risco");
+    } finally {
+      setUploadingRisk(false);
     }
   };
 
@@ -2659,9 +2740,48 @@ export default function RoyZapp() {
               <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
                 <Phone className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
+                  {selectedConversation?.zapp_conversation?.client_id && (
+                    <>
+                      <DropdownMenuItem 
+                        className="text-zapp-text hover:bg-zapp-hover"
+                        onClick={() => setRoiDialogOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2 text-zapp-accent" />
+                        Adicionar ROI
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-zapp-text hover:bg-zapp-hover"
+                        onClick={() => setRiskDialogOpen(true)}
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+                        Adicionar Risco
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-zapp-border" />
+                    </>
+                  )}
+                  <DropdownMenuItem 
+                    className="text-zapp-text hover:bg-zapp-hover"
+                    onClick={() => {
+                      const zc = selectedConversation?.zapp_conversation;
+                      if (zc?.client_id) {
+                        setEditingClientId(zc.client_id);
+                        setClientEditSheetOpen(true);
+                      }
+                    }}
+                    disabled={!selectedConversation?.zapp_conversation?.client_id}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Editar Cliente
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -3123,6 +3243,136 @@ export default function RoyZapp() {
             </Button>
             <Button onClick={saveAgent} disabled={savingAgent} className="bg-[#00a884] hover:bg-[#00a884]/90">
               {savingAgent ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ROI Dialog */}
+      <Dialog open={roiDialogOpen} onOpenChange={setRoiDialogOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle>Adicionar ROI</DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Registre uma percepção de valor do cliente
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[#8696a0]">Tipo</Label>
+                <Select value={roiType} onValueChange={(v) => {
+                  setRoiType(v);
+                  setRoiCategory(v === "tangible" ? "revenue" : "clarity");
+                }}>
+                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                    <SelectItem value="tangible" className="text-[#e9edef]">Tangível</SelectItem>
+                    <SelectItem value="intangible" className="text-[#e9edef]">Intangível</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#8696a0]">Categoria</Label>
+                <Select value={roiCategory} onValueChange={setRoiCategory}>
+                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                    {roiType === "tangible" ? (
+                      <>
+                        <SelectItem value="revenue" className="text-[#e9edef]">Receita</SelectItem>
+                        <SelectItem value="cost" className="text-[#e9edef]">Redução de Custo</SelectItem>
+                        <SelectItem value="time" className="text-[#e9edef]">Economia de Tempo</SelectItem>
+                        <SelectItem value="process" className="text-[#e9edef]">Melhoria de Processo</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="clarity" className="text-[#e9edef]">Clareza</SelectItem>
+                        <SelectItem value="confidence" className="text-[#e9edef]">Confiança</SelectItem>
+                        <SelectItem value="tranquility" className="text-[#e9edef]">Tranquilidade</SelectItem>
+                        <SelectItem value="status_direction" className="text-[#e9edef]">Direção</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#8696a0]">Impacto</Label>
+              <Select value={roiImpact} onValueChange={setRoiImpact}>
+                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                  <SelectItem value="low" className="text-[#e9edef]">Baixo</SelectItem>
+                  <SelectItem value="medium" className="text-[#e9edef]">Médio</SelectItem>
+                  <SelectItem value="high" className="text-[#e9edef]">Alto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#8696a0]">Evidência / Detalhe</Label>
+              <Textarea
+                value={roiEvidence}
+                onChange={(e) => setRoiEvidence(e.target.value)}
+                placeholder="Descreva o que o cliente percebeu como valor..."
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef] min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoiDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+              Cancelar
+            </Button>
+            <Button onClick={handleAddRoi} disabled={uploadingRoi} className="bg-[#00a884] hover:bg-[#00a884]/90">
+              {uploadingRoi ? "Salvando..." : "Adicionar ROI"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Risk Dialog */}
+      <Dialog open={riskDialogOpen} onOpenChange={setRiskDialogOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Risco</DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Registre um alerta de risco para este cliente
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[#8696a0]">Nível de Risco</Label>
+              <Select value={riskLevel} onValueChange={setRiskLevel}>
+                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                  <SelectItem value="low" className="text-[#e9edef]">Baixo</SelectItem>
+                  <SelectItem value="medium" className="text-[#e9edef]">Médio</SelectItem>
+                  <SelectItem value="high" className="text-[#e9edef]">Alto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#8696a0]">Motivo do Risco</Label>
+              <Textarea
+                value={riskReason}
+                onChange={(e) => setRiskReason(e.target.value)}
+                placeholder="Descreva o motivo do alerta de risco..."
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef] min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRiskDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+              Cancelar
+            </Button>
+            <Button onClick={handleAddRisk} disabled={uploadingRisk} className="bg-amber-500 hover:bg-amber-600">
+              {uploadingRisk ? "Salvando..." : "Adicionar Risco"}
             </Button>
           </DialogFooter>
         </DialogContent>
