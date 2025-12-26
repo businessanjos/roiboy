@@ -252,6 +252,56 @@ export type Database = {
           },
         ]
       }
+      ai_agent_functions: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          display_order: number
+          function_key: string
+          function_name: string
+          id: string
+          instructions: string | null
+          is_enabled: boolean
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          function_key: string
+          function_name: string
+          id?: string
+          instructions?: string | null
+          is_enabled?: boolean
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          function_key?: string
+          function_name?: string
+          id?: string
+          instructions?: string | null
+          is_enabled?: boolean
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_functions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage_logs: {
         Row: {
           account_id: string
@@ -4922,6 +4972,10 @@ export type Database = {
         }[]
       }
       get_user_account_id: { Args: never; Returns: string }
+      initialize_ai_agent_functions: {
+        Args: { p_account_id: string }
+        Returns: undefined
+      }
       is_account_locked: { Args: { p_email: string }; Returns: boolean }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
       is_new_device: {
