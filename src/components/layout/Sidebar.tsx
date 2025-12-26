@@ -25,6 +25,7 @@ import {
   BellRing,
   UsersRound,
   Bot,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,6 +94,7 @@ const navItems: NavItem[] = [
   { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
   { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
+  { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/integrations", icon: Link2, label: "Integrações", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },

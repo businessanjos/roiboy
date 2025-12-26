@@ -53,6 +53,7 @@ const Reminders = lazy(() => import("./pages/Reminders"));
 const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
 const AIAgent = lazy(() => import("./pages/AIAgent"));
+const RoyZapp = lazy(() => import("./pages/RoyZapp"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +120,7 @@ const App = () => (
                             <Route path="/account-settings" element={<AccountSettings />} />
                             <Route path="/reminders" element={<Reminders />} />
                             <Route path="/whatsapp-groups" element={<WhatsAppGroups />} />
+                            <Route path="/roy-zapp" element={<RoyZapp />} />
                             <Route path="/ai-agent" element={<AIAgent />} />
                             <Route path="/admin" element={<Admin />} />
                           </Route>

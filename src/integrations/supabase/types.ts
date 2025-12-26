@@ -4873,6 +4873,296 @@ export type Database = {
           },
         ]
       }
+      zapp_agents: {
+        Row: {
+          account_id: string
+          created_at: string
+          current_chats: number
+          department_id: string | null
+          id: string
+          is_active: boolean
+          is_online: boolean
+          last_activity_at: string | null
+          max_concurrent_chats: number
+          role: Database["public"]["Enums"]["zapp_agent_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          current_chats?: number
+          department_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_online?: boolean
+          last_activity_at?: string | null
+          max_concurrent_chats?: number
+          role?: Database["public"]["Enums"]["zapp_agent_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          current_chats?: number
+          department_id?: string | null
+          id?: string
+          is_active?: boolean
+          is_online?: boolean
+          last_activity_at?: string | null
+          max_concurrent_chats?: number
+          role?: Database["public"]["Enums"]["zapp_agent_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_agents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_agents_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_agents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_conversation_assignments: {
+        Row: {
+          account_id: string
+          agent_id: string | null
+          assigned_at: string | null
+          closed_at: string | null
+          closed_by: string | null
+          conversation_id: string
+          created_at: string
+          department_id: string | null
+          first_response_at: string | null
+          id: string
+          priority: number
+          status: Database["public"]["Enums"]["zapp_assignment_status"]
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          agent_id?: string | null
+          assigned_at?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          conversation_id: string
+          created_at?: string
+          department_id?: string | null
+          first_response_at?: string | null
+          id?: string
+          priority?: number
+          status?: Database["public"]["Enums"]["zapp_assignment_status"]
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          agent_id?: string | null
+          assigned_at?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          conversation_id?: string
+          created_at?: string
+          department_id?: string | null
+          first_response_at?: string | null
+          id?: string
+          priority?: number
+          status?: Database["public"]["Enums"]["zapp_assignment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_conversation_assignments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_assignments_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_assignments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversation_assignments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_departments: {
+        Row: {
+          account_id: string
+          auto_distribution: boolean
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          auto_distribution?: boolean
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          auto_distribution?: boolean
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_departments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_transfers: {
+        Row: {
+          account_id: string
+          conversation_id: string
+          created_at: string
+          from_agent_id: string | null
+          from_department_id: string | null
+          id: string
+          reason: string | null
+          to_agent_id: string | null
+          to_department_id: string | null
+          transferred_at: string
+          transferred_by: string
+        }
+        Insert: {
+          account_id: string
+          conversation_id: string
+          created_at?: string
+          from_agent_id?: string | null
+          from_department_id?: string | null
+          id?: string
+          reason?: string | null
+          to_agent_id?: string | null
+          to_department_id?: string | null
+          transferred_at?: string
+          transferred_by: string
+        }
+        Update: {
+          account_id?: string
+          conversation_id?: string
+          created_at?: string
+          from_agent_id?: string | null
+          from_department_id?: string | null
+          id?: string
+          reason?: string | null
+          to_agent_id?: string | null
+          to_department_id?: string | null
+          transferred_at?: string
+          transferred_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_transfers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_transfers_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_transfers_from_agent_id_fkey"
+            columns: ["from_agent_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_transfers_from_department_id_fkey"
+            columns: ["from_department_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_transfers_to_agent_id_fkey"
+            columns: ["to_agent_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_transfers_to_department_id_fkey"
+            columns: ["to_department_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_transfers_transferred_by_fkey"
+            columns: ["transferred_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       events_checkin_view: {
@@ -5197,6 +5487,8 @@ export type Database = {
         | "head"
         | "gestor"
       vnps_class: "detractor" | "neutral" | "promoter"
+      zapp_agent_role: "admin" | "supervisor" | "agent"
+      zapp_assignment_status: "pending" | "active" | "waiting" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5493,6 +5785,8 @@ export const Constants = {
         "gestor",
       ],
       vnps_class: ["detractor", "neutral", "promoter"],
+      zapp_agent_role: ["admin", "supervisor", "agent"],
+      zapp_assignment_status: ["pending", "active", "waiting", "closed"],
     },
   },
 } as const
