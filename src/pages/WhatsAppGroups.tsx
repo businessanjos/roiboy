@@ -147,6 +147,7 @@ export default function WhatsAppGroups() {
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [availableGroups, setAvailableGroups] = useState<Array<{jid: string; name: string; size: number}>>([]);
   const [selectedGroupsToSync, setSelectedGroupsToSync] = useState<string[]>([]);
+  const [syncSearchTerm, setSyncSearchTerm] = useState("");
   const [isFetchingGroups, setIsFetchingGroups] = useState(false);
   const [isSavingGroups, setIsSavingGroups] = useState(false);
   
@@ -1676,7 +1677,7 @@ export default function WhatsAppGroups() {
 
       {/* Sync Groups Selection Dialog */}
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
@@ -1688,28 +1689,40 @@ export default function WhatsAppGroups() {
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Select all toggle */}
-            <div className="flex items-center justify-between pb-3 border-b">
-              <span className="text-sm font-medium">
-                {selectedGroupsToSync.length} de {availableGroups.length} selecionado(s)
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedGroupsToSync(availableGroups.map(g => g.jid))}
-                  disabled={selectedGroupsToSync.length === availableGroups.length}
-                >
-                  Selecionar todos
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedGroupsToSync([])}
-                  disabled={selectedGroupsToSync.length === 0}
-                >
-                  Desmarcar todos
-                </Button>
+            {/* Search and controls */}
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar grupos..."
+                  value={syncSearchTerm}
+                  onChange={(e) => setSyncSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  {selectedGroupsToSync.length} de {availableGroups.length} selecionado(s)
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedGroupsToSync(availableGroups.map(g => g.jid))}
+                    disabled={selectedGroupsToSync.length === availableGroups.length}
+                  >
+                    Selecionar todos
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedGroupsToSync([])}
+                    disabled={selectedGroupsToSync.length === 0}
+                  >
+                    Desmarcar todos
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -1720,7 +1733,9 @@ export default function WhatsAppGroups() {
                   Nenhum grupo novo encontrado
                 </p>
               ) : (
-                availableGroups.map((group) => (
+                availableGroups
+                  .filter(g => g.name.toLowerCase().includes(syncSearchTerm.toLowerCase()) || g.jid.includes(syncSearchTerm))
+                  .map((group) => (
                   <div
                     key={group.jid}
                     className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/30 transition-colors ${
