@@ -2449,13 +2449,12 @@ export default function RoyZapp() {
   };
 
   return (
-    <div className="h-full w-full flex flex-row bg-zapp-bg overflow-hidden">
+    <div className="h-full w-full grid grid-cols-1 lg:grid-cols-[400px_1fr] bg-zapp-bg overflow-hidden">
       {/* Left panel - Conversation list */}
       <div 
         className={cn(
-          "h-full flex-shrink-0 border-r border-zapp-border flex flex-col overflow-hidden",
-          "w-full lg:w-[400px]",
-          selectedConversation && "hidden lg:flex"
+          "h-full border-r border-zapp-border flex flex-col overflow-hidden",
+          selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
         {renderConversationList()}
@@ -2464,8 +2463,8 @@ export default function RoyZapp() {
       {/* Right panel - Chat view */}
       <div 
         className={cn(
-          "h-full flex-1 min-w-0 flex flex-col overflow-hidden",
-          !selectedConversation && "hidden lg:flex"
+          "h-full flex flex-col overflow-hidden",
+          !selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
         {renderChatView()}
