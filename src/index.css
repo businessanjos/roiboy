@@ -90,20 +90,20 @@
     --sidebar-border: 48 20% 82%;
     --sidebar-ring: 39 55% 63%;
 
-    /* ROY zAPP - WhatsApp Theme (always dark like WhatsApp) */
-    --zapp-bg: 200 13% 7%;
-    --zapp-bg-dark: 200 13% 10%;
-    --zapp-panel: 200 11% 13%;
-    --zapp-panel-header: 200 11% 16%;
-    --zapp-text: 0 0% 93%;
-    --zapp-text-muted: 200 10% 54%;
-    --zapp-accent: 152 69% 34%;
-    --zapp-accent-hover: 152 69% 29%;
-    --zapp-message-out: 160 56% 18%;
-    --zapp-message-in: 200 11% 13%;
-    --zapp-border: 200 10% 18%;
-    --zapp-input: 200 11% 18%;
-    --zapp-hover: 200 11% 20%;
+    /* ROY zAPP - Tema claro seguindo paleta do sistema */
+    --zapp-bg: 47 30% 92%; /* #efede6 */
+    --zapp-bg-dark: 48 26% 88%; /* #e7e4d8 */
+    --zapp-panel: 48 26% 88%; /* #e7e4d8 */
+    --zapp-panel-header: 47 30% 92%; /* #efede6 */
+    --zapp-text: 20 10% 11%; /* #201c19 */
+    --zapp-text-muted: 60 4% 35%; /* baseado em #42423d */
+    --zapp-accent: 39 55% 63%; /* #d2ae6d - dourado */
+    --zapp-accent-hover: 39 55% 55%; /* dourado mais escuro */
+    --zapp-message-out: 39 45% 85%; /* dourado claro para msgs enviadas */
+    --zapp-message-in: 0 0% 98%; /* branco para msgs recebidas */
+    --zapp-border: 48 20% 82%;
+    --zapp-input: 0 0% 100%;
+    --zapp-hover: 48 26% 84%;
   }
 
   .dark {
@@ -181,20 +181,20 @@
     --sidebar-border: 20 8% 18%;
     --sidebar-ring: 39 60% 55%;
 
-    /* ROY zAPP - WhatsApp Theme Dark */
-    --zapp-bg: 200 13% 7%;
-    --zapp-bg-dark: 200 13% 10%;
-    --zapp-panel: 200 11% 13%;
-    --zapp-panel-header: 200 11% 16%;
-    --zapp-text: 0 0% 93%;
-    --zapp-text-muted: 200 10% 54%;
-    --zapp-accent: 152 69% 34%;
-    --zapp-accent-hover: 152 69% 29%;
-    --zapp-message-out: 160 56% 18%;
-    --zapp-message-in: 200 11% 13%;
-    --zapp-border: 200 10% 18%;
-    --zapp-input: 200 11% 18%;
-    --zapp-hover: 200 11% 20%;
+    /* ROY zAPP - Tema escuro seguindo paleta do sistema */
+    --zapp-bg: 20 12% 8%; /* fundo principal */
+    --zapp-bg-dark: 20 12% 6%; /* fundo mais escuro */
+    --zapp-panel: 20 10% 14%; /* painéis */
+    --zapp-panel-header: 20 10% 16%; /* header dos painéis */
+    --zapp-text: 45 25% 95%; /* texto claro */
+    --zapp-text-muted: 45 15% 60%; /* texto secundário */
+    --zapp-accent: 39 60% 55%; /* dourado */
+    --zapp-accent-hover: 39 60% 48%; /* dourado mais escuro */
+    --zapp-message-out: 39 50% 25%; /* dourado escuro para msgs enviadas */
+    --zapp-message-in: 20 8% 18%; /* escuro para msgs recebidas */
+    --zapp-border: 20 8% 22%;
+    --zapp-input: 20 8% 18%;
+    --zapp-hover: 20 8% 20%;
   }
 }
 
