@@ -598,6 +598,75 @@ export default function RoyZapp() {
     }
   };
 
+  // Assign conversation to current agent (pull from queue)
+  const assignToMe = async (assignmentId: string) => {
+    if (!currentAgent) {
+      toast.error("Você não está cadastrado como atendente");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("zapp_conversation_assignments")
+        .update({ 
+          agent_id: currentAgent.id, 
+          status: "active",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", assignmentId);
+
+      if (error) throw error;
+      
+      toast.success("Conversa atribuída a você!");
+      fetchData();
+      
+      // Update selected conversation locally
+      if (selectedConversation?.id === assignmentId) {
+        setSelectedConversation(prev => prev ? {
+          ...prev,
+          agent_id: currentAgent.id,
+          status: "active" as const,
+          agent: { ...currentAgent }
+        } : null);
+      }
+    } catch (error: any) {
+      console.error("Error assigning conversation:", error);
+      toast.error(error.message || "Erro ao atribuir conversa");
+    }
+  };
+
+  // Release conversation back to queue
+  const releaseToQueue = async (assignmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("zapp_conversation_assignments")
+        .update({ 
+          agent_id: null, 
+          status: "pending",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", assignmentId);
+
+      if (error) throw error;
+      
+      toast.success("Conversa devolvida para a fila!");
+      fetchData();
+      
+      // Update selected conversation locally
+      if (selectedConversation?.id === assignmentId) {
+        setSelectedConversation(prev => prev ? {
+          ...prev,
+          agent_id: null,
+          status: "pending" as const,
+          agent: null
+        } : null);
+      }
+    } catch (error: any) {
+      console.error("Error releasing conversation:", error);
+      toast.error(error.message || "Erro ao devolver conversa");
+    }
+  };
+
   // Filter users not already agents
   const availableUsers = teamUsers.filter(
     (user) => !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id
@@ -1567,6 +1636,27 @@ export default function RoyZapp() {
             </p>
           </div>
           <div className="flex items-center gap-1">
+            {/* Assign to me / Release button */}
+            {selectedConversation.agent_id !== currentAgent?.id ? (
+              <Button
+                size="sm"
+                className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-8"
+                onClick={() => assignToMe(selectedConversation.id)}
+              >
+                <UserCheck className="h-4 w-4 mr-1" />
+                Puxar para mim
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-500 text-amber-500 hover:bg-amber-500/10 text-xs h-8"
+                onClick={() => releaseToQueue(selectedConversation.id)}
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Devolver
+              </Button>
+            )}
             <Badge 
               variant="outline" 
               className={cn(
