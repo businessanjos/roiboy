@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -13,7 +15,8 @@ import {
   CheckCircle2,
   User,
   Radio,
-  TrendingUp
+  TrendingUp,
+  ArrowRight
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -198,11 +201,12 @@ export function ClientRequestsFeed() {
             <Radio className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">Solicitações via WhatsApp</CardTitle>
           </div>
-          {tickets.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {tickets.length} tickets
-            </Badge>
-          )}
+          <Button variant="ghost" size="sm" asChild className="text-xs">
+            <Link to="/requests">
+              Ver todos
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Link>
+          </Button>
         </div>
         <CardDescription>
           Problemas e solicitações dos clientes em tempo real
