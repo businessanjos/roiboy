@@ -34,6 +34,7 @@ import {
   Power,
   Wifi,
   WifiOff,
+  Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +83,18 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
+interface ZappTag {
+  id: string;
+  account_id: string;
+  name: string;
+  color: string;
+  description: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
 
 interface Department {
   id: string;
@@ -178,8 +191,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
-  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "settings">("inbox");
+  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings">("inbox");
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [tags, setTags] = useState<ZappTag[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
   const [teamRoles, setTeamRoles] = useState<{ id: string; name: string; color: string }[]>([]);
@@ -226,6 +240,17 @@ export default function RoyZapp() {
   // Transfer dialog
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<{ type: "agent" | "department"; id: string }>({ type: "agent", id: "" });
+
+  // Tag dialog state
+  const [tagDialogOpen, setTagDialogOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<ZappTag | null>(null);
+  const [tagForm, setTagForm] = useState({
+    name: "",
+    description: "",
+    color: "#6b7c85",
+  });
+  const [savingTag, setSavingTag] = useState(false);
+  const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -306,6 +331,7 @@ export default function RoyZapp() {
         { data: rolesData, error: rolesError },
         { data: settingsData, error: settingsError },
         { data: assignmentsData, error: assignmentsError },
+        { data: tagsData, error: tagsError },
       ] = await Promise.all([
         supabase
           .from("zapp_departments")
@@ -348,6 +374,11 @@ export default function RoyZapp() {
           .neq("status", "closed")
           .order("created_at", { ascending: false })
           .limit(100),
+        supabase
+          .from("zapp_tags")
+          .select("*")
+          .eq("account_id", currentUser.account_id)
+          .order("display_order"),
       ]);
 
       if (deptsError) throw deptsError;
@@ -356,6 +387,7 @@ export default function RoyZapp() {
       if (rolesError) throw rolesError;
       // settingsError is ok if no settings exist yet
       if (assignmentsError) throw assignmentsError;
+      if (tagsError) throw tagsError;
 
       setDepartments(depts || []);
       setAgents(agentsData || []);
@@ -363,6 +395,7 @@ export default function RoyZapp() {
       setTeamRoles(rolesData || []);
       setAllowedRoleIds((settingsData?.zapp_allowed_roles as string[]) || []);
       setAssignments(assignmentsData || []);
+      setTags(tagsData || []);
     } catch (error: any) {
       console.error("Error fetching zapp data:", error);
       toast.error("Erro ao carregar dados");
@@ -702,6 +735,23 @@ export default function RoyZapp() {
             size="icon"
             className={cn(
               "rounded-full h-10 w-10",
+              activeView === "tags" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
+            )}
+            onClick={() => setActiveView("tags")}
+          >
+            <Tags className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Tags</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "rounded-full h-10 w-10",
               activeView === "settings" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
             )}
             onClick={() => setActiveView("settings")}
@@ -942,6 +992,7 @@ export default function RoyZapp() {
 
         {activeView === "team" && renderTeamList()}
         {activeView === "departments" && renderDepartmentList()}
+        {activeView === "tags" && renderTagsList()}
         {activeView === "settings" && renderSettingsPanel()}
       </ScrollArea>
     </div>
@@ -1111,6 +1162,151 @@ export default function RoyZapp() {
                 <span>•</span>
                 <span>{dept.auto_distribution ? "Distribuição automática" : "Manual"}</span>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Tag functions
+  const openTagDialog = (tag?: ZappTag) => {
+    if (tag) {
+      setEditingTag(tag);
+      setTagForm({
+        name: tag.name,
+        description: tag.description || "",
+        color: tag.color,
+      });
+    } else {
+      setEditingTag(null);
+      setTagForm({
+        name: "",
+        description: "",
+        color: "#6b7c85",
+      });
+    }
+    setTagDialogOpen(true);
+  };
+
+  const saveTag = async () => {
+    if (!currentUser?.account_id || !tagForm.name.trim()) {
+      toast.error("Nome da tag é obrigatório");
+      return;
+    }
+
+    setSavingTag(true);
+    try {
+      if (editingTag) {
+        const { error } = await supabase
+          .from("zapp_tags")
+          .update({
+            name: tagForm.name.trim(),
+            description: tagForm.description.trim() || null,
+            color: tagForm.color,
+          })
+          .eq("id", editingTag.id);
+
+        if (error) throw error;
+        toast.success("Tag atualizada!");
+      } else {
+        const { error } = await supabase.from("zapp_tags").insert({
+          account_id: currentUser.account_id,
+          name: tagForm.name.trim(),
+          description: tagForm.description.trim() || null,
+          color: tagForm.color,
+          display_order: tags.length,
+        });
+
+        if (error) throw error;
+        toast.success("Tag criada!");
+      }
+
+      setTagDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error saving tag:", error);
+      toast.error(error.message || "Erro ao salvar tag");
+    } finally {
+      setSavingTag(false);
+    }
+  };
+
+  const deleteTag = async (id: string) => {
+    try {
+      const { error } = await supabase.from("zapp_tags").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Tag excluída!");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting tag:", error);
+      toast.error(error.message || "Erro ao excluir tag");
+    } finally {
+      setDeletingTagId(null);
+    }
+  };
+
+  // Render tags list
+  const renderTagsList = () => (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-zapp-text font-medium">Tags</h3>
+        <Button
+          size="sm"
+          className="bg-zapp-accent hover:bg-zapp-accent-hover text-white"
+          onClick={() => openTagDialog()}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Nova
+        </Button>
+      </div>
+
+      {tags.length === 0 ? (
+        <div className="text-center py-8">
+          <Tags className="h-12 w-12 text-zapp-text-muted mx-auto mb-3" />
+          <p className="text-zapp-text-muted text-sm">Nenhuma tag cadastrada</p>
+          <p className="text-zapp-text-muted text-xs mt-1">Crie tags para organizar suas conversas</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {tags.map((tag) => (
+            <div
+              key={tag.id}
+              className="p-3 bg-zapp-panel rounded-lg"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: tag.color }}
+                  />
+                  <span className="text-zapp-text font-medium">{tag.name}</span>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zapp-text-muted hover:bg-zapp-bg-dark">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border">
+                    <DropdownMenuItem className="text-zapp-text" onClick={() => openTagDialog(tag)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-zapp-border" />
+                    <DropdownMenuItem 
+                      className="text-destructive"
+                      onClick={() => setDeletingTagId(tag.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              {tag.description && (
+                <p className="text-zapp-text-muted text-xs mt-1">{tag.description}</p>
+              )}
             </div>
           ))}
         </div>
@@ -1736,6 +1932,88 @@ export default function RoyZapp() {
               onClick={() => deletingAgentId && deleteAgent(deletingAgentId)}
             >
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Tag Dialog */}
+      <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTag ? "Editar Tag" : "Nova Tag"}
+            </DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Tags ajudam a organizar suas conversas
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tag-name" className="text-[#8696a0]">Nome</Label>
+              <Input
+                id="tag-name"
+                value={tagForm.name}
+                onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
+                placeholder="Ex: Urgente, VIP, Suporte"
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tag-description" className="text-[#8696a0]">Descrição</Label>
+              <Textarea
+                id="tag-description"
+                value={tagForm.description}
+                onChange={(e) => setTagForm({ ...tagForm, description: e.target.value })}
+                placeholder="Descrição opcional"
+                rows={2}
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#8696a0]">Cor</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={tagForm.color}
+                  onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
+                  className="h-10 w-10 rounded border-0 cursor-pointer"
+                />
+                <Input
+                  value={tagForm.color}
+                  onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
+                  className="flex-1 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTagDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+              Cancelar
+            </Button>
+            <Button onClick={saveTag} disabled={savingTag} className="bg-[#00a884] hover:bg-[#00a884]/90">
+              {savingTag ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Tag Confirmation */}
+      <AlertDialog open={!!deletingTagId} onOpenChange={(open) => !open && setDeletingTagId(null)}>
+        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#e9edef]">Excluir tag?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8696a0]">
+              A tag será removida de todas as conversas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={() => deletingTagId && deleteTag(deletingTagId)}
+            >
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
