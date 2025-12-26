@@ -54,6 +54,7 @@ import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 import { ROIEventsFeed } from "@/components/dashboard/ROIEventsFeed";
 import { LiveParticipationReport } from "@/components/dashboard/LiveParticipationReport";
+import { ClientRequestsFeed } from "@/components/dashboard/ClientRequestsFeed";
 
 interface ContractData {
   id: string;
@@ -726,6 +727,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Client Requests Feed - Real-time */}
+          <ClientRequestsFeed />
 
           {/* Upcoming Life Events */}
           <Card className="shadow-card">
