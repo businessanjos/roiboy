@@ -503,18 +503,22 @@ export default function Dashboard() {
       {/* Tabs */}
       <Tabs defaultValue="gestao" className="space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-          <TabsList className="grid w-full grid-cols-3 max-w-sm sm:max-w-md h-9 sm:h-10">
+          <TabsList className="grid w-full grid-cols-4 max-w-md sm:max-w-lg h-9 sm:h-10">
             <TabsTrigger value="gestao" className="gap-1 sm:gap-2 text-xs sm:text-sm">
               <Settings2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Gestão</span>
+              <span className="hidden xs:inline">Gestão</span>
             </TabsTrigger>
             <TabsTrigger value="cx" className="gap-1 sm:gap-2 text-xs sm:text-sm">
               <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>CX</span>
+              <span className="hidden xs:inline">CX</span>
+            </TabsTrigger>
+            <TabsTrigger value="suporte" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Suporte</span>
             </TabsTrigger>
             <TabsTrigger value="roi" className="gap-1 sm:gap-2 text-xs sm:text-sm">
               <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>ROI</span>
+              <span className="hidden xs:inline">ROI</span>
             </TabsTrigger>
           </TabsList>
 
@@ -728,8 +732,6 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Client Requests Feed - Real-time */}
-          <ClientRequestsFeed />
 
           {/* Upcoming Life Events */}
           <Card className="shadow-card">
@@ -803,6 +805,11 @@ export default function Dashboard() {
             </h3>
             <GroupEngagementReport />
           </div>
+        </TabsContent>
+
+        {/* Suporte Tab */}
+        <TabsContent value="suporte" className="space-y-6">
+          <ClientRequestsFeed />
         </TabsContent>
 
         {/* Gestão Tab */}
