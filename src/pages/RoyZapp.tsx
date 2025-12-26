@@ -3154,7 +3154,7 @@ export default function RoyZapp() {
           <input
             ref={imageInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             className="hidden"
             onChange={(e) => handleFileSelect(e, "image")}
           />
@@ -3177,24 +3177,24 @@ export default function RoyZapp() {
                 {uploadingMedia ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
-                  <Paperclip className="h-6 w-6" />
+                  <Plus className="h-6 w-6" />
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="bg-zapp-panel border-zapp-border">
-              <DropdownMenuItem 
-                onClick={() => imageInputRef.current?.click()}
-                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
-              >
-                <ImageIcon className="h-4 w-4 mr-2" />
-                Enviar imagem
-              </DropdownMenuItem>
+            <DropdownMenuContent side="top" align="start" className="bg-[#233138] border-zapp-border z-50">
               <DropdownMenuItem 
                 onClick={() => fileInputRef.current?.click()}
                 className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
               >
-                <FileText className="h-4 w-4 mr-2" />
-                Enviar arquivo
+                <FileText className="h-4 w-4 mr-2 text-[#7f66ff]" />
+                Documento
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => imageInputRef.current?.click()}
+                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
+              >
+                <ImageIcon className="h-4 w-4 mr-2 text-[#007bfc]" />
+                Fotos e vídeos
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
