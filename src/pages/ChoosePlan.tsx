@@ -256,12 +256,16 @@ export default function ChoosePlan() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-8 px-4">
       <div className="max-w-5xl mx-auto">
+        {/* Back button */}
+        <div className="mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+            <ArrowRight className="h-4 w-4 rotate-180" />
+            Voltar ao Dashboard
+          </Button>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-destructive/10 text-destructive px-4 py-2 rounded-full mb-4">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm font-medium">Seu período de teste expirou</span>
-          </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
             {step === "plans" ? "Escolha seu plano" : `Finalize sua assinatura`}
           </h1>
