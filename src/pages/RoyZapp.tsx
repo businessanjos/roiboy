@@ -3088,14 +3088,14 @@ export default function RoyZapp() {
             <div className="space-y-2">
               <Label className="text-[#8696a0]">Departamento</Label>
               <Select
-                value={agentForm.department_id}
-                onValueChange={(value) => setAgentForm({ ...agentForm, department_id: value })}
+                value={agentForm.department_id || "all"}
+                onValueChange={(value) => setAgentForm({ ...agentForm, department_id: value === "all" ? "" : value })}
               >
                 <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                  <SelectItem value="" className="text-[#e9edef]">Todos</SelectItem>
+                  <SelectItem value="all" className="text-[#e9edef]">Todos</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept.id} value={dept.id} className="text-[#e9edef]">
                       {dept.name}
