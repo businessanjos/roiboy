@@ -57,7 +57,7 @@ interface AISettings {
 }
 
 const defaultAI: AISettings = {
-  model: "google/gemini-2.5-flash",
+  model: "auto",
   system_prompt: "Você é um analisador de mensagens de WhatsApp especializado em detectar percepção de ROI, riscos de churn e momentos de vida importantes dos clientes.",
   analysis_frequency: "realtime",
   min_message_length: 20,
@@ -73,11 +73,12 @@ const FUNCTION_PROMPT_FIELDS: Record<string, string> = {
 };
 
 const AI_MODELS = [
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Rápido e eficiente (recomendado)" },
+  { value: "auto", label: "Automático (Flash → Pro)", description: "Usa Flash no geral, escala para Pro quando necessário" },
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Rápido e eficiente (~$0.10/1K análises)" },
   { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", description: "Mais rápido, menor custo" },
-  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Máxima qualidade" },
+  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Máxima qualidade (~$2.60/1K análises)" },
   { value: "openai/gpt-5-mini", label: "GPT-5 Mini", description: "Equilíbrio custo/qualidade" },
-  { value: "openai/gpt-5", label: "GPT-5", description: "Maior precisão" },
+  { value: "openai/gpt-5", label: "GPT-5", description: "Maior precisão (~$2.60/1K análises)" },
 ];
 
 const ANALYSIS_FREQUENCIES = [
