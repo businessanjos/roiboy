@@ -17,7 +17,8 @@ import {
   RefreshCw,
   MessageSquareText,
   Settings2,
-  Loader2
+  Loader2,
+  Users,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -89,6 +90,7 @@ const FUNCTION_ICONS: Record<string, React.ReactNode> = {
   life_events: <Heart className="h-5 w-5" />,
   engagement_score: <Activity className="h-5 w-5" />,
   vnps_eligibility: <ThumbsUp className="h-5 w-5" />,
+  group_sentiment: <Users className="h-5 w-5" />,
   support_requests: <Headphones className="h-5 w-5" />,
 };
 
@@ -98,6 +100,7 @@ const FUNCTION_COLORS: Record<string, string> = {
   life_events: 'bg-pink-500/10 text-pink-500 border-pink-500/20',
   engagement_score: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
   vnps_eligibility: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+  group_sentiment: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
   support_requests: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
 };
 
