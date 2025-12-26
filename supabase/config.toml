@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.support-webhook]
 verify_jwt = false
+
+[functions.download-media]
+verify_jwt = false
