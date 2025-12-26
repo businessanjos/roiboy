@@ -322,6 +322,9 @@ export default function RoyZapp() {
   });
   const [savingTag, setSavingTag] = useState(false);
   const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
+  
+  // Client products state (for badges)
+  const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -542,6 +545,31 @@ export default function RoyZapp() {
       setTeamRoles(rolesData || []);
       setAssignments(assignmentsData || []);
       setTags(tagsData || []);
+      
+      // Fetch products for all clients in the conversations
+      const clientIds = (assignmentsData || [])
+        .map((a: ConversationAssignment) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
+        .filter((id: string | null | undefined): id is string => !!id);
+      
+      if (clientIds.length > 0) {
+        const { data: cpData } = await supabase
+          .from("client_products")
+          .select("client_id, product:products(id, name)")
+          .in("client_id", clientIds);
+        
+        if (cpData) {
+          const productsMap: Record<string, { id: string; name: string }[]> = {};
+          cpData.forEach((cp: any) => {
+            if (cp.client_id && cp.product) {
+              if (!productsMap[cp.client_id]) {
+                productsMap[cp.client_id] = [];
+              }
+              productsMap[cp.client_id].push({ id: cp.product.id, name: cp.product.name });
+            }
+          });
+          setClientProducts(productsMap);
+        }
+      }
       
       // Check if current user is already an agent, if not, auto-register
       let finalAgents = agentsData || [];
@@ -1663,6 +1691,29 @@ export default function RoyZapp() {
                           </span>
                         </div>
                       )}
+                      {/* Product badges */}
+                      {(() => {
+                        const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
+                        const products = clientId ? clientProducts[clientId] : undefined;
+                        return products && products.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            {products.slice(0, 2).map((p) => (
+                              <Badge 
+                                key={p.id} 
+                                variant="secondary" 
+                                className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-0"
+                              >
+                                {p.name}
+                              </Badge>
+                            ))}
+                            {products.length > 2 && (
+                              <span className="text-[10px] text-zapp-text-muted">
+                                +{products.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -2266,12 +2317,33 @@ export default function RoyZapp() {
                 </h3>
                 {clientId && <ExternalLink className="h-3.5 w-3.5 text-zapp-text-muted flex-shrink-0" />}
               </div>
-              <p className="text-zapp-text-muted text-xs">
-                {contactInfo.phone}
-                {selectedConversation.agent?.user && (
-                  <span> • Atendido por {selectedConversation.agent.user.name}</span>
+              <div className="flex items-center gap-2">
+                <p className="text-zapp-text-muted text-xs">
+                  {contactInfo.phone}
+                  {selectedConversation.agent?.user && (
+                    <span> • Atendido por {selectedConversation.agent.user.name}</span>
+                  )}
+                </p>
+                {/* Product badges in header */}
+                {clientId && clientProducts[clientId] && clientProducts[clientId].length > 0 && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {clientProducts[clientId].slice(0, 2).map((p) => (
+                      <Badge 
+                        key={p.id} 
+                        variant="secondary" 
+                        className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-0"
+                      >
+                        {p.name}
+                      </Badge>
+                    ))}
+                    {clientProducts[clientId].length > 2 && (
+                      <span className="text-[10px] text-zapp-text-muted">
+                        +{clientProducts[clientId].length - 2}
+                      </span>
+                    )}
+                  </div>
                 )}
-              </p>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
