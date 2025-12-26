@@ -1,6 +1,47 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Background task to process AI queue
+async function processAIQueue(supabaseUrl: string, supabaseKey: string) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Check if there are pending jobs
+    const { count } = await supabase
+      .from("ai_analysis_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    
+    if (!count || count === 0) {
+      console.log("[BG] No pending jobs in AI queue");
+      return;
+    }
+    
+    console.log(`[BG] Found ${count} pending jobs, triggering queue processor`);
+    
+    // Call the process-ai-queue function
+    const response = await fetch(`${supabaseUrl}/functions/v1/process-ai-queue`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseKey}`,
+      },
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`[BG] Queue processing result:`, result);
+    } else {
+      console.error(`[BG] Queue processing failed:`, response.status);
+    }
+  } catch (err) {
+    console.error("[BG] Error in background queue processing:", err);
+  }
+}
+
+// Declare EdgeRuntime for background tasks
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -812,6 +853,8 @@ serve(async (req) => {
                     console.log("Queue insert error (non-blocking):", queueError.message);
                   } else {
                     console.log("AI analysis queued for message:", insertedMsg.id);
+                    // Trigger background queue processing
+                    EdgeRuntime.waitUntil(processAIQueue(supabaseUrl, supabaseKey));
                   }
                 }
               } catch (err) {
