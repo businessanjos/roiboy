@@ -4099,50 +4099,50 @@ export default function RoyZapp() {
 
       {/* ROI Dialog */}
       <Dialog open={roiDialogOpen} onOpenChange={setRoiDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+        <DialogContent className="bg-zapp-bg border-zapp-border text-zapp-text">
           <DialogHeader>
-            <DialogTitle>Adicionar ROI</DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
+            <DialogTitle className="text-zapp-text">Adicionar ROI</DialogTitle>
+            <DialogDescription className="text-zapp-muted">
               Registre uma percepção de valor do cliente
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[#8696a0]">Tipo</Label>
+                <Label className="text-zapp-muted">Tipo</Label>
                 <Select value={roiType} onValueChange={(v) => {
                   setRoiType(v);
                   setRoiCategory(v === "tangible" ? "revenue" : "clarity");
                 }}>
-                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                    <SelectItem value="tangible" className="text-[#e9edef]">Tangível</SelectItem>
-                    <SelectItem value="intangible" className="text-[#e9edef]">Intangível</SelectItem>
+                  <SelectContent className="bg-zapp-bg border-zapp-border">
+                    <SelectItem value="tangible" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Tangível</SelectItem>
+                    <SelectItem value="intangible" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Intangível</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-[#8696a0]">Categoria</Label>
+                <Label className="text-zapp-muted">Categoria</Label>
                 <Select value={roiCategory} onValueChange={setRoiCategory}>
-                  <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                  <SelectContent className="bg-zapp-bg border-zapp-border">
                     {roiType === "tangible" ? (
                       <>
-                        <SelectItem value="revenue" className="text-[#e9edef]">Receita</SelectItem>
-                        <SelectItem value="cost" className="text-[#e9edef]">Redução de Custo</SelectItem>
-                        <SelectItem value="time" className="text-[#e9edef]">Economia de Tempo</SelectItem>
-                        <SelectItem value="process" className="text-[#e9edef]">Melhoria de Processo</SelectItem>
+                        <SelectItem value="revenue" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Receita</SelectItem>
+                        <SelectItem value="cost" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Redução de Custo</SelectItem>
+                        <SelectItem value="time" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Economia de Tempo</SelectItem>
+                        <SelectItem value="process" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Melhoria de Processo</SelectItem>
                       </>
                     ) : (
                       <>
-                        <SelectItem value="clarity" className="text-[#e9edef]">Clareza</SelectItem>
-                        <SelectItem value="confidence" className="text-[#e9edef]">Confiança</SelectItem>
-                        <SelectItem value="tranquility" className="text-[#e9edef]">Tranquilidade</SelectItem>
-                        <SelectItem value="status_direction" className="text-[#e9edef]">Direção</SelectItem>
+                        <SelectItem value="clarity" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Clareza</SelectItem>
+                        <SelectItem value="confidence" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Confiança</SelectItem>
+                        <SelectItem value="tranquility" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Tranquilidade</SelectItem>
+                        <SelectItem value="status_direction" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Direção</SelectItem>
                       </>
                     )}
                   </SelectContent>
@@ -4150,33 +4150,33 @@ export default function RoyZapp() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Impacto</Label>
+              <Label className="text-zapp-muted">Impacto</Label>
               <Select value={roiImpact} onValueChange={setRoiImpact}>
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                  <SelectItem value="low" className="text-[#e9edef]">Baixo</SelectItem>
-                  <SelectItem value="medium" className="text-[#e9edef]">Médio</SelectItem>
-                  <SelectItem value="high" className="text-[#e9edef]">Alto</SelectItem>
+                <SelectContent className="bg-zapp-bg border-zapp-border">
+                  <SelectItem value="low" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Baixo</SelectItem>
+                  <SelectItem value="medium" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Médio</SelectItem>
+                  <SelectItem value="high" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Alto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Evidência / Detalhe</Label>
+              <Label className="text-zapp-muted">Evidência / Detalhe</Label>
               <Textarea
                 value={roiEvidence}
                 onChange={(e) => setRoiEvidence(e.target.value)}
                 placeholder="Descreva o que o cliente percebeu como valor..."
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef] min-h-[100px]"
+                className="bg-zapp-input border-zapp-border text-zapp-text placeholder:text-zapp-muted min-h-[100px]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRoiDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+            <Button variant="outline" onClick={() => setRoiDialogOpen(false)} className="border-zapp-border text-zapp-muted hover:bg-zapp-hover hover:text-zapp-text">
               Cancelar
             </Button>
-            <Button onClick={handleAddRoi} disabled={uploadingRoi} className="bg-[#00a884] hover:bg-[#00a884]/90">
+            <Button onClick={handleAddRoi} disabled={uploadingRoi} className="bg-zapp-accent hover:bg-zapp-accent/90 text-white">
               {uploadingRoi ? "Salvando..." : "Adicionar ROI"}
             </Button>
           </DialogFooter>
@@ -4185,42 +4185,42 @@ export default function RoyZapp() {
 
       {/* Risk Dialog */}
       <Dialog open={riskDialogOpen} onOpenChange={setRiskDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+        <DialogContent className="bg-zapp-bg border-zapp-border text-zapp-text">
           <DialogHeader>
-            <DialogTitle>Adicionar Risco</DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
+            <DialogTitle className="text-zapp-text">Adicionar Risco</DialogTitle>
+            <DialogDescription className="text-zapp-muted">
               Registre um alerta de risco para este cliente
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Nível de Risco</Label>
+              <Label className="text-zapp-muted">Nível de Risco</Label>
               <Select value={riskLevel} onValueChange={setRiskLevel}>
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                  <SelectItem value="low" className="text-[#e9edef]">Baixo</SelectItem>
-                  <SelectItem value="medium" className="text-[#e9edef]">Médio</SelectItem>
-                  <SelectItem value="high" className="text-[#e9edef]">Alto</SelectItem>
+                <SelectContent className="bg-zapp-bg border-zapp-border">
+                  <SelectItem value="low" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Baixo</SelectItem>
+                  <SelectItem value="medium" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Médio</SelectItem>
+                  <SelectItem value="high" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Alto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Motivo do Risco</Label>
+              <Label className="text-zapp-muted">Motivo do Risco</Label>
               <Textarea
                 value={riskReason}
                 onChange={(e) => setRiskReason(e.target.value)}
                 placeholder="Descreva o motivo do alerta de risco..."
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef] min-h-[100px]"
+                className="bg-zapp-input border-zapp-border text-zapp-text placeholder:text-zapp-muted min-h-[100px]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRiskDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+            <Button variant="outline" onClick={() => setRiskDialogOpen(false)} className="border-zapp-border text-zapp-muted hover:bg-zapp-hover hover:text-zapp-text">
               Cancelar
             </Button>
-            <Button onClick={handleAddRisk} disabled={uploadingRisk} className="bg-amber-500 hover:bg-amber-600">
+            <Button onClick={handleAddRisk} disabled={uploadingRisk} className="bg-amber-500 hover:bg-amber-600 text-white">
               {uploadingRisk ? "Salvando..." : "Adicionar Risco"}
             </Button>
           </DialogFooter>
