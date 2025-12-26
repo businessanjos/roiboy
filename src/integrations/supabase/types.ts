@@ -5206,11 +5206,16 @@ export type Database = {
       zapp_messages: {
         Row: {
           account_id: string
+          audio_duration_sec: number | null
           content: string | null
           created_at: string
           direction: string
           external_message_id: string | null
           id: string
+          media_filename: string | null
+          media_mimetype: string | null
+          media_type: string | null
+          media_url: string | null
           message_type: string | null
           sender_name: string | null
           sender_phone: string | null
@@ -5219,11 +5224,16 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          audio_duration_sec?: number | null
           content?: string | null
           created_at?: string
           direction: string
           external_message_id?: string | null
           id?: string
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_type?: string | null
+          media_url?: string | null
           message_type?: string | null
           sender_name?: string | null
           sender_phone?: string | null
@@ -5232,11 +5242,16 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          audio_duration_sec?: number | null
           content?: string | null
           created_at?: string
           direction?: string
           external_message_id?: string | null
           id?: string
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_type?: string | null
+          media_url?: string | null
           message_type?: string | null
           sender_name?: string | null
           sender_phone?: string | null

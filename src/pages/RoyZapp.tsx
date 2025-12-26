@@ -43,6 +43,11 @@ import {
   Strikethrough,
   Code,
   Square,
+  Play,
+  Pause,
+  FileText,
+  Download,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -160,6 +165,11 @@ interface Message {
   is_from_client: boolean;
   created_at: string;
   message_type: string;
+  media_url?: string | null;
+  media_type?: string | null;
+  media_mimetype?: string | null;
+  media_filename?: string | null;
+  audio_duration_sec?: number | null;
 }
 
 interface ConversationAssignment {
@@ -471,7 +481,7 @@ export default function RoyZapp() {
     try {
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type")
+        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec")
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: true })
         .limit(100);
@@ -483,6 +493,11 @@ export default function RoyZapp() {
         is_from_client: m.direction === "inbound",
         created_at: m.sent_at,
         message_type: m.message_type || "text",
+        media_url: m.media_url,
+        media_type: m.media_type,
+        media_mimetype: m.media_mimetype,
+        media_filename: m.media_filename,
+        audio_duration_sec: m.audio_duration_sec,
       })));
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -1908,9 +1923,83 @@ export default function RoyZapp() {
                           ? "bg-[#202c33] rounded-tl-none"
                           : "bg-[#005c4b] rounded-tr-none"
                       )}>
-                        <p className="text-[#e9edef] text-sm whitespace-pre-wrap break-words">
-                          {message.content || "[Mensagem de mídia]"}
-                        </p>
+                        {/* Media content */}
+                        {message.media_url && message.media_type === "image" && (
+                          <div className="mb-2 rounded-lg overflow-hidden">
+                            <img 
+                              src={message.media_url} 
+                              alt="Imagem"
+                              className="max-w-full max-h-72 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(message.media_url!, '_blank')}
+                            />
+                          </div>
+                        )}
+                        {message.media_url && message.media_type === "audio" && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 bg-black/20 rounded-full px-3 py-2 min-w-[200px]">
+                              <Mic className="h-4 w-4 text-[#8696a0]" />
+                              <audio 
+                                controls 
+                                className="h-8 max-w-[180px]" 
+                                style={{ width: '100%' }}
+                              >
+                                <source src={message.media_url} type={message.media_mimetype || "audio/ogg"} />
+                              </audio>
+                              {message.audio_duration_sec && (
+                                <span className="text-[10px] text-[#8696a0]">
+                                  {Math.floor(message.audio_duration_sec / 60)}:{(message.audio_duration_sec % 60).toString().padStart(2, '0')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {message.media_url && message.media_type === "video" && (
+                          <div className="mb-2 rounded-lg overflow-hidden">
+                            <video 
+                              src={message.media_url} 
+                              controls
+                              className="max-w-full max-h-72"
+                            />
+                          </div>
+                        )}
+                        {message.media_url && message.media_type === "document" && (
+                          <a 
+                            href={message.media_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 bg-black/20 rounded-lg px-3 py-2 mb-2 hover:bg-black/30 transition-colors"
+                          >
+                            <FileText className="h-8 w-8 text-[#8696a0]" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[#e9edef] text-sm truncate">
+                                {message.media_filename || "Documento"}
+                              </p>
+                              <p className="text-[#8696a0] text-xs">Clique para baixar</p>
+                            </div>
+                            <Download className="h-4 w-4 text-[#8696a0]" />
+                          </a>
+                        )}
+                        {message.media_url && message.media_type === "sticker" && (
+                          <div className="mb-2">
+                            <img 
+                              src={message.media_url} 
+                              alt="Figurinha"
+                              className="max-w-[150px] max-h-[150px] object-contain"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Text content (hide for audio-only messages) */}
+                        {(message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") && (
+                          <p className="text-[#e9edef] text-sm whitespace-pre-wrap break-words">
+                            {message.content}
+                          </p>
+                        )}
+                        {(!message.content && !message.media_url) && (
+                          <p className="text-[#e9edef] text-sm whitespace-pre-wrap break-words opacity-50">
+                            [Mensagem não suportada]
+                          </p>
+                        )}
                         <div className={cn(
                           "flex items-center justify-end gap-1 mt-1",
                           message.is_from_client ? "text-[#8696a0]" : "text-[#ffffff99]"
