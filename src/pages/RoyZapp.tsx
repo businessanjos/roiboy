@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
@@ -38,6 +38,11 @@ import {
   WifiOff,
   Tags,
   ExternalLink,
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  Square,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -229,6 +234,10 @@ export default function RoyZapp() {
   const [filterGroups, setFilterGroups] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   const [messageInput, setMessageInput] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showFormatting, setShowFormatting] = useState(false);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
 
   // Department dialog state
@@ -720,18 +729,8 @@ export default function RoyZapp() {
     }
   };
 
-  // Filter users not already agents
-  const availableUsers = teamUsers.filter(
-    (user) => !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id
-  );
-
-  // Get current user's agent record
-  const currentAgent = useMemo(() => {
-    return agents.find((a) => a.user_id === currentUser?.id);
-  }, [agents, currentUser?.id]);
-
   // Helper to get contact info from assignment (prefers zapp_conversation, falls back to conversation)
-  const getContactInfo = (assignment: ConversationAssignment) => {
+  const getContactInfo = useCallback((assignment: ConversationAssignment) => {
     const zc = assignment.zapp_conversation;
     const c = assignment.conversation?.client;
     
@@ -745,7 +744,130 @@ export default function RoyZapp() {
       unreadCount: zc?.unread_count || 0,
       lastMessageAt: zc?.last_message_at || assignment.updated_at,
     };
+  }, []);
+
+  // Send message via UAZAPI
+  const sendMessage = async () => {
+    if (!messageInput.trim() || !selectedConversation || sendingMessage) return;
+    
+    const contactInfo = getContactInfo(selectedConversation);
+    const phone = contactInfo.phone;
+    const isGroup = contactInfo.isGroup;
+    const groupJid = selectedConversation.zapp_conversation?.group_jid;
+    
+    if (!phone && !groupJid) {
+      toast.error("Número de telefone não encontrado");
+      return;
+    }
+    
+    setSendingMessage(true);
+    
+    try {
+      // Call UAZAPI to send message
+      const action = isGroup && groupJid ? "send_to_group" : "send_text";
+      const payload: Record<string, string> = {
+        action,
+        message: messageInput.trim(),
+      };
+      
+      if (isGroup && groupJid) {
+        payload.group_id = groupJid;
+      } else {
+        payload.phone = phone;
+      }
+      
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: payload,
+      });
+      
+      if (error) throw error;
+      
+      // Save message to zapp_messages
+      if (selectedConversation.zapp_conversation_id) {
+        await supabase.from("zapp_messages").insert({
+          account_id: currentUser!.account_id,
+          zapp_conversation_id: selectedConversation.zapp_conversation_id,
+          direction: "outbound",
+          content: messageInput.trim(),
+          message_type: "text",
+          sent_at: new Date().toISOString(),
+        });
+        
+        // Update conversation last message
+        await supabase.from("zapp_conversations").update({
+          last_message_at: new Date().toISOString(),
+          last_message_preview: messageInput.trim().substring(0, 100),
+          unread_count: 0,
+        }).eq("id", selectedConversation.zapp_conversation_id);
+      }
+      
+      // Add message to local state
+      const newMessage: Message = {
+        id: crypto.randomUUID(),
+        content: messageInput.trim(),
+        is_from_client: false,
+        created_at: new Date().toISOString(),
+        message_type: "text",
+      };
+      setMessages(prev => [...prev, newMessage]);
+      setMessageInput("");
+      
+      toast.success("Mensagem enviada!");
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      toast.error(error.message || "Erro ao enviar mensagem");
+    } finally {
+      setSendingMessage(false);
+    }
   };
+
+  // Handle key press in input
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Insert formatting
+  const insertFormatting = useCallback((formatType: 'bold' | 'italic' | 'strikethrough' | 'monospace') => {
+    const input = messageInputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const selectedText = messageInput.substring(start, end);
+    
+    let prefix = '';
+    let suffix = '';
+    
+    switch (formatType) {
+      case 'bold': prefix = '*'; suffix = '*'; break;
+      case 'italic': prefix = '_'; suffix = '_'; break;
+      case 'strikethrough': prefix = '~'; suffix = '~'; break;
+      case 'monospace': prefix = '```'; suffix = '```'; break;
+    }
+    
+    const newText = messageInput.substring(0, start) + prefix + selectedText + suffix + messageInput.substring(end);
+    setMessageInput(newText);
+    
+    setTimeout(() => {
+      input.focus();
+      const newCursorPos = selectedText ? start + prefix.length + selectedText.length + suffix.length : start + prefix.length;
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  }, [messageInput]);
+
+  // Filter users not already agents
+  const availableUsers = teamUsers.filter(
+    (user) => !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id
+  );
+
+  // Get current user's agent record
+  const currentAgent = useMemo(() => {
+    return agents.find((a) => a.user_id === currentUser?.id);
+  }, [agents, currentUser?.id]);
+
 
   // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
@@ -1809,31 +1931,152 @@ export default function RoyZapp() {
           </div>
         </ScrollArea>
 
+        {/* Formatting toolbar */}
+        {showFormatting && (
+          <div className="bg-[#202c33] px-4 py-2 border-b border-[#2a3942] flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  onClick={() => insertFormatting('bold')}
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Negrito (*texto*)</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  onClick={() => insertFormatting('italic')}
+                >
+                  <Italic className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Itálico (_texto_)</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  onClick={() => insertFormatting('strikethrough')}
+                >
+                  <Strikethrough className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Tachado (~texto~)</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  onClick={() => insertFormatting('monospace')}
+                >
+                  <Code className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Monoespaçado (```texto```)</TooltipContent>
+            </Tooltip>
+            
+            <span className="text-xs text-[#8696a0] ml-2">Selecione e clique</span>
+          </div>
+        )}
+
         {/* Message input */}
         <div className="bg-[#202c33] px-4 py-3 flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="text-[#8696a0] hover:bg-[#2a3942] flex-shrink-0">
-            <Smile className="h-6 w-6" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={cn(
+                  "flex-shrink-0",
+                  showFormatting 
+                    ? "text-[#00a884] hover:bg-[#2a3942]" 
+                    : "text-[#8696a0] hover:bg-[#2a3942]"
+                )}
+                onClick={() => setShowFormatting(!showFormatting)}
+              >
+                <Bold className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Formatação</TooltipContent>
+          </Tooltip>
+          
           <Button variant="ghost" size="icon" className="text-[#8696a0] hover:bg-[#2a3942] flex-shrink-0">
             <Paperclip className="h-6 w-6" />
           </Button>
+          
           <Input
+            ref={messageInputRef}
             placeholder="Digite uma mensagem"
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            disabled={sendingMessage}
             className="flex-1 bg-[#2a3942] border-0 text-[#d1d7db] placeholder:text-[#8696a0] focus-visible:ring-0 rounded-lg h-10"
           />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-[#8696a0] hover:bg-[#2a3942] flex-shrink-0"
-          >
-            {messageInput.trim() ? (
-              <Send className="h-6 w-6 text-[#00a884]" />
-            ) : (
-              <Mic className="h-6 w-6" />
-            )}
-          </Button>
+          
+          {messageInput.trim() ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-[#00a884] hover:bg-[#2a3942] flex-shrink-0"
+              onClick={sendMessage}
+              disabled={sendingMessage}
+            >
+              {sendingMessage ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <Send className="h-6 w-6" />
+              )}
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "flex-shrink-0",
+                    isRecording 
+                      ? "text-red-500 hover:bg-[#2a3942] animate-pulse" 
+                      : "text-[#8696a0] hover:bg-[#2a3942]"
+                  )}
+                  onClick={() => {
+                    if (isRecording) {
+                      setIsRecording(false);
+                      toast.info("Gravação cancelada");
+                    } else {
+                      toast.info("Gravação de áudio será implementada em breve!");
+                      // setIsRecording(true);
+                    }
+                  }}
+                >
+                  {isRecording ? <Square className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {isRecording ? "Parar gravação" : "Gravar áudio"}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
     );
