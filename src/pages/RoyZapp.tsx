@@ -1195,7 +1195,9 @@ export default function RoyZapp() {
       const matchesSearch = searchQuery === "" ||
         contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         contact.phone?.includes(searchQuery);
-      const matchesStatus = filterStatus === "all" || a.status === filterStatus;
+      // Status filter: "triage" means no agent assigned (in queue)
+      const matchesStatus = filterStatus === "all" || 
+        (filterStatus === "triage" ? a.agent_id === null : a.status === filterStatus);
       
       // Unread filter
       const matchesUnread = !filterUnread || (contact.unreadCount > 0);
