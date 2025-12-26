@@ -300,6 +300,75 @@ export default function RoyZapp() {
     }
   }, [currentUser?.account_id]);
 
+  // Realtime subscription for conversations
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+
+    const conversationsChannel = supabase
+      .channel('zapp-conversations-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'zapp_conversations',
+          filter: `account_id=eq.${currentUser.account_id}`
+        },
+        (payload) => {
+          console.log("Realtime conversation update:", payload);
+          // Refetch assignments to get updated conversation data
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(conversationsChannel);
+    };
+  }, [currentUser?.account_id]);
+
+  // Realtime subscription for messages in selected conversation
+  useEffect(() => {
+    if (!selectedConversation?.zapp_conversation_id) return;
+
+    const messagesChannel = supabase
+      .channel(`zapp-messages-${selectedConversation.zapp_conversation_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'zapp_messages',
+          filter: `zapp_conversation_id=eq.${selectedConversation.zapp_conversation_id}`
+        },
+        (payload) => {
+          console.log("Realtime new message:", payload);
+          const newMsg = payload.new as any;
+          setMessages((prev) => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, {
+              id: newMsg.id,
+              content: newMsg.content,
+              is_from_client: newMsg.direction === "inbound",
+              created_at: newMsg.sent_at,
+              message_type: newMsg.message_type || "text",
+              media_url: newMsg.media_url,
+              media_type: newMsg.media_type,
+              media_mimetype: newMsg.media_mimetype,
+              media_filename: newMsg.media_filename,
+              audio_duration_sec: newMsg.audio_duration_sec,
+            }];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+    };
+  }, [selectedConversation?.zapp_conversation_id]);
+
   useEffect(() => {
     if (selectedConversation?.zapp_conversation_id) {
       fetchMessages(selectedConversation.zapp_conversation_id);
