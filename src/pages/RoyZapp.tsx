@@ -2047,7 +2047,7 @@ export default function RoyZapp() {
   const renderChatView = () => {
     if (!selectedConversation) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
+        <div className="h-full w-full flex flex-col items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
           <div className="relative z-10 text-center px-8 max-w-md">
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-zapp-accent/10 flex items-center justify-center">
               <MessageSquare className="h-12 w-12 text-zapp-accent" />
@@ -2078,7 +2078,7 @@ export default function RoyZapp() {
     }
 
     return (
-      <div className="flex-1 flex flex-col bg-zapp-bg">
+      <div className="h-full w-full flex flex-col bg-zapp-bg overflow-hidden">
         {/* Chat header */}
         <div className="bg-zapp-panel-header px-4 py-2 flex items-center gap-3 border-b border-zapp-border">
           <Button
@@ -2449,24 +2449,28 @@ export default function RoyZapp() {
   };
 
   return (
-    <div className="flex-1 flex flex-row w-full h-full min-h-0 bg-zapp-bg overflow-hidden">
-      {/* Left panel - Conversation list */}
-      <div className={cn(
-        "border-r border-zapp-border flex flex-col min-h-0",
-        selectedConversation 
-          ? "hidden lg:flex lg:w-[400px] lg:flex-shrink-0" 
-          : "w-full lg:w-[400px] lg:flex-shrink-0"
-      )}>
-        {renderConversationList()}
+    <div className="flex h-full w-full bg-zapp-bg" style={{ display: 'flex', flexDirection: 'row' }}>
+      {/* Left panel - Conversation list - fixed width */}
+      <div 
+        className={cn(
+          "flex-shrink-0 border-r border-zapp-border flex flex-col overflow-hidden",
+          selectedConversation ? "hidden lg:flex" : "flex"
+        )}
+        style={{ width: selectedConversation ? undefined : '100%', maxWidth: '400px' }}
+      >
+        <div className="lg:w-[400px] w-full h-full flex flex-col">
+          {renderConversationList()}
+        </div>
       </div>
 
-      {/* Right panel - Chat view */}
-      <div className={cn(
-        "flex flex-col min-h-0 min-w-0",
-        !selectedConversation 
-          ? "hidden lg:flex lg:flex-1" 
-          : "w-full lg:flex-1"
-      )}>
+      {/* Right panel - Chat view - takes remaining space */}
+      <div 
+        className={cn(
+          "flex-1 flex flex-col overflow-hidden",
+          !selectedConversation ? "hidden lg:flex" : "flex"
+        )}
+        style={{ minWidth: 0 }}
+      >
         {renderChatView()}
       </div>
 
