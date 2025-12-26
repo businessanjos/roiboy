@@ -35,8 +35,20 @@ interface Product {
   is_active: boolean;
   is_mls: boolean;
   mls_level: string | null;
+  color: string | null;
   created_at: string;
 }
+
+const COLOR_OPTIONS = [
+  { value: "#10b981", label: "Verde", class: "bg-emerald-500" },
+  { value: "#3b82f6", label: "Azul", class: "bg-blue-500" },
+  { value: "#8b5cf6", label: "Roxo", class: "bg-violet-500" },
+  { value: "#f59e0b", label: "Laranja", class: "bg-amber-500" },
+  { value: "#ef4444", label: "Vermelho", class: "bg-red-500" },
+  { value: "#ec4899", label: "Rosa", class: "bg-pink-500" },
+  { value: "#06b6d4", label: "Ciano", class: "bg-cyan-500" },
+  { value: "#6b7280", label: "Cinza", class: "bg-gray-500" },
+];
 
 // Using shared MLS_LEVELS from mls-utils
 
@@ -65,6 +77,7 @@ export default function Products() {
   const [isActive, setIsActive] = useState(true);
   const [isMls, setIsMls] = useState(false);
   const [mlsLevel, setMlsLevel] = useState<string>("");
+  const [color, setColor] = useState<string>("#10b981");
 
   const fetchProducts = async () => {
     try {
@@ -95,6 +108,7 @@ export default function Products() {
     setIsActive(true);
     setIsMls(false);
     setMlsLevel("");
+    setColor("#10b981");
     setEditingId(null);
   };
 
@@ -107,6 +121,7 @@ export default function Products() {
     setIsActive(product.is_active);
     setIsMls(product.is_mls);
     setMlsLevel(product.mls_level || "");
+    setColor(product.color || "#10b981");
     setDialogOpen(true);
   };
 
@@ -132,6 +147,7 @@ export default function Products() {
         is_active: isActive,
         is_mls: isMls,
         mls_level: isMls ? (mlsLevel || null) : null,
+        color: color,
       };
 
       if (editingId) {
@@ -311,6 +327,26 @@ export default function Products() {
                     </Select>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cor da Tag</Label>
+                <div className="flex flex-wrap gap-2">
+                  {COLOR_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setColor(option.value)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        color === option.value 
+                          ? "border-foreground scale-110" 
+                          : "border-transparent hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: option.value }}
+                      title={option.label}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
 
