@@ -1677,7 +1677,7 @@ export default function WhatsAppGroups() {
 
       {/* Sync Groups Selection Dialog */}
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
@@ -1688,9 +1688,9 @@ export default function WhatsAppGroups() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
             {/* Search and controls */}
-            <div className="space-y-3">
+            <div className="space-y-3 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -1701,11 +1701,11 @@ export default function WhatsAppGroups() {
                 />
               </div>
               
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-medium whitespace-nowrap">
                   {selectedGroupsToSync.length} de {availableGroups.length} selecionado(s)
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1727,7 +1727,7 @@ export default function WhatsAppGroups() {
             </div>
 
             {/* Groups list */}
-            <div className="border rounded-lg max-h-80 overflow-y-auto bg-background">
+            <div className="border rounded-lg flex-1 overflow-y-auto bg-card min-h-0">
               {availableGroups.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">
                   Nenhum grupo novo encontrado
@@ -1738,7 +1738,7 @@ export default function WhatsAppGroups() {
                   .map((group) => (
                   <div
                     key={group.jid}
-                    className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50 transition-colors bg-background ${
+                    className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50 transition-colors ${
                       selectedGroupsToSync.includes(group.jid) ? "bg-primary/10" : ""
                     }`}
                     onClick={() => toggleGroupSelection(group.jid)}
