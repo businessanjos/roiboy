@@ -2555,10 +2555,14 @@ export default function RoyZapp() {
           
           {messageInput.trim() ? (
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
-              onClick={sendMessage}
+              onClick={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
               disabled={sendingMessage}
             >
               {sendingMessage ? (
