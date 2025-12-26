@@ -298,11 +298,15 @@ export default function RoyZapp() {
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
   // Distribution settings state (persisted to localStorage)
@@ -1468,6 +1472,220 @@ export default function RoyZapp() {
     }
     // Reset input
     e.target.value = "";
+  };
+
+  // Start audio recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        } 
+      });
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+          ? 'audio/webm;codecs=opus' 
+          : 'audio/webm'
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          await sendAudioMessage(audioBlob);
+        }
+      };
+      
+      mediaRecorder.start(100); // Collect data every 100ms
+      setIsRecording(true);
+      setRecordingDuration(0);
+      
+      // Start timer
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+      
+      toast.success("Gravando áudio...");
+    } catch (error: any) {
+      console.error("Error starting recording:", error);
+      toast.error("Erro ao acessar microfone. Verifique as permissões.");
+    }
+  };
+
+  // Stop audio recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      setRecordingDuration(0);
+    }
+  };
+
+  // Cancel audio recording
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      // Stop without triggering onstop handler
+      const stream = mediaRecorderRef.current.stream;
+      stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      setRecordingDuration(0);
+      toast.info("Gravação cancelada");
+    }
+  };
+
+  // Send audio message
+  const sendAudioMessage = async (audioBlob: Blob) => {
+    if (!selectedConversation || uploadingMedia) return;
+    
+    const contactInfo = getContactInfo(selectedConversation);
+    const phone = contactInfo.phone;
+    const isGroup = contactInfo.isGroup;
+    const groupJid = selectedConversation.zapp_conversation?.group_jid;
+    
+    if (!phone && !groupJid) {
+      toast.error("Número de telefone não encontrado");
+      return;
+    }
+
+    setUploadingMedia(true);
+    const tempMessageId = `temp-audio-${Date.now()}`;
+    const now = new Date().toISOString();
+    
+    // Create optimistic message
+    const optimisticMessage: Message = {
+      id: tempMessageId,
+      content: "[Áudio]",
+      is_from_client: false,
+      created_at: now,
+      message_type: "audio",
+      media_url: URL.createObjectURL(audioBlob),
+      media_type: "audio",
+      media_mimetype: audioBlob.type,
+      media_filename: `audio_${Date.now()}.webm`,
+      audio_duration_sec: recordingDuration || null,
+      sender_name: null,
+    };
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    try {
+      // Upload audio to Supabase storage
+      const fileName = `${currentUser!.account_id}/audio_${Date.now()}.webm`;
+      const bucket = "client-followups";
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, audioBlob, {
+          contentType: audioBlob.type,
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
+      const mediaUrl = urlData.publicUrl;
+      
+      // Call UAZAPI to send audio
+      const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
+      const payload: Record<string, string> = {
+        action,
+        media_url: mediaUrl,
+        media_type: "audio",
+        caption: "",
+        file_name: `audio_${Date.now()}.webm`,
+      };
+      
+      if (isGroup && groupJid) {
+        payload.group_id = groupJid;
+      } else {
+        payload.phone = phone;
+      }
+      
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: payload,
+      });
+      
+      if (error) throw error;
+      
+      if (data && !data.success) {
+        throw new Error(data.message || "Falha ao enviar áudio");
+      }
+      
+      // Save message to zapp_messages
+      if (selectedConversation.zapp_conversation_id) {
+        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+          account_id: currentUser!.account_id,
+          zapp_conversation_id: selectedConversation.zapp_conversation_id,
+          direction: "outbound",
+          content: "[Áudio]",
+          message_type: "audio",
+          media_url: mediaUrl,
+          media_type: "audio",
+          media_mimetype: audioBlob.type,
+          media_filename: `audio_${Date.now()}.webm`,
+          audio_duration_sec: recordingDuration || null,
+          sent_at: now,
+        }).select("id").single();
+        
+        // Replace temp message with real one
+        if (insertedMessage) {
+          setMessages(prev => prev.map(m => 
+            m.id === tempMessageId ? { ...m, id: insertedMessage.id, media_url: mediaUrl } : m
+          ));
+        }
+        
+        // Update conversation last message
+        await supabase.from("zapp_conversations").update({
+          last_message_at: now,
+          last_message_preview: "🎤 Áudio",
+          unread_count: 0,
+        }).eq("id", selectedConversation.zapp_conversation_id);
+      }
+      
+      toast.success("Áudio enviado!");
+    } catch (error: any) {
+      console.error("Error sending audio:", error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
+      toast.error(error.message || "Erro ao enviar áudio");
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
+  // Format duration for display
+  const formatRecordingDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Handle key press in input
@@ -3473,34 +3691,53 @@ export default function RoyZapp() {
                 <Send className="h-6 w-6" />
               )}
             </Button>
+          ) : isRecording ? (
+            // Recording UI
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-mono text-destructive animate-pulse">
+                ⏺ {formatRecordingDuration(recordingDuration)}
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:bg-zapp-hover flex-shrink-0"
+                    onClick={cancelRecording}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Cancelar</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
+                    onClick={stopRecording}
+                  >
+                    <Send className="h-6 w-6" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Enviar áudio</TooltipContent>
+              </Tooltip>
+            </div>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn(
-                    "flex-shrink-0",
-                    isRecording 
-                      ? "text-destructive hover:bg-zapp-hover animate-pulse" 
-                      : "text-zapp-text-muted hover:bg-zapp-hover"
-                  )}
-                  onClick={() => {
-                    if (isRecording) {
-                      setIsRecording(false);
-                      toast.info("Gravação cancelada");
-                    } else {
-                      toast.info("Gravação de áudio será implementada em breve!");
-                      // setIsRecording(true);
-                    }
-                  }}
+                  className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                  onClick={startRecording}
+                  disabled={uploadingMedia}
                 >
-                  {isRecording ? <Square className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                  <Mic className="h-6 w-6" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">
-                {isRecording ? "Parar gravação" : "Gravar áudio"}
-              </TooltipContent>
+              <TooltipContent side="top">Gravar áudio</TooltipContent>
             </Tooltip>
           )}
         </div>
