@@ -4770,6 +4770,7 @@ export type Database = {
       whatsapp_groups: {
         Row: {
           account_id: string
+          ai_analysis_enabled: boolean
           created_at: string
           description: string | null
           group_jid: string
@@ -4781,6 +4782,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          ai_analysis_enabled?: boolean
           created_at?: string
           description?: string | null
           group_jid: string
@@ -4792,6 +4794,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          ai_analysis_enabled?: boolean
           created_at?: string
           description?: string | null
           group_jid?: string

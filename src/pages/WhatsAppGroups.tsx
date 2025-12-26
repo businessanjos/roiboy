@@ -58,7 +58,10 @@ import {
   Save,
   ImagePlus,
   FileText,
+  Brain,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 // Format phone number for display
@@ -91,6 +94,7 @@ interface WhatsAppGroup {
   owner_phone?: string;
   participant_count: number;
   created_at: string;
+  ai_analysis_enabled?: boolean;
   // Legacy fields from API
   subject?: string;
   participants?: Array<{ id: string; admin?: string }>;
@@ -237,6 +241,28 @@ export default function WhatsAppGroups() {
     },
     onError: (error: Error) => {
       toast.error("Erro ao criar grupo: " + error.message);
+    },
+  });
+
+  // Toggle AI analysis mutation
+  const toggleAiAnalysisMutation = useMutation({
+    mutationFn: async ({ groupId, enabled }: { groupId: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("whatsapp_groups")
+        .update({ ai_analysis_enabled: enabled })
+        .eq("id", groupId);
+      if (error) throw error;
+      return enabled;
+    },
+    onSuccess: (enabled) => {
+      toast.success(enabled 
+        ? "Análise IA ativada para este grupo" 
+        : "Análise IA desativada para este grupo"
+      );
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-groups"] });
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao atualizar: " + error.message);
     },
   });
 
@@ -1038,6 +1064,7 @@ export default function WhatsAppGroups() {
                     <TableRow>
                       <TableHead>Nome do Grupo</TableHead>
                       <TableHead>Participantes</TableHead>
+                      <TableHead>Análise IA</TableHead>
                       <TableHead>ID</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
@@ -1055,6 +1082,28 @@ export default function WhatsAppGroups() {
                           <Badge variant="secondary">
                             {group.participant_count || group.size || group.participants?.length || 0} membros
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={group.ai_analysis_enabled || false}
+                                  onCheckedChange={(checked) => 
+                                    toggleAiAnalysisMutation.mutate({ groupId: group.id, enabled: checked })
+                                  }
+                                  disabled={toggleAiAnalysisMutation.isPending}
+                                />
+                                {group.ai_analysis_enabled && (
+                                  <Brain className="h-4 w-4 text-primary" />
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Quando ativo, a IA analisa mensagens buscando</p>
+                              <p>sinais de ROI, riscos, atendimento, etc.</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
                         <TableCell>
                           <code className="text-xs bg-muted px-2 py-1 rounded">
