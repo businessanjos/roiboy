@@ -288,56 +288,80 @@ serve(async (req) => {
         // ZAPP: Save ALL conversations (client or not)
         // ============================================
         
+        // For group messages, use group_jid as identifier
+        // For direct messages, use phone_e164
+        const groupJid = isGroupMessage ? (chat.wa_chatid || chat.id) : null;
+        const groupName = isGroupMessage ? chat.name : null;
+        
         // Find or create zapp_conversation (for ALL contacts)
         let zappConversationId: string | null = null;
         
-        const { data: existingZappConvo } = await supabase
-          .from("zapp_conversations")
-          .select("id")
-          .eq("account_id", accountId)
-          .eq("phone_e164", phone)
-          .maybeSingle();
+        let existingZappConvo;
+        
+        if (isGroupMessage && groupJid) {
+          // For groups, search by group_jid
+          const { data } = await supabase
+            .from("zapp_conversations")
+            .select("id, unread_count")
+            .eq("account_id", accountId)
+            .eq("group_jid", groupJid)
+            .maybeSingle();
+          existingZappConvo = data;
+        } else {
+          // For direct messages, search by phone_e164
+          const { data } = await supabase
+            .from("zapp_conversations")
+            .select("id, unread_count")
+            .eq("account_id", accountId)
+            .eq("phone_e164", phone)
+            .eq("is_group", false)
+            .maybeSingle();
+          existingZappConvo = data;
+        }
 
         if (existingZappConvo) {
           zappConversationId = existingZappConvo.id;
           
           // Update last message info and increment unread count
-          // First get current unread count
-          const { data: currentConvo } = await supabase
-            .from("zapp_conversations")
-            .select("unread_count")
-            .eq("id", zappConversationId)
-            .single();
-          
           await supabase
             .from("zapp_conversations")
             .update({
               last_message_at: timestamp,
-              last_message_preview: content.substring(0, 100),
-              contact_name: contactName,
-              unread_count: (currentConvo?.unread_count || 0) + 1,
+              last_message_preview: isGroupMessage 
+                ? `${contactName}: ${content.substring(0, 80)}`
+                : content.substring(0, 100),
+              contact_name: isGroupMessage ? groupName : contactName,
+              unread_count: (existingZappConvo.unread_count || 0) + 1,
             })
             .eq("id", zappConversationId);
         } else {
-          // Find client if exists (to link)
-          const { data: existingClient } = await supabase
-            .from("clients")
-            .select("id")
-            .eq("account_id", accountId)
-            .eq("phone_e164", phone)
-            .maybeSingle();
+          // Find client if exists (to link) - only for direct messages
+          let clientId = null;
+          if (!isGroupMessage) {
+            const { data: existingClient } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("account_id", accountId)
+              .eq("phone_e164", phone)
+              .maybeSingle();
+            clientId = existingClient?.id || null;
+          }
           
           const { data: newZappConvo, error: zappConvoError } = await supabase
             .from("zapp_conversations")
             .insert({
               account_id: accountId,
-              client_id: existingClient?.id || null,
-              phone_e164: phone,
-              contact_name: contactName,
+              client_id: clientId,
+              phone_e164: isGroupMessage ? "" : phone,
+              contact_name: isGroupMessage ? groupName : contactName,
               channel: "whatsapp",
               external_thread_id: chat.id,
+              is_group: isGroupMessage,
+              group_jid: groupJid,
               last_message_at: timestamp,
-              last_message_preview: content.substring(0, 100),
+              last_message_preview: isGroupMessage 
+                ? `${contactName}: ${content.substring(0, 80)}`
+                : content.substring(0, 100),
               unread_count: 1,
             })
             .select("id")
@@ -345,7 +369,7 @@ serve(async (req) => {
 
           if (newZappConvo) {
             zappConversationId = newZappConvo.id;
-            console.log(`Created new zapp_conversation: ${zappConversationId}`);
+            console.log(`Created new zapp_conversation (group: ${isGroupMessage}): ${zappConversationId}`);
           } else if (zappConvoError) {
             console.error("Error creating zapp_conversation:", zappConvoError);
           }
@@ -363,6 +387,9 @@ serve(async (req) => {
               message_type: msg.audioMessage ? "audio" : "text",
               external_message_id: messageId,
               sent_at: timestamp,
+              // For group messages, store sender info
+              sender_phone: isGroupMessage ? phone : null,
+              sender_name: isGroupMessage ? contactName : null,
             });
 
           if (zappMsgError) {
@@ -504,9 +531,21 @@ serve(async (req) => {
         
         for (const msg of messages) {
           if (msg.key.fromMe) continue;
-          if (isGroupJid(msg.key.remoteJid)) continue;
+          
+          const isGroupMsg = isGroupJid(msg.key.remoteJid);
+          const groupJid = isGroupMsg ? msg.key.remoteJid : null;
 
-          const phone = extractPhoneFromJid(msg.key.remoteJid);
+          // For group messages, we need to extract sender phone differently
+          // The msg.key.participant contains the sender's JID in group messages
+          let phone = "";
+          if (isGroupMsg) {
+            // In group messages, participant field contains sender's JID
+            const participantJid = (msg.key as any).participant || "";
+            phone = extractPhoneFromJid(participantJid);
+          } else {
+            phone = extractPhoneFromJid(msg.key.remoteJid);
+          }
+          
           const contactName = msg.pushName || "Desconhecido";
           
           let content = "";
@@ -516,9 +555,11 @@ serve(async (req) => {
           else if (msg.message?.videoMessage?.caption) content = `[Vídeo] ${msg.message.videoMessage.caption}`;
           else if (msg.message?.audioMessage) content = "[Áudio]";
           
-          if (!phone || !content) continue;
+          // For groups, phone might be empty but we can still process if we have groupJid
+          if (!content) continue;
+          if (!isGroupMsg && !phone) continue;
 
-          console.log(`Processing alt format message from ${phone}: ${content.substring(0, 50)}...`);
+          console.log(`Processing alt format message (group: ${isGroupMsg}) from ${phone}: ${content.substring(0, 50)}...`);
 
           const timestamp = msg.messageTimestamp 
             ? new Date(Number(msg.messageTimestamp) * 1000).toISOString()
@@ -531,13 +572,28 @@ serve(async (req) => {
           // ============================================
           
           let zappConversationId: string | null = null;
+          let existingZappConvo;
           
-          const { data: existingZappConvo } = await supabase
-            .from("zapp_conversations")
-            .select("id, unread_count")
-            .eq("account_id", accountId)
-            .eq("phone_e164", phone)
-            .maybeSingle();
+          if (isGroupMsg && groupJid) {
+            // For groups, search by group_jid
+            const { data } = await supabase
+              .from("zapp_conversations")
+              .select("id, unread_count")
+              .eq("account_id", accountId)
+              .eq("group_jid", groupJid)
+              .maybeSingle();
+            existingZappConvo = data;
+          } else {
+            // For direct messages, search by phone_e164
+            const { data } = await supabase
+              .from("zapp_conversations")
+              .select("id, unread_count")
+              .eq("account_id", accountId)
+              .eq("phone_e164", phone)
+              .eq("is_group", false)
+              .maybeSingle();
+            existingZappConvo = data;
+          }
 
           if (existingZappConvo) {
             zappConversationId = existingZappConvo.id;
@@ -546,30 +602,40 @@ serve(async (req) => {
               .from("zapp_conversations")
               .update({
                 last_message_at: timestamp,
-                last_message_preview: content.substring(0, 100),
-                contact_name: contactName,
+                last_message_preview: isGroupMsg 
+                  ? `${contactName}: ${content.substring(0, 80)}`
+                  : content.substring(0, 100),
                 unread_count: (existingZappConvo.unread_count || 0) + 1,
               })
               .eq("id", zappConversationId);
           } else {
-            const { data: existingClientForZapp } = await supabase
-              .from("clients")
-              .select("id")
-              .eq("account_id", accountId)
-              .eq("phone_e164", phone)
-              .maybeSingle();
+            // For direct messages, try to find client
+            let clientId = null;
+            if (!isGroupMsg && phone) {
+              const { data: existingClientForZapp } = await supabase
+                .from("clients")
+                .select("id")
+                .eq("account_id", accountId)
+                .eq("phone_e164", phone)
+                .maybeSingle();
+              clientId = existingClientForZapp?.id || null;
+            }
             
             const { data: newZappConvo } = await supabase
               .from("zapp_conversations")
               .insert({
                 account_id: accountId,
-                client_id: existingClientForZapp?.id || null,
-                phone_e164: phone,
+                client_id: clientId,
+                phone_e164: isGroupMsg ? "" : phone,
                 contact_name: contactName,
                 channel: "whatsapp",
                 external_thread_id: msg.key.remoteJid,
+                is_group: isGroupMsg,
+                group_jid: groupJid,
                 last_message_at: timestamp,
-                last_message_preview: content.substring(0, 100),
+                last_message_preview: isGroupMsg 
+                  ? `${contactName}: ${content.substring(0, 80)}`
+                  : content.substring(0, 100),
                 unread_count: 1,
               })
               .select("id")
@@ -592,6 +658,9 @@ serve(async (req) => {
                 message_type: msg.message?.audioMessage ? "audio" : "text",
                 external_message_id: messageId,
                 sent_at: timestamp,
+                // For group messages, store sender info
+                sender_phone: isGroupMsg ? phone : null,
+                sender_name: isGroupMsg ? contactName : null,
               });
 
             // Create or update zapp assignment

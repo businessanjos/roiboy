@@ -192,6 +192,8 @@ interface ConversationAssignment {
     last_message_at: string | null;
     last_message_preview: string | null;
     unread_count: number;
+    is_group: boolean;
+    group_jid: string | null;
     client?: {
       id: string;
       full_name: string;
@@ -383,7 +385,7 @@ export default function RoyZapp() {
             agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
             department:zapp_departments(*),
             conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, client:clients(id, full_name, phone_e164, avatar_url))
+            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, client:clients(id, full_name, phone_e164, avatar_url))
           `)
           .eq("account_id", currentUser.account_id)
           .neq("status", "closed")
@@ -699,6 +701,7 @@ export default function RoyZapp() {
       phone: zc?.phone_e164 || c?.phone_e164 || "",
       avatar: zc?.client?.avatar_url || c?.avatar_url || null,
       isClient: !!(zc?.client_id || c?.id),
+      isGroup: zc?.is_group || false,
       lastMessage: zc?.last_message_preview || null,
       unreadCount: zc?.unread_count || 0,
       lastMessageAt: zc?.last_message_at || assignment.updated_at,
@@ -719,10 +722,8 @@ export default function RoyZapp() {
         contact.phone?.includes(searchQuery);
       const matchesStatus = filterStatus === "all" || a.status === filterStatus;
       
-      // Groups filter: WhatsApp group IDs typically contain @g.us
-      const isGroup = contact.phone?.includes("@g.us") || 
-                      contact.phone?.includes("-") ||
-                      (contact.phone?.length || 0) > 15;
+      // Groups filter: use is_group from zapp_conversation
+      const isGroup = contact.isGroup;
       const matchesGroups = !filterGroups || isGroup;
       
       return matchesTab && matchesSearch && matchesStatus && matchesGroups;
@@ -1084,7 +1085,11 @@ export default function RoyZapp() {
                       {assignment.status === "pending" && (
                         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-zapp-bg" />
                       )}
-                      {!contact.isClient && (
+                      {contact.isGroup ? (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-zapp-bg flex items-center justify-center">
+                          <Users2 className="h-2.5 w-2.5 text-white" />
+                        </div>
+                      ) : !contact.isClient && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-500 border-2 border-zapp-bg flex items-center justify-center">
                           <span className="text-[8px] text-white font-bold">?</span>
                         </div>
