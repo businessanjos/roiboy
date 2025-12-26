@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -123,11 +123,14 @@ interface User {
 
 export default function Admin() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-
+  
+  // Get initial tab from URL query param
+  const initialTab = searchParams.get('tab') || 'dashboard';
   // Check if current user is super admin
   useEffect(() => {
     const checkSuperAdmin = async () => {
@@ -261,7 +264,7 @@ export default function Admin() {
         </div>
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-6">
+      <Tabs defaultValue={initialTab} className="space-y-6">
         <TabsList className="bg-muted/50 p-1">
           <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="h-4 w-4" />
