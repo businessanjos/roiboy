@@ -286,13 +286,15 @@ serve(async (req) => {
         let mediaFilename = "";
         let audioDurationSec: number | null = null;
         
-        // Check for media URL at various locations
-        mediaUrl = msg.mediaUrl || msg.media_url || msg.url || "";
-        mediaMimetype = msg.mimetype || "";
-        mediaFilename = msg.fileName || "";
+        // Check for media URL at various locations (UAZAPI puts it in different places)
+        const msgAny = msg as Record<string, unknown>;
+        mediaUrl = msg.mediaUrl || msg.media_url || msg.url || 
+          String(msgAny.mediaUrl || msgAny.media_url || msgAny.url || "");
+        mediaMimetype = msg.mimetype || String(msgAny.mimetype || "");
+        mediaFilename = msg.fileName || String(msgAny.fileName || msgAny.filename || "");
         
         // FIRST: Detect media type from message type field (UAZAPI uses 'type' or 'mediaType')
-        const msgTypeField = msg.type || (msg as Record<string, unknown>).mediaType;
+        const msgTypeField = msg.type || msgAny.mediaType || msgAny.messageType;
         if (msgTypeField && typeof msgTypeField === "string") {
           const msgType = msgTypeField.toLowerCase();
           if (msgType.includes("image")) mediaType = "image";
@@ -302,6 +304,11 @@ serve(async (req) => {
           else if (msgType.includes("sticker")) mediaType = "sticker";
         }
         
+        // Log for debugging media messages
+        if (mediaType || mediaUrl || msgTypeField) {
+          console.log(`Media detection - msgTypeField: ${msgTypeField}, detected mediaType: ${mediaType}, mediaUrl present: ${!!mediaUrl}, mediaUrl: ${String(mediaUrl).substring(0, 100)}`);
+        }
+        
         // Log the content structure for debugging
         console.log(`Content analysis - msg.content type: ${typeof msg.content}, msg.type: ${msg.type}, mediaType detected: ${mediaType}`);
         if (typeof msg.content === "object" && msg.content !== null) {
@@ -309,12 +316,16 @@ serve(async (req) => {
         }
         
         // Extract content based on message type
+        // Note: For media messages, UAZAPI may send the caption in text/content/body fields
+        // So we capture the text first, then if we have media info, we enhance it
         if (typeof msg.body === "string") {
           content = msg.body;
         } else if (typeof msg.content === "string") {
           content = msg.content;
         } else if (typeof msg.text === "string") {
           content = msg.text;
+        } else if (typeof msgAny.caption === "string") {
+          content = msgAny.caption as string;
         } else if (msg.conversation) {
           content = msg.conversation;
         } else if (msg.extendedTextMessage?.text) {
@@ -403,8 +414,9 @@ serve(async (req) => {
           }
         }
         
-        // If still no content but we detected a media type, set default content
-        if (!content && mediaType) {
+        // If we detected a media type but content is just plain text (the caption), 
+        // prefix it or set default if empty
+        if (mediaType) {
           const mediaLabels: Record<string, string> = {
             image: "[Imagem]",
             video: "[Vídeo]",
@@ -412,7 +424,19 @@ serve(async (req) => {
             document: "[Documento]",
             sticker: "[Figurinha]",
           };
-          content = mediaLabels[mediaType] || "[Mídia]";
+          
+          // If no content, use the label
+          if (!content) {
+            content = mediaLabels[mediaType] || "[Mídia]";
+          } else {
+            // If we have caption-like content but media type is detected, 
+            // make sure to indicate it's a media message
+            if (mediaType === "video" && !content.includes("[Vídeo]")) {
+              content = `🎬 ${content}`;
+            } else if (mediaType === "image" && !content.includes("[Imagem]")) {
+              content = `📷 ${content}`;
+            }
+          }
         }
         
         console.log(`Media info - type: ${mediaType}, url: ${mediaUrl?.substring(0, 50)}..., mimetype: ${mediaMimetype}`);
