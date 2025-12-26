@@ -69,9 +69,10 @@ const PERMISSION_LABELS: Record<string, { label: string; category: string }> = {
   "forms.edit": { label: "Gerenciar formulários", category: "Formulários" },
   "products.view": { label: "Ver produtos", category: "Produtos" },
   "products.edit": { label: "Gerenciar produtos", category: "Produtos" },
+  "royzapp.access": { label: "Acessar ROY zAPP", category: "ROY zAPP" },
 };
 
-const PERMISSION_CATEGORIES = ["Clientes", "Equipe", "Relatórios", "Eventos", "Formulários", "Produtos", "Configurações"];
+const PERMISSION_CATEGORIES = ["Clientes", "Equipe", "Relatórios", "Eventos", "Formulários", "Produtos", "Configurações", "ROY zAPP"];
 
 // Default role colors using design system tokens
 const DEFAULT_ROLE_COLORS = [

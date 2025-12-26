@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   FORMS_EDIT: "forms.edit",
   PRODUCTS_VIEW: "products.view",
   PRODUCTS_EDIT: "products.edit",
+  ROYZAPP_ACCESS: "royzapp.access",
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
