@@ -305,6 +305,73 @@ export type Database = {
           },
         ]
       }
+      ai_analysis_queue: {
+        Row: {
+          account_id: string
+          attempts: number
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number
+          message_id: string
+          priority: number
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          message_id: string
+          priority?: number
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          message_id?: string
+          priority?: number
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_analysis_queue_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_queue_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_analysis_queue_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "zapp_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage_logs: {
         Row: {
           account_id: string
