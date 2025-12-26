@@ -2501,39 +2501,41 @@ export default function RoyZapp() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* Assign to me / Release button */}
             {selectedConversation.agent_id !== currentAgent?.id ? (
               <Button
                 size="sm"
-                className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-8"
+                className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-8 px-3"
                 onClick={() => assignToMe(selectedConversation.id)}
               >
-                <UserCheck className="h-4 w-4 mr-1" />
+                <UserCheck className="h-4 w-4 mr-1.5" />
                 Puxar para mim
               </Button>
             ) : (
               <Button
                 size="sm"
                 variant="outline"
-                className="border-amber-500 text-amber-500 hover:bg-amber-500/10 text-xs h-8"
+                className="border-amber-500 text-amber-500 hover:bg-amber-500/10 text-xs h-8 px-3"
                 onClick={() => releaseToQueue(selectedConversation.id)}
               >
-                <ArrowLeft className="h-4 w-4 mr-1" />
+                <ArrowLeft className="h-4 w-4 mr-1.5" />
                 Devolver
               </Button>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button 
+                <Button 
+                  variant="outline"
+                  size="sm"
                   className={cn(
-                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
+                    "h-8 px-3 text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
                     STATUS_CONFIG[selectedConversation.status]?.color || "text-muted-foreground",
                     "border-current bg-transparent"
                   )}
                 >
                   {STATUS_CONFIG[selectedConversation.status]?.label || "Status"}
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">
                 <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Alterar status</div>
@@ -2560,20 +2562,22 @@ export default function RoyZapp() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-zapp-text-muted hover:bg-zapp-hover"
-              onClick={() => setTransferDialogOpen(true)}
-            >
-              <ArrowRightLeft className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover">
-              <Phone className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover">
-              <MoreVertical className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8"
+                onClick={() => setTransferDialogOpen(true)}
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
+                <Phone className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
