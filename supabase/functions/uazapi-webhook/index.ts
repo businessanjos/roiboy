@@ -600,10 +600,16 @@ serve(async (req) => {
                   : content.substring(0, 100)),
           };
           
-          // Only update contact_name for inbound messages
+          // Only update contact_name and avatar for inbound messages
           if (direction === "inbound") {
             updateData.contact_name = isGroupMessage ? groupName : contactName;
             updateData.unread_count = (existingZappConvo.unread_count || 0) + 1;
+            
+            // Update avatar from WhatsApp profile picture if available
+            const profilePicUrl = chat.image || chat.imagePreview;
+            if (profilePicUrl) {
+              updateData.avatar_url = profilePicUrl;
+            }
           }
           
           await supabase
@@ -623,6 +629,8 @@ serve(async (req) => {
             clientId = existingClient?.id || null;
           }
           
+          const profilePicUrl = chat.image || chat.imagePreview;
+          
           const { data: newZappConvo, error: zappConvoError } = await supabase
             .from("zapp_conversations")
             .insert({
@@ -641,6 +649,7 @@ serve(async (req) => {
                     ? `${contactName}: ${content.substring(0, 80)}`
                     : content.substring(0, 100)),
               unread_count: direction === "inbound" ? 1 : 0,
+              avatar_url: profilePicUrl || null,
             })
             .select("id")
             .single();

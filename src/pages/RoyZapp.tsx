@@ -229,6 +229,7 @@ interface ConversationAssignment {
     is_pinned?: boolean;
     is_favorite?: boolean;
     is_blocked?: boolean;
+    avatar_url?: string | null;
     client?: {
       id: string;
       full_name: string;
@@ -426,7 +427,7 @@ export default function RoyZapp() {
           agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
           department:zapp_departments(*),
           conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, client:clients(id, full_name, phone_e164, avatar_url))
+          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
         `)
         .eq("account_id", currentUser.account_id)
         .neq("status", "closed")
@@ -712,7 +713,7 @@ export default function RoyZapp() {
             agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
             department:zapp_departments(*),
             conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, client:clients(id, full_name, phone_e164, avatar_url))
+            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
           `)
           .eq("account_id", currentUser.account_id)
           .neq("status", "closed")
@@ -1238,7 +1239,7 @@ export default function RoyZapp() {
     return {
       name: zc?.client?.full_name || zc?.contact_name || c?.full_name || "Contato",
       phone: zc?.phone_e164 || c?.phone_e164 || "",
-      avatar: zc?.client?.avatar_url || c?.avatar_url || null,
+      avatar: zc?.client?.avatar_url || zc?.avatar_url || c?.avatar_url || null,
       isClient: !!(zc?.client_id || c?.id),
       isGroup: zc?.is_group || false,
       lastMessage: zc?.last_message_preview || null,
