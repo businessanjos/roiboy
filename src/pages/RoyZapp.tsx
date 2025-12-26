@@ -254,6 +254,9 @@ export default function RoyZapp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterGroups, setFilterGroups] = useState(false);
+  const [filterProductId, setFilterProductId] = useState<string>("all");
+  const [filterTagId, setFilterTagId] = useState<string>("all");
+  const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -546,6 +549,15 @@ export default function RoyZapp() {
       setAssignments(assignmentsData || []);
       setTags(tagsData || []);
       
+      // Fetch available products for filter dropdown
+      const { data: productsData } = await supabase
+        .from("products")
+        .select("id, name, color")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("name");
+      
+      setAvailableProducts(productsData || []);
       // Fetch products for all clients in the conversations
       const clientIds = (assignmentsData || [])
         .map((a: ConversationAssignment) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
@@ -1150,9 +1162,18 @@ export default function RoyZapp() {
       const isGroup = contact.isGroup;
       const matchesGroups = !filterGroups || isGroup;
       
-      return matchesTab && matchesSearch && matchesStatus && matchesGroups;
+      // Product filter
+      const clientId = a.zapp_conversation?.client_id || a.conversation?.client?.id;
+      const clientProds = clientId ? clientProducts[clientId] : undefined;
+      const matchesProduct = filterProductId === "all" || 
+        (clientProds && clientProds.some(p => p.id === filterProductId));
+      
+      // Tag filter - for now just pass if 'all', tags feature to be implemented on conversations
+      const matchesTag = filterTagId === "all";
+      
+      return matchesTab && matchesSearch && matchesStatus && matchesGroups && matchesProduct && matchesTag;
     });
-  }, [assignments, searchQuery, filterStatus, filterGroups, inboxTab, currentAgent?.id]);
+  }, [assignments, searchQuery, filterStatus, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, clientProducts]);
 
   // Helper to get agent name by id
   const getAgentName = (agentId: string | null) => {
@@ -1401,7 +1422,9 @@ export default function RoyZapp() {
                 <Filter className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border">
+            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56 max-h-80 overflow-y-auto">
+              {/* Status filters */}
+              <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
               <DropdownMenuItem 
                 className={cn("text-zapp-text", filterStatus === "all" && "bg-zapp-bg-dark")}
                 onClick={() => setFilterStatus("all")}
@@ -1426,6 +1449,60 @@ export default function RoyZapp() {
               >
                 Aguardando cliente
               </DropdownMenuItem>
+              
+              {/* Product filters */}
+              {availableProducts.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-zapp-border" />
+                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Produto</div>
+                  <DropdownMenuItem 
+                    className={cn("text-zapp-text", filterProductId === "all" && "bg-zapp-bg-dark")}
+                    onClick={() => setFilterProductId("all")}
+                  >
+                    Todos os produtos
+                  </DropdownMenuItem>
+                  {availableProducts.map((product) => (
+                    <DropdownMenuItem 
+                      key={product.id}
+                      className={cn("text-zapp-text flex items-center gap-2", filterProductId === product.id && "bg-zapp-bg-dark")}
+                      onClick={() => setFilterProductId(product.id)}
+                    >
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: product.color || '#10b981' }}
+                      />
+                      <span className="truncate">{product.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              
+              {/* Tag filters */}
+              {tags.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-zapp-border" />
+                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Etiqueta</div>
+                  <DropdownMenuItem 
+                    className={cn("text-zapp-text", filterTagId === "all" && "bg-zapp-bg-dark")}
+                    onClick={() => setFilterTagId("all")}
+                  >
+                    Todas as etiquetas
+                  </DropdownMenuItem>
+                  {tags.filter(t => t.is_active).map((tag) => (
+                    <DropdownMenuItem 
+                      key={tag.id}
+                      className={cn("text-zapp-text flex items-center gap-2", filterTagId === tag.id && "bg-zapp-bg-dark")}
+                      onClick={() => setFilterTagId(tag.id)}
+                    >
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span className="truncate">{tag.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
