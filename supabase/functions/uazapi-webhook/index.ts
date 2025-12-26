@@ -36,6 +36,7 @@ interface UazapiWebhookPayload {
     // Group chat fields
     wa_chatid?: string;
     wa_isGroup?: boolean;
+    wa_name?: string;
   };
   // Message data - UAZAPI format
   message?: {
@@ -52,6 +53,7 @@ interface UazapiWebhookPayload {
     senderName?: string;
     isGroup?: boolean;
     chatid?: string;
+    groupName?: string;
     // Nested message content
     conversation?: string;
     extendedTextMessage?: { text?: string };
@@ -290,8 +292,11 @@ serve(async (req) => {
         
         // For group messages, use group_jid as identifier
         // For direct messages, use phone_e164
-        const groupJid = isGroupMessage ? (chat.wa_chatid || chat.id) : null;
-        const groupName = isGroupMessage ? chat.name : null;
+        // The group identifier might be in wa_chatid (e.g., "123456789@g.us") or msg.chatid
+        const groupJid = isGroupMessage ? (msg.chatid || chat.wa_chatid || chat.id) : null;
+        const groupName = isGroupMessage ? (msg.groupName || chat.name || chat.wa_name) : null;
+        
+        console.log(`Group info - isGroup: ${isGroupMessage}, groupJid: ${groupJid}, groupName: ${groupName}, chat.id: ${chat.id}, msg.chatid: ${msg.chatid}`);
         
         // Find or create zapp_conversation (for ALL contacts)
         let zappConversationId: string | null = null;
