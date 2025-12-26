@@ -2,7 +2,7 @@ import { useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Bold, Italic, Strikethrough, Code } from "lucide-react";
+import { Bold, Italic, Strikethrough, Code, List, ListOrdered, Quote } from "lucide-react";
 
 interface WhatsAppFormattingToolbarProps {
   value: string;
@@ -25,7 +25,7 @@ export function WhatsAppFormattingToolbar({
 }: WhatsAppFormattingToolbarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const insertFormatting = useCallback((formatType: 'bold' | 'italic' | 'strikethrough' | 'monospace') => {
+  const insertFormatting = useCallback((formatType: 'bold' | 'italic' | 'strikethrough' | 'monospace' | 'quote' | 'bulletList' | 'numberedList') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -35,6 +35,7 @@ export function WhatsAppFormattingToolbar({
     
     let prefix = '';
     let suffix = '';
+    let isLinePrefix = false;
     
     switch (formatType) {
       case 'bold':
@@ -53,15 +54,49 @@ export function WhatsAppFormattingToolbar({
         prefix = '```';
         suffix = '```';
         break;
+      case 'quote':
+        prefix = '> ';
+        isLinePrefix = true;
+        break;
+      case 'bulletList':
+        prefix = '• ';
+        isLinePrefix = true;
+        break;
+      case 'numberedList':
+        prefix = '1. ';
+        isLinePrefix = true;
+        break;
     }
     
-    const newText = value.substring(0, start) + prefix + selectedText + suffix + value.substring(end);
+    let newText: string;
+    
+    if (isLinePrefix) {
+      // For line-based formatting, add prefix to each line
+      if (selectedText) {
+        const lines = selectedText.split('\n');
+        const formattedLines = lines.map((line, index) => {
+          if (formatType === 'numberedList') {
+            return `${index + 1}. ${line}`;
+          }
+          return `${prefix}${line}`;
+        });
+        newText = value.substring(0, start) + formattedLines.join('\n') + value.substring(end);
+      } else {
+        // No selection - just add prefix at cursor
+        newText = value.substring(0, start) + prefix + value.substring(end);
+      }
+    } else {
+      newText = value.substring(0, start) + prefix + selectedText + suffix + value.substring(end);
+    }
+    
     onChange(newText);
     
     // Restore focus and cursor position
     setTimeout(() => {
       textarea.focus();
-      const newCursorPos = selectedText ? start + prefix.length + selectedText.length + suffix.length : start + prefix.length;
+      const newCursorPos = selectedText 
+        ? start + (isLinePrefix ? prefix.length + selectedText.length : prefix.length + selectedText.length + suffix.length)
+        : start + prefix.length;
       textarea.setSelectionRange(newCursorPos, newCursorPos);
     }, 0);
   }, [value, onChange]);
@@ -142,7 +177,63 @@ export function WhatsAppFormattingToolbar({
             </TooltipContent>
           </Tooltip>
           
-          <span className="text-xs text-muted-foreground ml-2">
+          <div className="w-px h-5 bg-border mx-1" />
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => insertFormatting('quote')}
+                disabled={disabled}
+              >
+                <Quote className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Citação (&gt; texto)</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => insertFormatting('bulletList')}
+                disabled={disabled}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Lista com marcadores (• item)</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => insertFormatting('numberedList')}
+                disabled={disabled}
+              >
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Lista numerada (1. item)</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
             Selecione o texto e clique para formatar
           </span>
         </div>
