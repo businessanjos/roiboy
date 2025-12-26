@@ -293,8 +293,12 @@ serve(async (req) => {
         mediaMimetype = msg.mimetype || String(msgAny.mimetype || "");
         mediaFilename = msg.fileName || String(msgAny.fileName || msgAny.filename || "");
         
+        // FIRST: Log ALL type-related fields for debugging
+        console.log(`Type fields - msg.type: "${msg.type}", msgAny.mediaType: "${msgAny.mediaType}", msgAny.messageType: "${msgAny.messageType}"`);
+        
         // FIRST: Detect media type from message type field (UAZAPI uses 'type' or 'mediaType')
-        const msgTypeField = msg.type || msgAny.mediaType || msgAny.messageType;
+        // Priority: mediaType > messageType > type (since 'type' is often just 'text' even for media)
+        const msgTypeField = msgAny.mediaType || msgAny.messageType || msg.type;
         if (msgTypeField && typeof msgTypeField === "string") {
           const msgType = msgTypeField.toLowerCase();
           if (msgType.includes("image")) mediaType = "image";
@@ -305,9 +309,7 @@ serve(async (req) => {
         }
         
         // Log for debugging media messages
-        if (mediaType || mediaUrl || msgTypeField) {
-          console.log(`Media detection - msgTypeField: ${msgTypeField}, detected mediaType: ${mediaType}, mediaUrl present: ${!!mediaUrl}, mediaUrl: ${String(mediaUrl).substring(0, 100)}`);
-        }
+        console.log(`Media detection - msgTypeField: "${msgTypeField}", detected mediaType: "${mediaType}", mediaUrl present: ${!!mediaUrl}, mediaUrl: "${String(mediaUrl).substring(0, 100)}"`);
         
         // Log the content structure for debugging
         console.log(`Content analysis - msg.content type: ${typeof msg.content}, msg.type: ${msg.type}, mediaType detected: ${mediaType}`);
