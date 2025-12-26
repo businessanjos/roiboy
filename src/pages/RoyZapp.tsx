@@ -554,17 +554,21 @@ export default function RoyZapp() {
       if (clientIds.length > 0) {
         const { data: cpData } = await supabase
           .from("client_products")
-          .select("client_id, product:products(id, name)")
+          .select("client_id, product:products(id, name, color)")
           .in("client_id", clientIds);
         
         if (cpData) {
-          const productsMap: Record<string, { id: string; name: string }[]> = {};
+          const productsMap: Record<string, { id: string; name: string; color?: string }[]> = {};
           cpData.forEach((cp: any) => {
             if (cp.client_id && cp.product) {
               if (!productsMap[cp.client_id]) {
                 productsMap[cp.client_id] = [];
               }
-              productsMap[cp.client_id].push({ id: cp.product.id, name: cp.product.name });
+              productsMap[cp.client_id].push({ 
+                id: cp.product.id, 
+                name: cp.product.name,
+                color: cp.product.color 
+              });
             }
           });
           setClientProducts(productsMap);
@@ -1701,7 +1705,11 @@ export default function RoyZapp() {
                               <Badge 
                                 key={p.id} 
                                 variant="secondary" 
-                                className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-0"
+                                className="text-[10px] px-1.5 py-0 h-4 border-0"
+                                style={{ 
+                                  backgroundColor: `${p.color || '#10b981'}20`,
+                                  color: p.color || '#10b981'
+                                }}
                               >
                                 {p.name}
                               </Badge>
@@ -2331,7 +2339,11 @@ export default function RoyZapp() {
                       <Badge 
                         key={p.id} 
                         variant="secondary" 
-                        className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-0"
+                        className="text-[10px] px-1.5 py-0 h-4 border-0"
+                        style={{ 
+                          backgroundColor: `${p.color || '#10b981'}20`,
+                          color: p.color || '#10b981'
+                        }}
                       >
                         {p.name}
                       </Badge>
