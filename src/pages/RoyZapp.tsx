@@ -330,7 +330,7 @@ export default function RoyZapp() {
     }
   }, [currentUser?.account_id]);
 
-  // Realtime subscription for conversations
+  // Realtime subscription for conversations and assignments
   useEffect(() => {
     if (!currentUser?.account_id) return;
 
@@ -347,6 +347,20 @@ export default function RoyZapp() {
         (payload) => {
           console.log("Realtime conversation update:", payload);
           // Refetch assignments to get updated conversation data
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'zapp_conversation_assignments',
+          filter: `account_id=eq.${currentUser.account_id}`
+        },
+        (payload) => {
+          console.log("Realtime assignment update:", payload);
+          // Refetch assignments when new conversation comes in
           fetchData();
         }
       )
