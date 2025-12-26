@@ -1430,7 +1430,7 @@ export default function RoyZapp() {
                     onClick={() => setSelectedConversation(assignment)}
                   >
                     <div className="relative">
-                      <Avatar className="h-10 w-10">
+                      <Avatar className="h-11 w-11">
                         <AvatarImage src={contact.avatar || undefined} />
                         <AvatarFallback className="bg-muted text-muted-foreground text-sm">
                           {contact.name ? getInitials(contact.name) : "?"}
