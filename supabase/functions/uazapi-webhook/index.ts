@@ -291,10 +291,18 @@ serve(async (req) => {
         
         // Check for media URL at various locations (UAZAPI puts it in different places)
         const msgAny = msg as Record<string, unknown>;
+        const contentObj = (typeof msg.content === "object" && msg.content !== null) 
+          ? msg.content as Record<string, unknown> 
+          : null;
+        
+        // UAZAPI puts media URL in msg.content.URL (uppercase) for media messages
         mediaUrl = msg.mediaUrl || msg.media_url || msg.url || 
-          String(msgAny.mediaUrl || msgAny.media_url || msgAny.url || "");
-        mediaMimetype = msg.mimetype || String(msgAny.mimetype || "");
-        mediaFilename = msg.fileName || String(msgAny.fileName || msgAny.filename || "");
+          String(msgAny.mediaUrl || msgAny.media_url || msgAny.url || "") ||
+          (contentObj ? String(contentObj.URL || contentObj.url || "") : "");
+        mediaMimetype = msg.mimetype || String(msgAny.mimetype || "") ||
+          (contentObj ? String(contentObj.mimetype || "") : "");
+        mediaFilename = msg.fileName || String(msgAny.fileName || msgAny.filename || "") ||
+          (contentObj ? String(contentObj.fileName || contentObj.filename || "") : "");
         
         // FIRST: Log ALL type-related fields for debugging
         console.log(`Type fields - msg.type: "${msg.type}", msgAny.mediaType: "${msgAny.mediaType}", msgAny.messageType: "${msgAny.messageType}"`);
