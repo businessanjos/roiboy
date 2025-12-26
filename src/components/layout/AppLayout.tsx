@@ -32,7 +32,7 @@ export function AppLayout() {
       <MobileHeader />
       <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
+        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
           <Outlet />
         </main>
       </div>
