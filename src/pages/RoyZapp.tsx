@@ -36,7 +36,9 @@ import {
   Wifi,
   WifiOff,
   Tags,
+  ExternalLink,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -192,6 +194,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings">("inbox");
   const [departments, setDepartments] = useState<Department[]>([]);
   const [tags, setTags] = useState<ZappTag[]>([]);
@@ -1616,24 +1619,36 @@ export default function RoyZapp() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={selectedConversation.conversation?.client?.avatar_url || undefined} />
-            <AvatarFallback className="bg-[#6b7c85] text-white text-sm">
-              {selectedConversation.conversation?.client?.full_name
-                ? getInitials(selectedConversation.conversation.client.full_name)
-                : "?"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-[#e9edef] font-medium truncate">
-              {selectedConversation.conversation?.client?.full_name || "Cliente"}
-            </h3>
-            <p className="text-[#8696a0] text-xs">
-              {selectedConversation.conversation?.client?.phone_e164}
-              {selectedConversation.agent?.user && (
-                <span> • Atendido por {selectedConversation.agent.user.name}</span>
-              )}
-            </p>
+          <div 
+            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => {
+              if (selectedConversation.conversation?.client?.id) {
+                navigate(`/clients/${selectedConversation.conversation.client.id}`);
+              }
+            }}
+          >
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={selectedConversation.conversation?.client?.avatar_url || undefined} />
+              <AvatarFallback className="bg-[#6b7c85] text-white text-sm">
+                {selectedConversation.conversation?.client?.full_name
+                  ? getInitials(selectedConversation.conversation.client.full_name)
+                  : "?"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-[#e9edef] font-medium truncate">
+                  {selectedConversation.conversation?.client?.full_name || "Cliente"}
+                </h3>
+                <ExternalLink className="h-3.5 w-3.5 text-zapp-text-muted flex-shrink-0" />
+              </div>
+              <p className="text-[#8696a0] text-xs">
+                {selectedConversation.conversation?.client?.phone_e164}
+                {selectedConversation.agent?.user && (
+                  <span> • Atendido por {selectedConversation.agent.user.name}</span>
+                )}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-1">
             {/* Assign to me / Release button */}
