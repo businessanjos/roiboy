@@ -256,6 +256,7 @@ export default function RoyZapp() {
   const [filterGroups, setFilterGroups] = useState(false);
   const [filterProductId, setFilterProductId] = useState<string>("all");
   const [filterTagId, setFilterTagId] = useState<string>("all");
+  const [filterAgentId, setFilterAgentId] = useState<string>("all");
   const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   const [messageInput, setMessageInput] = useState("");
@@ -1171,9 +1172,12 @@ export default function RoyZapp() {
       // Tag filter - for now just pass if 'all', tags feature to be implemented on conversations
       const matchesTag = filterTagId === "all";
       
-      return matchesTab && matchesSearch && matchesStatus && matchesGroups && matchesProduct && matchesTag;
+      // Agent filter
+      const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
+      
+      return matchesTab && matchesSearch && matchesStatus && matchesGroups && matchesProduct && matchesTag && matchesAgent;
     });
-  }, [assignments, searchQuery, filterStatus, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, clientProducts]);
+  }, [assignments, searchQuery, filterStatus, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
 
   // Helper to get agent name by id
   const getAgentName = (agentId: string | null) => {
@@ -1503,6 +1507,38 @@ export default function RoyZapp() {
                   ))}
                 </>
               )}
+              
+              {/* Agent filters */}
+              {agents.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-zapp-border" />
+                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Atendente</div>
+                  <DropdownMenuItem 
+                    className={cn("text-zapp-text", filterAgentId === "all" && "bg-zapp-bg-dark")}
+                    onClick={() => setFilterAgentId("all")}
+                  >
+                    Todos os atendentes
+                  </DropdownMenuItem>
+                  {agents.filter(a => a.is_active).map((agent) => (
+                    <DropdownMenuItem 
+                      key={agent.id}
+                      className={cn("text-zapp-text flex items-center gap-2", filterAgentId === agent.id && "bg-zapp-bg-dark")}
+                      onClick={() => setFilterAgentId(agent.id)}
+                    >
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={agent.user?.avatar_url || undefined} />
+                        <AvatarFallback className="text-[8px] bg-zapp-panel">
+                          {agent.user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="truncate">{agent.user?.name || "Atendente"}</span>
+                      {agent.is_online && (
+                        <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
@@ -1761,8 +1797,8 @@ export default function RoyZapp() {
                           )}
                         </div>
                       </div>
-                      {/* Show agent indicator in queue tab when someone is handling */}
-                      {inboxTab === "queue" && assignment.agent_id && (
+                      {/* Show agent indicator when someone is handling (always show, not just in queue tab) */}
+                      {assignment.agent_id && (
                         <div className="flex items-center gap-1 mt-1">
                           <User className="h-3 w-3 text-zapp-accent" />
                           <span className="text-[11px] text-zapp-accent truncate">
