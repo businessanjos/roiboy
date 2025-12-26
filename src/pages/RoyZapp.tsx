@@ -2449,27 +2449,24 @@ export default function RoyZapp() {
   };
 
   return (
-    <div className="flex h-full w-full bg-zapp-bg" style={{ display: 'flex', flexDirection: 'row' }}>
-      {/* Left panel - Conversation list - fixed width */}
+    <div className="h-full w-full flex flex-row bg-zapp-bg overflow-hidden">
+      {/* Left panel - Conversation list */}
       <div 
         className={cn(
-          "flex-shrink-0 border-r border-zapp-border flex flex-col overflow-hidden",
-          selectedConversation ? "hidden lg:flex" : "flex"
+          "h-full flex-shrink-0 border-r border-zapp-border flex flex-col overflow-hidden",
+          "w-full lg:w-[400px]",
+          selectedConversation && "hidden lg:flex"
         )}
-        style={{ width: selectedConversation ? undefined : '100%', maxWidth: '400px' }}
       >
-        <div className="lg:w-[400px] w-full h-full flex flex-col">
-          {renderConversationList()}
-        </div>
+        {renderConversationList()}
       </div>
 
-      {/* Right panel - Chat view - takes remaining space */}
+      {/* Right panel - Chat view */}
       <div 
         className={cn(
-          "flex-1 flex flex-col overflow-hidden",
-          !selectedConversation ? "hidden lg:flex" : "flex"
+          "h-full flex-1 min-w-0 flex flex-col overflow-hidden",
+          !selectedConversation && "hidden lg:flex"
         )}
-        style={{ minWidth: 0 }}
       >
         {renderChatView()}
       </div>
