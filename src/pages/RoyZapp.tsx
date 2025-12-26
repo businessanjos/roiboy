@@ -299,6 +299,8 @@ export default function RoyZapp() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const messageInputRef = useRef<HTMLInputElement>(null);
@@ -1506,7 +1508,13 @@ export default function RoyZapp() {
         
         if (audioChunksRef.current.length > 0) {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          await sendAudioMessage(audioBlob);
+          const audioUrl = URL.createObjectURL(audioBlob);
+          // Set preview instead of sending immediately
+          setAudioPreview({ 
+            blob: audioBlob, 
+            url: audioUrl, 
+            duration: recordingDuration 
+          });
         }
       };
       
@@ -1559,8 +1567,25 @@ export default function RoyZapp() {
     }
   };
 
+  // Discard audio preview
+  const discardAudioPreview = () => {
+    if (audioPreview) {
+      URL.revokeObjectURL(audioPreview.url);
+      setAudioPreview(null);
+    }
+  };
+
+  // Confirm and send audio preview
+  const confirmAudioSend = async () => {
+    if (audioPreview) {
+      await sendAudioMessage(audioPreview.blob, audioPreview.duration);
+      URL.revokeObjectURL(audioPreview.url);
+      setAudioPreview(null);
+    }
+  };
+
   // Send audio message
-  const sendAudioMessage = async (audioBlob: Blob) => {
+  const sendAudioMessage = async (audioBlob: Blob, duration?: number) => {
     if (!selectedConversation || uploadingMedia) return;
     
     const contactInfo = getContactInfo(selectedConversation);
@@ -1588,7 +1613,7 @@ export default function RoyZapp() {
       media_type: "audio",
       media_mimetype: audioBlob.type,
       media_filename: `audio_${Date.now()}.webm`,
-      audio_duration_sec: recordingDuration || null,
+      audio_duration_sec: duration || null,
       sender_name: null,
     };
     
@@ -3691,6 +3716,69 @@ export default function RoyZapp() {
                 <Send className="h-6 w-6" />
               )}
             </Button>
+          ) : audioPreview ? (
+            // Audio preview UI
+            <div className="flex items-center gap-2 flex-1 bg-zapp-input rounded-lg px-3 py-2">
+              <audio
+                ref={audioPreviewRef}
+                src={audioPreview.url}
+                className="hidden"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                onClick={() => {
+                  const audio = audioPreviewRef.current;
+                  if (audio) {
+                    if (audio.paused) {
+                      audio.play();
+                    } else {
+                      audio.pause();
+                    }
+                  }
+                }}
+              >
+                <Play className="h-5 w-5" />
+              </Button>
+              <div className="flex-1 h-1 bg-zapp-border rounded-full overflow-hidden">
+                <div className="h-full bg-zapp-accent w-full" />
+              </div>
+              <span className="text-xs text-zapp-text-muted font-mono min-w-[40px]">
+                {formatRecordingDuration(audioPreview.duration)}
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                    onClick={discardAudioPreview}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Descartar</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                    onClick={confirmAudioSend}
+                    disabled={uploadingMedia}
+                  >
+                    {uploadingMedia ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Enviar</TooltipContent>
+              </Tooltip>
+            </div>
           ) : isRecording ? (
             // Recording UI
             <div className="flex items-center gap-2">
@@ -3718,10 +3806,10 @@ export default function RoyZapp() {
                     className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
                     onClick={stopRecording}
                   >
-                    <Send className="h-6 w-6" />
+                    <Square className="h-5 w-5 fill-current" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="top">Enviar áudio</TooltipContent>
+                <TooltipContent side="top">Parar</TooltipContent>
               </Tooltip>
             </div>
           ) : (
