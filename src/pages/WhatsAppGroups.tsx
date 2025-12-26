@@ -1727,7 +1727,7 @@ export default function WhatsAppGroups() {
             </div>
 
             {/* Groups list */}
-            <div className="border rounded-lg max-h-80 overflow-y-auto">
+            <div className="border rounded-lg max-h-80 overflow-y-auto bg-background">
               {availableGroups.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">
                   Nenhum grupo novo encontrado
@@ -1738,8 +1738,8 @@ export default function WhatsAppGroups() {
                   .map((group) => (
                   <div
                     key={group.jid}
-                    className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/30 transition-colors ${
-                      selectedGroupsToSync.includes(group.jid) ? "bg-primary/5" : ""
+                    className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50 transition-colors bg-background ${
+                      selectedGroupsToSync.includes(group.jid) ? "bg-primary/10" : ""
                     }`}
                     onClick={() => toggleGroupSelection(group.jid)}
                   >
