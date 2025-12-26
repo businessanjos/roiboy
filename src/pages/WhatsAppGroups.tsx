@@ -95,6 +95,9 @@ interface WhatsAppGroup {
   participant_count: number;
   created_at: string;
   ai_analysis_enabled?: boolean;
+  sentiment?: 'engaged' | 'neutral' | 'dead';
+  sentiment_reason?: string;
+  last_sentiment_check?: string;
   // Legacy fields from API
   subject?: string;
   participants?: Array<{ id: string; admin?: string }>;
@@ -1063,6 +1066,7 @@ export default function WhatsAppGroups() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome do Grupo</TableHead>
+                      <TableHead>Sentimento</TableHead>
                       <TableHead>Participantes</TableHead>
                       <TableHead>Análise IA</TableHead>
                       <TableHead>ID</TableHead>
@@ -1077,6 +1081,29 @@ export default function WhatsAppGroups() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium">{group.name || group.subject || "Sem nome"}</span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  group.sentiment === 'engaged' 
+                                    ? 'bg-green-500/10 text-green-600 border-green-500/30' 
+                                    : group.sentiment === 'dead' 
+                                      ? 'bg-red-500/10 text-red-600 border-red-500/30'
+                                      : 'bg-muted text-muted-foreground'
+                                }
+                              >
+                                {group.sentiment === 'engaged' ? '🔥 Engajado' 
+                                  : group.sentiment === 'dead' ? '💀 Morto' 
+                                  : '😐 Neutro'}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              {group.sentiment_reason || 'Ainda não analisado pelo Agente ROY'}
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
