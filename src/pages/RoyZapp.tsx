@@ -2119,7 +2119,7 @@ export default function RoyZapp() {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden text-[#aebac1] hover:bg-[#2a3942]"
+            className="lg:hidden text-zapp-text-muted hover:bg-zapp-hover"
             onClick={() => setSelectedConversation(null)}
           >
             <ArrowLeft className="h-5 w-5" />
@@ -2134,7 +2134,7 @@ export default function RoyZapp() {
           >
             <Avatar className="h-10 w-10">
               <AvatarImage src={selectedConversation.conversation?.client?.avatar_url || undefined} />
-              <AvatarFallback className="bg-[#6b7c85] text-white text-sm">
+              <AvatarFallback className="bg-muted text-muted-foreground text-sm">
                 {selectedConversation.conversation?.client?.full_name
                   ? getInitials(selectedConversation.conversation.client.full_name)
                   : "?"}
@@ -2142,12 +2142,12 @@ export default function RoyZapp() {
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-[#e9edef] font-medium truncate">
+                <h3 className="text-zapp-text font-medium truncate">
                   {selectedConversation.conversation?.client?.full_name || "Cliente"}
                 </h3>
                 <ExternalLink className="h-3.5 w-3.5 text-zapp-text-muted flex-shrink-0" />
               </div>
-              <p className="text-[#8696a0] text-xs">
+              <p className="text-zapp-text-muted text-xs">
                 {selectedConversation.conversation?.client?.phone_e164}
                 {selectedConversation.agent?.user && (
                   <span> • Atendido por {selectedConversation.agent.user.name}</span>
@@ -2190,15 +2190,15 @@ export default function RoyZapp() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-[#aebac1] hover:bg-[#2a3942]"
+              className="text-zapp-text-muted hover:bg-zapp-hover"
               onClick={() => setTransferDialogOpen(true)}
             >
               <ArrowRightLeft className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942]">
+            <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover">
               <Phone className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-[#aebac1] hover:bg-[#2a3942]">
+            <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover">
               <MoreVertical className="h-5 w-5" />
             </Button>
           </div>
@@ -2209,7 +2209,7 @@ export default function RoyZapp() {
           <div className="space-y-1 max-w-3xl mx-auto">
             {messages.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-[#8696a0] text-sm">Nenhuma mensagem ainda</p>
+                <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
               </div>
             ) : (
               messages.map((message, index) => {
@@ -2220,7 +2220,7 @@ export default function RoyZapp() {
                   <div key={message.id}>
                     {showTimestamp && (
                       <div className="flex justify-center my-3">
-                        <span className="bg-[#182229] text-[#8696a0] text-xs px-3 py-1 rounded-lg shadow">
+                        <span className="bg-zapp-panel text-zapp-text-muted text-xs px-3 py-1 rounded-lg shadow">
                           {format(new Date(message.created_at), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </span>
                       </div>
@@ -2232,8 +2232,8 @@ export default function RoyZapp() {
                       <div className={cn(
                         "max-w-[65%] px-3 py-2 rounded-lg relative shadow",
                         message.is_from_client
-                          ? "bg-[#202c33] rounded-tl-none"
-                          : "bg-[#005c4b] rounded-tr-none"
+                          ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
+                          : "bg-zapp-message-out text-zapp-text rounded-tr-none"
                       )}>
                         {/* Media content */}
                         {message.media_url && message.media_type === "image" && (
@@ -2249,7 +2249,7 @@ export default function RoyZapp() {
                         {message.media_url && message.media_type === "audio" && (
                           <div className="flex items-center gap-2 mb-1">
                             <div className="flex items-center gap-2 bg-black/20 rounded-full px-3 py-2 min-w-[200px]">
-                              <Mic className="h-4 w-4 text-[#8696a0]" />
+                              <Mic className="h-4 w-4 text-zapp-text-muted" />
                               <audio 
                                 controls 
                                 className="h-8 max-w-[180px]" 
@@ -2258,7 +2258,7 @@ export default function RoyZapp() {
                                 <source src={message.media_url} type={message.media_mimetype || "audio/ogg"} />
                               </audio>
                               {message.audio_duration_sec && (
-                                <span className="text-[10px] text-[#8696a0]">
+                                <span className="text-[10px] text-zapp-text-muted">
                                   {Math.floor(message.audio_duration_sec / 60)}:{(message.audio_duration_sec % 60).toString().padStart(2, '0')}
                                 </span>
                               )}
@@ -2281,14 +2281,14 @@ export default function RoyZapp() {
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 bg-black/20 rounded-lg px-3 py-2 mb-2 hover:bg-black/30 transition-colors"
                           >
-                            <FileText className="h-8 w-8 text-[#8696a0]" />
+                            <FileText className="h-8 w-8 text-zapp-text-muted" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-[#e9edef] text-sm truncate">
+                              <p className="text-zapp-text text-sm truncate">
                                 {message.media_filename || "Documento"}
                               </p>
-                              <p className="text-[#8696a0] text-xs">Clique para baixar</p>
+                              <p className="text-zapp-text-muted text-xs">Clique para baixar</p>
                             </div>
-                            <Download className="h-4 w-4 text-[#8696a0]" />
+                            <Download className="h-4 w-4 text-zapp-text-muted" />
                           </a>
                         )}
                         {message.media_url && message.media_type === "sticker" && (
@@ -2303,24 +2303,24 @@ export default function RoyZapp() {
                         
                         {/* Text content (hide for audio-only messages) */}
                         {(message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") && (
-                          <p className="text-[#e9edef] text-sm whitespace-pre-wrap break-words">
+                          <p className="text-sm whitespace-pre-wrap break-words">
                             {message.content}
                           </p>
                         )}
                         {(!message.content && !message.media_url) && (
-                          <p className="text-[#e9edef] text-sm whitespace-pre-wrap break-words opacity-50">
+                          <p className="text-sm whitespace-pre-wrap break-words opacity-50">
                             [Mensagem não suportada]
                           </p>
                         )}
                         <div className={cn(
                           "flex items-center justify-end gap-1 mt-1",
-                          message.is_from_client ? "text-[#8696a0]" : "text-[#ffffff99]"
+                          message.is_from_client ? "text-zapp-text-muted" : "opacity-70"
                         )}>
                           <span className="text-[10px]">
                             {format(new Date(message.created_at), "HH:mm")}
                           </span>
                           {!message.is_from_client && (
-                            <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" />
+                            <CheckCheck className="h-3.5 w-3.5 text-primary" />
                           )}
                         </div>
                       </div>
@@ -2334,14 +2334,14 @@ export default function RoyZapp() {
 
         {/* Formatting toolbar */}
         {showFormatting && (
-          <div className="bg-[#202c33] px-4 py-2 border-b border-[#2a3942] flex items-center gap-1">
+          <div className="bg-zapp-panel px-4 py-2 border-b border-zapp-border flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
                   onClick={() => insertFormatting('bold')}
                 >
                   <Bold className="h-4 w-4" />
@@ -2356,7 +2356,7 @@ export default function RoyZapp() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
                   onClick={() => insertFormatting('italic')}
                 >
                   <Italic className="h-4 w-4" />
@@ -2371,7 +2371,7 @@ export default function RoyZapp() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
                   onClick={() => insertFormatting('strikethrough')}
                 >
                   <Strikethrough className="h-4 w-4" />
@@ -2386,7 +2386,7 @@ export default function RoyZapp() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 text-[#8696a0] hover:bg-[#2a3942] hover:text-[#e9edef]"
+                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
                   onClick={() => insertFormatting('monospace')}
                 >
                   <Code className="h-4 w-4" />
@@ -2395,12 +2395,12 @@ export default function RoyZapp() {
               <TooltipContent side="top">Monoespaçado (```texto```)</TooltipContent>
             </Tooltip>
             
-            <span className="text-xs text-[#8696a0] ml-2">Selecione e clique</span>
+            <span className="text-xs text-zapp-text-muted ml-2">Selecione e clique</span>
           </div>
         )}
 
         {/* Message input */}
-        <div className="bg-[#202c33] px-4 py-3 flex items-center gap-2">
+        <div className="bg-zapp-panel px-4 py-3 flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
@@ -2409,8 +2409,8 @@ export default function RoyZapp() {
                 className={cn(
                   "flex-shrink-0",
                   showFormatting 
-                    ? "text-[#00a884] hover:bg-[#2a3942]" 
-                    : "text-[#8696a0] hover:bg-[#2a3942]"
+                    ? "text-zapp-accent hover:bg-zapp-hover" 
+                    : "text-zapp-text-muted hover:bg-zapp-hover"
                 )}
                 onClick={() => setShowFormatting(!showFormatting)}
               >
@@ -2420,7 +2420,7 @@ export default function RoyZapp() {
             <TooltipContent side="top">Formatação</TooltipContent>
           </Tooltip>
           
-          <Button variant="ghost" size="icon" className="text-[#8696a0] hover:bg-[#2a3942] flex-shrink-0">
+          <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0">
             <Paperclip className="h-6 w-6" />
           </Button>
           
@@ -2431,14 +2431,14 @@ export default function RoyZapp() {
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyPress}
             disabled={sendingMessage}
-            className="flex-1 bg-[#2a3942] border-0 text-[#d1d7db] placeholder:text-[#8696a0] focus-visible:ring-0 rounded-lg h-10"
+            className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-10"
           />
           
           {messageInput.trim() ? (
             <Button
               variant="ghost"
               size="icon"
-              className="text-[#00a884] hover:bg-[#2a3942] flex-shrink-0"
+              className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
               onClick={sendMessage}
               disabled={sendingMessage}
             >
@@ -2457,8 +2457,8 @@ export default function RoyZapp() {
                   className={cn(
                     "flex-shrink-0",
                     isRecording 
-                      ? "text-red-500 hover:bg-[#2a3942] animate-pulse" 
-                      : "text-[#8696a0] hover:bg-[#2a3942]"
+                      ? "text-destructive hover:bg-zapp-hover animate-pulse" 
+                      : "text-zapp-text-muted hover:bg-zapp-hover"
                   )}
                   onClick={() => {
                     if (isRecording) {
