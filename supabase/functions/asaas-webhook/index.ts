@@ -30,14 +30,23 @@ serve(async (req) => {
   }
 
   try {
+    const payload = await req.json().catch(() => ({}));
+    
+    // Handle health check
+    if (payload.healthCheck) {
+      return new Response(
+        JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const payload = await req.json();
     console.log('[Asaas Webhook] Received event:', payload.event);
-    console.log('[Asaas Webhook] Payment data:', JSON.stringify(payload.payment).substring(0, 500));
+    console.log('[Asaas Webhook] Payment data:', payload.payment ? JSON.stringify(payload.payment).substring(0, 500) : 'none');
 
     const { event, payment } = payload;
 
