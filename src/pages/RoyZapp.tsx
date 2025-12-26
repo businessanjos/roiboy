@@ -2525,16 +2525,15 @@ export default function RoyZapp() {
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Badge 
-                  variant="outline" 
+                <button 
                   className={cn(
-                    "text-xs cursor-pointer hover:opacity-80 transition-opacity",
+                    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
                     STATUS_CONFIG[selectedConversation.status]?.color || "text-muted-foreground",
-                    "border-current"
+                    "border-current bg-transparent"
                   )}
                 >
                   {STATUS_CONFIG[selectedConversation.status]?.label || "Status"}
-                </Badge>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">
                 <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Alterar status</div>
