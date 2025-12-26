@@ -785,24 +785,37 @@ serve(async (req) => {
               console.error("Error inserting message_event:", messageError);
             }
 
-            // Trigger AI analysis for text messages
+            // Queue AI analysis for text messages (async processing for scalability)
             if (content.length > 10 && !content.startsWith("[")) {
               try {
-                await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${supabaseKey}`,
-                  },
-                  body: JSON.stringify({
-                    account_id: accountId,
-                    client_id: clientId,
-                    message_content: content,
-                  }),
-                });
-                console.log("AI analysis triggered");
+                // Get the message ID we just inserted
+                const { data: insertedMsg } = await supabase
+                  .from("zapp_messages")
+                  .select("id")
+                  .eq("zapp_conversation_id", zappConversationId)
+                  .eq("external_message_id", messageId)
+                  .maybeSingle();
+
+                if (insertedMsg) {
+                  // Insert job into queue instead of calling analyze-message directly
+                  const { error: queueError } = await supabase
+                    .from("ai_analysis_queue")
+                    .insert({
+                      account_id: accountId,
+                      message_id: insertedMsg.id,
+                      client_id: clientId,
+                      status: "pending",
+                      priority: 0, // Normal priority
+                    });
+
+                  if (queueError) {
+                    console.log("Queue insert error (non-blocking):", queueError.message);
+                  } else {
+                    console.log("AI analysis queued for message:", insertedMsg.id);
+                  }
+                }
               } catch (err) {
-                console.log("AI analysis trigger error (non-blocking):", err);
+                console.log("AI queue error (non-blocking):", err);
               }
             }
           } else {
