@@ -31,6 +31,9 @@ import {
   Loader2,
   Clock,
   X,
+  Power,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -215,6 +218,11 @@ export default function RoyZapp() {
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
   const [savingAllowedRoles, setSavingAllowedRoles] = useState(false);
 
+  // WhatsApp connection state
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [whatsappConnecting, setWhatsappConnecting] = useState(false);
+  const [whatsappInstanceName, setWhatsappInstanceName] = useState<string | null>(null);
+
   // Transfer dialog
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<{ type: "agent" | "department"; id: string }>({ type: "agent", id: "" });
@@ -222,6 +230,7 @@ export default function RoyZapp() {
   useEffect(() => {
     if (currentUser?.account_id) {
       fetchData();
+      checkWhatsAppStatus();
     }
   }, [currentUser?.account_id]);
 
@@ -230,6 +239,60 @@ export default function RoyZapp() {
       fetchMessages(selectedConversation.conversation_id);
     }
   }, [selectedConversation]);
+
+  const checkWhatsAppStatus = async () => {
+    try {
+      const response = await supabase.functions.invoke("uazapi-manager", {
+        body: { action: "status" },
+      });
+
+      if (response.data) {
+        const state = response.data?.state || response.data?.data?.state;
+        const connected = state === "open" || response.data?.connected || response.data?.data?.connected;
+        setWhatsappConnected(connected);
+        setWhatsappInstanceName(response.data?.instance || response.data?.data?.instance || null);
+      }
+    } catch (error) {
+      console.log("WhatsApp status check failed:", error);
+    }
+  };
+
+  const toggleWhatsAppConnection = async () => {
+    setWhatsappConnecting(true);
+    try {
+      if (whatsappConnected) {
+        // Disconnect
+        const response = await supabase.functions.invoke("uazapi-manager", {
+          body: { action: "disconnect" },
+        });
+
+        if (response.error) throw new Error(response.error.message);
+        
+        setWhatsappConnected(false);
+        toast.success("WhatsApp desconectado do zAPP");
+      } else {
+        // Connect - check if already connected via main integration
+        const statusResponse = await supabase.functions.invoke("uazapi-manager", {
+          body: { action: "status" },
+        });
+
+        const state = statusResponse.data?.state || statusResponse.data?.data?.state;
+        const connected = state === "open" || statusResponse.data?.connected || statusResponse.data?.data?.connected;
+
+        if (connected) {
+          setWhatsappConnected(true);
+          toast.success("WhatsApp conectado ao zAPP!");
+        } else {
+          toast.warning("Configure a conexão WhatsApp primeiro em Integrações");
+        }
+      }
+    } catch (error: any) {
+      console.error("WhatsApp toggle error:", error);
+      toast.error(error.message || "Erro ao alterar conexão WhatsApp");
+    } finally {
+      setWhatsappConnecting(false);
+    }
+  };
 
   const fetchData = async () => {
     if (!currentUser?.account_id) return;
@@ -1088,8 +1151,72 @@ export default function RoyZapp() {
     <div className="p-4 space-y-6">
       <h3 className="text-zapp-text font-medium">Configurações</h3>
 
-      {/* Allowed Roles Section */}
+      {/* WhatsApp Connection */}
       <div className="space-y-3">
+        <div>
+          <p className="text-zapp-text text-sm font-medium">Conexão WhatsApp</p>
+          <p className="text-zapp-text-muted text-xs">Ative para receber e enviar mensagens pelo zAPP</p>
+        </div>
+        
+        <div className={cn(
+          "p-4 rounded-lg border-2 transition-colors",
+          whatsappConnected 
+            ? "bg-zapp-accent/10 border-zapp-accent" 
+            : "bg-zapp-panel border-zapp-border"
+        )}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {whatsappConnected ? (
+                <div className="w-10 h-10 rounded-full bg-zapp-accent flex items-center justify-center">
+                  <Wifi className="h-5 w-5 text-white" />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-zapp-bg flex items-center justify-center">
+                  <WifiOff className="h-5 w-5 text-zapp-text-muted" />
+                </div>
+              )}
+              <div>
+                <p className="text-zapp-text text-sm font-medium">
+                  {whatsappConnected ? "Conectado" : "Desconectado"}
+                </p>
+                <p className="text-zapp-text-muted text-xs">
+                  {whatsappConnected 
+                    ? "Recebendo mensagens em tempo real" 
+                    : "Clique para ativar a conexão"}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant={whatsappConnected ? "outline" : "default"}
+              size="sm"
+              onClick={toggleWhatsAppConnection}
+              disabled={whatsappConnecting}
+              className={cn(
+                whatsappConnected 
+                  ? "border-red-500 text-red-500 hover:bg-red-500/10" 
+                  : "bg-zapp-accent hover:bg-zapp-accent-hover text-white"
+              )}
+            >
+              {whatsappConnecting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Power className="h-4 w-4 mr-1" />
+                  {whatsappConnected ? "Desligar" : "Ligar"}
+                </>
+              )}
+            </Button>
+          </div>
+          {whatsappInstanceName && (
+            <p className="text-zapp-text-muted text-xs mt-2">
+              Instância: {whatsappInstanceName}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Allowed Roles Section */}
+      <div className="space-y-3 pt-4 border-t border-zapp-border">
         <div>
           <p className="text-zapp-text text-sm font-medium">Cargos que podem atender</p>
           <p className="text-zapp-text-muted text-xs">Selecione quais cargos da equipe podem ser atendentes no zAPP</p>
