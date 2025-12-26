@@ -2202,6 +2202,9 @@ export default function RoyZapp() {
       );
     }
 
+    const contactInfo = getContactInfo(selectedConversation);
+    const clientId = selectedConversation.zapp_conversation?.client_id || selectedConversation.conversation?.client?.id;
+
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full bg-zapp-bg overflow-hidden">
         {/* Chat header */}
@@ -2217,28 +2220,31 @@ export default function RoyZapp() {
           <div 
             className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => {
-              if (selectedConversation.conversation?.client?.id) {
-                navigate(`/clients/${selectedConversation.conversation.client.id}`);
+              if (clientId) {
+                navigate(`/clients/${clientId}`);
               }
             }}
           >
             <Avatar className="h-10 w-10">
-              <AvatarImage src={selectedConversation.conversation?.client?.avatar_url || undefined} />
+              <AvatarImage src={contactInfo.avatar || undefined} />
               <AvatarFallback className="bg-muted text-muted-foreground text-sm">
-                {selectedConversation.conversation?.client?.full_name
-                  ? getInitials(selectedConversation.conversation.client.full_name)
-                  : "?"}
+                {contactInfo.isGroup ? (
+                  <Users2 className="h-5 w-5" />
+                ) : (
+                  getInitials(contactInfo.name)
+                )}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
+                {contactInfo.isGroup && <Users2 className="h-4 w-4 text-zapp-accent flex-shrink-0" />}
                 <h3 className="text-zapp-text font-medium truncate">
-                  {selectedConversation.conversation?.client?.full_name || "Cliente"}
+                  {contactInfo.name}
                 </h3>
-                <ExternalLink className="h-3.5 w-3.5 text-zapp-text-muted flex-shrink-0" />
+                {clientId && <ExternalLink className="h-3.5 w-3.5 text-zapp-text-muted flex-shrink-0" />}
               </div>
               <p className="text-zapp-text-muted text-xs">
-                {selectedConversation.conversation?.client?.phone_e164}
+                {contactInfo.phone}
                 {selectedConversation.agent?.user && (
                   <span> • Atendido por {selectedConversation.agent.user.name}</span>
                 )}
