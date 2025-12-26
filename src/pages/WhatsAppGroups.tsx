@@ -1689,17 +1689,28 @@ export default function WhatsAppGroups() {
           
           <div className="space-y-4">
             {/* Select all toggle */}
-            <div className="flex items-center justify-between pb-2 border-b">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <span className="text-sm font-medium">
                 {selectedGroupsToSync.length} de {availableGroups.length} selecionado(s)
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSelectAll}
-              >
-                {selectedGroupsToSync.length === availableGroups.length ? "Desmarcar todos" : "Selecionar todos"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedGroupsToSync(availableGroups.map(g => g.jid))}
+                  disabled={selectedGroupsToSync.length === availableGroups.length}
+                >
+                  Selecionar todos
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedGroupsToSync([])}
+                  disabled={selectedGroupsToSync.length === 0}
+                >
+                  Desmarcar todos
+                </Button>
+              </div>
             </div>
 
             {/* Groups list */}
