@@ -5093,6 +5093,7 @@ export type Database = {
       zapp_conversations: {
         Row: {
           account_id: string
+          archived_at: string | null
           channel: string
           client_id: string | null
           contact_name: string | null
@@ -5100,15 +5101,23 @@ export type Database = {
           external_thread_id: string | null
           group_jid: string | null
           id: string
+          is_archived: boolean
+          is_blocked: boolean
+          is_favorite: boolean
           is_group: boolean
+          is_muted: boolean
+          is_pinned: boolean
           last_message_at: string | null
           last_message_preview: string | null
+          muted_until: string | null
           phone_e164: string
+          pinned_at: string | null
           unread_count: number | null
           updated_at: string
         }
         Insert: {
           account_id: string
+          archived_at?: string | null
           channel?: string
           client_id?: string | null
           contact_name?: string | null
@@ -5116,15 +5125,23 @@ export type Database = {
           external_thread_id?: string | null
           group_jid?: string | null
           id?: string
+          is_archived?: boolean
+          is_blocked?: boolean
+          is_favorite?: boolean
           is_group?: boolean
+          is_muted?: boolean
+          is_pinned?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
+          muted_until?: string | null
           phone_e164: string
+          pinned_at?: string | null
           unread_count?: number | null
           updated_at?: string
         }
         Update: {
           account_id?: string
+          archived_at?: string | null
           channel?: string
           client_id?: string | null
           contact_name?: string | null
@@ -5132,10 +5149,17 @@ export type Database = {
           external_thread_id?: string | null
           group_jid?: string | null
           id?: string
+          is_archived?: boolean
+          is_blocked?: boolean
+          is_favorite?: boolean
           is_group?: boolean
+          is_muted?: boolean
+          is_pinned?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
+          muted_until?: string | null
           phone_e164?: string
+          pinned_at?: string | null
           unread_count?: number | null
           updated_at?: string
         }
