@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Rocket, 
   Building2, 
@@ -28,11 +28,19 @@ import {
   Clock,
   MapPin,
   Video,
-  User
+  User,
+  Trophy,
+  Star,
+  Target,
+  Zap,
+  Crown,
+  Heart
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
+import { RoyAssistant, ONBOARDING_MESSAGES } from "@/components/onboarding/RoyAssistant";
 
 const TOTAL_STEPS = 6;
 
@@ -67,12 +75,23 @@ interface OnboardingData {
   inviteEmails: string;
 }
 
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  unlocked: boolean;
+}
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const [currentStep, setCurrentStep] = useState(1);
   const [skippedSteps, setSkippedSteps] = useState<number[]>([]);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [royMinimized, setRoyMinimized] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [data, setData] = useState<OnboardingData>({
     accountName: "",
     welcomeMessage: "",
@@ -92,6 +111,52 @@ export default function Onboarding() {
     eventAddress: "",
     inviteEmails: ""
   });
+
+  // Achievements system
+  const achievements: Achievement[] = [
+    {
+      id: "first_step",
+      title: "Primeiros Passos",
+      description: "Completou a configuração da conta",
+      icon: Star,
+      unlocked: completedSteps.includes(1)
+    },
+    {
+      id: "ai_master",
+      title: "Mestre da IA",
+      description: "Configurou a inteligência artificial",
+      icon: Zap,
+      unlocked: completedSteps.includes(2)
+    },
+    {
+      id: "first_client",
+      title: "Primeiro Cliente",
+      description: "Cadastrou seu primeiro cliente",
+      icon: Target,
+      unlocked: completedSteps.includes(3) && !skippedSteps.includes(3)
+    },
+    {
+      id: "product_pro",
+      title: "Catálogo Iniciado",
+      description: "Cadastrou seu primeiro produto",
+      icon: Package,
+      unlocked: completedSteps.includes(4) && !skippedSteps.includes(4)
+    },
+    {
+      id: "event_planner",
+      title: "Organizador",
+      description: "Criou seu primeiro evento",
+      icon: Calendar,
+      unlocked: completedSteps.includes(5) && !skippedSteps.includes(5)
+    },
+    {
+      id: "team_builder",
+      title: "Líder de Equipe",
+      description: "Convidou membros para a equipe",
+      icon: Crown,
+      unlocked: completedSteps.includes(6) && !skippedSteps.includes(6) && data.inviteEmails.trim().length > 0
+    }
+  ];
 
   // Check onboarding status
   const { data: settings, isLoading: settingsLoading } = useQuery({
@@ -136,6 +201,9 @@ export default function Onboarding() {
       navigate("/dashboard");
     } else if (settings?.onboarding_step) {
       setCurrentStep(settings.onboarding_step);
+      // Mark previous steps as completed
+      const completed = Array.from({ length: settings.onboarding_step - 1 }, (_, i) => i + 1);
+      setCompletedSteps(completed);
     }
   }, [settings, navigate]);
 
@@ -225,9 +293,12 @@ export default function Onboarding() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["onboarding-settings"] });
-      toast.success("Configuração concluída! Bem-vindo ao Roy.");
-      navigate("/dashboard");
+      setShowCelebration(true);
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["onboarding-settings"] });
+        toast.success("Configuração concluída! Bem-vindo ao Roy.");
+        navigate("/dashboard");
+      }, 2000);
     },
     onError: (error) => {
       toast.error("Erro ao concluir: " + error.message);
@@ -235,6 +306,11 @@ export default function Onboarding() {
   });
 
   const nextStep = () => {
+    // Mark current step as completed
+    if (!completedSteps.includes(currentStep)) {
+      setCompletedSteps(prev => [...prev, currentStep]);
+    }
+
     if (currentStep < TOTAL_STEPS) {
       const newStep = currentStep + 1;
       setCurrentStep(newStep);
@@ -254,6 +330,9 @@ export default function Onboarding() {
 
   const skipStep = () => {
     setSkippedSteps(prev => [...prev, currentStep]);
+    if (!completedSteps.includes(currentStep)) {
+      setCompletedSteps(prev => [...prev, currentStep]);
+    }
     nextStep();
   };
 
@@ -263,16 +342,82 @@ export default function Onboarding() {
     return <LoadingScreen message="Preparando onboarding..." />;
   }
 
-  const progress = (currentStep / TOTAL_STEPS) * 100;
-
   const stepIcons = [Building2, Sparkles, User, Package, Calendar, UserPlus];
   const stepLabels = ["Conta", "IA", "Cliente", "Produto", "Evento", "Equipe"];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Celebration confetti */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 pointer-events-none z-50"
+          >
+            {Array.from({ length: 50 }).map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ 
+                  x: Math.random() * window.innerWidth, 
+                  y: window.innerHeight + 20,
+                  rotate: 0,
+                  scale: Math.random() * 0.5 + 0.5
+                }}
+                animate={{ 
+                  y: -20, 
+                  rotate: Math.random() * 720,
+                  transition: { 
+                    duration: 2 + Math.random() * 2,
+                    ease: "easeOut",
+                    delay: Math.random() * 0.5
+                  }
+                }}
+                className="absolute w-3 h-3 rounded-full"
+                style={{
+                  backgroundColor: ['#d2ae6d', '#506767', '#ef4444', '#22c55e', '#3b82f6'][Math.floor(Math.random() * 5)]
+                }}
+              />
+            ))}
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.5, type: "spring" }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              <div className="bg-background/95 rounded-2xl p-8 text-center shadow-elevated">
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, -10, 0] }}
+                  transition={{ duration: 0.5, delay: 0.8 }}
+                >
+                  <Trophy className="h-16 w-16 text-primary mx-auto mb-4" />
+                </motion.div>
+                <h2 className="text-2xl font-bold mb-2">Parabéns!</h2>
+                <p className="text-muted-foreground">Sua conta está pronta para uso</p>
+                <div className="flex justify-center gap-2 mt-4">
+                  {achievements.filter(a => a.unlocked).map(a => (
+                    <div 
+                      key={a.id}
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white"
+                    >
+                      <a.icon className="h-4 w-4" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="w-full max-w-3xl">
         {/* Header */}
-        <div className="text-center mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6"
+        >
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
             <Rocket className="h-8 w-8 text-primary" />
           </div>
@@ -280,126 +425,148 @@ export default function Onboarding() {
           <p className="text-muted-foreground mt-2">
             Vamos configurar sua conta e criar seus primeiros cadastros
           </p>
-        </div>
+        </motion.div>
 
-        {/* Progress */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Passo {currentStep} de {TOTAL_STEPS}</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
+        {/* Roy Assistant */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
+          <RoyAssistant
+            step={currentStep}
+            messages={ONBOARDING_MESSAGES}
+            minimized={royMinimized}
+            onToggle={() => setRoyMinimized(!royMinimized)}
+          />
+        </motion.div>
 
-        {/* Steps indicator */}
-        <div className="flex justify-center gap-1 mb-8 overflow-x-auto pb-2">
-          {stepIcons.map((Icon, index) => {
-            const step = index + 1;
-            const isSkipped = skippedSteps.includes(step);
-            return (
-              <div key={step} className="flex flex-col items-center gap-1">
-                <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-                    step === currentStep
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : step < currentStep
-                      ? isSkipped 
-                        ? "border-muted bg-muted/50 text-muted-foreground"
-                        : "border-primary bg-primary/20 text-primary"
-                      : "border-muted bg-muted/50 text-muted-foreground"
-                  }`}
-                >
-                  {step < currentStep && !isSkipped ? (
-                    <CheckCircle className="h-5 w-5" />
-                  ) : (
-                    <Icon className="h-4 w-4" />
-                  )}
-                </div>
-                <span className={`text-[10px] ${step === currentStep ? "text-primary font-medium" : "text-muted-foreground"}`}>
-                  {stepLabels[index]}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        {/* Progress with achievements */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-6"
+        >
+          <OnboardingProgress
+            currentStep={currentStep}
+            totalSteps={TOTAL_STEPS}
+            completedSteps={completedSteps}
+            skippedSteps={skippedSteps}
+            stepLabels={stepLabels}
+            stepIcons={stepIcons}
+            achievements={achievements}
+          />
+        </motion.div>
 
         {/* Content Card */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-8">
-            {currentStep === 1 && (
-              <StepAccount
-                data={data}
-                onChange={(updates) => setData({ ...data, ...updates })}
-              />
-            )}
-            {currentStep === 2 && (
-              <StepAI
-                data={data}
-                onChange={(updates) => setData({ ...data, ...updates })}
-              />
-            )}
-            {currentStep === 3 && (
-              <StepClient
-                data={data}
-                onChange={(updates) => setData({ ...data, ...updates })}
-              />
-            )}
-            {currentStep === 4 && (
-              <StepProduct
-                data={data}
-                onChange={(updates) => setData({ ...data, ...updates })}
-              />
-            )}
-            {currentStep === 5 && (
-              <StepEvent
-                data={data}
-                onChange={(updates) => setData({ ...data, ...updates })}
-              />
-            )}
-            {currentStep === 6 && (
-              <StepTeam
-                data={data}
-                onChange={(updates) => setData({ ...data, ...updates })}
-              />
-            )}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <CardContent className="p-8">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {currentStep === 1 && (
+                    <StepAccount
+                      data={data}
+                      onChange={(updates) => setData({ ...data, ...updates })}
+                    />
+                  )}
+                  {currentStep === 2 && (
+                    <StepAI
+                      data={data}
+                      onChange={(updates) => setData({ ...data, ...updates })}
+                    />
+                  )}
+                  {currentStep === 3 && (
+                    <StepClient
+                      data={data}
+                      onChange={(updates) => setData({ ...data, ...updates })}
+                    />
+                  )}
+                  {currentStep === 4 && (
+                    <StepProduct
+                      data={data}
+                      onChange={(updates) => setData({ ...data, ...updates })}
+                    />
+                  )}
+                  {currentStep === 5 && (
+                    <StepEvent
+                      data={data}
+                      onChange={(updates) => setData({ ...data, ...updates })}
+                    />
+                  )}
+                  {currentStep === 6 && (
+                    <StepTeam
+                      data={data}
+                      onChange={(updates) => setData({ ...data, ...updates })}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
 
-            {/* Navigation */}
-            <div className="flex justify-between mt-8 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                disabled={currentStep === 1}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Voltar
-              </Button>
-              <div className="flex gap-2">
-                {canSkip && (
-                  <Button
-                    variant="ghost"
-                    onClick={skipStep}
-                    className="text-muted-foreground"
-                  >
-                    Pular
-                  </Button>
-                )}
+              {/* Navigation */}
+              <div className="flex justify-between mt-8 pt-6 border-t">
                 <Button
-                  onClick={nextStep}
-                  disabled={completeMutation.isPending}
+                  variant="outline"
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
                   className="gap-2"
                 >
-                  {completeMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {currentStep === TOTAL_STEPS ? "Concluir" : "Próximo"}
-                  {currentStep !== TOTAL_STEPS && <ArrowRight className="h-4 w-4" />}
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
                 </Button>
+                <div className="flex gap-2">
+                  {canSkip && (
+                    <Button
+                      variant="ghost"
+                      onClick={skipStep}
+                      className="text-muted-foreground"
+                    >
+                      Pular
+                    </Button>
+                  )}
+                  <Button
+                    onClick={nextStep}
+                    disabled={completeMutation.isPending}
+                    className="gap-2"
+                  >
+                    {completeMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {currentStep === TOTAL_STEPS ? (
+                      <>
+                        <Trophy className="h-4 w-4" />
+                        Concluir
+                      </>
+                    ) : (
+                      <>
+                        Próximo
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Skip all link */}
-        <div className="text-center mt-6">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center mt-6"
+        >
           <Button
             variant="link"
             className="text-muted-foreground"
@@ -407,7 +574,7 @@ export default function Onboarding() {
           >
             Pular configuração e ir para o dashboard
           </Button>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -481,7 +648,11 @@ function StepAI({
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+        <motion.div 
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="flex items-center justify-between p-4 rounded-lg border bg-muted/30"
+        >
           <div className="flex-1">
             <p className="font-medium">Análise de IA Automática</p>
             <p className="text-sm text-muted-foreground">
@@ -492,22 +663,39 @@ function StepAI({
             checked={data.enableAI}
             onCheckedChange={(checked) => onChange({ enableAI: checked })}
           />
-        </div>
+        </motion.div>
 
-        <div className="p-4 rounded-lg border bg-gradient-to-r from-purple-500/5 to-blue-500/5">
+        <motion.div 
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="p-4 rounded-lg border bg-gradient-to-r from-purple-500/5 to-blue-500/5"
+        >
           <div className="flex items-start gap-3">
             <Sparkles className="h-5 w-5 text-purple-500 mt-0.5" />
             <div>
               <p className="font-medium text-sm">Recursos de IA incluem:</p>
               <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-                <li>• Detecção automática de percepção de ROI</li>
-                <li>• Alertas de risco de churn</li>
-                <li>• Identificação de eventos de vida importantes</li>
-                <li>• Recomendações de ação personalizadas</li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  Detecção automática de percepção de ROI
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  Alertas de risco de churn
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  Identificação de eventos de vida importantes
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  Recomendações de ação personalizadas
+                </li>
               </ul>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -542,7 +730,10 @@ function StepClient({
       </div>
 
       <div className="space-y-4">
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+        >
           <Label htmlFor="clientName" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Nome Completo *
@@ -554,9 +745,13 @@ function StepClient({
             placeholder="Ex: João da Silva"
             className="mt-1.5"
           />
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
           <Label htmlFor="clientPhone" className="flex items-center gap-2">
             <Phone className="h-4 w-4" />
             WhatsApp *
@@ -568,9 +763,13 @@ function StepClient({
             placeholder="(11) 99999-9999"
             className="mt-1.5"
           />
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
           <Label htmlFor="clientEmail" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             E-mail (opcional)
@@ -583,14 +782,19 @@ function StepClient({
             placeholder="email@exemplo.com"
             className="mt-1.5"
           />
-        </div>
+        </motion.div>
       </div>
 
-      <div className="p-4 rounded-lg border bg-muted/30">
+      <motion.div 
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="p-4 rounded-lg border bg-muted/30"
+      >
         <p className="text-sm text-muted-foreground">
           💡 Você pode importar mais clientes em massa depois via CSV
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -623,7 +827,10 @@ function StepProduct({
       </div>
 
       <div className="space-y-4">
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+        >
           <Label htmlFor="productName" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Nome do Produto/Serviço *
@@ -635,9 +842,13 @@ function StepProduct({
             placeholder="Ex: Mentoria Premium, Curso de Vendas..."
             className="mt-1.5"
           />
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
           <Label htmlFor="productDescription">Descrição (opcional)</Label>
           <Textarea
             id="productDescription"
@@ -646,9 +857,13 @@ function StepProduct({
             placeholder="Uma breve descrição do produto..."
             className="mt-1.5 min-h-[80px]"
           />
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
           <Label htmlFor="productPrice" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             Preço (opcional)
@@ -660,7 +875,7 @@ function StepProduct({
             placeholder="R$ 0,00"
             className="mt-1.5"
           />
-        </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -687,7 +902,10 @@ function StepEvent({
       </div>
 
       <div className="space-y-4">
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+        >
           <Label htmlFor="eventTitle">Título do Evento *</Label>
           <Input
             id="eventTitle"
@@ -696,9 +914,14 @@ function StepEvent({
             placeholder="Ex: Live de Boas-vindas, Mentoria em Grupo..."
             className="mt-1.5"
           />
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 gap-4"
+        >
           <div>
             <Label>Tipo</Label>
             <Select
@@ -733,9 +956,14 @@ function StepEvent({
               </SelectContent>
             </Select>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-2 gap-4"
+        >
           <div>
             <Label htmlFor="eventDate" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
@@ -763,10 +991,13 @@ function StepEvent({
               className="mt-1.5"
             />
           </div>
-        </div>
+        </motion.div>
 
         {data.eventModality === "online" || data.eventModality === "hybrid" ? (
-          <div>
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+          >
             <Label htmlFor="eventMeetingUrl" className="flex items-center gap-2">
               <Video className="h-4 w-4" />
               Link da Reunião (opcional)
@@ -778,11 +1009,14 @@ function StepEvent({
               placeholder="https://meet.google.com/..."
               className="mt-1.5"
             />
-          </div>
+          </motion.div>
         ) : null}
 
         {data.eventModality === "presential" || data.eventModality === "hybrid" ? (
-          <div>
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+          >
             <Label htmlFor="eventAddress" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               Endereço (opcional)
@@ -794,7 +1028,7 @@ function StepEvent({
               placeholder="Rua, número, cidade..."
               className="mt-1.5"
             />
-          </div>
+          </motion.div>
         ) : null}
       </div>
     </div>
@@ -822,7 +1056,10 @@ function StepTeam({
       </div>
 
       <div className="space-y-4">
-        <div>
+        <motion.div
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+        >
           <Label htmlFor="inviteEmails">E-mails para Convidar</Label>
           <Textarea
             id="inviteEmails"
@@ -834,9 +1071,14 @@ function StepTeam({
           <p className="text-xs text-muted-foreground mt-1.5">
             Separe múltiplos e-mails por vírgula. Você pode convidar mais pessoas depois.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="p-4 rounded-lg border bg-muted/30">
+        <motion.div 
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="p-4 rounded-lg border bg-muted/30"
+        >
           <div className="flex items-start gap-3">
             <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
@@ -845,17 +1087,22 @@ function StepTeam({
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20"
+      >
         <div className="flex items-center gap-3">
-          <CheckCircle className="h-5 w-5 text-primary" />
+          <Trophy className="h-5 w-5 text-primary" />
           <p className="text-sm">
             Clique em <strong>Concluir</strong> para salvar tudo e acessar o dashboard
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
