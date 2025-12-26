@@ -2082,7 +2082,7 @@ export default function RoyZapp() {
   const renderChatView = () => {
     if (!selectedConversation) {
       return (
-        <div className="h-full w-full flex flex-col items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
+        <div className="flex-1 h-full flex flex-col items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
           <div className="relative z-10 text-center px-8 max-w-md">
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-zapp-accent/10 flex items-center justify-center">
               <MessageSquare className="h-12 w-12 text-zapp-accent" />
@@ -2113,7 +2113,7 @@ export default function RoyZapp() {
     }
 
     return (
-      <div className="h-full w-full flex flex-col bg-zapp-bg overflow-hidden">
+      <div className="flex-1 h-full flex flex-col bg-zapp-bg overflow-hidden">
         {/* Chat header */}
         <div className="bg-zapp-panel-header px-4 py-3 flex items-center gap-3 border-b border-zapp-border">
           <Button
