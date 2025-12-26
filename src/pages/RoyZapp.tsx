@@ -1278,25 +1278,6 @@ export default function RoyZapp() {
         <TooltipContent side="bottom">Conversas</TooltipContent>
       </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              filterGroups ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => {
-              setFilterGroups(!filterGroups);
-              setActiveView("inbox");
-            }}
-          >
-            <Users2 className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">{filterGroups ? "Mostrar todas" : "Filtrar grupos"}</TooltipContent>
-      </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
