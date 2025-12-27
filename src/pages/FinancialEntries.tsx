@@ -506,7 +506,7 @@ export default function FinancialEntries() {
               Categorias
             </Button>
           </div>
-          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="h-8">
+          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="h-8 px-3 text-xs font-medium">
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Novo Lançamento
           </Button>
