@@ -651,12 +651,12 @@ export default function FinancialCommissionsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Vendedor</Label>
-                <Select value={ruleForm.user_id} onValueChange={(v) => setRuleForm({ ...ruleForm, user_id: v })}>
+                <Select value={ruleForm.user_id || "all"} onValueChange={(v) => setRuleForm({ ...ruleForm, user_id: v === "all" ? "" : v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {users.map((u) => (
                       <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
                     ))}
@@ -665,12 +665,12 @@ export default function FinancialCommissionsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Produto</Label>
-                <Select value={ruleForm.product_id} onValueChange={(v) => setRuleForm({ ...ruleForm, product_id: v })}>
+                <Select value={ruleForm.product_id || "all"} onValueChange={(v) => setRuleForm({ ...ruleForm, product_id: v === "all" ? "" : v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {products.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
