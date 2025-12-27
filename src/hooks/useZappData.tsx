@@ -301,7 +301,7 @@ export function useZappData() {
           color: sector.color.replace("text-", "").replace("-600", ""),
           sector_id: sector.id,
           display_order: (existingDepts.length + idx + 1),
-          auto_distribute: false,
+          auto_distribution: false,
         }));
         
         console.log("[ZappData] Creating departments:", newDepts);
