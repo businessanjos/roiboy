@@ -137,6 +137,7 @@ export default function RoyZapp() {
     description: "",
     color: "#25D366",
     auto_distribution: true,
+    sector_id: "" as string,
   });
   const [savingDepartment, setSavingDepartment] = useState(false);
   const [deletingDepartmentId, setDeletingDepartmentId] = useState<string | null>(null);
@@ -265,6 +266,7 @@ export default function RoyZapp() {
         description: dept.description || "",
         color: dept.color,
         auto_distribution: dept.auto_distribution,
+        sector_id: (dept as any).sector_id || "",
       });
     } else {
       setEditingDepartment(null);
@@ -273,6 +275,7 @@ export default function RoyZapp() {
         description: "",
         color: "#25D366",
         auto_distribution: true,
+        sector_id: "",
       });
     }
     setDepartmentDialogOpen(true);
@@ -294,6 +297,7 @@ export default function RoyZapp() {
             description: departmentForm.description.trim() || null,
             color: departmentForm.color,
             auto_distribution: departmentForm.auto_distribution,
+            sector_id: departmentForm.sector_id || null,
           })
           .eq("id", editingDepartment.id);
 
@@ -306,6 +310,7 @@ export default function RoyZapp() {
           description: departmentForm.description.trim() || null,
           color: departmentForm.color,
           auto_distribution: departmentForm.auto_distribution,
+          sector_id: departmentForm.sector_id || null,
           display_order: departments.length,
         });
 

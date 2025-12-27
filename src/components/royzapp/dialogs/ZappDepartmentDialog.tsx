@@ -22,13 +22,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Department } from "../types";
+import { sectors, SectorId } from "@/config/sectors";
 
 interface DepartmentForm {
   name: string;
   description: string;
   color: string;
   auto_distribution: boolean;
+  sector_id: string;
 }
 
 interface ZappDepartmentDialogProps {
@@ -106,6 +115,32 @@ export const ZappDepartmentDialog = memo(function ZappDepartmentDialog({
                   className="flex-1 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#8696a0]">Setor Vinculado</Label>
+              <Select
+                value={form.sector_id}
+                onValueChange={(value) => onFormChange({ ...form, sector_id: value === "none" ? "" : value })}
+              >
+                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                  <SelectValue placeholder="Selecione um setor (opcional)" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#2a3942] border-[#3b4a54]">
+                  <SelectItem value="none" className="text-[#8696a0]">Nenhum setor</SelectItem>
+                  {sectors.filter(s => !s.comingSoon).map((sector) => {
+                    const Icon = sector.icon;
+                    return (
+                      <SelectItem key={sector.id} value={sector.id} className="text-[#e9edef]">
+                        <div className="flex items-center gap-2">
+                          <Icon className={`h-4 w-4 ${sector.color}`} />
+                          {sector.name}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-[#8696a0]">Vincule este departamento a um setor do sistema</p>
             </div>
             <div className="flex items-center justify-between">
               <div>

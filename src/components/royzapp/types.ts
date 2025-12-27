@@ -19,6 +19,7 @@ export interface Department {
   is_active: boolean;
   auto_distribution: boolean;
   display_order: number;
+  sector_id: string | null;
   created_at: string;
   updated_at: string;
 }
