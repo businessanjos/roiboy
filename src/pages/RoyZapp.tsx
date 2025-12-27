@@ -21,6 +21,14 @@ import {
   ZappDepartmentDialog,
   ZappAgentDialog,
   ZappTagDialog,
+  ZappRoiDialog,
+  ZappRiskDialog,
+  ZappTransferDialog,
+  ZappConversationTagDialog,
+  ZappContactPickerDialog,
+  ZappQuickRepliesDialog,
+  ZappAddClientDialog,
+  ZappNewConversationDialog,
 } from "@/components/royzapp/dialogs";
 import {
   MessageSquare,
@@ -2756,206 +2764,47 @@ export default function RoyZapp() {
       />
 
       {/* ROI Dialog */}
-      <Dialog open={roiDialogOpen} onOpenChange={setRoiDialogOpen}>
-        <DialogContent className="bg-zapp-bg border-zapp-border text-zapp-text">
-          <DialogHeader>
-            <DialogTitle className="text-zapp-text">Adicionar ROI</DialogTitle>
-            <DialogDescription className="text-zapp-muted">
-              Registre uma percepção de valor do cliente
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-zapp-muted">Tipo</Label>
-                <Select value={roiType} onValueChange={(v) => {
-                  setRoiType(v);
-                  setRoiCategory(v === "tangible" ? "revenue" : "clarity");
-                }}>
-                  <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zapp-bg border-zapp-border">
-                    <SelectItem value="tangible" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Tangível</SelectItem>
-                    <SelectItem value="intangible" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Intangível</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-zapp-muted">Categoria</Label>
-                <Select value={roiCategory} onValueChange={setRoiCategory}>
-                  <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zapp-bg border-zapp-border">
-                    {roiType === "tangible" ? (
-                      <>
-                        <SelectItem value="revenue" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Receita</SelectItem>
-                        <SelectItem value="cost" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Redução de Custo</SelectItem>
-                        <SelectItem value="time" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Economia de Tempo</SelectItem>
-                        <SelectItem value="process" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Melhoria de Processo</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="clarity" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Clareza</SelectItem>
-                        <SelectItem value="confidence" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Confiança</SelectItem>
-                        <SelectItem value="tranquility" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Tranquilidade</SelectItem>
-                        <SelectItem value="status_direction" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Direção</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-zapp-muted">Impacto</Label>
-              <Select value={roiImpact} onValueChange={setRoiImpact}>
-                <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zapp-bg border-zapp-border">
-                  <SelectItem value="low" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Baixo</SelectItem>
-                  <SelectItem value="medium" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Médio</SelectItem>
-                  <SelectItem value="high" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Alto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-zapp-muted">Evidência / Detalhe</Label>
-              <Textarea
-                value={roiEvidence}
-                onChange={(e) => setRoiEvidence(e.target.value)}
-                placeholder="Descreva o que o cliente percebeu como valor..."
-                className="bg-zapp-input border-zapp-border text-zapp-text placeholder:text-zapp-muted min-h-[100px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRoiDialogOpen(false)} className="border-zapp-border text-zapp-muted hover:bg-zapp-hover hover:text-zapp-text">
-              Cancelar
-            </Button>
-            <Button onClick={handleAddRoi} disabled={uploadingRoi} className="bg-zapp-accent hover:bg-zapp-accent/90 text-white">
-              {uploadingRoi ? "Salvando..." : "Adicionar ROI"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappRoiDialog
+        open={roiDialogOpen}
+        onOpenChange={setRoiDialogOpen}
+        roiType={roiType}
+        roiCategory={roiCategory}
+        roiImpact={roiImpact}
+        roiEvidence={roiEvidence}
+        uploading={uploadingRoi}
+        onTypeChange={setRoiType}
+        onCategoryChange={setRoiCategory}
+        onImpactChange={setRoiImpact}
+        onEvidenceChange={setRoiEvidence}
+        onSave={handleAddRoi}
+      />
 
       {/* Risk Dialog */}
-      <Dialog open={riskDialogOpen} onOpenChange={setRiskDialogOpen}>
-        <DialogContent className="bg-zapp-bg border-zapp-border text-zapp-text">
-          <DialogHeader>
-            <DialogTitle className="text-zapp-text">Adicionar Risco</DialogTitle>
-            <DialogDescription className="text-zapp-muted">
-              Registre um alerta de risco para este cliente
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-zapp-muted">Nível de Risco</Label>
-              <Select value={riskLevel} onValueChange={setRiskLevel}>
-                <SelectTrigger className="bg-zapp-input border-zapp-border text-zapp-text">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-zapp-bg border-zapp-border">
-                  <SelectItem value="low" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Baixo</SelectItem>
-                  <SelectItem value="medium" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Médio</SelectItem>
-                  <SelectItem value="high" className="text-zapp-text focus:bg-zapp-hover focus:text-zapp-text">Alto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-zapp-muted">Motivo do Risco</Label>
-              <Textarea
-                value={riskReason}
-                onChange={(e) => setRiskReason(e.target.value)}
-                placeholder="Descreva o motivo do alerta de risco..."
-                className="bg-zapp-input border-zapp-border text-zapp-text placeholder:text-zapp-muted min-h-[100px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRiskDialogOpen(false)} className="border-zapp-border text-zapp-muted hover:bg-zapp-hover hover:text-zapp-text">
-              Cancelar
-            </Button>
-            <Button onClick={handleAddRisk} disabled={uploadingRisk} className="bg-amber-500 hover:bg-amber-600 text-white">
-              {uploadingRisk ? "Salvando..." : "Adicionar Risco"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappRiskDialog
+        open={riskDialogOpen}
+        onOpenChange={setRiskDialogOpen}
+        riskLevel={riskLevel}
+        riskReason={riskReason}
+        uploading={uploadingRisk}
+        onLevelChange={setRiskLevel}
+        onReasonChange={setRiskReason}
+        onSave={handleAddRisk}
+      />
 
       {/* Transfer Dialog */}
-      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
-        <DialogContent className="bg-zapp-bg border-zapp-border text-zapp-text">
-          <DialogHeader>
-            <DialogTitle className="text-zapp-text">Transferir Conversa</DialogTitle>
-            <DialogDescription className="text-zapp-text-muted">
-              Selecione para quem transferir
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Tabs defaultValue="agent" onValueChange={(v) => setTransferTarget({ ...transferTarget, type: v as "agent" | "department" })}>
-              <TabsList className="w-full bg-zapp-bg-dark">
-                <TabsTrigger value="agent" className="flex-1 data-[state=active]:bg-zapp-accent data-[state=active]:text-zapp-bg-dark ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  Atendente
-                </TabsTrigger>
-                <TabsTrigger value="department" className="flex-1 data-[state=active]:bg-zapp-accent data-[state=active]:text-zapp-bg-dark ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  Departamento
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="agent" className="mt-4">
-                <Select
-                  value={transferTarget.id}
-                  onValueChange={(value) => setTransferTarget({ ...transferTarget, id: value })}
-                >
-                  <SelectTrigger className="bg-zapp-bg-dark border-zapp-border text-zapp-text">
-                    <SelectValue placeholder="Selecione um atendente" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zapp-panel border-zapp-border">
-                    {agents.filter(a => a.is_online && a.id !== selectedConversation?.agent_id).map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id} className="text-zapp-text">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-zapp-accent" />
-                          {agent.user?.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TabsContent>
-              <TabsContent value="department" className="mt-4">
-                <Select
-                  value={transferTarget.id}
-                  onValueChange={(value) => setTransferTarget({ ...transferTarget, id: value })}
-                >
-                  <SelectTrigger className="bg-zapp-bg-dark border-zapp-border text-zapp-text">
-                    <SelectValue placeholder="Selecione um departamento" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zapp-panel border-zapp-border">
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id} className="text-zapp-text">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: dept.color }} />
-                          {dept.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TabsContent>
-            </Tabs>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTransferDialogOpen(false)} className="border-zapp-border text-zapp-text-muted hover:bg-zapp-hover">
-              Cancelar
-            </Button>
-            <Button className="bg-zapp-accent hover:bg-zapp-accent-hover text-zapp-bg-dark border-0 ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0" disabled={!transferTarget.id}>
-              Transferir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappTransferDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
+        transferTarget={transferTarget}
+        onTransferTargetChange={setTransferTarget}
+        agents={agents}
+        departments={departments}
+        currentAgentId={selectedConversation?.agent_id}
+        onTransfer={() => {
+          // TODO: Implement transfer logic
+          setTransferDialogOpen(false);
+        }}
+      />
 
       {/* Tag Dialog */}
       <ZappTagDialog
@@ -2972,80 +2821,16 @@ export default function RoyZapp() {
       />
 
       {/* Conversation Tagging Dialog */}
-      <Dialog open={conversationTagDialogOpen} onOpenChange={setConversationTagDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
-          <DialogHeader>
-            <DialogTitle>Etiquetar Conversa</DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Selecione as tags para esta conversa
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {tags.length === 0 ? (
-              <div className="text-center py-4">
-                <Tags className="h-8 w-8 text-zapp-text-muted mx-auto mb-2" />
-                <p className="text-zapp-text-muted text-sm">Nenhuma tag cadastrada</p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-3 border-[#3b4a54] text-[#8696a0]"
-                  onClick={() => {
-                    setConversationTagDialogOpen(false);
-                    setActiveView("tags");
-                  }}
-                >
-                  Criar tags
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {tags.map((tag) => (
-                  <div
-                    key={tag.id}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
-                      selectedConversationTags.includes(tag.id)
-                        ? "bg-zapp-accent/20 border border-zapp-accent"
-                        : "bg-[#202c33] hover:bg-[#2a3942] border border-transparent"
-                    )}
-                    onClick={() => toggleConversationTag(tag.id)}
-                  >
-                    <div
-                      className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: tag.color }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#e9edef] text-sm font-medium truncate">{tag.name}</p>
-                      {tag.description && (
-                        <p className="text-[#8696a0] text-xs truncate">{tag.description}</p>
-                      )}
-                    </div>
-                    {selectedConversationTags.includes(tag.id) && (
-                      <CheckCheck className="h-4 w-4 text-zapp-accent flex-shrink-0" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setConversationTagDialogOpen(false)} 
-              className="border-[#3b4a54] text-[#8696a0]"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={saveConversationTags} 
-              disabled={savingConversationTags || tags.length === 0}
-              className="bg-[#00a884] hover:bg-[#00a884]/90"
-            >
-              {savingConversationTags ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappConversationTagDialog
+        open={conversationTagDialogOpen}
+        onOpenChange={setConversationTagDialogOpen}
+        tags={tags}
+        selectedTags={selectedConversationTags}
+        onToggleTag={toggleConversationTag}
+        onSave={saveConversationTags}
+        saving={savingConversationTags}
+        onNavigateToTags={() => setActiveView("tags")}
+      />
 
       {/* Client Quick Edit Sheet */}
       <ClientQuickEditSheet
@@ -3056,313 +2841,62 @@ export default function RoyZapp() {
       />
 
       {/* Contact Picker Dialog */}
-      <Dialog open={contactPickerOpen} onOpenChange={setContactPickerOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
-          <DialogHeader>
-            <DialogTitle>Enviar Contato</DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Busque e selecione um contato para enviar
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Input
-              placeholder="Buscar por nome ou telefone..."
-              value={contactSearch}
-              onChange={(e) => setContactSearch(e.target.value)}
-              className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-            />
-            <ScrollArea className="h-64">
-              {contactSearch.trim() === "" ? (
-                <p className="text-center text-[#8696a0] py-8">Digite para buscar contatos</p>
-              ) : filteredContactClients.length === 0 ? (
-                <p className="text-center text-[#8696a0] py-8">Nenhum contato encontrado</p>
-              ) : (
-                <div className="space-y-2">
-                  {filteredContactClients.map((client) => (
-                    <button
-                      key={client.id}
-                      onClick={() => sendContact(client)}
-                      disabled={sendingContact}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#202c33] transition-colors text-left"
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={client.avatar_url || undefined} />
-                        <AvatarFallback className="bg-zapp-accent text-white">
-                          {client.full_name.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[#e9edef] font-medium truncate">{client.full_name}</p>
-                        <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
-                      </div>
-                      {sendingContact && <Loader2 className="h-4 w-4 animate-spin text-zapp-accent" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ZappContactPickerDialog
+        open={contactPickerOpen}
+        onOpenChange={setContactPickerOpen}
+        searchQuery={contactSearch}
+        onSearchChange={setContactSearch}
+        filteredClients={filteredContactClients}
+        onSelectContact={sendContact}
+        sending={sendingContact}
+      />
 
       {/* Quick Replies Dialog */}
-      <Dialog open={quickRepliesOpen} onOpenChange={setQuickRepliesOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef] max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Respostas Rápidas</span>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingQuickReply(null);
-                  setQuickReplyForm({ title: "", content: "" });
-                  setQuickReplyDialogOpen(true);
-                }}
-                className="bg-[#00a884] hover:bg-[#00a884]/90"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Nova
-              </Button>
-            </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Clique para usar uma resposta ou gerencie suas respostas salvas
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-72">
-            {quickReplies.length === 0 ? (
-              <div className="text-center py-8">
-                <Zap className="h-12 w-12 mx-auto text-[#8696a0] mb-3" />
-                <p className="text-[#8696a0]">Nenhuma resposta rápida criada</p>
-                <p className="text-[#8696a0] text-sm">Crie respostas para agilizar seu atendimento</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {quickReplies.map((reply) => (
-                  <div
-                    key={reply.id}
-                    className="group flex items-start gap-2 p-3 rounded-lg hover:bg-[#202c33] transition-colors"
-                  >
-                    <button
-                      onClick={() => useQuickReply(reply)}
-                      className="flex-1 text-left"
-                    >
-                      <p className="text-[#e9edef] font-medium">{reply.title}</p>
-                      <p className="text-[#8696a0] text-sm line-clamp-2">{reply.content}</p>
-                    </button>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-[#8696a0] hover:text-[#e9edef]"
-                        onClick={() => {
-                          setEditingQuickReply(reply);
-                          setQuickReplyForm({ title: reply.title, content: reply.content });
-                          setQuickReplyDialogOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-[#8696a0] hover:text-red-400"
-                        onClick={() => deleteQuickReply(reply.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      {/* Quick Reply Edit Dialog */}
-      <Dialog open={quickReplyDialogOpen} onOpenChange={setQuickReplyDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
-          <DialogHeader>
-            <DialogTitle>{editingQuickReply ? "Editar Resposta" : "Nova Resposta Rápida"}</DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Crie atalhos para mensagens que você envia frequentemente
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="qr-title" className="text-[#8696a0]">Título</Label>
-              <Input
-                id="qr-title"
-                value={quickReplyForm.title}
-                onChange={(e) => setQuickReplyForm({ ...quickReplyForm, title: e.target.value })}
-                placeholder="Ex: Saudação inicial"
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="qr-content" className="text-[#8696a0]">Conteúdo da mensagem</Label>
-              <Textarea
-                id="qr-content"
-                value={quickReplyForm.content}
-                onChange={(e) => setQuickReplyForm({ ...quickReplyForm, content: e.target.value })}
-                placeholder="Olá! Como posso ajudá-lo hoje?"
-                rows={4}
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef] font-mono text-sm"
-              />
-              <p className="text-xs text-[#8696a0]">
-                Dica: Use *negrito*, _itálico_, ~tachado~ para formatação WhatsApp
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQuickReplyDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
-              Cancelar
-            </Button>
-            <Button onClick={saveQuickReply} disabled={savingQuickReply} className="bg-[#00a884] hover:bg-[#00a884]/90">
-              {savingQuickReply ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappQuickRepliesDialog
+        open={quickRepliesOpen}
+        onOpenChange={setQuickRepliesOpen}
+        quickReplies={quickReplies}
+        onUseReply={useQuickReply}
+        onEditReply={(reply) => {
+          setEditingQuickReply(reply);
+          setQuickReplyForm({ title: reply.title, content: reply.content });
+          setQuickReplyDialogOpen(true);
+        }}
+        onDeleteReply={deleteQuickReply}
+        onCreateNew={() => {
+          setEditingQuickReply(null);
+          setQuickReplyForm({ title: "", content: "" });
+          setQuickReplyDialogOpen(true);
+        }}
+        editDialogOpen={quickReplyDialogOpen}
+        onEditDialogChange={setQuickReplyDialogOpen}
+        editingReply={editingQuickReply}
+        form={quickReplyForm}
+        onFormChange={setQuickReplyForm}
+        onSave={saveQuickReply}
+        saving={savingQuickReply}
+      />
 
       {/* Add Client Dialog */}
-      <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-zapp-accent" />
-              Adicionar Cliente
-            </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Cadastre este contato como cliente no sistema
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="client-name" className="text-[#8696a0]">Nome completo</Label>
-              <Input
-                id="client-name"
-                value={addClientForm.full_name}
-                onChange={(e) => setAddClientForm({ ...addClientForm, full_name: e.target.value })}
-                placeholder="Nome do cliente"
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="client-phone" className="text-[#8696a0]">Telefone</Label>
-              <Input
-                id="client-phone"
-                value={addClientForm.phone_e164}
-                onChange={(e) => setAddClientForm({ ...addClientForm, phone_e164: e.target.value })}
-                placeholder="+5511999999999"
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddClientDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
-              Cancelar
-            </Button>
-            <Button 
-              onClick={saveNewClient} 
-              disabled={savingNewClient || !addClientForm.full_name.trim() || !addClientForm.phone_e164.trim()} 
-              className="bg-[#00a884] hover:bg-[#00a884]/90"
-            >
-              {savingNewClient ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                "Salvar Cliente"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappAddClientDialog
+        open={addClientDialogOpen}
+        onOpenChange={setAddClientDialogOpen}
+        form={addClientForm}
+        onFormChange={setAddClientForm}
+        onSave={saveNewClient}
+        saving={savingNewClient}
+      />
 
       {/* New Conversation Dialog */}
-      <Dialog open={newConversationDialogOpen} onOpenChange={setNewConversationDialogOpen}>
-        <DialogContent className="bg-[#111b21] border-[#3b4a54] max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-[#e9edef] flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-zapp-accent" />
-              Nova Conversa
-            </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Selecione um cliente ou digite um número para iniciar uma conversa
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8696a0]" />
-              <Input
-                placeholder="Buscar cliente ou digitar número..."
-                value={newConversationSearch}
-                onChange={(e) => setNewConversationSearch(e.target.value)}
-                className="pl-10 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-            
-            {/* Show option to open WhatsApp with the number if it looks like a phone number */}
-            {newConversationSearch && /^[\d\s+()-]+$/.test(newConversationSearch) && newConversationSearch.replace(/\D/g, '').length >= 8 && (
-              <button
-                className="w-full flex items-center gap-3 p-3 rounded-lg bg-[#202c33] hover:bg-[#2a3942] transition-colors text-left border border-[#3b4a54]"
-                onClick={() => {
-                  const phoneNumber = newConversationSearch.replace(/\D/g, '');
-                  const formattedNumber = phoneNumber.startsWith('55') ? phoneNumber : `55${phoneNumber}`;
-                  window.open(`https://wa.me/${formattedNumber}`, '_blank');
-                  setNewConversationDialogOpen(false);
-                  setNewConversationSearch('');
-                }}
-              >
-                <div className="h-10 w-10 rounded-full bg-[#00a884] flex items-center justify-center">
-                  <ExternalLink className="h-5 w-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[#e9edef] font-medium">Abrir no WhatsApp</p>
-                  <p className="text-[#8696a0] text-sm">Conversar com {newConversationSearch}</p>
-                </div>
-              </button>
-            )}
-            
-            <ScrollArea className="h-56">
-              {filteredNewConversationClients.length === 0 ? (
-                <div className="text-center py-8 text-[#8696a0]">
-                  {newConversationSearch && !/^[\d\s+()-]+$/.test(newConversationSearch) ? "Nenhum cliente encontrado" : "Busque um cliente ou digite um número"}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {filteredNewConversationClients.map((client) => (
-                    <button
-                      key={client.id}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#202c33] transition-colors text-left"
-                      onClick={() => createConversationWithClient(client)}
-                      disabled={creatingConversation}
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={client.avatar_url || undefined} />
-                        <AvatarFallback className="bg-zapp-accent text-white text-sm">
-                          {getInitials(client.full_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[#e9edef] font-medium truncate">{client.full_name}</p>
-                        <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewConversationDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
-              Cancelar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappNewConversationDialog
+        open={newConversationDialogOpen}
+        onOpenChange={setNewConversationDialogOpen}
+        searchQuery={newConversationSearch}
+        onSearchChange={setNewConversationSearch}
+        clients={filteredNewConversationClients}
+        onSelectClient={createConversationWithClient}
+        creating={creatingConversation}
+      />
     </div>
   );
 }
