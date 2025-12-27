@@ -543,7 +543,7 @@ export default function RoyZapp() {
               );
               if (hasOptimistic) {
                 // Replace optimistic message with real one
-                return prev.map(m => 
+                const updated = prev.map(m => 
                   m.id.startsWith("temp-") && m.content === newMsg.content && !m.is_from_client
                     ? {
                         id: newMsg.id,
@@ -561,10 +561,14 @@ export default function RoyZapp() {
                       }
                     : m
                 );
+                // Sort by timestamp to ensure correct order
+                return updated.sort((a, b) => 
+                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                );
               }
             }
             
-            return [...prev, {
+            const newMessage: Message = {
               id: newMsg.id,
               content: newMsg.content,
               is_from_client: newMsg.direction === "inbound",
@@ -577,7 +581,12 @@ export default function RoyZapp() {
               audio_duration_sec: newMsg.audio_duration_sec,
               sender_name: newMsg.sender_name,
               delivery_status: newMsg.delivery_status || "sent",
-            }];
+            };
+            
+            // Add new message and sort by timestamp to maintain correct order
+            return [...prev, newMessage].sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
           });
         }
       )
