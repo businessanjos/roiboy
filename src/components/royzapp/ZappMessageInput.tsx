@@ -41,6 +41,9 @@ interface ZappMessageInputProps {
   recordingDuration: number;
   audioPreview: { blob: Blob; url: string; duration: number } | null;
   showFormatting: boolean;
+  messageInputRef?: React.RefObject<HTMLInputElement>;
+  imageInputRef?: React.RefObject<HTMLInputElement>;
+  fileInputRef?: React.RefObject<HTMLInputElement>;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -51,8 +54,7 @@ interface ZappMessageInputProps {
   onCancelRecording: () => void;
   onDiscardAudioPreview: () => void;
   onConfirmAudioSend: () => void;
-  onOpenImagePicker: () => void;
-  onOpenFilePicker: () => void;
+  onFileSelect: (e: React.ChangeEvent<HTMLInputElement>, type: string) => void;
   onOpenContactPicker: () => void;
   onOpenQuickReplies: () => void;
 }
@@ -71,6 +73,9 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   recordingDuration,
   audioPreview,
   showFormatting,
+  messageInputRef,
+  imageInputRef,
+  fileInputRef,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -81,8 +86,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onCancelRecording,
   onDiscardAudioPreview,
   onConfirmAudioSend,
-  onOpenImagePicker,
-  onOpenFilePicker,
+  onFileSelect,
   onOpenContactPicker,
   onOpenQuickReplies,
 }: ZappMessageInputProps) {
@@ -209,14 +213,14 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="bg-[#233138] border-zapp-border z-50">
             <DropdownMenuItem 
-              onClick={onOpenFilePicker}
+              onClick={() => fileInputRef?.current?.click()}
               className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
             >
               <FileText className="h-4 w-4 mr-2 text-[#7f66ff]" />
               Documento
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={onOpenImagePicker}
+              onClick={() => imageInputRef?.current?.click()}
               className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
             >
               <ImageIcon className="h-4 w-4 mr-2 text-[#007bfc]" />
@@ -331,7 +335,24 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </div>
         ) : (
           <>
+            {/* Hidden file inputs */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={(e) => onFileSelect(e, "image")}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+              className="hidden"
+              onChange={(e) => onFileSelect(e, "document")}
+            />
+            
             <Input
+              ref={messageInputRef}
               placeholder="Digite uma mensagem"
               value={messageInput}
               onChange={(e) => onMessageChange(e.target.value)}
