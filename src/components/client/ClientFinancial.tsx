@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
+import { ClientFinancialStatusBadge } from "./ClientFinancialStatusBadge";
 import { 
   Package, 
   Calendar, 
@@ -22,7 +23,8 @@ import {
   Trash2,
   Send,
   Camera,
-  Paperclip
+  Paperclip,
+  Shield
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -310,8 +312,12 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
 
   return (
     <div className="space-y-4">
+      {/* Header with Status Badge */}
       <div className="flex justify-between items-center gap-2 flex-wrap">
-        <h3 className="font-medium">Dados Financeiros</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="font-medium">Dados Financeiros</h3>
+          <ClientFinancialStatusBadge clientId={clientId} size="lg" />
+        </div>
         <Button 
           size="sm" 
           variant="outline" 
