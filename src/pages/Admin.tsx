@@ -391,6 +391,102 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
   const activeMainPlans = mainPlans.filter(p => p.is_active).length;
   const activeAddons = addonPlans.filter(p => p.is_active).length;
 
+  // ========== AI USAGE METRICS (Last 30 days) ==========
+  const { data: aiStats } = useQuery({
+    queryKey: ['admin-ai-stats-dashboard'],
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data, error } = await supabase
+        .from('ai_usage_logs')
+        .select('account_id, input_tokens, output_tokens, model, created_at')
+        .gte('created_at', thirtyDaysAgo.toISOString());
+      
+      if (error) throw error;
+      
+      // Calculate costs
+      const modelCosts: Record<string, { input: number; output: number }> = {
+        'google/gemini-2.5-flash': { input: 0.075, output: 0.30 },
+        'google/gemini-2.5-flash-lite': { input: 0.02, output: 0.08 },
+        'google/gemini-2.5-pro': { input: 1.25, output: 5.0 },
+        'google/gemini-3-pro-preview': { input: 1.25, output: 5.0 },
+        'openai/gpt-5': { input: 5.0, output: 15.0 },
+        'openai/gpt-5-mini': { input: 0.15, output: 0.60 },
+        'openai/gpt-5-nano': { input: 0.05, output: 0.20 },
+      };
+      const usdToBrl = 5.5;
+      
+      let totalCost = 0;
+      let totalAnalyses = data?.length || 0;
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      const accountsUsingAI = new Set<string>();
+      
+      data?.forEach(log => {
+        accountsUsingAI.add(log.account_id);
+        totalInputTokens += log.input_tokens;
+        totalOutputTokens += log.output_tokens;
+        
+        const costs = modelCosts[log.model] || { input: 0.5, output: 1.5 };
+        totalCost += ((log.input_tokens / 1_000_000) * costs.input * usdToBrl) +
+                     ((log.output_tokens / 1_000_000) * costs.output * usdToBrl);
+      });
+      
+      // Calculate today's stats
+      const todayStart = startOfDay(new Date());
+      const todayLogs = data?.filter(l => new Date(l.created_at) >= todayStart) || [];
+      const todayAnalyses = todayLogs.length;
+      const todayCost = todayLogs.reduce((sum, log) => {
+        const costs = modelCosts[log.model] || { input: 0.5, output: 1.5 };
+        return sum + ((log.input_tokens / 1_000_000) * costs.input * usdToBrl) +
+               ((log.output_tokens / 1_000_000) * costs.output * usdToBrl);
+      }, 0);
+      
+      return {
+        totalAnalyses,
+        totalCost,
+        totalInputTokens,
+        totalOutputTokens,
+        accountsUsingAI: accountsUsingAI.size,
+        todayAnalyses,
+        todayCost,
+        avgPerAccount: accountsUsingAI.size > 0 ? totalAnalyses / accountsUsingAI.size : 0,
+        costPerAnalysis: totalAnalyses > 0 ? totalCost / totalAnalyses : 0,
+      };
+    }
+  });
+
+  // ========== MRR GROWTH (Compare to last month) ==========
+  const { data: mrrGrowthData } = useQuery({
+    queryKey: ['admin-mrr-growth'],
+    queryFn: async () => {
+      const lastMonth = subMonths(new Date(), 1);
+      const lastMonthStart = startOfMonth(lastMonth);
+      const lastMonthEnd = endOfMonth(lastMonth);
+      
+      // Get accounts created before last month end that had active status
+      const accountsLastMonth = accounts.filter(a => {
+        const createdAt = new Date(a.created_at);
+        return createdAt <= lastMonthEnd;
+      });
+      
+      // Estimate last month MRR (simplified - assumes same plans)
+      const lastMonthMrr = accountsLastMonth.reduce((sum, account) => {
+        const plan = plans.find(p => p.id === account.plan_id);
+        if (!plan) return sum;
+        
+        const monthlyPrice = plan.billing_period === 'annual' ? plan.price / 12 :
+                             plan.billing_period === 'semiannual' ? plan.price / 6 :
+                             plan.billing_period === 'quarterly' ? plan.price / 3 :
+                             plan.price;
+        return sum + monthlyPrice;
+      }, 0);
+      
+      return { lastMonthMrr };
+    }
+  });
+
   // ========== TRIAL CONVERSION METRICS ==========
   // Total accounts that ever had a trial (accounts created = went through trial)
   const totalTrialAccounts = accounts.length;
@@ -435,6 +531,11 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
     return sum + monthlyPrice;
   }, 0);
 
+  // MRR Growth calculation
+  const mrrGrowth = mrrGrowthData?.lastMonthMrr 
+    ? ((mrr - mrrGrowthData.lastMonthMrr) / mrrGrowthData.lastMonthMrr) * 100 
+    : 0;
+
   // Calculate Churn Rate (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -468,10 +569,13 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
   // LTV = ARPU * Average Lifespan (in months)
   const ltv = arpu * avgLifespanMonths;
 
+  // ARR (Annual Recurring Revenue)
+  const arr = mrr * 12;
+
   return (
     <div className="space-y-6">
-      {/* Financial Metrics */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      {/* Financial Metrics - Row 1 */}
+      <div className="grid gap-4 lg:grid-cols-4">
         {/* MRR Card */}
         <Card className="border-0 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-sm">
           <CardContent className="pt-6">
@@ -481,12 +585,46 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
                 <p className="text-3xl font-semibold tracking-tight mt-1">
                   R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {activeAccounts} {activeAccounts === 1 ? 'conta ativa' : 'contas ativas'}
-                </p>
+                <div className="flex items-center gap-1 mt-2">
+                  {mrrGrowth > 0 ? (
+                    <span className="text-xs text-emerald-600 flex items-center gap-0.5">
+                      <TrendingUp className="h-3 w-3" />
+                      +{mrrGrowth.toFixed(1)}% vs mês anterior
+                    </span>
+                  ) : mrrGrowth < 0 ? (
+                    <span className="text-xs text-red-600 flex items-center gap-0.5">
+                      <Activity className="h-3 w-3" />
+                      {mrrGrowth.toFixed(1)}% vs mês anterior
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {activeAccounts} {activeAccounts === 1 ? 'conta ativa' : 'contas ativas'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="p-3 rounded-full bg-primary/10">
                 <TrendingUp className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ARR Card */}
+        <Card className="border-0 bg-gradient-to-br from-blue-500/5 via-blue-500/10 to-blue-500/5 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">ARR</p>
+                <p className="text-3xl font-semibold tracking-tight mt-1">
+                  R$ {arr.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Receita recorrente anual
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-blue-500/10">
+                <DollarSign className="h-6 w-6 text-blue-500" />
               </div>
             </div>
           </CardContent>
@@ -532,6 +670,76 @@ function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: 
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Usage Metrics */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <Cpu className="h-5 w-5 text-emerald-500" />
+            Uso de IA Agregado (Últimos 30 dias)
+          </CardTitle>
+          <CardDescription>Consumo e custos de inteligência artificial em toda a plataforma</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="p-4 rounded-lg bg-emerald-500/10 text-center">
+              <p className="text-3xl font-bold text-emerald-600">
+                R$ {(aiStats?.totalCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Custo Total (30d)</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-blue-500/10 text-center">
+              <p className="text-3xl font-bold text-blue-600">
+                {(aiStats?.totalAnalyses || 0).toLocaleString('pt-BR')}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Análises Totais</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-purple-500/10 text-center">
+              <p className="text-3xl font-bold text-purple-600">
+                {aiStats?.accountsUsingAI || 0}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Contas Usando IA</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-amber-500/10 text-center">
+              <p className="text-3xl font-bold text-amber-600">
+                R$ {(aiStats?.costPerAnalysis || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Custo por Análise</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-primary/10 text-center">
+              <p className="text-3xl font-bold text-primary">
+                {(aiStats?.todayAnalyses || 0).toLocaleString('pt-BR')}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Análises Hoje</p>
+              <p className="text-xs text-muted-foreground">
+                R$ {(aiStats?.todayCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+          
+          {/* Tokens breakdown */}
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <div className="grid grid-cols-3 gap-4 text-center text-sm">
+              <div>
+                <p className="text-muted-foreground">Tokens de Entrada</p>
+                <p className="font-semibold">{((aiStats?.totalInputTokens || 0) / 1_000_000).toFixed(2)}M</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Tokens de Saída</p>
+                <p className="font-semibold">{((aiStats?.totalOutputTokens || 0) / 1_000_000).toFixed(2)}M</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Média por Conta</p>
+                <p className="font-semibold">{(aiStats?.avgPerAccount || 0).toFixed(1)} análises</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Trial Conversion Metrics */}
       <Card className="border-0 shadow-sm">
