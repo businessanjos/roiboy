@@ -4,8 +4,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export default function Sectors() {
@@ -34,105 +32,100 @@ export default function Sectors() {
     navigate(defaultRoute);
   };
 
+  const mainSectors = sectors.filter(s => s.id !== "royzapp");
+  const royzappSector = sectors.find(s => s.id === "royzapp");
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
+      <div className="container mx-auto px-6 py-16 max-w-5xl">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+        <div className="text-center mb-16">
+          <h1 className="text-3xl md:text-4xl font-light text-foreground mb-2 tracking-tight">
             Bem-vindo à{" "}
-            <span className="text-primary">{accountName}</span>
+            <span className="text-primary font-medium">{accountName}</span>
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground">
             Gerencie sua empresa através das áreas fundamentais do negócio
           </p>
         </div>
 
         {/* Main Sectors Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {sectors.filter(s => s.id !== "royzapp").map((sector) => (
-            <Card
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {mainSectors.map((sector) => (
+            <div
               key={sector.id}
               onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
               className={cn(
-                "relative overflow-hidden transition-all duration-300 border-2",
+                "group relative p-6 rounded-lg border bg-card transition-all duration-200",
                 sector.comingSoon
-                  ? "cursor-not-allowed opacity-60 border-muted"
-                  : "cursor-pointer hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 border-transparent"
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:border-primary/40 hover:shadow-sm"
               )}
             >
-              <CardContent className="p-6 flex flex-col items-center text-center min-h-[200px] justify-center">
+              <div className="flex items-start gap-4">
                 {/* Icon */}
                 <div className={cn(
-                  "w-16 h-16 rounded-xl flex items-center justify-center mb-4",
+                  "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0",
                   sector.bgColor
                 )}>
-                  <sector.icon className={cn("h-8 w-8", sector.color)} />
+                  <sector.icon className={cn("h-6 w-6", sector.color)} />
                 </div>
 
-                {/* Title */}
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  {sector.name}
-                </h3>
-
-                {/* Description */}
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {sector.description}
-                </p>
-
-                {/* Coming Soon Badge */}
-                {sector.comingSoon && (
-                  <Badge variant="secondary" className="absolute top-3 right-3">
-                    Em breve
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-medium text-foreground">
+                      {sector.name}
+                    </h3>
+                    {sector.comingSoon && (
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                        Em breve
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {sector.description}
+                  </p>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
         {/* ROY zAPP - Featured Tool */}
-        {sectors.filter(s => s.id === "royzapp").map((sector) => (
-          <Card
-            key={sector.id}
-            onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
-            className={cn(
-              "relative overflow-hidden transition-all duration-300 border-2 cursor-pointer",
-              "hover:shadow-lg hover:scale-[1.01] hover:border-amber-500/50 border-amber-500/20",
-              "bg-gradient-to-r from-amber-500/5 to-orange-500/5"
-            )}
+        {royzappSector && (
+          <div
+            onClick={() => handleSectorClick(royzappSector.id, royzappSector.defaultRoute)}
+            className="group relative p-6 rounded-lg border border-primary/20 bg-primary/5 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:bg-primary/10"
           >
-            <CardContent className="p-6 flex items-center gap-6">
+            <div className="flex items-center gap-5">
               {/* Icon */}
-              <div className={cn(
-                "w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0",
-                "bg-gradient-to-br from-amber-500/20 to-orange-500/20"
-              )}>
-                <sector.icon className="h-10 w-10 text-amber-600" />
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10">
+                <royzappSector.icon className="h-7 w-7 text-primary" />
               </div>
 
               {/* Content */}
-              <div className="flex-1">
-                <Badge variant="outline" className="mb-2 text-amber-600 border-amber-500/30">
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-medium text-primary uppercase tracking-wider">
                   Ferramenta
-                </Badge>
-                <h3 className="text-2xl font-bold text-foreground mb-1">
-                  {sector.name}
+                </span>
+                <h3 className="text-xl font-medium text-foreground">
+                  {royzappSector.name}
                 </h3>
-                <p className="text-muted-foreground">
-                  {sector.description}
+                <p className="text-sm text-muted-foreground">
+                  {royzappSector.description}
                 </p>
               </div>
 
-              {/* Arrow indicator */}
-              <div className="flex-shrink-0 text-amber-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              {/* Arrow */}
+              <div className="text-primary/60 group-hover:text-primary transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
