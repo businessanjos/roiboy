@@ -5520,6 +5520,82 @@ export type Database = {
           },
         ]
       }
+      zapsign_documents: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          contract_id: string | null
+          created_at: string
+          external_id: string | null
+          id: string
+          name: string
+          original_file_url: string | null
+          signed_at: string | null
+          signed_file_url: string | null
+          signers: Json | null
+          status: string
+          updated_at: string
+          zapsign_doc_token: string
+          zapsign_template_id: string | null
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          name: string
+          original_file_url?: string | null
+          signed_at?: string | null
+          signed_file_url?: string | null
+          signers?: Json | null
+          status?: string
+          updated_at?: string
+          zapsign_doc_token: string
+          zapsign_template_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          name?: string
+          original_file_url?: string | null
+          signed_at?: string | null
+          signed_file_url?: string | null
+          signers?: Json | null
+          status?: string
+          updated_at?: string
+          zapsign_doc_token?: string
+          zapsign_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapsign_documents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapsign_documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapsign_documents_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       events_checkin_view: {
