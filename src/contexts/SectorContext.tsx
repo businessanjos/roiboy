@@ -26,14 +26,9 @@ export function SectorProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // If we have a sector set, keep it
-    if (currentSectorId) {
-      return;
-    }
-
     // Try to detect sector from route
     const detectedSector = getSectorByRoute(location.pathname);
-    if (detectedSector) {
+    if (detectedSector && detectedSector.id !== currentSectorId) {
       setCurrentSectorId(detectedSector.id);
       localStorage.setItem("current_sector", detectedSector.id);
     }
