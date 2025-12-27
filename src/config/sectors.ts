@@ -75,6 +75,7 @@ export const sectors: Sector[] = [
     bgColor: "bg-emerald-500/10",
     defaultRoute: "/contracts",
     navItems: [
+      { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
