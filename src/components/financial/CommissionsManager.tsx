@@ -134,17 +134,20 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
     queryKey: ["commission-rules", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("commission_rules")
         .select(`
           *,
-          user:users(full_name),
+          user:users(name),
           product:products(name)
         `)
         .eq("account_id", accountId)
         .order("name");
       if (error) throw error;
-      return data as CommissionRule[];
+      return (data || []).map((r: any) => ({
+        ...r,
+        user: r.user ? { full_name: r.user.name || 'Sem nome' } : null,
+      })) as CommissionRule[];
     },
     enabled: !!accountId && open,
   });
@@ -158,11 +161,11 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
       const startDate = format(startOfMonth(currentMonth), "yyyy-MM-dd");
       const endDate = format(endOfMonth(currentMonth), "yyyy-MM-dd");
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("commission_entries")
         .select(`
           *,
-          user:users(full_name),
+          user:users(name),
           rule:commission_rules(name)
         `)
         .eq("account_id", accountId)
@@ -170,7 +173,10 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
         .lte("created_at", endDate)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as CommissionEntry[];
+      return (data || []).map((e: any) => ({
+        ...e,
+        user: e.user ? { full_name: e.user.name || 'Sem nome' } : null,
+      })) as CommissionEntry[];
     },
     enabled: !!accountId && open,
   });
@@ -182,11 +188,11 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
       if (!accountId) return [];
       const { data, error } = await supabase
         .from("users")
-        .select("id, full_name")
+        .select("id, name")
         .eq("account_id", accountId)
-        .order("full_name");
+        .order("name");
       if (error) throw error;
-      return data as User[];
+      return (data || []).map((u: any) => ({ id: u.id, full_name: u.name || 'Sem nome' })) as User[];
     },
     enabled: !!accountId && open,
   });
@@ -226,13 +232,13 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
       };
 
       if (editingRule) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("commission_rules")
           .update(payload)
           .eq("id", editingRule.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("commission_rules")
           .insert(payload);
         if (error) throw error;
@@ -259,7 +265,7 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
   // Delete rule mutation
   const deleteRuleMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("commission_rules")
         .delete()
         .eq("id", id);
@@ -281,7 +287,7 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
   // Pay commission mutation
   const payCommissionMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("commission_entries")
         .update({
           status: "paid",
