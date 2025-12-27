@@ -34,7 +34,62 @@ function extractDomain(url: string): string {
   }
 }
 
-// Function to detect and render links in text
+// Function to apply WhatsApp-style formatting (bold, italic, strikethrough, monospace)
+function applyWhatsAppFormatting(text: string, keyPrefix: string = ""): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  let remaining = text;
+  let partIndex = 0;
+  
+  // Pattern to match WhatsApp formatting: *bold*, _italic_, ~strikethrough~, ```monospace```
+  const formatPatterns = [
+    { pattern: /\*([^*]+)\*/g, tag: "strong" },
+    { pattern: /_([^_]+)_/g, tag: "em" },
+    { pattern: /~([^~]+)~/g, tag: "del" },
+    { pattern: /```([^`]+)```/g, tag: "code" },
+  ];
+  
+  // Simple approach: process one format at a time
+  let hasMatch = true;
+  while (hasMatch) {
+    hasMatch = false;
+    for (const { pattern, tag } of formatPatterns) {
+      pattern.lastIndex = 0;
+      const match = pattern.exec(remaining);
+      if (match) {
+        hasMatch = true;
+        const beforeMatch = remaining.substring(0, match.index);
+        const matchedContent = match[1];
+        const afterMatch = remaining.substring(match.index + match[0].length);
+        
+        if (beforeMatch) {
+          result.push(beforeMatch);
+        }
+        
+        const element = tag === "strong" ? (
+          <strong key={`${keyPrefix}-${partIndex++}`} className="font-bold">{matchedContent}</strong>
+        ) : tag === "em" ? (
+          <em key={`${keyPrefix}-${partIndex++}`} className="italic">{matchedContent}</em>
+        ) : tag === "del" ? (
+          <del key={`${keyPrefix}-${partIndex++}`}>{matchedContent}</del>
+        ) : (
+          <code key={`${keyPrefix}-${partIndex++}`} className="bg-black/20 px-1 rounded text-xs font-mono">{matchedContent}</code>
+        );
+        
+        result.push(element);
+        remaining = afterMatch;
+        break;
+      }
+    }
+  }
+  
+  if (remaining) {
+    result.push(remaining);
+  }
+  
+  return result.length > 0 ? result : [text];
+}
+
+// Function to detect and render links in text with WhatsApp formatting
 function renderTextWithLinks(text: string): React.ReactNode {
   // URL regex pattern
   const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
@@ -42,7 +97,7 @@ function renderTextWithLinks(text: string): React.ReactNode {
   const parts = text.split(urlRegex);
   
   if (parts.length === 1) {
-    return text;
+    return applyWhatsAppFormatting(text, "fmt");
   }
   
   return parts.map((part, index) => {
@@ -63,7 +118,7 @@ function renderTextWithLinks(text: string): React.ReactNode {
         </a>
       );
     }
-    return part;
+    return <span key={index}>{applyWhatsAppFormatting(part, `fmt-${index}`)}</span>;
   });
 }
 
