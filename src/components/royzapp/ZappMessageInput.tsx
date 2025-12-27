@@ -33,8 +33,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ZappGroupMentionInput } from "./ZappGroupMentionInput";
+import { ZappGroupMentionInput, MentionData } from "./ZappGroupMentionInput";
 import { Message } from "./types";
+
+export type { MentionData };
 
 interface ReplyingToMessage {
   id: string;
@@ -71,6 +73,7 @@ interface ZappMessageInputProps {
   onOpenContactPicker: () => void;
   onOpenQuickReplies: () => void;
   onCancelReply?: () => void;
+  onMentionInsert?: (mention: MentionData) => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -107,6 +110,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onOpenContactPicker,
   onOpenQuickReplies,
   onCancelReply,
+  onMentionInsert,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -403,6 +407,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 onKeyDown={onKeyPress}
                 disabled={sendingMessage}
                 groupJid={groupJid}
+                onMentionInsert={onMentionInsert}
               />
             ) : (
               <Input

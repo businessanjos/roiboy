@@ -11,10 +11,16 @@ interface GroupParticipant {
   isAdmin: boolean;
 }
 
+export interface MentionData {
+  phone: string;
+  jid: string;
+  name: string;
+}
+
 interface ZappGroupMentionInputProps {
   value: string;
   onChange: (value: string) => void;
-  onMentionInsert?: (phone: string, name: string) => void;
+  onMentionInsert?: (mention: MentionData) => void;
   placeholder?: string;
   className?: string;
   onKeyDown?: (e: React.KeyboardEvent) => void;
@@ -154,7 +160,10 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
       
       onChange(newValue);
       setShowSuggestions(false);
-      onMentionInsert?.(participant.phone, participant.name);
+      
+      // Build JID for the participant
+      const jid = participant.id.includes("@") ? participant.id : `${participant.phone}@s.whatsapp.net`;
+      onMentionInsert?.({ phone: participant.phone, jid, name: participant.name });
 
       setTimeout(() => inputRef.current?.focus(), 0);
     }, [value, mentionStartIndex, mentionQuery, onChange, onMentionInsert]);
