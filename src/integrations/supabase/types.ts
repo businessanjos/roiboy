@@ -5183,6 +5183,8 @@ export type Database = {
           document_type: string | null
           email: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           is_active: boolean
           name: string
           neighborhood: string | null
@@ -5208,6 +5210,8 @@ export type Database = {
           document_type?: string | null
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           is_active?: boolean
           name: string
           neighborhood?: string | null
@@ -5233,6 +5237,8 @@ export type Database = {
           document_type?: string | null
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           is_active?: boolean
           name?: string
           neighborhood?: string | null
