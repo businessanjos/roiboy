@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -18,6 +18,8 @@ import {
   EyeOff,
   ArrowUpRight,
   ArrowDownLeft,
+  Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface BankAccount {
   id: string;
@@ -66,6 +69,7 @@ interface BankAccount {
   is_active: boolean;
   color: string;
   notes: string | null;
+  logo_url: string | null;
   created_at: string;
 }
 
@@ -90,6 +94,10 @@ export default function BankAccounts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [showBalances, setShowBalances] = useState(true);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -140,10 +148,30 @@ export default function BankAccounts() {
     enabled: !!accountId,
   });
 
+  // Upload logo function
+  const uploadLogo = async (file: File, bankAccountId: string): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${accountId}/${bankAccountId}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('bank-logos')
+      .upload(filePath, file, { upsert: true });
+    
+    if (uploadError) throw uploadError;
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('bank-logos')
+      .getPublicUrl(filePath);
+    
+    return publicUrl;
+  };
+
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const initialBalance = parseFloat(data.initial_balance.replace(",", ".") || "0");
+      let logoUrl = editingAccount?.logo_url || null;
+
       const payload = {
         account_id: accountId,
         name: data.name,
@@ -158,7 +186,10 @@ export default function BankAccounts() {
         current_balance: editingAccount ? editingAccount.current_balance : initialBalance,
         color: data.color,
         notes: data.notes || null,
+        logo_url: logoUrl,
       };
+
+      let savedId: string;
 
       if (editingAccount) {
         const { error } = await supabase
@@ -166,9 +197,29 @@ export default function BankAccounts() {
           .update(payload)
           .eq("id", editingAccount.id);
         if (error) throw error;
+        savedId = editingAccount.id;
       } else {
-        const { error } = await supabase.from("bank_accounts").insert(payload);
+        const { data: inserted, error } = await supabase
+          .from("bank_accounts")
+          .insert(payload)
+          .select("id")
+          .single();
         if (error) throw error;
+        savedId = inserted.id;
+      }
+
+      // Upload logo if there's a new file
+      if (logoFile) {
+        setUploadingLogo(true);
+        try {
+          logoUrl = await uploadLogo(logoFile, savedId);
+          await supabase
+            .from("bank_accounts")
+            .update({ logo_url: logoUrl })
+            .eq("id", savedId);
+        } finally {
+          setUploadingLogo(false);
+        }
       }
     },
     onSuccess: () => {
@@ -238,6 +289,8 @@ export default function BankAccounts() {
       notes: "",
     });
     setEditingAccount(null);
+    setLogoFile(null);
+    setLogoPreview(null);
   };
 
   const handleEdit = (account: BankAccount) => {
@@ -255,7 +308,48 @@ export default function BankAccounts() {
       color: account.color,
       notes: account.notes || "",
     });
+    setLogoFile(null);
+    setLogoPreview(account.logo_url);
     setIsDialogOpen(true);
+  };
+
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "A imagem deve ter no máximo 2MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (editingAccount?.logo_url) {
+      // Remove from storage
+      const urlParts = editingAccount.logo_url.split('/');
+      const filePath = urlParts.slice(-2).join('/');
+      await supabase.storage.from('bank-logos').remove([filePath]);
+      
+      // Update database
+      await supabase
+        .from("bank_accounts")
+        .update({ logo_url: null })
+        .eq("id", editingAccount.id);
+      
+      queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
+    }
+    setLogoFile(null);
+    setLogoPreview(null);
   };
 
   const formatCurrency = (value: number) => {
@@ -337,13 +431,22 @@ export default function BankAccounts() {
                 />
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="p-2 rounded-lg"
-                        style={{ backgroundColor: `${account.color}20` }}
-                      >
-                        <TypeIcon className="h-5 w-5" style={{ color: account.color }} />
-                      </div>
+                    <div className="flex items-center gap-3">
+                      {account.logo_url ? (
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={account.logo_url} alt={account.bank_name} />
+                          <AvatarFallback style={{ backgroundColor: `${account.color}20`, color: account.color }}>
+                            {account.bank_name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <div
+                          className="p-2 rounded-lg"
+                          style={{ backgroundColor: `${account.color}20` }}
+                        >
+                          <TypeIcon className="h-5 w-5" style={{ color: account.color }} />
+                        </div>
+                      )}
                       <div>
                         <CardTitle className="text-base">{account.name}</CardTitle>
                         <CardDescription>{account.bank_name}</CardDescription>
@@ -592,6 +695,54 @@ export default function BankAccounts() {
               </div>
             </div>
 
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <Label>Logo do Banco</Label>
+              <div className="flex items-center gap-4">
+                {logoPreview ? (
+                  <div className="relative">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={logoPreview} alt="Logo" />
+                      <AvatarFallback>{formData.bank_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className="h-16 w-16 rounded-full border-2 border-dashed border-muted-foreground/25 flex items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {logoPreview ? "Trocar Logo" : "Enviar Logo"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG até 2MB</p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea
@@ -606,8 +757,8 @@ export default function BankAccounts() {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? "Salvando..." : editingAccount ? "Atualizar" : "Criar"}
+              <Button type="submit" disabled={saveMutation.isPending || uploadingLogo}>
+                {saveMutation.isPending || uploadingLogo ? "Salvando..." : editingAccount ? "Atualizar" : "Criar"}
               </Button>
             </DialogFooter>
           </form>
