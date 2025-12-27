@@ -2263,6 +2263,10 @@ export default function RoyZapp() {
   // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
+      // Hide archived conversations from main inbox
+      const isArchived = a.zapp_conversation?.is_archived || false;
+      if (isArchived) return false;
+      
       // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
       const matchesTab = inboxTab === "mine" 
         ? a.agent_id === currentAgent?.id
