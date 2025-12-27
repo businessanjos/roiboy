@@ -1455,7 +1455,9 @@ export type Database = {
       clients: {
         Row: {
           account_id: string
+          additional_bank_accounts: Json | null
           additional_phones: Json | null
+          additional_pix_keys: Json | null
           avatar_url: string | null
           bank_account: string | null
           bank_account_type: string | null
@@ -1495,6 +1497,7 @@ export type Database = {
           pix_key: string | null
           pix_key_type: string | null
           responsible_user_id: string | null
+          rg: string | null
           stage_id: string | null
           state: string | null
           status: Database["public"]["Enums"]["client_status"]
@@ -1505,7 +1508,9 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          additional_bank_accounts?: Json | null
           additional_phones?: Json | null
+          additional_pix_keys?: Json | null
           avatar_url?: string | null
           bank_account?: string | null
           bank_account_type?: string | null
@@ -1545,6 +1550,7 @@ export type Database = {
           pix_key?: string | null
           pix_key_type?: string | null
           responsible_user_id?: string | null
+          rg?: string | null
           stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -1555,7 +1561,9 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          additional_bank_accounts?: Json | null
           additional_phones?: Json | null
+          additional_pix_keys?: Json | null
           avatar_url?: string | null
           bank_account?: string | null
           bank_account_type?: string | null
@@ -1595,6 +1603,7 @@ export type Database = {
           pix_key?: string | null
           pix_key_type?: string | null
           responsible_user_id?: string | null
+          rg?: string | null
           stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
