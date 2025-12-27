@@ -1350,7 +1350,13 @@ export default function RoyZapp() {
 
       if (error) throw error;
       toast.success("Marcada como não lida!");
-      fetchData();
+      
+      // Update local state instead of refetching
+      setAssignments(prev => prev.map(a => 
+        a.zapp_conversation?.id === conversationId 
+          ? { ...a, zapp_conversation: { ...a.zapp_conversation!, unread_count: 1 } }
+          : a
+      ));
     } catch (error: any) {
       console.error("Error marking as unread:", error);
       toast.error("Erro ao marcar como não lida");
