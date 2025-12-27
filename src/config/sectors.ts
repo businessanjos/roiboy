@@ -68,12 +68,13 @@ export const sectors: Sector[] = [
   {
     id: "financeiro",
     name: "Finanças",
-    description: "Contratos e cobrança",
+    description: "Contratos e cobrança de clientes",
     icon: CreditCard,
     color: "text-emerald-600",
     bgColor: "bg-emerald-500/10",
-    defaultRoute: "/billing",
+    defaultRoute: "/contracts",
     navItems: [
+      { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/billing", icon: CreditCard, label: "Cobrança", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
     ],
