@@ -577,6 +577,77 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_digit: string | null
+          account_id: string
+          account_number: string | null
+          account_type: string
+          agency: string | null
+          agency_digit: string | null
+          bank_code: string | null
+          bank_name: string
+          color: string
+          created_at: string
+          currency: string
+          current_balance: number
+          id: string
+          initial_balance: number
+          is_active: boolean
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_digit?: string | null
+          account_id: string
+          account_number?: string | null
+          account_type?: string
+          agency?: string | null
+          agency_digit?: string | null
+          bank_code?: string | null
+          bank_name: string
+          color?: string
+          created_at?: string
+          currency?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_digit?: string | null
+          account_id?: string
+          account_number?: string | null
+          account_type?: string
+          agency?: string | null
+          agency_digit?: string | null
+          bank_code?: string | null
+          bank_name?: string
+          color?: string
+          created_at?: string
+          currency?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contracts: {
         Row: {
           account_id: string
@@ -2819,6 +2890,206 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_categories: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_categories_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_entries: {
+        Row: {
+          account_id: string
+          amount: number
+          attachment_name: string | null
+          attachment_url: string | null
+          bank_account_id: string | null
+          category_id: string | null
+          client_id: string | null
+          conciliated_at: string | null
+          conciliated_by: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string
+          document_number: string | null
+          due_date: string
+          entry_type: string
+          id: string
+          is_conciliated: boolean
+          is_recurring: boolean
+          notes: string | null
+          omie_id: string | null
+          omie_sync_at: string | null
+          parent_entry_id: string | null
+          payment_date: string | null
+          recurrence_end_date: string | null
+          recurrence_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number
+          attachment_name?: string | null
+          attachment_url?: string | null
+          bank_account_id?: string | null
+          category_id?: string | null
+          client_id?: string | null
+          conciliated_at?: string | null
+          conciliated_by?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description: string
+          document_number?: string | null
+          due_date: string
+          entry_type?: string
+          id?: string
+          is_conciliated?: boolean
+          is_recurring?: boolean
+          notes?: string | null
+          omie_id?: string | null
+          omie_sync_at?: string | null
+          parent_entry_id?: string | null
+          payment_date?: string | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          attachment_name?: string | null
+          attachment_url?: string | null
+          bank_account_id?: string | null
+          category_id?: string | null
+          client_id?: string | null
+          conciliated_at?: string | null
+          conciliated_by?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          document_number?: string | null
+          due_date?: string
+          entry_type?: string
+          id?: string
+          is_conciliated?: boolean
+          is_recurring?: boolean
+          notes?: string | null
+          omie_id?: string | null
+          omie_sync_at?: string | null
+          parent_entry_id?: string | null
+          payment_date?: string | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_conciliated_by_fkey"
+            columns: ["conciliated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_parent_entry_id_fkey"
+            columns: ["parent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
             referencedColumns: ["id"]
           },
         ]
