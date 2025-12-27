@@ -32,6 +32,8 @@ interface Supplier {
   name: string;
   document: string | null;
   document_type: string | null;
+  inscricao_estadual: string | null;
+  inscricao_municipal: string | null;
   email: string | null;
   phone: string | null;
   contact_name: string | null;
@@ -54,6 +56,8 @@ const initialFormData = {
   name: "",
   document: "",
   document_type: "cpf",
+  inscricao_estadual: "",
+  inscricao_municipal: "",
   email: "",
   phone: "",
   contact_name: "",
@@ -112,6 +116,8 @@ export default function FinancialSuppliersPage() {
         name: data.name,
         document: data.document || null,
         document_type: data.document_type || "cpf",
+        inscricao_estadual: data.inscricao_estadual || null,
+        inscricao_municipal: data.inscricao_municipal || null,
         email: data.email || null,
         phone: data.phone || null,
         contact_name: data.contact_name || null,
@@ -180,6 +186,8 @@ export default function FinancialSuppliersPage() {
       "Nome",
       "Tipo Doc",
       "Documento",
+      "Inscrição Estadual",
+      "Inscrição Municipal",
       "E-mail",
       "Telefone",
       "Contato",
@@ -202,6 +210,8 @@ export default function FinancialSuppliersPage() {
       s.name,
       s.document_type || "",
       s.document || "",
+      s.inscricao_estadual || "",
+      s.inscricao_municipal || "",
       s.email || "",
       s.phone || "",
       s.contact_name || "",
@@ -265,22 +275,24 @@ export default function FinancialSuppliersPage() {
           name: cols[0],
           document_type: cols[1]?.toLowerCase() || "cpf",
           document: cols[2] || null,
-          email: cols[3] || null,
-          phone: cols[4] || null,
-          contact_name: cols[5] || null,
-          street: cols[6] || null,
-          street_number: cols[7] || null,
-          complement: cols[8] || null,
-          neighborhood: cols[9] || null,
-          city: cols[10] || null,
-          state: cols[11] || null,
-          zip_code: cols[12] || null,
-          bank_name: cols[13] || null,
-          bank_agency: cols[14] || null,
-          bank_account: cols[15] || null,
-          pix_key: cols[16] || null,
-          notes: cols[17] || null,
-          is_active: cols[18]?.toLowerCase() !== "não",
+          inscricao_estadual: cols[3] || null,
+          inscricao_municipal: cols[4] || null,
+          email: cols[5] || null,
+          phone: cols[6] || null,
+          contact_name: cols[7] || null,
+          street: cols[8] || null,
+          street_number: cols[9] || null,
+          complement: cols[10] || null,
+          neighborhood: cols[11] || null,
+          city: cols[12] || null,
+          state: cols[13] || null,
+          zip_code: cols[14] || null,
+          bank_name: cols[15] || null,
+          bank_agency: cols[16] || null,
+          bank_account: cols[17] || null,
+          pix_key: cols[18] || null,
+          notes: cols[19] || null,
+          is_active: cols[20]?.toLowerCase() !== "não",
         };
 
         const { error } = await supabase.from("suppliers").insert(supplierData);
@@ -309,6 +321,8 @@ export default function FinancialSuppliersPage() {
       "Nome",
       "Tipo Doc",
       "Documento",
+      "Inscrição Estadual",
+      "Inscrição Municipal",
       "E-mail",
       "Telefone",
       "Contato",
@@ -333,6 +347,8 @@ export default function FinancialSuppliersPage() {
         "Fornecedor Exemplo LTDA",
         "cnpj",
         "12.345.678/0001-99",
+        "123.456.789.001",
+        "12345678",
         "contato@fornecedor.com.br",
         "(11) 99999-9999",
         "João Silva",
@@ -354,6 +370,8 @@ export default function FinancialSuppliersPage() {
         "Maria Prestadora de Serviços",
         "cpf",
         "123.456.789-00",
+        "",
+        "",
         "maria@email.com",
         "(21) 98888-7777",
         "",
@@ -373,6 +391,9 @@ export default function FinancialSuppliersPage() {
       ],
       [
         "", // Linha em branco para o usuário preencher
+        "",
+        "",
+        "",
         "",
         "",
         "",
@@ -418,6 +439,8 @@ export default function FinancialSuppliersPage() {
       name: supplier.name,
       document: supplier.document || "",
       document_type: supplier.document_type || "cpf",
+      inscricao_estadual: supplier.inscricao_estadual || "",
+      inscricao_municipal: supplier.inscricao_municipal || "",
       email: supplier.email || "",
       phone: supplier.phone || "",
       contact_name: supplier.contact_name || "",
@@ -629,6 +652,25 @@ export default function FinancialSuppliersPage() {
                       value={formData.document}
                       onChange={(e) => setFormData({ ...formData, document: e.target.value })}
                       placeholder={formData.document_type === "cnpj" ? "00.000.000/0001-00" : "000.000.000-00"}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Inscrição Estadual</Label>
+                    <Input
+                      value={formData.inscricao_estadual}
+                      onChange={(e) => setFormData({ ...formData, inscricao_estadual: e.target.value })}
+                      placeholder="123.456.789.001"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Inscrição Municipal</Label>
+                    <Input
+                      value={formData.inscricao_municipal}
+                      onChange={(e) => setFormData({ ...formData, inscricao_municipal: e.target.value })}
+                      placeholder="12345678"
                     />
                   </div>
                 </div>
