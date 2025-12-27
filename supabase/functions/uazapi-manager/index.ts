@@ -1520,19 +1520,21 @@ serve(async (req) => {
         let sendSuccess = false;
         
         // UAZAPI GO v2 - Same format as send_text but with group JID as "number"
-        // The API expects { number: "groupJid@g.us", text: "message", mentions: ["jid1@s.whatsapp.net", ...] }
-        // Build base body with mentions if present
-        const baseBody: Record<string, unknown> = { number: groupJid, text: message };
-        if (mentionsList.length > 0) {
-          // Ensure mentions have proper format
-          baseBody.mentions = mentionsList.map(m => m.includes("@") ? m : `${m}@s.whatsapp.net`);
-          baseBody.mentionedJid = baseBody.mentions; // Alternative field name
-        }
+        // Format mentions to ensure @s.whatsapp.net format (clean any @lid format)
+        const formattedMentions = mentionsList.map(m => {
+          // Remove any existing suffix and add @s.whatsapp.net
+          const phone = m.replace(/@.*$/, "").replace(/\D/g, "");
+          return `${phone}@s.whatsapp.net`;
+        });
         
+        // First try WITHOUT mentions (to ensure message is sent)
+        // Then try WITH mentions in different formats
         const sendEndpoints = [
-          { url: `/send/text`, method: "POST", body: baseBody },
-          { url: `/send/text`, method: "POST", body: { chatId: groupJid, text: message, mentions: baseBody.mentions } },
-          { url: `/chat/send/text`, method: "POST", body: { Phone: groupJid, Body: message, Mentions: baseBody.mentions } },
+          // Without mentions first (fallback)
+          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message } },
+          // With mentions in different formats
+          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message, mentions: formattedMentions } },
+          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message, mentionedJid: formattedMentions } },
         ];
 
         for (const endpoint of sendEndpoints) {

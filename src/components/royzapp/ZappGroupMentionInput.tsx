@@ -161,8 +161,8 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
       onChange(newValue);
       setShowSuggestions(false);
       
-      // Build JID for the participant
-      const jid = participant.id.includes("@") ? participant.id : `${participant.phone}@s.whatsapp.net`;
+      // Always build JID using phone number with @s.whatsapp.net format (not @lid)
+      const jid = `${participant.phone}@s.whatsapp.net`;
       onMentionInsert?.({ phone: participant.phone, jid, name: participant.name });
 
       setTimeout(() => inputRef.current?.focus(), 0);
