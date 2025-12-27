@@ -3101,6 +3101,7 @@ export type Database = {
           recurrence_end_date: string | null
           recurrence_type: string | null
           status: string
+          supplier_id: string | null
           total_installments: number | null
           updated_at: string
         }
@@ -3136,6 +3137,7 @@ export type Database = {
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string
+          supplier_id?: string | null
           total_installments?: number | null
           updated_at?: string
         }
@@ -3171,6 +3173,7 @@ export type Database = {
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string
+          supplier_id?: string | null
           total_installments?: number | null
           updated_at?: string
         }
@@ -3236,6 +3239,13 @@ export type Database = {
             columns: ["parent_entry_id"]
             isOneToOne: false
             referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -4855,6 +4865,92 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      suppliers: {
+        Row: {
+          account_id: string
+          bank_account: string | null
+          bank_agency: string | null
+          bank_name: string | null
+          city: string | null
+          complement: string | null
+          contact_name: string | null
+          created_at: string
+          document: string | null
+          document_type: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          neighborhood: string | null
+          notes: string | null
+          phone: string | null
+          pix_key: string | null
+          state: string | null
+          street: string | null
+          street_number: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          account_id: string
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          city?: string | null
+          complement?: string | null
+          contact_name?: string | null
+          created_at?: string
+          document?: string | null
+          document_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          pix_key?: string | null
+          state?: string | null
+          street?: string | null
+          street_number?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          account_id?: string
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          city?: string | null
+          complement?: string | null
+          contact_name?: string | null
+          created_at?: string
+          document?: string | null
+          document_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          pix_key?: string | null
+          state?: string | null
+          street?: string | null
+          street_number?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_knowledge_base: {
         Row: {

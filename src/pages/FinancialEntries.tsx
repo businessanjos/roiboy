@@ -75,6 +75,7 @@ import { RecurringEntriesManager } from "@/components/financial/RecurringEntries
 import { CostCentersManager } from "@/components/financial/CostCentersManager";
 import { BudgetManager } from "@/components/financial/BudgetManager";
 import { ProfitabilityReport } from "@/components/financial/ProfitabilityReport";
+import { SuppliersManager } from "@/components/financial/SuppliersManager";
 
 interface FinancialEntry {
   id: string;
@@ -157,6 +158,7 @@ export default function FinancialEntries() {
   const [isCostCentersOpen, setIsCostCentersOpen] = useState(false);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isProfitabilityOpen, setIsProfitabilityOpen] = useState(false);
+  const [isSuppliersOpen, setIsSuppliersOpen] = useState(false);
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [payingEntry, setPayingEntry] = useState<FinancialEntry | null>(null);
 
@@ -459,6 +461,10 @@ export default function FinancialEntries() {
           <Button variant="outline" onClick={() => setIsCostCentersOpen(true)}>
             <Building2 className="h-4 w-4 mr-2" />
             Centros
+          </Button>
+          <Button variant="outline" onClick={() => setIsSuppliersOpen(true)}>
+            <User className="h-4 w-4 mr-2" />
+            Fornecedores
           </Button>
           <Button variant="outline" onClick={() => setIsRecurringOpen(true)}>
             <Repeat className="h-4 w-4 mr-2" />
@@ -961,6 +967,12 @@ export default function FinancialEntries() {
       <ProfitabilityReport
         open={isProfitabilityOpen}
         onOpenChange={setIsProfitabilityOpen}
+      />
+
+      {/* Suppliers Manager */}
+      <SuppliersManager
+        open={isSuppliersOpen}
+        onOpenChange={setIsSuppliersOpen}
       />
     </div>
   );
