@@ -16,6 +16,7 @@ import {
   Trash2,
   X,
   Zap,
+  Reply,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,14 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ZappGroupMentionInput } from "./ZappGroupMentionInput";
+import { Message } from "./types";
+
+interface ReplyingToMessage {
+  id: string;
+  content: string | null;
+  sender_name: string | null;
+  is_from_client: boolean;
+}
 
 interface ZappMessageInputProps {
   messageInput: string;
@@ -47,6 +56,7 @@ interface ZappMessageInputProps {
   fileInputRef?: React.RefObject<HTMLInputElement>;
   isGroup?: boolean;
   groupJid?: string | null;
+  replyingTo?: ReplyingToMessage | null;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -60,6 +70,7 @@ interface ZappMessageInputProps {
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>, type: string) => void;
   onOpenContactPicker: () => void;
   onOpenQuickReplies: () => void;
+  onCancelReply?: () => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -81,6 +92,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   fileInputRef,
   isGroup,
   groupJid,
+  replyingTo,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -94,6 +106,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onFileSelect,
   onOpenContactPicker,
   onOpenQuickReplies,
+  onCancelReply,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -177,6 +190,31 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </Tooltip>
           
           <span className="text-xs text-zapp-text-muted ml-2">Selecione e clique</span>
+        </div>
+      )}
+
+      {/* Reply preview bar */}
+      {replyingTo && (
+        <div className="bg-zapp-panel border-b border-zapp-border px-4 py-2 flex items-center gap-3">
+          <div className="w-1 h-10 bg-zapp-accent rounded-full flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-zapp-accent truncate">
+              {replyingTo.is_from_client 
+                ? (replyingTo.sender_name || "Cliente") 
+                : "Você"}
+            </p>
+            <p className="text-sm text-zapp-text-muted truncate">
+              {replyingTo.content || "[Mídia]"}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+            onClick={onCancelReply}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       )}
 

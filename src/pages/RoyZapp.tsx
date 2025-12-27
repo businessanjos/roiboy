@@ -92,6 +92,7 @@ export default function RoyZapp() {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean } | null>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -757,6 +758,7 @@ export default function RoyZapp() {
       return newMessages;
     });
     setMessageInput("");
+    setReplyingTo(null);
     
     // Fire and forget - don't block UI while sending
     (async () => {
@@ -2037,6 +2039,17 @@ export default function RoyZapp() {
           onFileSelect={handleFileSelect}
           onOpenContactPicker={() => setContactPickerOpen(true)}
           onOpenQuickReplies={() => setQuickRepliesOpen(true)}
+          replyingTo={replyingTo}
+          onReplyMessage={(msg) => {
+            setReplyingTo({
+              id: msg.id,
+              content: msg.content,
+              sender_name: msg.sender_name || null,
+              is_from_client: msg.is_from_client,
+            });
+            messageInputRef.current?.focus();
+          }}
+          onCancelReply={() => setReplyingTo(null)}
         />
       </div>
 
