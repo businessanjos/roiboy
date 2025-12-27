@@ -53,29 +53,49 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
 
           if (error) throw error;
 
-          // Parse different response formats - API returns { data: { participants: [...] } }
-          let participantsList: GroupParticipant[] = [];
           const rawParticipants = data?.data?.participants || data?.participants || [];
           
-          console.log("[ZappGroupMentionInput] Raw participants:", rawParticipants);
+          // Extract phone numbers for client lookup
+          const phoneNumbers = rawParticipants.map((p: any) => {
+            const phoneField = p.PhoneNumber || p.phoneNumber || p.phone || p.id || "";
+            return phoneField.replace("@s.whatsapp.net", "").replace("@lid", "");
+          }).filter(Boolean);
+
+          // Query clients to get names - match by last 8 digits
+          const { data: clients } = await supabase
+            .from("clients")
+            .select("phone_e164, full_name");
+
+          // Create phone -> name map
+          const phoneToName: Record<string, string> = {};
+          if (clients) {
+            clients.forEach((c: any) => {
+              const cleanPhone = c.phone_e164?.replace(/\D/g, "") || "";
+              if (cleanPhone && c.full_name) {
+                phoneToName[cleanPhone] = c.full_name;
+                phoneToName[cleanPhone.slice(-8)] = c.full_name;
+                phoneToName[cleanPhone.slice(-9)] = c.full_name;
+              }
+            });
+          }
           
-          participantsList = rawParticipants.map((p: any) => {
-            // Handle different field name formats (camelCase vs PascalCase)
+          const participantsList: GroupParticipant[] = rawParticipants.map((p: any) => {
             const phoneField = p.PhoneNumber || p.phoneNumber || p.phone || p.id || "";
             const phone = phoneField.replace("@s.whatsapp.net", "").replace("@lid", "");
             const displayName = p.DisplayName || p.displayName || p.name || p.notify || p.pushName || "";
             const isAdmin = p.IsAdmin || p.isAdmin || p.IsSuperAdmin || p.isSuperAdmin || 
                            p.admin === "admin" || p.admin === "superadmin" || false;
             
+            // Try to find name from clients table
+            const clientName = phoneToName[phone] || phoneToName[phone.slice(-8)] || phoneToName[phone.slice(-9)] || "";
+            
             return {
               id: p.JID || p.jid || p.LID || p.lid || p.id || phone,
               phone: phone,
-              name: displayName || phone, // Fallback to phone if no name
+              name: displayName || clientName || phone,
               isAdmin: isAdmin,
             };
           });
-
-          console.log("[ZappGroupMentionInput] Parsed participants:", participantsList);
 
           setParticipants(participantsList);
         } catch (error) {
