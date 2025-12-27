@@ -74,6 +74,7 @@ const FinancialAlertsPage = lazy(() => import("./pages/financial/FinancialAlerts
 const FinancialAgingPage = lazy(() => import("./pages/financial/FinancialAgingPage"));
 const FinancialProfitabilityPage = lazy(() => import("./pages/financial/FinancialProfitabilityPage"));
 const FinancialDREPage = lazy(() => import("./pages/financial/FinancialDREPage"));
+const FinancialDRFPage = lazy(() => import("./pages/financial/FinancialDRFPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -144,6 +145,7 @@ const App = () => (
                               <Route path="aging" element={<FinancialAgingPage />} />
                               <Route path="profitability" element={<FinancialProfitabilityPage />} />
                               <Route path="dre" element={<FinancialDREPage />} />
+                              <Route path="drf" element={<FinancialDRFPage />} />
                             </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
