@@ -594,6 +594,7 @@ export type Database = {
           id: string
           initial_balance: number
           is_active: boolean
+          logo_url: string | null
           name: string
           notes: string | null
           updated_at: string
@@ -614,6 +615,7 @@ export type Database = {
           id?: string
           initial_balance?: number
           is_active?: boolean
+          logo_url?: string | null
           name: string
           notes?: string | null
           updated_at?: string
@@ -634,6 +636,7 @@ export type Database = {
           id?: string
           initial_balance?: number
           is_active?: boolean
+          logo_url?: string | null
           name?: string
           notes?: string | null
           updated_at?: string
