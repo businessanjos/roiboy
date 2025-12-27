@@ -2778,9 +2778,10 @@ export default function RoyZapp() {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      {/* First row: Name + Time + Menu */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
                           {contact.isPinned && (
                             <Pin className="h-3 w-3 text-zapp-text-muted flex-shrink-0" />
                           )}
@@ -2790,12 +2791,12 @@ export default function RoyZapp() {
                           {contact.isFavorite && (
                             <Heart className="h-3 w-3 text-red-400 fill-red-400 flex-shrink-0" />
                           )}
-                          <span className="text-zapp-text font-medium truncate text-sm">
+                          <span className="text-zapp-text font-medium truncate text-sm flex-1">
                             {contact.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-zapp-text-muted text-xs">
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className="text-zapp-text-muted text-[11px] whitespace-nowrap">
                             {formatTime(contact.lastMessageAt)}
                           </span>
                           {/* Dropdown menu */}
@@ -2804,12 +2805,12 @@ export default function RoyZapp() {
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-6 w-6 text-zapp-text-muted hover:bg-zapp-hover"
+                                className="h-6 w-6 text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56">
+                            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56 z-50">
                               {zappConvId && (
                                 <>
                                   <DropdownMenuItem 
@@ -2899,10 +2900,12 @@ export default function RoyZapp() {
                           </DropdownMenu>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between mt-0.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
+                      
+                      {/* Second row: Last message + Unread badge */}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
                           {assignment.status === "active" && (
-                            <CheckCheck className="h-4 w-4 text-info flex-shrink-0" />
+                            <CheckCheck className="h-3.5 w-3.5 text-info flex-shrink-0" />
                           )}
                           <span className="text-zapp-text-muted text-xs truncate">
                             {contact.lastMessage || contact.phone || "Nova conversa"}
@@ -2911,7 +2914,7 @@ export default function RoyZapp() {
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           {assignment.department && (
                             <div
-                              className="w-2 h-2 rounded-full"
+                              className="w-2 h-2 rounded-full flex-shrink-0"
                               style={{ backgroundColor: assignment.department.color }}
                             />
                           )}
@@ -2922,44 +2925,46 @@ export default function RoyZapp() {
                           )}
                         </div>
                       </div>
-                      {/* Show agent indicator when someone is handling (always show, not just in queue tab) */}
-                      {assignment.agent_id && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <User className="h-3 w-3 text-zapp-accent" />
-                          <span className="text-[11px] text-zapp-accent truncate">
-                            {assignment.agent_id === currentAgent?.id 
-                              ? "Você" 
-                              : getAgentName(assignment.agent_id) || "Atendente"}
-                          </span>
-                        </div>
-                      )}
-                      {/* Product badges */}
-                      {(() => {
-                        const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
-                        const products = clientId ? clientProducts[clientId] : undefined;
-                        return products && products.length > 0 && (
-                          <div className="flex items-center gap-1 mt-1 flex-wrap">
-                            {products.slice(0, 2).map((p) => (
-                              <Badge 
-                                key={p.id} 
-                                variant="secondary" 
-                                className="text-[10px] px-1.5 py-0 h-4 border-0"
-                                style={{ 
-                                  backgroundColor: `${p.color || '#10b981'}20`,
-                                  color: p.color || '#10b981'
-                                }}
-                              >
-                                {p.name}
-                              </Badge>
-                            ))}
-                            {products.length > 2 && (
-                              <span className="text-[10px] text-zapp-text-muted">
-                                +{products.length - 2}
-                              </span>
-                            )}
+                      
+                      {/* Third row: Agent + Products */}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {assignment.agent_id && (
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3 text-zapp-accent" />
+                            <span className="text-[11px] text-zapp-accent">
+                              {assignment.agent_id === currentAgent?.id 
+                                ? "Você" 
+                                : getAgentName(assignment.agent_id) || "Atendente"}
+                            </span>
                           </div>
-                        );
-                      })()}
+                        )}
+                        {(() => {
+                          const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
+                          const products = clientId ? clientProducts[clientId] : undefined;
+                          return products && products.length > 0 && (
+                            <>
+                              {products.slice(0, 2).map((p) => (
+                                <Badge 
+                                  key={p.id} 
+                                  variant="secondary" 
+                                  className="text-[10px] px-1.5 py-0 h-4 border-0"
+                                  style={{ 
+                                    backgroundColor: `${p.color || '#10b981'}20`,
+                                    color: p.color || '#10b981'
+                                  }}
+                                >
+                                  {p.name}
+                                </Badge>
+                              ))}
+                              {products.length > 2 && (
+                                <span className="text-[10px] text-zapp-text-muted">
+                                  +{products.length - 2}
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 );
