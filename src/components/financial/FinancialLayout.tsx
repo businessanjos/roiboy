@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -14,217 +13,158 @@ import {
   BarChart3,
   TrendingUp,
   PiggyBank,
-  ChevronLeft,
-  ChevronRight,
-  LayoutDashboard,
   Receipt,
+  ChevronDown,
+  Settings2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  description?: string;
 }
 
 const mainNavItems: NavItem[] = [
-  {
-    title: "Lançamentos",
-    href: "/financial/entries",
-    icon: Receipt,
-    description: "Contas a pagar e receber",
-  },
-  {
-    title: "Fluxo de Caixa",
-    href: "/financial/cash-flow",
-    icon: TrendingUp,
-    description: "Visão geral do fluxo",
-  },
-  {
-    title: "Contas Bancárias",
-    href: "/financial/bank-accounts",
-    icon: Building2,
-    description: "Gerenciar contas",
-  },
+  { title: "Lançamentos", href: "/financial/entries", icon: Receipt },
+  { title: "Fluxo de Caixa", href: "/financial/cash-flow", icon: TrendingUp },
+  { title: "Contas Bancárias", href: "/financial/bank-accounts", icon: Building2 },
 ];
 
 const managementNavItems: NavItem[] = [
-  {
-    title: "Categorias",
-    href: "/financial/categories",
-    icon: Filter,
-    description: "Categorias financeiras",
-  },
-  {
-    title: "Centros de Custo",
-    href: "/financial/cost-centers",
-    icon: PiggyBank,
-    description: "Gerenciar centros",
-  },
-  {
-    title: "Fornecedores",
-    href: "/financial/suppliers",
-    icon: User,
-    description: "Cadastro de fornecedores",
-  },
-  {
-    title: "Recorrências",
-    href: "/financial/recurring",
-    icon: Repeat,
-    description: "Lançamentos automáticos",
-  },
-  {
-    title: "Orçamentos",
-    href: "/financial/budget",
-    icon: FileText,
-    description: "Planejamento financeiro",
-  },
+  { title: "Categorias", href: "/financial/categories", icon: Filter },
+  { title: "Centros de Custo", href: "/financial/cost-centers", icon: PiggyBank },
+  { title: "Fornecedores", href: "/financial/suppliers", icon: User },
+  { title: "Recorrências", href: "/financial/recurring", icon: Repeat },
+  { title: "Orçamentos", href: "/financial/budget", icon: FileText },
 ];
 
 const operationsNavItems: NavItem[] = [
-  {
-    title: "Conciliação",
-    href: "/financial/reconciliation",
-    icon: Landmark,
-    description: "Conciliação bancária",
-  },
-  {
-    title: "Comissões",
-    href: "/financial/commissions",
-    icon: Percent,
-    description: "Gestão de comissões",
-  },
-  {
-    title: "Alertas",
-    href: "/financial/alerts",
-    icon: Bell,
-    description: "Alertas de vencimento",
-  },
+  { title: "Conciliação", href: "/financial/reconciliation", icon: Landmark },
+  { title: "Comissões", href: "/financial/commissions", icon: Percent },
+  { title: "Alertas", href: "/financial/alerts", icon: Bell },
 ];
 
 const reportsNavItems: NavItem[] = [
-  {
-    title: "Aging",
-    href: "/financial/aging",
-    icon: BarChart3,
-    description: "Relatório de aging",
-  },
-  {
-    title: "Rentabilidade",
-    href: "/financial/profitability",
-    icon: DollarSign,
-    description: "Análise de lucro",
-  },
+  { title: "Aging", href: "/financial/aging", icon: BarChart3 },
+  { title: "Rentabilidade", href: "/financial/profitability", icon: DollarSign },
 ];
 
-interface NavSectionProps {
-  title: string;
-  items: NavItem[];
-  isCollapsed: boolean;
+function NavTab({ item }: { item: NavItem }) {
+  return (
+    <NavLink
+      to={item.href}
+      className={({ isActive }) =>
+        cn(
+          "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
+          "hover:bg-accent hover:text-accent-foreground",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground"
+        )
+      }
+    >
+      <item.icon className="h-4 w-4" />
+      <span>{item.title}</span>
+    </NavLink>
+  );
 }
 
-function NavSection({ title, items, isCollapsed }: NavSectionProps) {
+function NavDropdown({ 
+  title, 
+  items, 
+  icon: Icon 
+}: { 
+  title: string; 
+  items: NavItem[]; 
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  const location = useLocation();
+  const isActive = items.some(item => location.pathname === item.href);
+  
   return (
-    <div className="space-y-1">
-      {!isCollapsed && (
-        <h4 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "gap-2 whitespace-nowrap",
+            isActive && "bg-accent text-accent-foreground"
+          )}
+        >
+          <Icon className="h-4 w-4" />
           {title}
-        </h4>
-      )}
-      {items.map((item) => (
-        <Tooltip key={item.href} delayDuration={0}>
-          <TooltipTrigger asChild>
+          <ChevronDown className="h-3 w-3" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {items.map((item) => (
+          <DropdownMenuItem key={item.href} asChild>
             <NavLink
               to={item.href}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground",
-                  isCollapsed && "justify-center px-2"
+                  "flex items-center gap-2 w-full",
+                  isActive && "bg-accent"
                 )
               }
             >
-              <item.icon className={cn("h-4 w-4 shrink-0", isCollapsed && "h-5 w-5")} />
-              {!isCollapsed && <span>{item.title}</span>}
+              <item.icon className="h-4 w-4" />
+              {item.title}
             </NavLink>
-          </TooltipTrigger>
-          {isCollapsed && (
-            <TooltipContent side="right" className="flex flex-col gap-1">
-              <span className="font-medium">{item.title}</span>
-              {item.description && (
-                <span className="text-xs text-muted-foreground">{item.description}</span>
-              )}
-            </TooltipContent>
-          )}
-        </Tooltip>
-      ))}
-    </div>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
 export function FinancialLayout() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const location = useLocation();
-
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "flex flex-col border-r bg-background transition-all duration-300",
-          isCollapsed ? "w-16" : "w-64"
-        )}
-      >
-        <div className="flex items-center justify-between p-4 border-b">
-          {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              <span className="font-semibold">Financeiro</span>
+    <div className="flex flex-col h-full">
+      {/* Header Navigation */}
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="px-4 py-3">
+          <ScrollArea className="w-full">
+            <div className="flex items-center gap-1">
+              {/* Main tabs */}
+              {mainNavItems.map((item) => (
+                <NavTab key={item.href} item={item} />
+              ))}
+              
+              <div className="w-px h-6 bg-border mx-2" />
+              
+              {/* Dropdown menus for secondary items */}
+              <NavDropdown 
+                title="Gestão" 
+                items={managementNavItems} 
+                icon={Settings2} 
+              />
+              
+              <NavDropdown 
+                title="Operações" 
+                items={operationsNavItems} 
+                icon={Landmark} 
+              />
+              
+              <NavDropdown 
+                title="Relatórios" 
+                items={reportsNavItems} 
+                icon={BarChart3} 
+              />
             </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("h-8 w-8", isCollapsed && "mx-auto")}
-            onClick={() => setIsCollapsed(!isCollapsed)}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </div>
-
-        <ScrollArea className="flex-1 py-4">
-          <div className="space-y-4 px-2">
-            <NavSection title="Principal" items={mainNavItems} isCollapsed={isCollapsed} />
-            
-            {!isCollapsed && <Separator className="mx-2" />}
-            
-            <NavSection title="Gestão" items={managementNavItems} isCollapsed={isCollapsed} />
-            
-            {!isCollapsed && <Separator className="mx-2" />}
-            
-            <NavSection title="Operações" items={operationsNavItems} isCollapsed={isCollapsed} />
-            
-            {!isCollapsed && <Separator className="mx-2" />}
-            
-            <NavSection title="Relatórios" items={reportsNavItems} isCollapsed={isCollapsed} />
-          </div>
-        </ScrollArea>
-      </aside>
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
