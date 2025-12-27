@@ -11,3 +11,4 @@ export * from "./ZappSettingsPanel";
 export * from "./ZappDepartmentList";
 export * from "./ZappSidebarNav";
 export * from "./ZappConversationPanel";
+export * from "./ZappChatView";
