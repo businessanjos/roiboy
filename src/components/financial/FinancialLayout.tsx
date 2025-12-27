@@ -36,6 +36,8 @@ const mainNavItems: NavItem[] = [
   { title: "Fluxo de Caixa", href: "/financial/cash-flow", icon: TrendingUp },
   { title: "Lançamentos", href: "/financial/entries", icon: Receipt },
   { title: "Contas Bancárias", href: "/financial/bank-accounts", icon: Building2 },
+  { title: "Boletos", href: "/financial/boletos", icon: FileText },
+  { title: "Notas Fiscais", href: "/financial/notas-fiscais", icon: Receipt },
 ];
 
 const managementNavItems: NavItem[] = [
