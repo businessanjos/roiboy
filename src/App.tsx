@@ -60,6 +60,7 @@ const Sectors = lazy(() => import("./pages/Sectors"));
 const Contracts = lazy(() => import("./pages/Contracts"));
 const FinancialEntries = lazy(() => import("./pages/FinancialEntries"));
 const BankAccounts = lazy(() => import("./pages/BankAccounts"));
+const CashFlow = lazy(() => import("./pages/CashFlow"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,6 +116,7 @@ const App = () => (
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/financial" element={<FinancialEntries />} />
+                            <Route path="/cash-flow" element={<CashFlow />} />
                             <Route path="/bank-accounts" element={<BankAccounts />} />
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />

@@ -12,6 +12,7 @@ import {
   Bot,
   Package,
   CreditCard,
+  BarChart3,
   TrendingUp,
   Megaphone,
   Settings,
@@ -76,6 +77,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/financial",
     navItems: [
       { to: "/financial", icon: CreditCard, label: "Contas a Pagar/Receber", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/cash-flow", icon: BarChart3, label: "Fluxo de Caixa", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/bank-accounts", icon: CreditCard, label: "Contas Bancárias", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
