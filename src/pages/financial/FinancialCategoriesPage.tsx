@@ -1,0 +1,346 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Edit2, Trash2, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface FinancialCategory {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  type: "income" | "expense" | "both";
+  color: string;
+  is_active: boolean;
+  parent_id: string | null;
+}
+
+const typeLabels = {
+  income: "Receita",
+  expense: "Despesa",
+  both: "Ambos",
+};
+
+const defaultColors = [
+  "#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
+  "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+];
+
+export default function FinancialCategoriesPage() {
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<FinancialCategory | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    type: "both" as "income" | "expense" | "both",
+    color: defaultColors[0],
+    is_active: true,
+    parent_id: "",
+  });
+
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ["financial-categories-all", accountId],
+    queryFn: async () => {
+      if (!accountId) return [];
+      const { data, error } = await supabase
+        .from("financial_categories")
+        .select("*")
+        .eq("account_id", accountId)
+        .order("name");
+      if (error) throw error;
+      return data as FinancialCategory[];
+    },
+    enabled: !!accountId,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const payload = {
+        account_id: accountId,
+        name: data.name,
+        type: data.type,
+        color: data.color,
+        is_active: data.is_active,
+        parent_id: data.parent_id || null,
+      };
+
+      if (editingCategory) {
+        const { error } = await supabase
+          .from("financial_categories")
+          .update(payload)
+          .eq("id", editingCategory.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("financial_categories")
+          .insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-categories"] });
+      setIsDialogOpen(false);
+      resetForm();
+      toast({ title: editingCategory ? "Categoria atualizada" : "Categoria criada" });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível salvar a categoria.", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("financial_categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-categories"] });
+      toast({ title: "Categoria excluída" });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível excluir a categoria.", variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      type: "both",
+      color: defaultColors[Math.floor(Math.random() * defaultColors.length)],
+      is_active: true,
+      parent_id: "",
+    });
+    setEditingCategory(null);
+  };
+
+  const handleEdit = (category: FinancialCategory) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      type: category.type,
+      color: category.color,
+      is_active: category.is_active,
+      parent_id: category.parent_id || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const parentCategories = categories.filter((c) => !c.parent_id && c.id !== editingCategory?.id);
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Categorias Financeiras</h1>
+          <p className="text-muted-foreground">Organize seus lançamentos por categoria</p>
+        </div>
+        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Categoria
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">
+              <p>Nenhuma categoria encontrada</p>
+              <Button variant="link" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+                Criar primeira categoria
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span className="font-medium">{category.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{typeLabels[category.type]}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={category.is_active ? "default" : "secondary"}>
+                        {category.is_active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(category)}>
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm("Deseja excluir esta categoria?")) {
+                                deleteMutation.mutate(category.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveMutation.mutate(formData);
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Salários"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as typeof formData.type })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="income">Receita</SelectItem>
+                  <SelectItem value="expense">Despesa</SelectItem>
+                  <SelectItem value="both">Ambos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cor</Label>
+              <div className="flex gap-2 flex-wrap">
+                {defaultColors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${formData.color === color ? "border-primary scale-110" : "border-transparent"}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setFormData({ ...formData, color })}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoria Pai (opcional)</Label>
+              <Select value={formData.parent_id} onValueChange={(v) => setFormData({ ...formData, parent_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {parentCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.is_active}
+                onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
+              />
+              <Label>Categoria ativa</Label>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? "Salvando..." : editingCategory ? "Atualizar" : "Criar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
