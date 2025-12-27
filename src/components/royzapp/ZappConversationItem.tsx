@@ -126,7 +126,15 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             {contact.isFavorite && (
               <Heart className="h-3 w-3 text-red-400 fill-red-400 flex-shrink-0" />
             )}
-            <span className="text-zapp-text font-medium truncate text-sm flex-1">
+            {contact.unreadCount > 0 && (
+              <span className="flex-shrink-0 bg-zapp-accent text-white text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                {contact.unreadCount}
+              </span>
+            )}
+            <span className={cn(
+              "truncate text-sm flex-1",
+              contact.unreadCount > 0 ? "text-zapp-text font-semibold" : "text-zapp-text font-medium"
+            )}>
               {contact.name}
             </span>
           </div>
