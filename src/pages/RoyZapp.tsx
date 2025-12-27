@@ -206,19 +206,18 @@ export default function RoyZapp() {
 
   // Fetch messages when conversation is selected
   useEffect(() => {
-    // Clear messages first when conversation changes
-    setMessages([]);
-    
     const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
     if (zappConvId) {
       fetchMessages(zappConvId);
     }
-  }, [selectedConversation?.id, fetchMessages, setMessages]);
+  }, [selectedConversation?.id, fetchMessages]);
 
   // Realtime subscription for messages in selected conversation
   useEffect(() => {
     const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
     if (!zappConvId || !currentUser?.account_id) return;
+
+    console.log("[RoyZapp] Setting up realtime for conversation:", zappConvId);
 
     const messagesChannel = supabase
       .channel(`zapp-messages-${zappConvId}`)
@@ -230,14 +229,18 @@ export default function RoyZapp() {
           table: 'zapp_messages',
           filter: `zapp_conversation_id=eq.${zappConvId}`
         },
-        () => {
+        (payload) => {
+          console.log("[RoyZapp] Realtime INSERT received:", payload);
           // Refetch messages to ensure proper ordering
           fetchMessages(zappConvId);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[RoyZapp] Realtime subscription status:", status);
+      });
 
     return () => {
+      console.log("[RoyZapp] Cleaning up realtime for conversation:", zappConvId);
       supabase.removeChannel(messagesChannel);
     };
   }, [selectedConversation?.id, currentUser?.account_id, fetchMessages]);
@@ -746,7 +749,13 @@ export default function RoyZapp() {
       sender_name: null,
     };
     
-    setMessages(prev => [...prev, optimisticMessage]);
+    console.log("[RoyZapp] Adding optimistic message:", optimisticMessage.id);
+    setMessages(prev => {
+      console.log("[RoyZapp] Previous messages count:", prev.length);
+      const newMessages = [...prev, optimisticMessage];
+      console.log("[RoyZapp] New messages count:", newMessages.length);
+      return newMessages;
+    });
     setMessageInput("");
     
     // Fire and forget - don't block UI while sending
