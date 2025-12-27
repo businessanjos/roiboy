@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home, Instagram, FileUser } from "lucide-react";
+import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home, Instagram, FileUser, Landmark, QrCode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   validateCPF, 
@@ -66,6 +66,14 @@ export interface ClientFormData {
   mls_level: string;
   // Responsible user
   responsible_user_id: string;
+  // Banking data
+  pix_key_type: string;
+  pix_key: string;
+  bank_code: string;
+  bank_name: string;
+  bank_agency: string;
+  bank_account: string;
+  bank_account_type: string;
 }
 
 interface ClientInfoFormProps {
@@ -881,6 +889,118 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
+          {/* Banking Data */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Landmark className="h-3.5 w-3.5" />
+              Dados Bancários
+            </div>
+            
+            {/* PIX */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <QrCode className="h-3.5 w-3.5 text-green-500" />
+                  Tipo de Chave PIX
+                </Label>
+                <Select
+                  value={data.pix_key_type || "none"}
+                  onValueChange={(value) => updateField("pix_key_type", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    <SelectItem value="cpf">CPF</SelectItem>
+                    <SelectItem value="cnpj">CNPJ</SelectItem>
+                    <SelectItem value="email">E-mail</SelectItem>
+                    <SelectItem value="phone">Telefone</SelectItem>
+                    <SelectItem value="random">Chave Aleatória</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium">Chave PIX</Label>
+                <Input
+                  value={data.pix_key}
+                  onChange={(e) => updateField("pix_key", e.target.value)}
+                  placeholder={
+                    data.pix_key_type === "cpf" ? "000.000.000-00" :
+                    data.pix_key_type === "cnpj" ? "00.000.000/0000-00" :
+                    data.pix_key_type === "email" ? "email@exemplo.com" :
+                    data.pix_key_type === "phone" ? "+55 11 99999-9999" :
+                    data.pix_key_type === "random" ? "Chave aleatória" :
+                    "Selecione o tipo primeiro"
+                  }
+                  className="h-9"
+                  disabled={!data.pix_key_type}
+                />
+              </div>
+            </div>
+            
+            {/* Bank Account */}
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium">Banco</Label>
+                <Input
+                  value={data.bank_name}
+                  onChange={(e) => updateField("bank_name", e.target.value)}
+                  placeholder="Banco do Brasil, Itaú, etc."
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Código</Label>
+                <Input
+                  value={data.bank_code}
+                  onChange={(e) => updateField("bank_code", e.target.value.replace(/\D/g, ""))}
+                  placeholder="001"
+                  maxLength={4}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Tipo</Label>
+                <Select
+                  value={data.bank_account_type || "checking"}
+                  onValueChange={(value) => updateField("bank_account_type", value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="checking">Corrente</SelectItem>
+                    <SelectItem value="savings">Poupança</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Agência</Label>
+                <Input
+                  value={data.bank_agency}
+                  onChange={(e) => updateField("bank_agency", e.target.value.replace(/\D/g, ""))}
+                  placeholder="0001"
+                  maxLength={6}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Conta</Label>
+                <Input
+                  value={data.bank_account}
+                  onChange={(e) => updateField("bank_account", e.target.value)}
+                  placeholder="12345-6"
+                  className="h-9"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
           {/* Notes */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Observações</Label>
@@ -1149,4 +1269,11 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   is_mls: false,
   mls_level: "",
   responsible_user_id: "",
+  pix_key_type: "",
+  pix_key: "",
+  bank_code: "",
+  bank_name: "",
+  bank_agency: "",
+  bank_account: "",
+  bank_account_type: "checking",
 });

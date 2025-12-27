@@ -1457,6 +1457,11 @@ export type Database = {
           account_id: string
           additional_phones: Json | null
           avatar_url: string | null
+          bank_account: string | null
+          bank_account_type: string | null
+          bank_agency: string | null
+          bank_code: string | null
+          bank_name: string | null
           bio: string | null
           birth_date: string | null
           business_city: string | null
@@ -1484,6 +1489,8 @@ export type Database = {
           neighborhood: string | null
           notes: string | null
           phone_e164: string
+          pix_key: string | null
+          pix_key_type: string | null
           responsible_user_id: string | null
           stage_id: string | null
           state: string | null
@@ -1497,6 +1504,11 @@ export type Database = {
           account_id: string
           additional_phones?: Json | null
           avatar_url?: string | null
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
           bio?: string | null
           birth_date?: string | null
           business_city?: string | null
@@ -1524,6 +1536,8 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           phone_e164: string
+          pix_key?: string | null
+          pix_key_type?: string | null
           responsible_user_id?: string | null
           stage_id?: string | null
           state?: string | null
@@ -1537,6 +1551,11 @@ export type Database = {
           account_id?: string
           additional_phones?: Json | null
           avatar_url?: string | null
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
           bio?: string | null
           birth_date?: string | null
           business_city?: string | null
@@ -1564,6 +1583,8 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           phone_e164?: string
+          pix_key?: string | null
+          pix_key_type?: string | null
           responsible_user_id?: string | null
           stage_id?: string | null
           state?: string | null
