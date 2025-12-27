@@ -1483,6 +1483,7 @@ export type Database = {
           full_name: string
           id: string
           instagram: string | null
+          instagrams: Json | null
           is_mls: boolean
           logo_url: string | null
           mls_level: string | null
@@ -1530,6 +1531,7 @@ export type Database = {
           full_name: string
           id?: string
           instagram?: string | null
+          instagrams?: Json | null
           is_mls?: boolean
           logo_url?: string | null
           mls_level?: string | null
@@ -1577,6 +1579,7 @@ export type Database = {
           full_name?: string
           id?: string
           instagram?: string | null
+          instagrams?: Json | null
           is_mls?: boolean
           logo_url?: string | null
           mls_level?: string | null

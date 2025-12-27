@@ -42,6 +42,7 @@ export interface ClientFormData {
   company_name: string;
   notes: string;
   instagram: string;
+  instagrams: string[];
   bio: string;
   // Residential address
   street: string;
@@ -666,19 +667,67 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               Perfil Público
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
+              {/* Instagram principal */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   <Instagram className="h-3.5 w-3.5 text-pink-500" />
-                  Instagram
+                  Instagram principal
                 </Label>
-                <Input
-                  value={data.instagram}
-                  onChange={(e) => updateField("instagram", e.target.value.replace(/^@/, ''))}
-                  placeholder="usuario"
-                  className="h-9"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={data.instagram}
+                    onChange={(e) => updateField("instagram", e.target.value.replace(/^@/, ''))}
+                    placeholder="usuario"
+                    className="h-9"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => {
+                      if (data.instagram.trim()) {
+                        updateField("instagrams", [...data.instagrams, data.instagram.trim()]);
+                        updateField("instagram", "");
+                      }
+                    }}
+                    disabled={!data.instagram.trim()}
+                    title="Adicionar outro Instagram"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
                 <p className="text-[11px] text-muted-foreground">Sem o @ (ex: usuario)</p>
               </div>
+
+              {/* Instagrams adicionais */}
+              {data.instagrams.length > 0 && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Instagrams adicionais</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {data.instagrams.map((ig, index) => (
+                      <Badge 
+                        key={index} 
+                        variant="secondary" 
+                        className="flex items-center gap-1 pl-2 pr-1 py-1"
+                      >
+                        <Instagram className="h-3 w-3 text-pink-500" />
+                        @{ig}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 ml-1 hover:bg-destructive/20 hover:text-destructive"
+                          onClick={() => updateField("instagrams", data.instagrams.filter((_, i) => i !== index))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-sm font-medium">Bio</Label>
                 <Textarea
@@ -1260,6 +1309,7 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   company_name: "",
   notes: "",
   instagram: "",
+  instagrams: [],
   bio: "",
   street: "",
   street_number: "",
