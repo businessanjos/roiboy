@@ -739,10 +739,11 @@ export default function RoyZapp() {
       return;
     }
     
-    // Add signature at the top of the message if enabled
+    // Add signature at the top of the message if enabled (bold name with colon)
     const baseMessage = messageInput.trim();
-    const messageContent = signatureEnabled && userSignature.trim() 
-      ? `${userSignature.trim()}\n\n${baseMessage}`
+    const formattedSignature = userSignature.trim() ? `*${userSignature.trim()}:*` : "";
+    const messageContent = signatureEnabled && formattedSignature 
+      ? `${formattedSignature}\n${baseMessage}`
       : baseMessage;
     const tempMessageId = `temp-${Date.now()}`;
     const now = new Date().toISOString();
