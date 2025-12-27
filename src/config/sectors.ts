@@ -53,6 +53,7 @@ export const sectors: Sector[] = [
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/team", icon: UserCircle, label: "Equipe", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
+      { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
       { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
       { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
       { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
@@ -65,13 +66,12 @@ export const sectors: Sector[] = [
   {
     id: "financeiro",
     name: "Finanças",
-    description: "Produtos, contratos e cobrança",
+    description: "Contratos e cobrança",
     icon: CreditCard,
     color: "text-emerald-600",
     bgColor: "bg-emerald-500/10",
-    defaultRoute: "/products",
+    defaultRoute: "/billing",
     navItems: [
-      { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
       { to: "/billing", icon: CreditCard, label: "Cobrança", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
     ],
