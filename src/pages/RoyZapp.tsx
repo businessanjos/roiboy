@@ -18,6 +18,11 @@ import {
   ConversationAssignment,
 } from "@/components/royzapp";
 import {
+  ZappDepartmentDialog,
+  ZappAgentDialog,
+  ZappTagDialog,
+} from "@/components/royzapp/dialogs";
+import {
   MessageSquare,
   Users,
   Users2,
@@ -2721,152 +2726,34 @@ export default function RoyZapp() {
       </div>
 
       {/* Department Dialog */}
-      <Dialog open={departmentDialogOpen} onOpenChange={setDepartmentDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingDepartment ? "Editar Departamento" : "Novo Departamento"}
-            </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Departamentos organizam as conversas por área
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="dept-name" className="text-[#8696a0]">Nome</Label>
-              <Input
-                id="dept-name"
-                value={departmentForm.name}
-                onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })}
-                placeholder="Ex: Vendas, Suporte"
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dept-description" className="text-[#8696a0]">Descrição</Label>
-              <Textarea
-                id="dept-description"
-                value={departmentForm.description}
-                onChange={(e) => setDepartmentForm({ ...departmentForm, description: e.target.value })}
-                placeholder="Descreva a função"
-                rows={2}
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[#8696a0]">Cor</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={departmentForm.color}
-                  onChange={(e) => setDepartmentForm({ ...departmentForm, color: e.target.value })}
-                  className="h-10 w-10 rounded border-0 cursor-pointer"
-                />
-                <Input
-                  value={departmentForm.color}
-                  onChange={(e) => setDepartmentForm({ ...departmentForm, color: e.target.value })}
-                  className="flex-1 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-[#e9edef]">Distribuição Automática</Label>
-                <p className="text-xs text-[#8696a0]">Atribuir conversas automaticamente</p>
-              </div>
-              <Switch
-                checked={departmentForm.auto_distribution}
-                onCheckedChange={(checked) => setDepartmentForm({ ...departmentForm, auto_distribution: checked })}
-                className="data-[state=checked]:bg-[#00a884]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDepartmentDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
-              Cancelar
-            </Button>
-            <Button onClick={saveDepartment} disabled={savingDepartment} className="bg-[#00a884] hover:bg-[#00a884]/90">
-              {savingDepartment ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappDepartmentDialog
+        open={departmentDialogOpen}
+        onOpenChange={setDepartmentDialogOpen}
+        editingDepartment={editingDepartment}
+        form={departmentForm}
+        onFormChange={setDepartmentForm}
+        onSave={saveDepartment}
+        saving={savingDepartment}
+        deletingId={deletingDepartmentId}
+        onDeleteConfirm={deleteDepartment}
+        onDeleteCancel={() => setDeletingDepartmentId(null)}
+      />
 
       {/* Agent Dialog */}
-      <Dialog open={agentDialogOpen} onOpenChange={setAgentDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingAgent ? "Editar Atendente" : "Adicionar Atendente"}
-            </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Configure as permissões do atendente
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="text-[#8696a0]">Usuário</Label>
-              <Select
-                value={agentForm.user_id}
-                onValueChange={(value) => setAgentForm({ ...agentForm, user_id: value })}
-                disabled={!!editingAgent}
-              >
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                  {availableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id} className="text-[#e9edef]">
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-
-            <div className="space-y-2">
-              <Label className="text-[#8696a0]">Departamento</Label>
-              <Select
-                value={agentForm.department_id || "all"}
-                onValueChange={(value) => setAgentForm({ ...agentForm, department_id: value === "all" ? "" : value })}
-              >
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                  <SelectItem value="all" className="text-[#e9edef]">Todos</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id} className="text-[#e9edef]">
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[#8696a0]">Máx. atendimentos simultâneos</Label>
-              <Input
-                type="number"
-                min={1}
-                max={20}
-                value={agentForm.max_concurrent_chats}
-                onChange={(e) => setAgentForm({ ...agentForm, max_concurrent_chats: parseInt(e.target.value) || 5 })}
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAgentDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
-              Cancelar
-            </Button>
-            <Button onClick={saveAgent} disabled={savingAgent} className="bg-[#00a884] hover:bg-[#00a884]/90">
-              {savingAgent ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ZappAgentDialog
+        open={agentDialogOpen}
+        onOpenChange={setAgentDialogOpen}
+        editingAgent={editingAgent}
+        form={agentForm}
+        onFormChange={setAgentForm}
+        onSave={saveAgent}
+        saving={savingAgent}
+        availableUsers={availableUsers}
+        departments={departments}
+        deletingId={deletingAgentId}
+        onDeleteConfirm={deleteAgent}
+        onDeleteCancel={() => setDeletingAgentId(null)}
+      />
 
       {/* ROI Dialog */}
       <Dialog open={roiDialogOpen} onOpenChange={setRoiDialogOpen}>
@@ -3070,128 +2957,19 @@ export default function RoyZapp() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmations */}
-      <AlertDialog open={!!deletingDepartmentId} onOpenChange={(open) => !open && setDeletingDepartmentId(null)}>
-        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#e9edef]">Excluir departamento?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8696a0]">
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={() => deletingDepartmentId && deleteDepartment(deletingDepartmentId)}
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!deletingAgentId} onOpenChange={(open) => !open && setDeletingAgentId(null)}>
-        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#e9edef]">Remover atendente?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8696a0]">
-              O usuário não poderá mais atender conversas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={() => deletingAgentId && deleteAgent(deletingAgentId)}
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* Tag Dialog */}
-      <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingTag ? "Editar Tag" : "Nova Tag"}
-            </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
-              Tags ajudam a organizar suas conversas
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="tag-name" className="text-[#8696a0]">Nome</Label>
-              <Input
-                id="tag-name"
-                value={tagForm.name}
-                onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
-                placeholder="Ex: Urgente, VIP, Suporte"
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tag-description" className="text-[#8696a0]">Descrição</Label>
-              <Textarea
-                id="tag-description"
-                value={tagForm.description}
-                onChange={(e) => setTagForm({ ...tagForm, description: e.target.value })}
-                placeholder="Descrição opcional"
-                rows={2}
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[#8696a0]">Cor</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={tagForm.color}
-                  onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
-                  className="h-10 w-10 rounded border-0 cursor-pointer"
-                />
-                <Input
-                  value={tagForm.color}
-                  onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
-                  className="flex-1 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTagDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
-              Cancelar
-            </Button>
-            <Button onClick={saveTag} disabled={savingTag} className="bg-[#00a884] hover:bg-[#00a884]/90">
-              {savingTag ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Tag Confirmation */}
-      <AlertDialog open={!!deletingTagId} onOpenChange={(open) => !open && setDeletingTagId(null)}>
-        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#e9edef]">Excluir tag?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8696a0]">
-              A tag será removida de todas as conversas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={() => deletingTagId && deleteTag(deletingTagId)}
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ZappTagDialog
+        open={tagDialogOpen}
+        onOpenChange={setTagDialogOpen}
+        editingTag={editingTag}
+        form={tagForm}
+        onFormChange={setTagForm}
+        onSave={saveTag}
+        saving={savingTag}
+        deletingId={deletingTagId}
+        onDeleteConfirm={deleteTag}
+        onDeleteCancel={() => setDeletingTagId(null)}
+      />
 
       {/* Conversation Tagging Dialog */}
       <Dialog open={conversationTagDialogOpen} onOpenChange={setConversationTagDialogOpen}>
