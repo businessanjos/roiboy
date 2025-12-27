@@ -76,7 +76,6 @@ export const sectors: Sector[] = [
     defaultRoute: "/contracts",
     navItems: [
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
-      { to: "/billing", icon: CreditCard, label: "Cobrança", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
