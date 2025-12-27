@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit2, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -43,14 +43,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface FinancialCategory {
   id: string;
   name: string;
-  parent_id: string | null;
-  type: "income" | "expense" | "both";
+  type: string;
   color: string;
   is_active: boolean;
-  parent_id: string | null;
+  icon?: string;
+  display_order?: number;
 }
 
-const typeLabels = {
+const typeLabels: Record<string, string> = {
   income: "Receita",
   expense: "Despesa",
   both: "Ambos",
@@ -74,7 +74,6 @@ export default function FinancialCategoriesPage() {
     type: "both" as "income" | "expense" | "both",
     color: defaultColors[0],
     is_active: true,
-    parent_id: "",
   });
 
   const { data: categories = [], isLoading } = useQuery({
@@ -87,7 +86,7 @@ export default function FinancialCategoriesPage() {
         .eq("account_id", accountId)
         .order("name");
       if (error) throw error;
-      return data as FinancialCategory[];
+      return data as unknown as FinancialCategory[];
     },
     enabled: !!accountId,
   });
@@ -100,7 +99,6 @@ export default function FinancialCategoriesPage() {
         type: data.type,
         color: data.color,
         is_active: data.is_active,
-        parent_id: data.parent_id || null,
       };
 
       if (editingCategory) {
@@ -147,7 +145,6 @@ export default function FinancialCategoriesPage() {
       type: "both",
       color: defaultColors[Math.floor(Math.random() * defaultColors.length)],
       is_active: true,
-      parent_id: "",
     });
     setEditingCategory(null);
   };
@@ -156,15 +153,13 @@ export default function FinancialCategoriesPage() {
     setEditingCategory(category);
     setFormData({
       name: category.name,
-      type: category.type,
+      type: category.type as "income" | "expense" | "both",
       color: category.color,
       is_active: category.is_active,
-      parent_id: category.parent_id || "",
     });
     setIsDialogOpen(true);
   };
 
-  const parentCategories = categories.filter((c) => !c.parent_id && c.id !== editingCategory?.id);
 
   return (
     <div className="p-6 space-y-6">
@@ -215,7 +210,7 @@ export default function FinancialCategoriesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{typeLabels[category.type]}</Badge>
+                      <Badge variant="outline">{typeLabels[category.type] || category.type}</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={category.is_active ? "default" : "secondary"}>
@@ -307,20 +302,6 @@ export default function FinancialCategoriesPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Categoria Pai (opcional)</Label>
-              <Select value={formData.parent_id} onValueChange={(v) => setFormData({ ...formData, parent_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Nenhuma" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
-                  {parentCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="flex items-center gap-2">
               <Switch

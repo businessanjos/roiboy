@@ -58,10 +58,21 @@ const RoyZapp = lazy(() => import("./pages/RoyZapp"));
 const BillingPortal = lazy(() => import("./pages/BillingPortal"));
 const Sectors = lazy(() => import("./pages/Sectors"));
 const Contracts = lazy(() => import("./pages/Contracts"));
-const FinancialEntries = lazy(() => import("./pages/FinancialEntries"));
-const BankAccounts = lazy(() => import("./pages/BankAccounts"));
-const CashFlow = lazy(() => import("./pages/CashFlow"));
-const FinancialReports = lazy(() => import("./pages/FinancialReports"));
+// Financial module with sub-routes
+import { FinancialLayout } from "@/components/financial/FinancialLayout";
+const FinancialEntriesPage = lazy(() => import("./pages/financial/FinancialEntriesPage"));
+const FinancialCashFlowPage = lazy(() => import("./pages/financial/FinancialCashFlowPage"));
+const FinancialBankAccountsPage = lazy(() => import("./pages/financial/FinancialBankAccountsPage"));
+const FinancialCategoriesPage = lazy(() => import("./pages/financial/FinancialCategoriesPage"));
+const FinancialCostCentersPage = lazy(() => import("./pages/financial/FinancialCostCentersPage"));
+const FinancialSuppliersPage = lazy(() => import("./pages/financial/FinancialSuppliersPage"));
+const FinancialRecurringPage = lazy(() => import("./pages/financial/FinancialRecurringPage"));
+const FinancialBudgetPage = lazy(() => import("./pages/financial/FinancialBudgetPage"));
+const FinancialReconciliationPage = lazy(() => import("./pages/financial/FinancialReconciliationPage"));
+const FinancialCommissionsPage = lazy(() => import("./pages/financial/FinancialCommissionsPage"));
+const FinancialAlertsPage = lazy(() => import("./pages/financial/FinancialAlertsPage"));
+const FinancialAgingPage = lazy(() => import("./pages/financial/FinancialAgingPage"));
+const FinancialProfitabilityPage = lazy(() => import("./pages/financial/FinancialProfitabilityPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -116,10 +127,22 @@ const App = () => (
                             <Route path="/clients/new" element={<Clients />} />
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/contracts" element={<Contracts />} />
-                            <Route path="/financial" element={<FinancialEntries />} />
-                            <Route path="/cash-flow" element={<CashFlow />} />
-                            <Route path="/bank-accounts" element={<BankAccounts />} />
-                            <Route path="/financial-reports" element={<FinancialReports />} />
+                            <Route path="/financial" element={<FinancialLayout />}>
+                              <Route index element={<Navigate to="/financial/entries" replace />} />
+                              <Route path="entries" element={<FinancialEntriesPage />} />
+                              <Route path="cash-flow" element={<FinancialCashFlowPage />} />
+                              <Route path="bank-accounts" element={<FinancialBankAccountsPage />} />
+                              <Route path="categories" element={<FinancialCategoriesPage />} />
+                              <Route path="cost-centers" element={<FinancialCostCentersPage />} />
+                              <Route path="suppliers" element={<FinancialSuppliersPage />} />
+                              <Route path="recurring" element={<FinancialRecurringPage />} />
+                              <Route path="budget" element={<FinancialBudgetPage />} />
+                              <Route path="reconciliation" element={<FinancialReconciliationPage />} />
+                              <Route path="commissions" element={<FinancialCommissionsPage />} />
+                              <Route path="alerts" element={<FinancialAlertsPage />} />
+                              <Route path="aging" element={<FinancialAgingPage />} />
+                              <Route path="profitability" element={<FinancialProfitabilityPage />} />
+                            </Route>
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
                             <Route path="/events/:id" element={<EventDetail />} />
