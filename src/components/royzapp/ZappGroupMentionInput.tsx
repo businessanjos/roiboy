@@ -156,7 +156,8 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
     const selectMention = useCallback((participant: GroupParticipant) => {
       const beforeMention = value.slice(0, mentionStartIndex);
       const afterMention = value.slice(mentionStartIndex + mentionQuery.length + 1);
-      const newValue = `${beforeMention}@${participant.phone} ${afterMention}`;
+      // Insert the name in the message text, the phone/JID is tracked separately for the API
+      const newValue = `${beforeMention}@${participant.name} ${afterMention}`;
       
       onChange(newValue);
       setShowSuggestions(false);
