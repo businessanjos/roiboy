@@ -82,7 +82,8 @@ const bankColors = [
 ];
 
 export default function BankAccounts() {
-  const { accountId } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
