@@ -48,7 +48,19 @@ interface FinancialCategory {
   is_active: boolean;
   icon?: string;
   display_order?: number;
+  dre_group?: string;
 }
+
+const dreGroupLabels: Record<string, string> = {
+  gross_revenue: "Receita Bruta",
+  deductions: "(-) Deduções",
+  cogs: "(-) CMV/CPV",
+  admin_expenses: "(-) Despesas Administrativas",
+  sales_expenses: "(-) Despesas Comerciais",
+  financial_expenses: "(-) Despesas Financeiras",
+  other_revenue: "(+) Outras Receitas",
+  other_expenses: "(-) Outras Despesas",
+};
 
 const typeLabels: Record<string, string> = {
   income: "Receita",
@@ -74,6 +86,7 @@ export default function FinancialCategoriesPage() {
     type: "both" as "income" | "expense" | "both",
     color: defaultColors[0],
     is_active: true,
+    dre_group: "" as string,
   });
 
   const { data: categories = [], isLoading } = useQuery({
@@ -99,6 +112,7 @@ export default function FinancialCategoriesPage() {
         type: data.type,
         color: data.color,
         is_active: data.is_active,
+        dre_group: data.dre_group || null,
       };
 
       if (editingCategory) {
@@ -145,6 +159,7 @@ export default function FinancialCategoriesPage() {
       type: "both",
       color: defaultColors[Math.floor(Math.random() * defaultColors.length)],
       is_active: true,
+      dre_group: "",
     });
     setEditingCategory(null);
   };
@@ -156,6 +171,7 @@ export default function FinancialCategoriesPage() {
       type: category.type as "income" | "expense" | "both",
       color: category.color,
       is_active: category.is_active,
+      dre_group: category.dre_group || "",
     });
     setIsDialogOpen(true);
   };
@@ -193,6 +209,7 @@ export default function FinancialCategoriesPage() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Grupo DRE</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -211,6 +228,15 @@ export default function FinancialCategoriesPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{typeLabels[category.type] || category.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {category.dre_group ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {dreGroupLabels[category.dre_group] || category.dre_group}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={category.is_active ? "default" : "secondary"}>
@@ -302,6 +328,31 @@ export default function FinancialCategoriesPage() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label>Grupo DRE</Label>
+              <Select 
+                value={formData.dre_group} 
+                onValueChange={(v) => setFormData({ ...formData, dre_group: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o grupo no DRE" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="gross_revenue">Receita Bruta</SelectItem>
+                  <SelectItem value="deductions">(-) Deduções</SelectItem>
+                  <SelectItem value="cogs">(-) CMV/CPV (Custo dos Produtos)</SelectItem>
+                  <SelectItem value="admin_expenses">(-) Despesas Administrativas</SelectItem>
+                  <SelectItem value="sales_expenses">(-) Despesas Comerciais</SelectItem>
+                  <SelectItem value="financial_expenses">(-) Despesas Financeiras</SelectItem>
+                  <SelectItem value="other_revenue">(+) Outras Receitas</SelectItem>
+                  <SelectItem value="other_expenses">(-) Outras Despesas</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Define onde esta categoria aparece na Demonstração do Resultado (DRE)
+              </p>
+            </div>
 
             <div className="flex items-center gap-2">
               <Switch
