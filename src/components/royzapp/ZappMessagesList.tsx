@@ -7,11 +7,13 @@ import { ZappMessageBubble } from "./ZappMessageBubble";
 interface ZappMessagesListProps {
   messages: Message[];
   isGroup: boolean;
+  onReplyMessage?: (message: Message) => void;
 }
 
 export function ZappMessagesList({
   messages,
   isGroup,
+  onReplyMessage,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +43,7 @@ export function ZappMessagesList({
                 message={message}
                 showTimestamp={showTimestamp}
                 isGroup={isGroup}
+                onReply={onReplyMessage}
               />
             );
           })

@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -10,14 +10,18 @@ import {
   FileText,
   Download,
   Loader2,
+  Reply,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message, getSenderColor } from "./types";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ZappMessageBubbleProps {
   message: Message;
   showTimestamp: boolean;
   isGroup: boolean;
+  onReply?: (message: Message) => void;
 }
 
 // Function to extract domain from URL for display
@@ -67,7 +71,10 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   message,
   showTimestamp,
   isGroup,
+  onReply,
 }: ZappMessageBubbleProps) {
+  const [showActions, setShowActions] = useState(false);
+  
   const renderedContent = useMemo(() => {
     if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
       return renderTextWithLinks(message.content);
@@ -83,10 +90,36 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           </span>
         </div>
       )}
-      <div className={cn(
-        "flex mb-1",
-        message.is_from_client ? "justify-start" : "justify-end"
-      )}>
+      <div 
+        className={cn(
+          "flex mb-1 group relative",
+          message.is_from_client ? "justify-start" : "justify-end"
+        )}
+        onMouseEnter={() => setShowActions(true)}
+        onMouseLeave={() => setShowActions(false)}
+      >
+        {/* Reply button - positioned outside bubble */}
+        {onReply && showActions && (
+          <div className={cn(
+            "flex items-center gap-1 absolute top-1/2 -translate-y-1/2 z-10",
+            message.is_from_client ? "right-[calc(65%+8px)]" : "left-[calc(65%+8px)]"
+          )}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                  onClick={() => onReply(message)}
+                >
+                  <Reply className="h-4 w-4 text-zapp-text-muted" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Responder</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+        
         <div className={cn(
           "max-w-[65%] px-3 py-2 rounded-lg relative shadow",
           message.is_from_client

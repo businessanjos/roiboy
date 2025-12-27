@@ -3,22 +3,31 @@ import { MessageSquare, Clock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput } from "./ZappMessageInput";
-import { ConversationAssignment } from "./types";
+import { ConversationAssignment, Message } from "./types";
 
-interface Message {
+interface ContactInfo {
+  name: string;
+  phone: string;
+  avatar: string | null;
+  clientId: string | null;
+  isClient: boolean;
+  isGroup: boolean;
+  lastMessage: string | null;
+  lastMessagePreview: string;
+  unreadCount: number;
+  lastMessageAt: string;
+  isPinned: boolean;
+  isMuted: boolean;
+  isArchived: boolean;
+  isFavorite: boolean;
+  isBlocked: boolean;
+}
+
+interface ReplyingToMessage {
   id: string;
   content: string | null;
+  sender_name: string | null;
   is_from_client: boolean;
-  created_at: string;
-  message_type: string;
-  media_url?: string | null;
-  media_type?: string | null;
-  media_mimetype?: string | null;
-  media_filename?: string | null;
-  audio_duration_sec?: number | null;
-  sender_name?: string | null;
-  delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
-  media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
 }
 
 interface ContactInfo {
@@ -52,6 +61,7 @@ interface ZappChatViewProps {
   recordingDuration: number;
   audioPreview: { blob: Blob; url: string; duration: number } | null;
   showFormatting: boolean;
+  replyingTo: ReplyingToMessage | null;
   messageInputRef: RefObject<HTMLInputElement>;
   imageInputRef: RefObject<HTMLInputElement>;
   fileInputRef: RefObject<HTMLInputElement>;
@@ -82,6 +92,8 @@ interface ZappChatViewProps {
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "document") => void;
   onOpenContactPicker: () => void;
   onOpenQuickReplies: () => void;
+  onReplyMessage: (message: Message) => void;
+  onCancelReply: () => void;
 }
 
 export function ZappChatView({
@@ -97,6 +109,7 @@ export function ZappChatView({
   recordingDuration,
   audioPreview,
   showFormatting,
+  replyingTo,
   messageInputRef,
   imageInputRef,
   fileInputRef,
@@ -125,6 +138,8 @@ export function ZappChatView({
   onFileSelect,
   onOpenContactPicker,
   onOpenQuickReplies,
+  onReplyMessage,
+  onCancelReply,
 }: ZappChatViewProps) {
   if (!selectedConversation) {
     return (
@@ -182,7 +197,8 @@ export function ZappChatView({
       {/* Messages */}
       <ZappMessagesList 
         messages={messages} 
-        isGroup={contactInfo.isGroup} 
+        isGroup={contactInfo.isGroup}
+        onReplyMessage={onReplyMessage}
       />
 
       {/* Message input */}
@@ -194,6 +210,7 @@ export function ZappChatView({
         recordingDuration={recordingDuration}
         audioPreview={audioPreview}
         showFormatting={showFormatting}
+        replyingTo={replyingTo}
         messageInputRef={messageInputRef}
         imageInputRef={imageInputRef}
         fileInputRef={fileInputRef}
@@ -212,6 +229,7 @@ export function ZappChatView({
         onFileSelect={onFileSelect}
         onOpenContactPicker={onOpenContactPicker}
         onOpenQuickReplies={onOpenQuickReplies}
+        onCancelReply={onCancelReply}
       />
     </div>
   );
