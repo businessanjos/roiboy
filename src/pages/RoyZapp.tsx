@@ -2322,6 +2322,17 @@ export default function RoyZapp() {
   const myConversations = assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
   const activeConversations = assignments.filter((a) => a.status === "active").length;
   const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
+  
+  // Unread counts
+  const myUnreadCount = assignments.filter((a) => 
+    a.agent_id === currentAgent?.id && 
+    a.status !== "closed" && 
+    (a.zapp_conversation?.unread_count || 0) > 0
+  ).length;
+  const queueUnreadCount = assignments.filter((a) => 
+    a.status !== "closed" && 
+    (a.zapp_conversation?.unread_count || 0) > 0
+  ).length;
 
   const getInitials = (name: string) =>
     name
@@ -2681,9 +2692,10 @@ export default function RoyZapp() {
         >
           <span className="flex items-center justify-center gap-2">
             Minhas
-            {myConversations > 0 && (
+            <span className="text-zapp-text-muted text-xs">({myConversations})</span>
+            {myUnreadCount > 0 && (
               <Badge variant="secondary" className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
-                {myConversations}
+                {myUnreadCount}
               </Badge>
             )}
           </span>
@@ -2702,9 +2714,10 @@ export default function RoyZapp() {
         >
           <span className="flex items-center justify-center gap-2">
             Fila
-            {totalQueueConversations > 0 && (
-              <Badge variant="secondary" className="bg-amber-500 text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
-                {totalQueueConversations}
+            <span className="text-zapp-text-muted text-xs">({totalQueueConversations})</span>
+            {queueUnreadCount > 0 && (
+              <Badge variant="secondary" className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
+                {queueUnreadCount}
               </Badge>
             )}
           </span>
