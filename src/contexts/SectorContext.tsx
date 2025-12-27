@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { SectorId, Sector, sectors, getSectorById, getSectorByRoute } from "@/config/sectors";
+import { SectorId, Sector, sectors, getSectorById, getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 
 interface SectorContextType {
   currentSector: Sector | null;
@@ -23,6 +23,11 @@ export function SectorProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Don't auto-detect if we're on sectors page
     if (location.pathname === "/setores") {
+      return;
+    }
+
+    // If we have a current sector and the route belongs to it, keep it
+    if (currentSectorId && routeBelongsToSector(location.pathname, currentSectorId)) {
       return;
     }
 

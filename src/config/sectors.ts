@@ -123,3 +123,10 @@ export function getSectorByRoute(route: string): Sector | undefined {
     sector.navItems.some((item) => route.startsWith(item.to))
   );
 }
+
+// Check if a route belongs to a specific sector
+export function routeBelongsToSector(route: string, sectorId: SectorId): boolean {
+  const sector = getSectorById(sectorId);
+  if (!sector) return false;
+  return sector.navItems.some((item) => route.startsWith(item.to));
+}
