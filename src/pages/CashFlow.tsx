@@ -401,55 +401,107 @@ export default function CashFlow() {
 
         {/* Charts */}
         <Tabs defaultValue="area" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="area">Saldo Projetado</TabsTrigger>
-            <TabsTrigger value="bars">Entradas x Saídas</TabsTrigger>
-            <TabsTrigger value="combined">Combinado</TabsTrigger>
+          <TabsList className="bg-card/50 backdrop-blur-sm border">
+            <TabsTrigger value="area" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Saldo Projetado
+            </TabsTrigger>
+            <TabsTrigger value="bars" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Entradas x Saídas
+            </TabsTrigger>
+            <TabsTrigger value="combined" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Combinado
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="area">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
+            <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-card to-background">
+              <CardHeader className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                  </div>
                   Evolução do Saldo
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 {isLoading ? (
-                  <Skeleton className="h-[400px] w-full" />
+                  <Skeleton className="h-[400px] w-full rounded-xl" />
                 ) : (
                   <ResponsiveContainer width="100%" height={400}>
-                    <AreaChart data={projectionData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <AreaChart data={projectionData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                      <defs>
+                        <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                          <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                        <filter id="glow">
+                          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                          <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        stroke="hsl(var(--border))" 
+                        strokeOpacity={0.5}
+                        vertical={false}
+                      />
                       <XAxis 
                         dataKey="period" 
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        dy={10}
                       />
                       <YAxis 
-                        tickFormatter={(value) => formatCurrency(value)}
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                        width={100}
+                        tickFormatter={(value) => {
+                          if (Math.abs(value) >= 1000) {
+                            return `${(value / 1000).toFixed(0)}k`;
+                          }
+                          return value.toString();
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        width={60}
                       />
                       <Tooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-xl p-4 shadow-xl">
+                                <p className="font-semibold text-sm text-foreground mb-2">{label}</p>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded-full bg-primary" />
+                                  <span className="text-muted-foreground text-sm">Saldo:</span>
+                                  <span className="font-bold text-foreground">
+                                    {formatCurrency(payload[0].value as number)}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
                         }}
                       />
-                      <Legend />
                       <Area
                         type="monotone"
                         dataKey="projectedBalance"
                         name="Saldo Projetado"
                         stroke="hsl(var(--primary))"
-                        fill="hsl(var(--primary))"
-                        fillOpacity={0.3}
+                        strokeWidth={3}
+                        fill="url(#balanceGradient)"
+                        dot={false}
+                        activeDot={{ 
+                          r: 6, 
+                          stroke: 'hsl(var(--background))', 
+                          strokeWidth: 2,
+                          fill: 'hsl(var(--primary))',
+                          filter: 'url(#glow)'
+                        }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -459,52 +511,107 @@ export default function CashFlow() {
           </TabsContent>
 
           <TabsContent value="bars">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
+            <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-card to-background">
+              <CardHeader className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                  </div>
                   Recebimentos vs Pagamentos
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 {isLoading ? (
-                  <Skeleton className="h-[400px] w-full" />
+                  <Skeleton className="h-[400px] w-full rounded-xl" />
                 ) : (
                   <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={projectionData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <BarChart data={projectionData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                      <defs>
+                        <linearGradient id="receivableGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#16a34a" stopOpacity={0.8} />
+                        </linearGradient>
+                        <linearGradient id="payableGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        stroke="hsl(var(--border))" 
+                        strokeOpacity={0.5}
+                        vertical={false}
+                      />
                       <XAxis 
                         dataKey="period" 
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        dy={10}
                       />
                       <YAxis 
-                        tickFormatter={(value) => formatCurrency(value)}
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                        width={100}
+                        tickFormatter={(value) => {
+                          if (Math.abs(value) >= 1000) {
+                            return `${(value / 1000).toFixed(0)}k`;
+                          }
+                          return value.toString();
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        width={60}
                       />
                       <Tooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
+                        cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-xl p-4 shadow-xl">
+                                <p className="font-semibold text-sm text-foreground mb-3">{label}</p>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                                      <span className="text-muted-foreground text-sm">A Receber:</span>
+                                    </div>
+                                    <span className="font-bold text-green-600">
+                                      {formatCurrency(payload[0]?.value as number || 0)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                                      <span className="text-muted-foreground text-sm">A Pagar:</span>
+                                    </div>
+                                    <span className="font-bold text-red-600">
+                                      {formatCurrency(payload[1]?.value as number || 0)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
                         }}
                       />
-                      <Legend />
+                      <Legend 
+                        wrapperStyle={{ paddingTop: '20px' }}
+                        iconType="circle"
+                        formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>}
+                      />
                       <Bar 
                         dataKey="receivables" 
                         name="A Receber" 
-                        fill="#22c55e"
-                        radius={[4, 4, 0, 0]}
+                        fill="url(#receivableGradient)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={50}
                       />
                       <Bar 
                         dataKey="payables" 
                         name="A Pagar" 
-                        fill="#ef4444"
-                        radius={[4, 4, 0, 0]}
+                        fill="url(#payableGradient)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={50}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -514,63 +621,133 @@ export default function CashFlow() {
           </TabsContent>
 
           <TabsContent value="combined">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
+            <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-card to-background">
+              <CardHeader className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                  </div>
                   Visão Combinada
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 {isLoading ? (
-                  <Skeleton className="h-[400px] w-full" />
+                  <Skeleton className="h-[400px] w-full rounded-xl" />
                 ) : (
                   <ResponsiveContainer width="100%" height={400}>
-                    <ComposedChart data={projectionData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <ComposedChart data={projectionData} margin={{ top: 20, right: 60, left: 0, bottom: 20 }}>
+                      <defs>
+                        <linearGradient id="receivableGradient2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#16a34a" stopOpacity={0.7} />
+                        </linearGradient>
+                        <linearGradient id="payableGradient2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ef4444" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#dc2626" stopOpacity={0.7} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        stroke="hsl(var(--border))" 
+                        strokeOpacity={0.5}
+                        vertical={false}
+                      />
                       <XAxis 
                         dataKey="period" 
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        dy={10}
                       />
                       <YAxis 
                         yAxisId="left"
-                        tickFormatter={(value) => formatCurrency(value)}
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                        width={100}
+                        tickFormatter={(value) => {
+                          if (Math.abs(value) >= 1000) {
+                            return `${(value / 1000).toFixed(0)}k`;
+                          }
+                          return value.toString();
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        width={60}
                       />
                       <YAxis 
                         yAxisId="right"
                         orientation="right"
-                        tickFormatter={(value) => formatCurrency(value)}
-                        className="text-xs"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                        width={100}
+                        tickFormatter={(value) => {
+                          if (Math.abs(value) >= 1000) {
+                            return `${(value / 1000).toFixed(0)}k`;
+                          }
+                          return value.toString();
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--primary))', fontSize: 12 }}
+                        width={60}
                       />
                       <Tooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
+                        cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-xl p-4 shadow-xl">
+                                <p className="font-semibold text-sm text-foreground mb-3">{label}</p>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                                      <span className="text-muted-foreground text-sm">A Receber:</span>
+                                    </div>
+                                    <span className="font-bold text-green-600">
+                                      {formatCurrency(payload[0]?.value as number || 0)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                                      <span className="text-muted-foreground text-sm">A Pagar:</span>
+                                    </div>
+                                    <span className="font-bold text-red-600">
+                                      {formatCurrency(payload[1]?.value as number || 0)}
+                                    </span>
+                                  </div>
+                                  <div className="pt-2 mt-2 border-t border-border/50 flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-full bg-primary" />
+                                      <span className="text-muted-foreground text-sm">Saldo:</span>
+                                    </div>
+                                    <span className="font-bold text-primary">
+                                      {formatCurrency(payload[2]?.value as number || 0)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
                         }}
                       />
-                      <Legend />
+                      <Legend 
+                        wrapperStyle={{ paddingTop: '20px' }}
+                        iconType="circle"
+                        formatter={(value) => <span className="text-sm text-muted-foreground">{value}</span>}
+                      />
                       <Bar 
                         yAxisId="left"
                         dataKey="receivables" 
                         name="A Receber" 
-                        fill="#22c55e"
-                        radius={[4, 4, 0, 0]}
+                        fill="url(#receivableGradient2)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={40}
                       />
                       <Bar 
                         yAxisId="left"
                         dataKey="payables" 
                         name="A Pagar" 
-                        fill="#ef4444"
-                        radius={[4, 4, 0, 0]}
+                        fill="url(#payableGradient2)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={40}
                       />
                       <Line 
                         yAxisId="right"
@@ -579,7 +756,18 @@ export default function CashFlow() {
                         name="Saldo Projetado"
                         stroke="hsl(var(--primary))"
                         strokeWidth={3}
-                        dot={{ fill: 'hsl(var(--primary))' }}
+                        dot={{ 
+                          fill: 'hsl(var(--primary))', 
+                          stroke: 'hsl(var(--background))', 
+                          strokeWidth: 2,
+                          r: 4
+                        }}
+                        activeDot={{ 
+                          r: 7, 
+                          stroke: 'hsl(var(--background))', 
+                          strokeWidth: 2,
+                          fill: 'hsl(var(--primary))'
+                        }}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
