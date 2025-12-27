@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   ZappMessagesList,
+  ZappChatHeader,
+  ZappMessageInput,
   getContactInfo as getContactInfoHelper,
   getInitials as getInitialsHelper,
 } from "@/components/royzapp";
@@ -1336,9 +1338,11 @@ export default function RoyZapp() {
       name: zc?.client?.full_name || zc?.contact_name || c?.full_name || "Contato",
       phone: zc?.phone_e164 || c?.phone_e164 || "",
       avatar: zc?.client?.avatar_url || zc?.avatar_url || c?.avatar_url || null,
+      clientId: zc?.client_id || c?.id || null,
       isClient: !!(zc?.client_id || c?.id),
       isGroup: zc?.is_group || false,
       lastMessage: zc?.last_message_preview || null,
+      lastMessagePreview: zc?.last_message_preview || "",
       unreadCount: zc?.unread_count || 0,
       lastMessageAt: zc?.last_message_at || assignment.updated_at,
       isPinned: zc?.is_pinned || false,
@@ -3680,203 +3684,25 @@ export default function RoyZapp() {
 
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full bg-zapp-bg overflow-hidden">
-        {/* Chat header */}
-        <div className="bg-zapp-panel-header px-4 py-3 flex items-center gap-3 border-b border-zapp-border">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden text-zapp-text-muted hover:bg-zapp-hover"
-            onClick={() => setSelectedConversation(null)}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div 
-            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => {
-              if (clientId) {
-                setEditingClientId(clientId);
-                setClientEditSheetOpen(true);
-              }
-            }}
-          >
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={contactInfo.avatar || undefined} />
-              <AvatarFallback className="bg-muted text-muted-foreground text-sm">
-                {contactInfo.isGroup ? (
-                  <Users2 className="h-5 w-5" />
-                ) : (
-                  getInitials(contactInfo.name)
-                )}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                {contactInfo.isGroup && <Users2 className="h-4 w-4 text-zapp-accent flex-shrink-0" />}
-                <h3 className="text-zapp-text font-medium truncate">
-                  {contactInfo.name}
-                </h3>
-                {clientId && <ExternalLink className="h-3.5 w-3.5 text-zapp-text-muted flex-shrink-0" />}
-              </div>
-              <div className="flex items-center gap-2">
-                <p className="text-zapp-text-muted text-xs">
-                  {contactInfo.phone}
-                  {selectedConversation.agent?.user && (
-                    <span> • Atendido por {selectedConversation.agent.user.name}</span>
-                  )}
-                </p>
-                {/* Product badges in header */}
-                {clientId && clientProducts[clientId] && clientProducts[clientId].length > 0 && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {clientProducts[clientId].slice(0, 2).map((p) => (
-                      <Badge 
-                        key={p.id} 
-                        variant="secondary" 
-                        className="text-[10px] px-1.5 py-0 h-4 border-0"
-                        style={{ 
-                          backgroundColor: `${p.color || '#10b981'}20`,
-                          color: p.color || '#10b981'
-                        }}
-                      >
-                        {p.name}
-                      </Badge>
-                    ))}
-                    {clientProducts[clientId].length > 2 && (
-                      <span className="text-[10px] text-zapp-text-muted">
-                        +{clientProducts[clientId].length - 2}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Assign to me / Release button */}
-            {selectedConversation.agent_id !== currentAgent?.id ? (
-              <Button
-                size="sm"
-                className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-8 px-3"
-                onClick={() => assignToMe(selectedConversation.id)}
-              >
-                <UserCheck className="h-4 w-4 mr-1.5" />
-                Puxar para mim
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-500 text-amber-500 hover:bg-amber-500/10 text-xs h-8 px-3"
-                onClick={() => releaseToQueue(selectedConversation.id)}
-              >
-                <ArrowLeft className="h-4 w-4 mr-1.5" />
-                Devolver
-              </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "h-8 px-3 text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
-                    STATUS_CONFIG[selectedConversation.status]?.color || "text-muted-foreground",
-                    "border-current bg-transparent"
-                  )}
-                >
-                  {STATUS_CONFIG[selectedConversation.status]?.label || "Status"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">
-                <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Alterar status</div>
-                <DropdownMenuItem 
-                  className={cn("text-zapp-text flex items-center gap-2", selectedConversation.status === "triage" && "bg-zapp-bg-dark")}
-                  onClick={() => updateConversationStatus(selectedConversation.id, "triage")}
-                >
-                  <div className="w-2 h-2 rounded-full bg-purple-500" />
-                  Triagem
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={cn("text-zapp-text flex items-center gap-2", selectedConversation.status === "active" && "bg-zapp-bg-dark")}
-                  onClick={() => updateConversationStatus(selectedConversation.id, "active")}
-                >
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Em atendimento
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={cn("text-zapp-text flex items-center gap-2", selectedConversation.status === "closed" && "bg-zapp-bg-dark")}
-                  onClick={() => updateConversationStatus(selectedConversation.id, "closed")}
-                >
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground" />
-                  Finalizado
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8"
-                onClick={() => setTransferDialogOpen(true)}
-              >
-                <ArrowRightLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
-                <Phone className="h-4 w-4" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
-                  {selectedConversation?.zapp_conversation?.client_id && (
-                    <>
-                      <DropdownMenuItem 
-                        className="text-zapp-text hover:bg-zapp-hover"
-                        onClick={() => setRoiDialogOpen(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2 text-zapp-accent" />
-                        Adicionar ROI
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-zapp-text hover:bg-zapp-hover"
-                        onClick={() => setRiskDialogOpen(true)}
-                      >
-                        <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-                        Adicionar Risco
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-zapp-border" />
-                    </>
-                  )}
-                  {selectedConversation?.zapp_conversation?.client_id ? (
-                    <DropdownMenuItem 
-                      className="text-zapp-text hover:bg-zapp-hover"
-                      onClick={() => {
-                        const zc = selectedConversation?.zapp_conversation;
-                        if (zc?.client_id) {
-                          setEditingClientId(zc.client_id);
-                          setClientEditSheetOpen(true);
-                        }
-                      }}
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Editar Cliente
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem 
-                      className="text-zapp-text hover:bg-zapp-hover"
-                      onClick={openAddClientDialog}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2 text-zapp-accent" />
-                      Adicionar Cliente
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
+        {/* Chat header - Using memoized component */}
+        <ZappChatHeader
+          assignment={selectedConversation}
+          contactInfo={contactInfo}
+          clientProducts={clientId ? clientProducts[clientId] || [] : []}
+          currentAgentId={currentAgent?.id || null}
+          onBack={() => setSelectedConversation(null)}
+          onOpenClientEdit={(id) => {
+            setEditingClientId(id);
+            setClientEditSheetOpen(true);
+          }}
+          onAssignToMe={assignToMe}
+          onReleaseToQueue={releaseToQueue}
+          onUpdateStatus={updateConversationStatus}
+          onOpenTransfer={() => setTransferDialogOpen(true)}
+          onOpenRoiDialog={() => setRoiDialogOpen(true)}
+          onOpenRiskDialog={() => setRiskDialogOpen(true)}
+          onOpenAddClient={openAddClientDialog}
+        />
 
         {/* Messages - Using memoized component */}
         <ZappMessagesList 
@@ -3884,299 +3710,32 @@ export default function RoyZapp() {
           isGroup={contactInfo.isGroup} 
         />
 
-        {/* Formatting toolbar */}
-        {showFormatting && (
-          <div className="bg-zapp-panel px-4 py-2 border-b border-zapp-border flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
-                  onClick={() => insertFormatting('bold')}
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Negrito (*texto*)</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
-                  onClick={() => insertFormatting('italic')}
-                >
-                  <Italic className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Itálico (_texto_)</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
-                  onClick={() => insertFormatting('strikethrough')}
-                >
-                  <Strikethrough className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Tachado (~texto~)</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-zapp-text-muted hover:bg-zapp-hover hover:text-zapp-text"
-                  onClick={() => insertFormatting('monospace')}
-                >
-                  <Code className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Monoespaçado (```texto```)</TooltipContent>
-            </Tooltip>
-            
-            <span className="text-xs text-zapp-text-muted ml-2">Selecione e clique</span>
-          </div>
-        )}
-
-        {/* Message input */}
-        <div className="bg-zapp-panel px-4 py-3 flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(
-                  "flex-shrink-0",
-                  showFormatting 
-                    ? "text-zapp-accent hover:bg-zapp-hover" 
-                    : "text-zapp-text-muted hover:bg-zapp-hover"
-                )}
-                onClick={() => setShowFormatting(!showFormatting)}
-              >
-                <Bold className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">Formatação</TooltipContent>
-          </Tooltip>
-          
-          {/* Hidden file inputs */}
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={(e) => handleFileSelect(e, "image")}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
-            className="hidden"
-            onChange={(e) => handleFileSelect(e, "document")}
-          />
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
-                disabled={uploadingMedia}
-              >
-                {uploadingMedia ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : (
-                  <Plus className="h-6 w-6" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="bg-[#233138] border-zapp-border z-50">
-              <DropdownMenuItem 
-                onClick={() => fileInputRef.current?.click()}
-                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
-              >
-                <FileText className="h-4 w-4 mr-2 text-[#7f66ff]" />
-                Documento
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => imageInputRef.current?.click()}
-                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
-              >
-                <ImageIcon className="h-4 w-4 mr-2 text-[#007bfc]" />
-                Fotos e vídeos
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-zapp-border" />
-              <DropdownMenuItem 
-                onClick={() => setContactPickerOpen(true)}
-                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
-              >
-                <Contact className="h-4 w-4 mr-2 text-[#02a698]" />
-                Contato
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => setQuickRepliesOpen(true)}
-                className="text-zapp-text hover:bg-zapp-hover cursor-pointer"
-              >
-                <Zap className="h-4 w-4 mr-2 text-[#ffb000]" />
-                Resposta rápida
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <Input
-            ref={messageInputRef}
-            placeholder="Digite uma mensagem"
-            value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            disabled={sendingMessage}
-            className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-10"
-          />
-          
-          {messageInput.trim() ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
-              onClick={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
-              disabled={sendingMessage}
-            >
-              {sendingMessage ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                <Send className="h-6 w-6" />
-              )}
-            </Button>
-          ) : audioPreview ? (
-            // Audio preview UI
-            <div className="flex items-center gap-2 flex-1 bg-zapp-input rounded-lg px-3 py-2">
-              <audio
-                ref={audioPreviewRef}
-                src={audioPreview.url}
-                className="hidden"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
-                onClick={() => {
-                  const audio = audioPreviewRef.current;
-                  if (audio) {
-                    if (audio.paused) {
-                      audio.play();
-                    } else {
-                      audio.pause();
-                    }
-                  }
-                }}
-              >
-                <Play className="h-5 w-5" />
-              </Button>
-              <div className="flex-1 h-1 bg-zapp-border rounded-full overflow-hidden">
-                <div className="h-full bg-zapp-accent w-full" />
-              </div>
-              <span className="text-xs text-zapp-text-muted font-mono min-w-[40px]">
-                {formatRecordingDuration(audioPreview.duration)}
-              </span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
-                    onClick={discardAudioPreview}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Descartar</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
-                    onClick={confirmAudioSend}
-                    disabled={uploadingMedia}
-                  >
-                    {uploadingMedia ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Send className="h-5 w-5" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Enviar</TooltipContent>
-              </Tooltip>
-            </div>
-          ) : isRecording ? (
-            // Recording UI
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-mono text-destructive animate-pulse">
-                ⏺ {formatRecordingDuration(recordingDuration)}
-              </span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:bg-zapp-hover flex-shrink-0"
-                    onClick={cancelRecording}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Cancelar</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
-                    onClick={stopRecording}
-                  >
-                    <Square className="h-5 w-5 fill-current" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Parar</TooltipContent>
-              </Tooltip>
-            </div>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
-                  onClick={startRecording}
-                  disabled={uploadingMedia}
-                >
-                  <Mic className="h-6 w-6" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Gravar áudio</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+        {/* Message input - Using memoized component */}
+        <ZappMessageInput
+          messageInput={messageInput}
+          sendingMessage={sendingMessage}
+          uploadingMedia={uploadingMedia}
+          isRecording={isRecording}
+          recordingDuration={recordingDuration}
+          audioPreview={audioPreview}
+          showFormatting={showFormatting}
+          messageInputRef={messageInputRef}
+          imageInputRef={imageInputRef}
+          fileInputRef={fileInputRef}
+          onMessageChange={setMessageInput}
+          onSendMessage={sendMessage}
+          onKeyPress={handleKeyPress}
+          onToggleFormatting={() => setShowFormatting(!showFormatting)}
+          onInsertFormatting={insertFormatting}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          onCancelRecording={cancelRecording}
+          onDiscardAudioPreview={discardAudioPreview}
+          onConfirmAudioSend={confirmAudioSend}
+          onFileSelect={handleFileSelect}
+          onOpenContactPicker={() => setContactPickerOpen(true)}
+          onOpenQuickReplies={() => setQuickRepliesOpen(true)}
+        />
       </div>
     );
   };
