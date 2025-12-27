@@ -304,10 +304,10 @@ export default function Contracts() {
       // Sync each document status
       for (const doc of documents) {
         try {
-          await syncDocumentStatus(doc.doc_token);
+          await syncDocumentStatus(doc.zapsign_doc_token);
           syncedCount++;
         } catch (error) {
-          console.error(`Error syncing document ${doc.doc_token}:`, error);
+          console.error(`Error syncing document ${doc.zapsign_doc_token}:`, error);
           errorCount++;
         }
       }
