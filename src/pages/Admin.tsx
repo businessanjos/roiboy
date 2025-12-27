@@ -56,7 +56,8 @@ import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager"
 import { SupportWhatsAppConfig } from "@/components/admin/SupportWhatsAppConfig";
 import { SupportKnowledgeBase } from "@/components/admin/SupportKnowledgeBase";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
-import { Tag, Headset, BookOpen, Activity as ActivityIcon } from "lucide-react";
+import { Tag, Headset, BookOpen, Activity as ActivityIcon, Cloud } from "lucide-react";
+import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
 
 interface SubscriptionPlan {
   id: string;
@@ -298,6 +299,10 @@ export default function Admin() {
             <Cpu className="h-4 w-4" />
             Custos IA
           </TabsTrigger>
+          <TabsTrigger value="cloud" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Cloud className="h-4 w-4" />
+            Cloud
+          </TabsTrigger>
           <TabsTrigger value="coupons" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Tag className="h-4 w-4" />
             Cupons
@@ -342,6 +347,10 @@ export default function Admin() {
 
         <TabsContent value="coupons" className="mt-0">
           <CouponsManager />
+        </TabsContent>
+
+        <TabsContent value="cloud" className="mt-0">
+          <CloudUsageMonitor />
         </TabsContent>
 
         <TabsContent value="support" className="mt-0 space-y-6">
