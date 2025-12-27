@@ -11,3 +11,4 @@ export { default as FinancialAgingPage } from "./FinancialAgingPage";
 export { default as FinancialProfitabilityPage } from "./FinancialProfitabilityPage";
 export { default as FinancialBankAccountsPage } from "./FinancialBankAccountsPage";
 export { default as FinancialCashFlowPage } from "./FinancialCashFlowPage";
+export { default as FinancialDREPage } from "./FinancialDREPage";

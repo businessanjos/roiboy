@@ -3066,6 +3066,7 @@ export type Database = {
           color: string
           created_at: string
           display_order: number
+          dre_group: string | null
           icon: string | null
           id: string
           is_active: boolean
@@ -3078,6 +3079,7 @@ export type Database = {
           color?: string
           created_at?: string
           display_order?: number
+          dre_group?: string | null
           icon?: string | null
           id?: string
           is_active?: boolean
@@ -3090,6 +3092,7 @@ export type Database = {
           color?: string
           created_at?: string
           display_order?: number
+          dre_group?: string | null
           icon?: string | null
           id?: string
           is_active?: boolean
