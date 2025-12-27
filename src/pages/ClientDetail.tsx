@@ -418,6 +418,8 @@ export default function ClientDetail() {
       business_city: client.business_city || "",
       business_state: client.business_state || "",
       business_zip_code: client.business_zip_code || "",
+      business_segment: (client as any).business_segment || "",
+      business_niche: (client as any).business_niche || "",
       contract_start_date: client.contract_start_date || "",
       contract_end_date: client.contract_end_date || "",
       is_mls: client.is_mls || false,

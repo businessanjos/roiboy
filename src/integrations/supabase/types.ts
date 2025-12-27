@@ -1467,6 +1467,8 @@ export type Database = {
           business_city: string | null
           business_complement: string | null
           business_neighborhood: string | null
+          business_niche: string | null
+          business_segment: string | null
           business_state: string | null
           business_street: string | null
           business_street_number: string | null
@@ -1515,6 +1517,8 @@ export type Database = {
           business_city?: string | null
           business_complement?: string | null
           business_neighborhood?: string | null
+          business_niche?: string | null
+          business_segment?: string | null
           business_state?: string | null
           business_street?: string | null
           business_street_number?: string | null
@@ -1563,6 +1567,8 @@ export type Database = {
           business_city?: string | null
           business_complement?: string | null
           business_neighborhood?: string | null
+          business_niche?: string | null
+          business_segment?: string | null
           business_state?: string | null
           business_street?: string | null
           business_street_number?: string | null

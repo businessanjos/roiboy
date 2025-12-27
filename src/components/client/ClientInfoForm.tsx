@@ -60,6 +60,9 @@ export interface ClientFormData {
   business_city: string;
   business_state: string;
   business_zip_code: string;
+  // Business info
+  business_segment: string;
+  business_niche: string;
   // Contract
   contract_start_date: string;
   contract_end_date: string;
@@ -1013,6 +1016,38 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
+          {/* Segment & Niche */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Building2 className="h-3.5 w-3.5" />
+              Segmento de Atuação
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Segmento</Label>
+                <Input
+                  value={data.business_segment}
+                  onChange={(e) => updateField("business_segment", e.target.value)}
+                  placeholder="Ex: Saúde & Estética"
+                  className="h-9"
+                />
+                <p className="text-[11px] text-muted-foreground">Área principal do negócio</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Nicho</Label>
+                <Input
+                  value={data.business_niche}
+                  onChange={(e) => updateField("business_niche", e.target.value)}
+                  placeholder="Ex: Harmonização Facial"
+                  className="h-9"
+                />
+                <p className="text-[11px] text-muted-foreground">Especialidade dentro do segmento</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
           {/* Business Address */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -1325,6 +1360,8 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   business_city: "",
   business_state: "",
   business_zip_code: "",
+  business_segment: "",
+  business_niche: "",
   contract_start_date: "",
   contract_end_date: "",
   is_mls: false,
