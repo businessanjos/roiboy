@@ -173,7 +173,7 @@ export default function CashFlow() {
   const isLoading = loadingBanks || loadingEntries;
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-6 max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
