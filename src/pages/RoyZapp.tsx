@@ -210,6 +210,33 @@ export default function RoyZapp() {
       fetchMessages(selectedConversation.zapp_conversation_id);
     }
   }, [selectedConversation, fetchMessages]);
+
+  // Realtime subscription for messages in selected conversation
+  useEffect(() => {
+    if (!selectedConversation?.zapp_conversation_id || !currentUser?.account_id) return;
+
+    const messagesChannel = supabase
+      .channel(`zapp-messages-${selectedConversation.zapp_conversation_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'zapp_messages',
+          filter: `zapp_conversation_id=eq.${selectedConversation.zapp_conversation_id}`
+        },
+        () => {
+          // Refetch messages to ensure proper ordering
+          fetchMessages(selectedConversation.zapp_conversation_id!);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+    };
+  }, [selectedConversation?.zapp_conversation_id, currentUser?.account_id, fetchMessages]);
+
   // Department functions
   const openDepartmentDialog = (dept?: Department) => {
     if (dept) {
