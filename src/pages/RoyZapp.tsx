@@ -4185,7 +4185,7 @@ export default function RoyZapp() {
       {/* Left panel - Conversation list */}
       <div 
         className={cn(
-          "w-[400px] min-w-[400px] max-w-[400px] flex flex-col overflow-hidden border-r border-zapp-border",
+          "w-[440px] min-w-[440px] max-w-[440px] flex flex-col overflow-hidden border-r border-zapp-border",
           selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
