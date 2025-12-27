@@ -490,7 +490,9 @@ export function useZappData() {
 
   // Initial data fetch
   useEffect(() => {
+    console.log("[ZappData] useEffect triggered, account_id:", currentUser?.account_id);
     if (currentUser?.account_id) {
+      console.log("[ZappData] Calling fetchData...");
       fetchData();
       checkWhatsAppStatus();
     }
