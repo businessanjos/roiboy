@@ -53,19 +53,29 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
 
           if (error) throw error;
 
-          // Parse different response formats
+          // Parse different response formats - API returns { data: { participants: [...] } }
           let participantsList: GroupParticipant[] = [];
-          const rawParticipants = data?.participants || data?.data?.participants || [];
+          const rawParticipants = data?.data?.participants || data?.participants || [];
+          
+          console.log("[ZappGroupMentionInput] Raw participants:", rawParticipants);
           
           participantsList = rawParticipants.map((p: any) => {
-            const phone = p.id?.replace("@s.whatsapp.net", "") || p.phone || "";
+            // Handle different field name formats (camelCase vs PascalCase)
+            const phoneField = p.PhoneNumber || p.phoneNumber || p.phone || p.id || "";
+            const phone = phoneField.replace("@s.whatsapp.net", "").replace("@lid", "");
+            const displayName = p.DisplayName || p.displayName || p.name || p.notify || p.pushName || "";
+            const isAdmin = p.IsAdmin || p.isAdmin || p.IsSuperAdmin || p.isSuperAdmin || 
+                           p.admin === "admin" || p.admin === "superadmin" || false;
+            
             return {
-              id: p.id || phone,
+              id: p.JID || p.jid || p.LID || p.lid || p.id || phone,
               phone: phone,
-              name: p.name || p.notify || p.pushName || phone,
-              isAdmin: p.admin === "admin" || p.admin === "superadmin" || p.isAdmin || false,
+              name: displayName || phone, // Fallback to phone if no name
+              isAdmin: isAdmin,
             };
           });
+
+          console.log("[ZappGroupMentionInput] Parsed participants:", participantsList);
 
           setParticipants(participantsList);
         } catch (error) {
