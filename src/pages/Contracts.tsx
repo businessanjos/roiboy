@@ -59,7 +59,9 @@ import {
   Upload,
   Check,
   ChevronsUpDown,
+  RefreshCw,
 } from "lucide-react";
+import { useZapSign } from "@/hooks/useZapSign";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -138,9 +140,11 @@ interface Client {
 
 export default function Contracts() {
   const navigate = useNavigate();
+  const { syncDocumentStatus, getLocalDocuments, loading: zapSignLoading } = useZapSign();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -282,6 +286,48 @@ export default function Contracts() {
     }
   };
 
+  const handleSyncZapSign = async () => {
+    setSyncing(true);
+    try {
+      // Get all ZapSign documents from local database
+      const documents = await getLocalDocuments();
+      
+      if (!documents || documents.length === 0) {
+        toast.info("Nenhum documento ZapSign encontrado para sincronizar");
+        setSyncing(false);
+        return;
+      }
+
+      let syncedCount = 0;
+      let errorCount = 0;
+
+      // Sync each document status
+      for (const doc of documents) {
+        try {
+          await syncDocumentStatus(doc.doc_token);
+          syncedCount++;
+        } catch (error) {
+          console.error(`Error syncing document ${doc.doc_token}:`, error);
+          errorCount++;
+        }
+      }
+
+      // Refresh contracts list
+      await fetchContracts();
+
+      if (errorCount > 0) {
+        toast.warning(`Sincronizados ${syncedCount} documentos. ${errorCount} erros.`);
+      } else {
+        toast.success(`${syncedCount} documentos sincronizados com ZapSign`);
+      }
+    } catch (error) {
+      console.error("Error syncing ZapSign:", error);
+      toast.error("Erro ao sincronizar com ZapSign");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const filteredContracts = useMemo(() => {
     return contracts.filter((contract) => {
       const matchesSearch = 
@@ -372,10 +418,24 @@ export default function Contracts() {
             Gerencie todos os contratos dos seus clientes
           </p>
         </div>
-        <Button onClick={openNewContractDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Contrato
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSyncZapSign}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Sincronizar ZapSign
+          </Button>
+          <Button onClick={openNewContractDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Contrato
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
