@@ -24,6 +24,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
+  Sheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +66,14 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CreditCardInvoiceImport } from "@/components/financial/CreditCardInvoiceImport";
+import { GoogleSheetsIntegration } from "@/components/financial/GoogleSheetsIntegration";
+import {
+  DropdownMenu as ImportDropdown,
+  DropdownMenuContent as ImportDropdownContent,
+  DropdownMenuItem as ImportDropdownItem,
+  DropdownMenuTrigger as ImportDropdownTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface FinancialEntry {
   id: string;
@@ -143,6 +153,8 @@ export default function FinancialEntriesPage() {
   const [editingEntry, setEditingEntry] = useState<FinancialEntry | null>(null);
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [payingEntry, setPayingEntry] = useState<FinancialEntry | null>(null);
+  const [isCreditCardImportOpen, setIsCreditCardImportOpen] = useState(false);
+  const [isGoogleSheetsOpen, setIsGoogleSheetsOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -431,10 +443,30 @@ export default function FinancialEntriesPage() {
           <h1 className="text-2xl font-bold">Lançamentos</h1>
           <p className="text-muted-foreground">Gerencie contas a pagar e receber</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Lançamento
-        </Button>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Sheet className="h-4 w-4 mr-2" />
+                Importar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsCreditCardImportOpen(true)}>
+                <CreditCard className="h-4 w-4 mr-2" />
+                Fatura de Cartão (IA)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsGoogleSheetsOpen(true)}>
+                <Sheet className="h-4 w-4 mr-2" />
+                Google Sheets / BTG
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Lançamento
+          </Button>
+        </div>
       </div>
 
       {/* Month Navigation */}
@@ -894,6 +926,18 @@ export default function FinancialEntriesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Credit Card Invoice Import */}
+      <CreditCardInvoiceImport 
+        open={isCreditCardImportOpen} 
+        onOpenChange={setIsCreditCardImportOpen} 
+      />
+
+      {/* Google Sheets Integration */}
+      <GoogleSheetsIntegration 
+        open={isGoogleSheetsOpen} 
+        onOpenChange={setIsGoogleSheetsOpen} 
+      />
     </div>
   );
 }

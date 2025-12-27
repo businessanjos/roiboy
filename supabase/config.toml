@@ -98,3 +98,9 @@ verify_jwt = false
 
 [functions.process-ai-queue]
 verify_jwt = false
+
+[functions.google-sheets-webhook]
+verify_jwt = false
+
+[functions.parse-credit-card-invoice]
+verify_jwt = false
