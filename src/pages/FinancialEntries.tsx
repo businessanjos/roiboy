@@ -71,6 +71,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FinancialCategoriesDialog } from "@/components/financial/FinancialCategoriesDialog";
+import { RecurringEntriesManager } from "@/components/financial/RecurringEntriesManager";
 
 interface FinancialEntry {
   id: string;
@@ -143,11 +144,13 @@ export default function FinancialEntries() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [conciliationFilter, setConciliationFilter] = useState<string>("all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<FinancialEntry | null>(null);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+  const [isRecurringOpen, setIsRecurringOpen] = useState(false);
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [payingEntry, setPayingEntry] = useState<FinancialEntry | null>(null);
   
@@ -403,7 +406,10 @@ export default function FinancialEntries() {
       entry.client?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
     const matchesCategory = categoryFilter === "all" || entry.category_id === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
+    const matchesConciliation = conciliationFilter === "all" || 
+      (conciliationFilter === "conciliated" && entry.is_conciliated) ||
+      (conciliationFilter === "pending" && !entry.is_conciliated && entry.status === "paid");
+    return matchesSearch && matchesStatus && matchesCategory && matchesConciliation;
   });
 
   // Calculate totals
@@ -436,6 +442,10 @@ export default function FinancialEntries() {
           <p className="text-muted-foreground">Gerencie contas a pagar e receber</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsRecurringOpen(true)}>
+            <Repeat className="h-4 w-4 mr-2" />
+            Recorrências
+          </Button>
           <Button variant="outline" onClick={() => setIsCategoriesOpen(true)}>
             <Filter className="h-4 w-4 mr-2" />
             Categorias
@@ -536,6 +546,16 @@ export default function FinancialEntries() {
                 {filteredCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={conciliationFilter} onValueChange={setConciliationFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Conciliação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="pending">A conciliar</SelectItem>
+                <SelectItem value="conciliated">Conciliados</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -899,6 +919,12 @@ export default function FinancialEntries() {
       <FinancialCategoriesDialog
         open={isCategoriesOpen}
         onOpenChange={setIsCategoriesOpen}
+      />
+
+      {/* Recurring Entries Manager */}
+      <RecurringEntriesManager
+        open={isRecurringOpen}
+        onOpenChange={setIsRecurringOpen}
       />
     </div>
   );

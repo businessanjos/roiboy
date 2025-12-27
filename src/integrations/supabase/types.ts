@@ -6021,6 +6021,21 @@ export type Database = {
           rsvp_status: string
         }[]
       }
+      get_recurring_templates: {
+        Args: { p_account_id: string }
+        Returns: {
+          amount: number
+          category_name: string
+          client_name: string
+          description: string
+          entry_type: string
+          id: string
+          next_due_date: string
+          recurrence_end_date: string
+          recurrence_type: string
+          total_generated: number
+        }[]
+      }
       get_related_clients: {
         Args: { p_client_id: string }
         Returns: {
@@ -6042,6 +6057,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id?: string }; Returns: boolean }
+      process_recurring_entries: { Args: never; Returns: number }
       record_login_attempt: {
         Args: {
           p_email: string
