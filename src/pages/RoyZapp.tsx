@@ -59,6 +59,7 @@ export default function RoyZapp() {
     teamUsers,
     allClients,
     assignments,
+    setAssignments,
     messages,
     loading,
     availableProducts,
@@ -1351,10 +1352,7 @@ export default function RoyZapp() {
     (user) => !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id
   );
 
-  // Get current user's agent record
-  const currentAgent = useMemo(() => {
-    return agents.find((a) => a.user_id === currentUser?.id);
-  }, [agents, currentUser?.id]);
+  // currentAgent is now provided by useZappData hook
 
   // Import recent conversations from WhatsApp
   const importRecentConversations = async () => {
