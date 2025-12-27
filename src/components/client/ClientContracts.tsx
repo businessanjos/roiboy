@@ -60,7 +60,8 @@ import {
   XCircle,
   PauseCircle,
   Ban,
-  MoreHorizontal
+  MoreHorizontal,
+  PenTool
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -69,6 +70,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ZapSignDialog } from "@/components/zapsign/ZapSignDialog";
 
 interface Contract {
   id: string;
@@ -147,6 +149,10 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // ZapSign dialog state
+  const [zapSignDialogOpen, setZapSignDialogOpen] = useState(false);
+  const [zapSignContractId, setZapSignContractId] = useState<string | undefined>(undefined);
+
   // Status action dialog state
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [statusAction, setStatusAction] = useState<ContractStatusAction | null>(null);
@@ -622,16 +628,28 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         <p className="text-sm text-muted-foreground">
           {contracts.length} contrato{contracts.length !== 1 ? "s" : ""} registrado{contracts.length !== 1 ? "s" : ""}
         </p>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              Novo Contrato
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => {
+              setZapSignContractId(undefined);
+              setZapSignDialogOpen(true);
+            }}
+          >
+            <PenTool className="h-4 w-4 mr-1" />
+            ZapSign
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Novo Contrato
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -821,6 +839,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {contracts.length === 0 ? (
@@ -1125,6 +1144,13 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ZapSignDialog
+        open={zapSignDialogOpen}
+        onOpenChange={setZapSignDialogOpen}
+        clientId={clientId}
+        contractId={zapSignContractId}
+      />
     </div>
   );
 }
