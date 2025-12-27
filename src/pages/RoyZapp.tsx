@@ -4883,23 +4883,46 @@ export default function RoyZapp() {
               Nova Conversa
             </DialogTitle>
             <DialogDescription className="text-[#8696a0]">
-              Selecione um cliente para iniciar uma conversa
+              Selecione um cliente ou digite um número para iniciar uma conversa
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8696a0]" />
               <Input
-                placeholder="Buscar cliente..."
+                placeholder="Buscar cliente ou digitar número..."
                 value={newConversationSearch}
                 onChange={(e) => setNewConversationSearch(e.target.value)}
                 className="pl-10 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
               />
             </div>
-            <ScrollArea className="h-64">
+            
+            {/* Show option to open WhatsApp with the number if it looks like a phone number */}
+            {newConversationSearch && /^[\d\s+()-]+$/.test(newConversationSearch) && newConversationSearch.replace(/\D/g, '').length >= 8 && (
+              <button
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-[#202c33] hover:bg-[#2a3942] transition-colors text-left border border-[#3b4a54]"
+                onClick={() => {
+                  const phoneNumber = newConversationSearch.replace(/\D/g, '');
+                  const formattedNumber = phoneNumber.startsWith('55') ? phoneNumber : `55${phoneNumber}`;
+                  window.open(`https://wa.me/${formattedNumber}`, '_blank');
+                  setNewConversationDialogOpen(false);
+                  setNewConversationSearch('');
+                }}
+              >
+                <div className="h-10 w-10 rounded-full bg-[#00a884] flex items-center justify-center">
+                  <ExternalLink className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#e9edef] font-medium">Abrir no WhatsApp</p>
+                  <p className="text-[#8696a0] text-sm">Conversar com {newConversationSearch}</p>
+                </div>
+              </button>
+            )}
+            
+            <ScrollArea className="h-56">
               {filteredNewConversationClients.length === 0 ? (
                 <div className="text-center py-8 text-[#8696a0]">
-                  {newConversationSearch ? "Nenhum cliente encontrado" : "Carregando clientes..."}
+                  {newConversationSearch && !/^[\d\s+()-]+$/.test(newConversationSearch) ? "Nenhum cliente encontrado" : "Busque um cliente ou digite um número"}
                 </div>
               ) : (
                 <div className="space-y-1">
