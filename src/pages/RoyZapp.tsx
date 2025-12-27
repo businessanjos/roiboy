@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
@@ -311,6 +311,7 @@ export default function RoyZapp() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
   // Distribution settings state (persisted to localStorage)
@@ -623,6 +624,13 @@ export default function RoyZapp() {
       fetchMessages(selectedConversation.zapp_conversation_id);
     }
   }, [selectedConversation]);
+
+  // Auto-scroll to bottom when messages change or conversation is selected
+  useLayoutEffect(() => {
+    if (messagesEndRef.current && messages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: "instant" });
+    }
+  }, [messages, selectedConversation?.zapp_conversation_id]);
 
   const checkWhatsAppStatus = async () => {
     try {
@@ -3637,6 +3645,7 @@ export default function RoyZapp() {
                 );
               })
             )}
+            <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
 
