@@ -8,6 +8,7 @@ import {
   Italic,
   Loader2,
   Mic,
+  PenLine,
   Play,
   Plus,
   Send,
@@ -59,6 +60,8 @@ interface ZappMessageInputProps {
   isGroup?: boolean;
   groupJid?: string | null;
   replyingTo?: ReplyingToMessage | null;
+  signatureEnabled?: boolean;
+  hasSignature?: boolean;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -74,6 +77,7 @@ interface ZappMessageInputProps {
   onOpenQuickReplies: () => void;
   onCancelReply?: () => void;
   onMentionInsert?: (mention: MentionData) => void;
+  onToggleSignature?: () => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -96,6 +100,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   isGroup,
   groupJid,
   replyingTo,
+  signatureEnabled,
+  hasSignature,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -111,6 +117,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onOpenQuickReplies,
   onCancelReply,
   onMentionInsert,
+  onToggleSignature,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -242,6 +249,30 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </TooltipTrigger>
           <TooltipContent side="top">Formatação</TooltipContent>
         </Tooltip>
+        
+        {/* Signature toggle button */}
+        {hasSignature && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={cn(
+                  "flex-shrink-0",
+                  signatureEnabled 
+                    ? "text-zapp-accent hover:bg-zapp-hover" 
+                    : "text-zapp-text-muted hover:bg-zapp-hover"
+                )}
+                onClick={onToggleSignature}
+              >
+                <PenLine className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {signatureEnabled ? "Desativar assinatura" : "Ativar assinatura"}
+            </TooltipContent>
+          </Tooltip>
+        )}
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

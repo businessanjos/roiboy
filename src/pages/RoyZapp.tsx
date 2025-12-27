@@ -102,6 +102,15 @@ export default function RoyZapp() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
+  // User signature state (persisted to localStorage)
+  const [userSignature, setUserSignature] = useState(() => {
+    const saved = localStorage.getItem("zapp_signature");
+    return saved || "";
+  });
+  const [signatureEnabled, setSignatureEnabled] = useState(() => {
+    const saved = localStorage.getItem("zapp_signatureEnabled");
+    return saved === "true";
+  });
   // Distribution settings state (persisted to localStorage)
   const [roundRobinEnabled, setRoundRobinEnabled] = useState(() => {
     const saved = localStorage.getItem("zapp_roundRobin");
@@ -730,7 +739,11 @@ export default function RoyZapp() {
       return;
     }
     
-    const messageContent = messageInput.trim();
+    // Add signature at the top of the message if enabled
+    const baseMessage = messageInput.trim();
+    const messageContent = signatureEnabled && userSignature.trim() 
+      ? `${userSignature.trim()}\n\n${baseMessage}`
+      : baseMessage;
     const tempMessageId = `temp-${Date.now()}`;
     const now = new Date().toISOString();
     const conversationId = selectedConversation.zapp_conversation_id;
@@ -1993,6 +2006,11 @@ export default function RoyZapp() {
           }}
           onImportLimitChange={setImportLimit}
           onImportConversations={importRecentConversations}
+          userSignature={userSignature}
+          onSignatureChange={(value) => {
+            setUserSignature(value);
+            localStorage.setItem("zapp_signature", value);
+          }}
           getAgentName={getAgentName}
         />
       </div>
@@ -2061,6 +2079,13 @@ export default function RoyZapp() {
           onCancelReply={() => setReplyingTo(null)}
           onMentionInsert={(mention) => {
             setPendingMentions(prev => [...prev, { phone: mention.phone, jid: mention.jid }]);
+          }}
+          signatureEnabled={signatureEnabled}
+          hasSignature={!!userSignature.trim()}
+          onToggleSignature={() => {
+            const newValue = !signatureEnabled;
+            setSignatureEnabled(newValue);
+            localStorage.setItem("zapp_signatureEnabled", String(newValue));
           }}
         />
       </div>

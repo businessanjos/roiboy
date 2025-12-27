@@ -7,10 +7,13 @@ import {
   Users,
   Download,
   Loader2,
+  PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -29,12 +32,14 @@ interface ZappSettingsPanelProps {
   soundEnabled: boolean;
   importLimit: string;
   importingConversations: boolean;
+  userSignature: string;
   onToggleWhatsAppConnection: () => void;
   onRoundRobinChange: (checked: boolean) => void;
   onRespectLimitChange: (checked: boolean) => void;
   onSoundChange: (checked: boolean) => void;
   onImportLimitChange: (value: string) => void;
   onImportConversations: () => void;
+  onSignatureChange: (value: string) => void;
 }
 
 export const ZappSettingsPanel = memo(function ZappSettingsPanel({
@@ -46,12 +51,14 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   soundEnabled,
   importLimit,
   importingConversations,
+  userSignature,
   onToggleWhatsAppConnection,
   onRoundRobinChange,
   onRespectLimitChange,
   onSoundChange,
   onImportLimitChange,
   onImportConversations,
+  onSignatureChange,
 }: ZappSettingsPanelProps) {
   const navigate = useNavigate();
 
@@ -180,6 +187,47 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
             onCheckedChange={onSoundChange}
             className="data-[state=checked]:bg-zapp-accent" 
           />
+        </div>
+      </div>
+
+      {/* User Signature */}
+      <div className="space-y-4 pt-4 border-t border-zapp-border">
+        <div>
+          <div className="flex items-center gap-2">
+            <PenLine className="h-4 w-4 text-zapp-accent" />
+            <p className="text-zapp-text text-sm font-medium">Assinatura</p>
+          </div>
+          <p className="text-zapp-text-muted text-xs mt-1">
+            Identifique-se nas mensagens que enviar. Aparecerá no topo da mensagem.
+          </p>
+        </div>
+        
+        <div className="p-4 bg-zapp-panel rounded-lg space-y-3">
+          <div>
+            <Label htmlFor="signature" className="text-zapp-text text-xs">
+              Sua assinatura personalizada
+            </Label>
+            <Textarea
+              id="signature"
+              value={userSignature}
+              onChange={(e) => onSignatureChange(e.target.value)}
+              placeholder="Ex: João Silva | Consultor&#10;📞 (11) 9999-9999"
+              className="mt-1 bg-zapp-input border-zapp-border text-zapp-text placeholder:text-zapp-text-muted min-h-[80px] resize-none"
+            />
+          </div>
+          
+          {userSignature && (
+            <div className="p-3 bg-zapp-bg rounded-lg">
+              <p className="text-xs text-zapp-text-muted mb-1">Prévia:</p>
+              <div className="text-sm text-zapp-text whitespace-pre-wrap border-l-2 border-zapp-accent pl-2">
+                {userSignature}
+              </div>
+            </div>
+          )}
+          
+          <p className="text-xs text-zapp-text-muted">
+            💡 Use o botão <PenLine className="h-3 w-3 inline" /> no chat para ativar/desativar a assinatura em cada mensagem.
+          </p>
         </div>
       </div>
 
