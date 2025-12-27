@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users, DollarSign, Loader2, Plus, MessageSquare, Webhook, Brain, Key, Sheet, CreditCard } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, ExternalLink, TrendingUp, Users, DollarSign, Loader2, Plus, MessageSquare, Webhook, Brain, Key, Sheet } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
 import { GoogleSheetsIntegration } from "@/components/financial/GoogleSheetsIntegration";
-import { CreditCardInvoiceImport } from "@/components/financial/CreditCardInvoiceImport";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -65,7 +64,6 @@ export function IntegrationsContent() {
     financeiro: [
       { id: "omie", name: "Omie", description: "Sincronize dados financeiros e pagamentos", icon: DollarSign },
       { id: "google-sheets", name: "Google Sheets", description: "Receba movimentações do BTG e outros bancos", icon: Sheet },
-      { id: "credit-card", name: "Fatura de Cartão", description: "Importe faturas com IA para extração automática", icon: CreditCard },
     ],
     vendas: [
       { id: "pipedrive", name: "Pipedrive", description: "Cadastre clientes ao fechar vendas", icon: Users },
@@ -537,10 +535,6 @@ export function IntegrationsContent() {
                 <TabsTrigger value="google-sheets" className="gap-2 px-3 py-2">
                   <Sheet className="h-4 w-4" />
                   <span>Google Sheets</span>
-                </TabsTrigger>
-                <TabsTrigger value="credit-card" className="gap-2 px-3 py-2">
-                  <CreditCard className="h-4 w-4" />
-                  <span>Fatura Cartão</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1179,34 +1173,6 @@ export function IntegrationsContent() {
           </Card>
         </TabsContent>
 
-        {/* Credit Card Invoice Tab */}
-        <TabsContent value="credit-card" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Importar Fatura de Cartão
-                <Badge variant="secondary" className="ml-2">IA</Badge>
-              </CardTitle>
-              <CardDescription>
-                Cole o texto da fatura e a IA extrai automaticamente as transações
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg bg-muted/50 p-4 space-y-3">
-                <h4 className="font-medium">Como funciona</h4>
-                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                  <li>Copie o texto da fatura do cartão (PDF ou app do banco)</li>
-                  <li>Cole no campo de importação</li>
-                  <li>A IA identifica e extrai todas as transações automaticamente</li>
-                  <li>Revise e importe as transações selecionadas</li>
-                </ol>
-              </div>
-              
-              <CreditCardInvoiceInline />
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
@@ -1275,17 +1241,3 @@ function GoogleSheetsIntegrationInline({ accountId }: { accountId: string | null
   );
 }
 
-// Inline component for Credit Card import
-function CreditCardInvoiceInline() {
-  const [isOpen, setIsOpen] = useState(false);
-  
-  return (
-    <>
-      <Button onClick={() => setIsOpen(true)} className="w-full">
-        <CreditCard className="h-4 w-4 mr-2" />
-        Importar Fatura de Cartão
-      </Button>
-      <CreditCardInvoiceImport open={isOpen} onOpenChange={setIsOpen} />
-    </>
-  );
-}
