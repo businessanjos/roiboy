@@ -1212,6 +1212,35 @@ export default function RoyZapp() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Handle delete message for everyone
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!selectedConversation) return;
+    
+    try {
+      // Call UAZAPI to delete message
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: {
+          action: "delete_message",
+          message_id: messageId,
+          phone: getContactInfo(selectedConversation).phone,
+        },
+      });
+      
+      if (error) throw error;
+      
+      // Remove message from local state
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      
+      // Delete from database
+      await supabase.from("zapp_messages").delete().eq("id", messageId);
+      
+      toast.success("Mensagem apagada para todos");
+    } catch (error: any) {
+      console.error("Error deleting message:", error);
+      toast.error(error.message || "Erro ao apagar mensagem");
+    }
+  };
+
   // Handle key press in input
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -2078,6 +2107,7 @@ export default function RoyZapp() {
             messageInputRef.current?.focus();
           }}
           onCancelReply={() => setReplyingTo(null)}
+          onDeleteMessage={handleDeleteMessage}
           onMentionInsert={(mention) => {
             setPendingMentions(prev => [...prev, { phone: mention.phone, jid: mention.jid }]);
           }}
