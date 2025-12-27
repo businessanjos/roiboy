@@ -5,3 +5,5 @@ export * from "./ZappMessageBubble";
 export * from "./ZappMessagesList";
 export * from "./ZappChatHeader";
 export * from "./ZappMessageInput";
+export * from "./ZappTeamList";
+export * from "./ZappTagsList";
