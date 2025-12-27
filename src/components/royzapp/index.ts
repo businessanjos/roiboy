@@ -7,3 +7,5 @@ export * from "./ZappChatHeader";
 export * from "./ZappMessageInput";
 export * from "./ZappTeamList";
 export * from "./ZappTagsList";
+export * from "./ZappSettingsPanel";
+export * from "./ZappDepartmentList";
