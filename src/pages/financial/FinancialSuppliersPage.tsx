@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit2, Trash2, Truck, Building2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Truck, Building2, Download, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,6 +81,7 @@ export default function FinancialSuppliersPage() {
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState(initialFormData);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers", accountId],
@@ -169,6 +170,140 @@ export default function FinancialSuppliersPage() {
     setEditingSupplier(null);
   };
 
+  const handleExport = () => {
+    if (suppliers.length === 0) {
+      toast({ title: "Nenhum fornecedor para exportar", variant: "destructive" });
+      return;
+    }
+
+    const headers = [
+      "Nome",
+      "Tipo Doc",
+      "Documento",
+      "E-mail",
+      "Telefone",
+      "Contato",
+      "Rua",
+      "Número",
+      "Complemento",
+      "Bairro",
+      "Cidade",
+      "Estado",
+      "CEP",
+      "Banco",
+      "Agência",
+      "Conta",
+      "PIX",
+      "Observações",
+      "Ativo",
+    ];
+
+    const rows = suppliers.map((s) => [
+      s.name,
+      s.document_type || "",
+      s.document || "",
+      s.email || "",
+      s.phone || "",
+      s.contact_name || "",
+      s.street || "",
+      s.street_number || "",
+      s.complement || "",
+      s.neighborhood || "",
+      s.city || "",
+      s.state || "",
+      s.zip_code || "",
+      s.bank_name || "",
+      s.bank_agency || "",
+      s.bank_account || "",
+      s.pix_key || "",
+      s.notes || "",
+      s.is_active ? "Sim" : "Não",
+    ]);
+
+    const csvContent =
+      "\uFEFF" +
+      [headers.join(";"), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `fornecedores_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: `${suppliers.length} fornecedor(es) exportado(s)` });
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !accountId) return;
+
+    setIsImporting(true);
+
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter((line) => line.trim());
+
+      if (lines.length < 2) {
+        toast({ title: "Arquivo vazio ou sem dados", variant: "destructive" });
+        setIsImporting(false);
+        return;
+      }
+
+      // Skip header
+      const dataLines = lines.slice(1);
+      let imported = 0;
+      let errors = 0;
+
+      for (const line of dataLines) {
+        const cols = line.split(/[;,]/).map((c) => c.replace(/^"|"$/g, "").trim());
+        if (!cols[0]) continue;
+
+        const supplierData = {
+          account_id: accountId,
+          name: cols[0],
+          document_type: cols[1]?.toLowerCase() || "cpf",
+          document: cols[2] || null,
+          email: cols[3] || null,
+          phone: cols[4] || null,
+          contact_name: cols[5] || null,
+          street: cols[6] || null,
+          street_number: cols[7] || null,
+          complement: cols[8] || null,
+          neighborhood: cols[9] || null,
+          city: cols[10] || null,
+          state: cols[11] || null,
+          zip_code: cols[12] || null,
+          bank_name: cols[13] || null,
+          bank_agency: cols[14] || null,
+          bank_account: cols[15] || null,
+          pix_key: cols[16] || null,
+          notes: cols[17] || null,
+          is_active: cols[18]?.toLowerCase() !== "não",
+        };
+
+        const { error } = await supabase.from("suppliers").insert(supplierData);
+        if (error) {
+          errors++;
+        } else {
+          imported++;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      toast({
+        title: `Importação concluída`,
+        description: `${imported} importado(s)${errors > 0 ? `, ${errors} erro(s)` : ""}`,
+      });
+    } catch (err) {
+      toast({ title: "Erro ao processar arquivo", variant: "destructive" });
+    } finally {
+      setIsImporting(false);
+      event.target.value = "";
+    }
+  };
+
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier);
     setFormData({
@@ -218,10 +353,38 @@ export default function FinancialSuppliersPage() {
                 </CardDescription>
               </div>
             </div>
-            <Button onClick={handleOpenForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleExport}
+                disabled={suppliers.length === 0}
+                title="Exportar CSV"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={isImporting}
+                title="Importar CSV"
+                asChild
+              >
+                <label className="cursor-pointer">
+                  <Upload className="h-4 w-4" />
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleImport}
+                    className="hidden"
+                  />
+                </label>
+              </Button>
+              <Button onClick={handleOpenForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
