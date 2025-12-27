@@ -402,6 +402,7 @@ export default function ClientDetail() {
       company_name: client.company_name || "",
       notes: client.notes || "",
       instagram: client.instagram || "",
+      instagrams: ((client as any).instagrams as string[]) || [],
       bio: client.bio || "",
       street: client.street || "",
       street_number: client.street_number || "",
