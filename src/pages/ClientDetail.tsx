@@ -422,6 +422,13 @@ export default function ClientDetail() {
       is_mls: client.is_mls || false,
       mls_level: client.mls_level || "",
       responsible_user_id: client.responsible_user_id || "",
+      pix_key_type: (client as any).pix_key_type || "",
+      pix_key: (client as any).pix_key || "",
+      bank_code: (client as any).bank_code || "",
+      bank_name: (client as any).bank_name || "",
+      bank_agency: (client as any).bank_agency || "",
+      bank_account: (client as any).bank_account || "",
+      bank_account_type: (client as any).bank_account_type || "checking",
     });
     setEditInfoDialogOpen(true);
   };
