@@ -2,7 +2,7 @@ import { RefObject } from "react";
 import { MessageSquare, Clock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
-import { ZappMessageInput } from "./ZappMessageInput";
+import { ZappMessageInput, MentionData } from "./ZappMessageInput";
 import { ConversationAssignment, Message } from "./types";
 
 interface ContactInfo {
@@ -94,6 +94,7 @@ interface ZappChatViewProps {
   onOpenQuickReplies: () => void;
   onReplyMessage: (message: Message) => void;
   onCancelReply: () => void;
+  onMentionInsert?: (mention: MentionData) => void;
 }
 
 export function ZappChatView({
@@ -140,6 +141,7 @@ export function ZappChatView({
   onOpenQuickReplies,
   onReplyMessage,
   onCancelReply,
+  onMentionInsert,
 }: ZappChatViewProps) {
   if (!selectedConversation) {
     return (
@@ -230,6 +232,7 @@ export function ZappChatView({
         onOpenContactPicker={onOpenContactPicker}
         onOpenQuickReplies={onOpenQuickReplies}
         onCancelReply={onCancelReply}
+        onMentionInsert={onMentionInsert}
       />
     </div>
   );

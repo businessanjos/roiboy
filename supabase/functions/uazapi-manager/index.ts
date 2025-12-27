@@ -26,6 +26,7 @@ interface UazapiRequest {
   group_description?: string;
   group_image?: string;
   participants?: string[];
+  mentions?: string[];
   media_url?: string;
   media_type?: "image" | "audio" | "document";
   caption?: string;
@@ -1512,17 +1513,26 @@ serve(async (req) => {
 
         // Ensure group_id has @g.us suffix
         const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
-        console.log(`Sending message to group: ${groupJid}`);
+        const mentionsList = (payload as UazapiRequest).mentions || [];
+        console.log(`Sending message to group: ${groupJid}, mentions: ${mentionsList.length}`);
         
         let sendResult: unknown = null;
         let sendSuccess = false;
         
         // UAZAPI GO v2 - Same format as send_text but with group JID as "number"
-        // The API expects { number: "groupJid@g.us", text: "message" }
+        // The API expects { number: "groupJid@g.us", text: "message", mentions: ["jid1@s.whatsapp.net", ...] }
+        // Build base body with mentions if present
+        const baseBody: Record<string, unknown> = { number: groupJid, text: message };
+        if (mentionsList.length > 0) {
+          // Ensure mentions have proper format
+          baseBody.mentions = mentionsList.map(m => m.includes("@") ? m : `${m}@s.whatsapp.net`);
+          baseBody.mentionedJid = baseBody.mentions; // Alternative field name
+        }
+        
         const sendEndpoints = [
-          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message } },
-          { url: `/send/text`, method: "POST", body: { chatId: groupJid, text: message } },
-          { url: `/chat/send/text`, method: "POST", body: { Phone: groupJid, Body: message } },
+          { url: `/send/text`, method: "POST", body: baseBody },
+          { url: `/send/text`, method: "POST", body: { chatId: groupJid, text: message, mentions: baseBody.mentions } },
+          { url: `/chat/send/text`, method: "POST", body: { Phone: groupJid, Body: message, Mentions: baseBody.mentions } },
         ];
 
         for (const endpoint of sendEndpoints) {

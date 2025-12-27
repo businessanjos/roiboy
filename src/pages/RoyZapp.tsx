@@ -93,6 +93,7 @@ export default function RoyZapp() {
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean } | null>(null);
+  const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string }[]>([]);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -760,18 +761,26 @@ export default function RoyZapp() {
     setMessageInput("");
     setReplyingTo(null);
     
+    // Capture current mentions before clearing
+    const mentionsToSend = [...pendingMentions];
+    setPendingMentions([]);
+    
     // Fire and forget - don't block UI while sending
     (async () => {
       try {
         // Call UAZAPI to send message
         const action = isGroup && groupJid ? "send_to_group" : "send_text";
-        const payload: Record<string, string> = {
+        const payload: Record<string, unknown> = {
           action,
           message: messageContent,
         };
         
         if (isGroup && groupJid) {
           payload.group_id = groupJid;
+          // Add mentions for group messages
+          if (mentionsToSend.length > 0) {
+            payload.mentions = mentionsToSend.map(m => m.jid);
+          }
         } else {
           payload.phone = phone;
         }
@@ -2050,6 +2059,9 @@ export default function RoyZapp() {
             messageInputRef.current?.focus();
           }}
           onCancelReply={() => setReplyingTo(null)}
+          onMentionInsert={(mention) => {
+            setPendingMentions(prev => [...prev, { phone: mention.phone, jid: mention.jid }]);
+          }}
         />
       </div>
 
