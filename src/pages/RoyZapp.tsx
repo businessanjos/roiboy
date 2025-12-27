@@ -433,9 +433,22 @@ export default function RoyZapp() {
     }
   }, [currentUser?.account_id]);
 
+  // Debounce ref for realtime updates
+  const realtimeFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
+  const REALTIME_DEBOUNCE_MS = 2000; // Wait 2 seconds before fetching after realtime update
+  const MIN_FETCH_INTERVAL_MS = 3000; // Minimum 3 seconds between fetches
+
   // Optimized fetch for realtime updates - only fetches assignments
   const fetchAssignmentsOnly = useCallback(async () => {
     if (!currentUser?.account_id) return;
+    
+    // Prevent fetching too frequently
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL_MS) {
+      return;
+    }
+    lastFetchTimeRef.current = now;
     
     try {
       const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -488,6 +501,19 @@ export default function RoyZapp() {
       console.error("Error fetching assignments:", error);
     }
   }, [currentUser?.account_id]);
+  
+  // Debounced version for realtime updates
+  const debouncedFetchAssignments = useCallback(() => {
+    // Clear any pending fetch
+    if (realtimeFetchTimeoutRef.current) {
+      clearTimeout(realtimeFetchTimeoutRef.current);
+    }
+    
+    // Schedule a new fetch
+    realtimeFetchTimeoutRef.current = setTimeout(() => {
+      fetchAssignmentsOnly();
+    }, REALTIME_DEBOUNCE_MS);
+  }, [fetchAssignmentsOnly]);
 
   // Realtime subscription for conversations and assignments
   useEffect(() => {
@@ -503,10 +529,9 @@ export default function RoyZapp() {
           table: 'zapp_conversations',
           filter: `account_id=eq.${currentUser.account_id}`
         },
-        (payload) => {
-          console.log("Realtime conversation update:", payload);
-          // Only fetch assignments, not full data reload
-          fetchAssignmentsOnly();
+        () => {
+          // Use debounced fetch to avoid constant updates
+          debouncedFetchAssignments();
         }
       )
       .on(
@@ -517,18 +542,21 @@ export default function RoyZapp() {
           table: 'zapp_conversation_assignments',
           filter: `account_id=eq.${currentUser.account_id}`
         },
-        (payload) => {
-          console.log("Realtime assignment update:", payload);
-          // Only fetch assignments, not full data reload
-          fetchAssignmentsOnly();
+        () => {
+          // Use debounced fetch to avoid constant updates
+          debouncedFetchAssignments();
         }
       )
       .subscribe();
 
     return () => {
+      // Clear pending timeout on cleanup
+      if (realtimeFetchTimeoutRef.current) {
+        clearTimeout(realtimeFetchTimeoutRef.current);
+      }
       supabase.removeChannel(conversationsChannel);
     };
-  }, [currentUser?.account_id, fetchAssignmentsOnly]);
+  }, [currentUser?.account_id, debouncedFetchAssignments]);
 
   // Realtime subscription for messages in selected conversation
   useEffect(() => {
