@@ -1,4 +1,4 @@
-import { memo, useRef, useLayoutEffect } from "react";
+import { useRef, useLayoutEffect } from "react";
 import { MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "./types";
@@ -9,7 +9,7 @@ interface ZappMessagesListProps {
   isGroup: boolean;
 }
 
-export const ZappMessagesList = memo(function ZappMessagesList({
+export function ZappMessagesList({
   messages,
   isGroup,
 }: ZappMessagesListProps) {
@@ -49,4 +49,4 @@ export const ZappMessagesList = memo(function ZappMessagesList({
       </div>
     </ScrollArea>
   );
-});
+}
