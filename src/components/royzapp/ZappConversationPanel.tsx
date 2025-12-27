@@ -8,6 +8,7 @@ import {
   Search,
   Filter,
   MoreVertical,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -219,34 +220,54 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               {/* Status filters */}
               <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
               <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "all" && "bg-zapp-bg-dark")}
+                className={cn(
+                  "text-zapp-text flex items-center justify-between", 
+                  filterStatus === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                )}
                 onClick={() => setFilterStatus("all")}
               >
-                Todas
+                <span>Todas</span>
+                {filterStatus === "all" && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-zapp-text", filterUnread && "bg-zapp-bg-dark")}
+                className={cn(
+                  "text-zapp-text flex items-center justify-between", 
+                  filterUnread && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                )}
                 onClick={() => setFilterUnread(!filterUnread)}
               >
-                Não lidas
+                <span>Não lidas</span>
+                {filterUnread && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "triage" && "bg-zapp-bg-dark")}
+                className={cn(
+                  "text-zapp-text flex items-center justify-between", 
+                  filterStatus === "triage" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                )}
                 onClick={() => setFilterStatus("triage")}
               >
-                Triagem
+                <span>Triagem</span>
+                {filterStatus === "triage" && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "active" && "bg-zapp-bg-dark")}
+                className={cn(
+                  "text-zapp-text flex items-center justify-between", 
+                  filterStatus === "active" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                )}
                 onClick={() => setFilterStatus("active")}
               >
-                Em atendimento
+                <span>Em atendimento</span>
+                {filterStatus === "active" && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "closed" && "bg-zapp-bg-dark")}
+                className={cn(
+                  "text-zapp-text flex items-center justify-between", 
+                  filterStatus === "closed" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                )}
                 onClick={() => setFilterStatus("closed")}
               >
-                Finalizado
+                <span>Finalizado</span>
+                {filterStatus === "closed" && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               
               {/* Product filters */}
@@ -255,22 +276,32 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <DropdownMenuSeparator className="bg-zapp-border" />
                   <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Produto</div>
                   <DropdownMenuItem 
-                    className={cn("text-zapp-text", filterProductId === "all" && "bg-zapp-bg-dark")}
+                    className={cn(
+                      "text-zapp-text flex items-center justify-between", 
+                      filterProductId === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                    )}
                     onClick={() => setFilterProductId("all")}
                   >
-                    Todos os produtos
+                    <span>Todos os produtos</span>
+                    {filterProductId === "all" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                   {availableProducts.map((product) => (
                     <DropdownMenuItem 
                       key={product.id}
-                      className={cn("text-zapp-text flex items-center gap-2", filterProductId === product.id && "bg-zapp-bg-dark")}
+                      className={cn(
+                        "text-zapp-text flex items-center justify-between", 
+                        filterProductId === product.id && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                      )}
                       onClick={() => setFilterProductId(product.id)}
                     >
-                      <div 
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: product.color || '#10b981' }}
-                      />
-                      <span className="truncate">{product.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: product.color || '#10b981' }}
+                        />
+                        <span className="truncate">{product.name}</span>
+                      </div>
+                      {filterProductId === product.id && <Check className="h-4 w-4 flex-shrink-0" />}
                     </DropdownMenuItem>
                   ))}
                 </>
@@ -282,22 +313,32 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <DropdownMenuSeparator className="bg-zapp-border" />
                   <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Etiqueta</div>
                   <DropdownMenuItem 
-                    className={cn("text-zapp-text", filterTagId === "all" && "bg-zapp-bg-dark")}
+                    className={cn(
+                      "text-zapp-text flex items-center justify-between", 
+                      filterTagId === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                    )}
                     onClick={() => setFilterTagId("all")}
                   >
-                    Todas as etiquetas
+                    <span>Todas as etiquetas</span>
+                    {filterTagId === "all" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                   {tags.filter(t => t.is_active).map((tag) => (
                     <DropdownMenuItem 
                       key={tag.id}
-                      className={cn("text-zapp-text flex items-center gap-2", filterTagId === tag.id && "bg-zapp-bg-dark")}
+                      className={cn(
+                        "text-zapp-text flex items-center justify-between", 
+                        filterTagId === tag.id && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                      )}
                       onClick={() => setFilterTagId(tag.id)}
                     >
-                      <div 
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      <span className="truncate">{tag.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        <span className="truncate">{tag.name}</span>
+                      </div>
+                      {filterTagId === tag.id && <Check className="h-4 w-4 flex-shrink-0" />}
                     </DropdownMenuItem>
                   ))}
                 </>
@@ -309,27 +350,37 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <DropdownMenuSeparator className="bg-zapp-border" />
                   <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Atendente</div>
                   <DropdownMenuItem 
-                    className={cn("text-zapp-text", filterAgentId === "all" && "bg-zapp-bg-dark")}
+                    className={cn(
+                      "text-zapp-text flex items-center justify-between", 
+                      filterAgentId === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                    )}
                     onClick={() => setFilterAgentId("all")}
                   >
-                    Todos os atendentes
+                    <span>Todos os atendentes</span>
+                    {filterAgentId === "all" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                   {agents.filter(a => a.is_active).map((agent) => (
                     <DropdownMenuItem 
                       key={agent.id}
-                      className={cn("text-zapp-text flex items-center gap-2", filterAgentId === agent.id && "bg-zapp-bg-dark")}
+                      className={cn(
+                        "text-zapp-text flex items-center justify-between", 
+                        filterAgentId === agent.id && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                      )}
                       onClick={() => setFilterAgentId(agent.id)}
                     >
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={agent.user?.avatar_url || undefined} />
-                        <AvatarFallback className="text-[8px] bg-zapp-panel">
-                          {agent.user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="truncate">{agent.user?.name || "Atendente"}</span>
-                      {agent.is_online && (
-                        <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={agent.user?.avatar_url || undefined} />
+                          <AvatarFallback className="text-[8px] bg-zapp-panel">
+                            {agent.user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{agent.user?.name || "Atendente"}</span>
+                        {agent.is_online && (
+                          <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                        )}
+                      </div>
+                      {filterAgentId === agent.id && <Check className="h-4 w-4 flex-shrink-0" />}
                     </DropdownMenuItem>
                   ))}
                 </>
