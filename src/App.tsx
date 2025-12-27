@@ -57,6 +57,7 @@ const AIAgent = lazy(() => import("./pages/AIAgent"));
 const RoyZapp = lazy(() => import("./pages/RoyZapp"));
 const BillingPortal = lazy(() => import("./pages/BillingPortal"));
 const Sectors = lazy(() => import("./pages/Sectors"));
+const Contracts = lazy(() => import("./pages/Contracts"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,6 +111,7 @@ const App = () => (
                             <Route path="/clients" element={<Clients />} />
                             <Route path="/clients/new" element={<Clients />} />
                             <Route path="/clients/:id" element={<ClientDetail />} />
+                            <Route path="/contracts" element={<Contracts />} />
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
                             <Route path="/events/:id" element={<EventDetail />} />
