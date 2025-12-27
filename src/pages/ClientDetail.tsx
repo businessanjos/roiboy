@@ -397,6 +397,7 @@ export default function ClientDetail() {
       emails: client.emails || [],
       additional_phones: client.additional_phones || [],
       cpf: client.cpf || "",
+      rg: (client as any).rg || "",
       cnpj: client.cnpj || "",
       birth_date: client.birth_date || "",
       company_name: client.company_name || "",
@@ -427,11 +428,13 @@ export default function ClientDetail() {
       responsible_user_id: client.responsible_user_id || "",
       pix_key_type: (client as any).pix_key_type || "",
       pix_key: (client as any).pix_key || "",
+      additional_pix_keys: ((client as any).additional_pix_keys as any[]) || [],
       bank_code: (client as any).bank_code || "",
       bank_name: (client as any).bank_name || "",
       bank_agency: (client as any).bank_agency || "",
       bank_account: (client as any).bank_account || "",
       bank_account_type: (client as any).bank_account_type || "checking",
+      additional_bank_accounts: ((client as any).additional_bank_accounts as any[]) || [],
     });
     setEditInfoDialogOpen(true);
   };

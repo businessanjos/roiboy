@@ -31,12 +31,26 @@ import {
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
 
+export interface PixKeyData {
+  type: string;
+  key: string;
+}
+
+export interface BankAccountData {
+  bank_name: string;
+  bank_code: string;
+  account_type: string;
+  agency: string;
+  account: string;
+}
+
 export interface ClientFormData {
   full_name: string;
   phone_e164: string;
   emails: string[];
   additional_phones: string[];
   cpf: string;
+  rg: string;
   cnpj: string;
   birth_date: string;
   company_name: string;
@@ -73,11 +87,13 @@ export interface ClientFormData {
   // Banking data
   pix_key_type: string;
   pix_key: string;
+  additional_pix_keys: PixKeyData[];
   bank_code: string;
   bank_name: string;
   bank_agency: string;
   bank_account: string;
   bank_account_type: string;
+  additional_bank_accounts: BankAccountData[];
 }
 
 interface ClientInfoFormProps {
@@ -747,13 +763,13 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
-          {/* CPF & Birth Date */}
+          {/* CPF, RG & Birth Date */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
               <FileText className="h-3.5 w-3.5" />
               Documentos Pessoais
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">CPF</Label>
                 <div className="relative">
@@ -775,6 +791,15 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                 {validation.cpf.isPartial && (
                   <p className="text-[11px] text-amber-600">Digitando...</p>
                 )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">RG</Label>
+                <Input
+                  value={data.rg}
+                  onChange={(e) => updateField("rg", e.target.value)}
+                  placeholder="00.000.000-0"
+                  className="h-9"
+                />
               </div>
               <BirthDateField 
                 value={data.birth_date}
@@ -1216,7 +1241,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
               <QrCode className="h-3.5 w-3.5" />
-              Chave PIX
+              Chave PIX Principal
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
@@ -1240,24 +1265,72 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-sm font-medium">Chave PIX</Label>
-                <Input
-                  value={data.pix_key}
-                  onChange={(e) => updateField("pix_key", e.target.value)}
-                  placeholder={
-                    data.pix_key_type === "cpf" ? "000.000.000-00" :
-                    data.pix_key_type === "cnpj" ? "00.000.000/0000-00" :
-                    data.pix_key_type === "email" ? "email@exemplo.com" :
-                    data.pix_key_type === "phone" ? "+55 11 99999-9999" :
-                    data.pix_key_type === "random" ? "Chave aleatória" :
-                    "Selecione o tipo primeiro"
-                  }
-                  className="h-9"
-                  disabled={!data.pix_key_type}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={data.pix_key}
+                    onChange={(e) => updateField("pix_key", e.target.value)}
+                    placeholder={
+                      data.pix_key_type === "cpf" ? "000.000.000-00" :
+                      data.pix_key_type === "cnpj" ? "00.000.000/0000-00" :
+                      data.pix_key_type === "email" ? "email@exemplo.com" :
+                      data.pix_key_type === "phone" ? "+55 11 99999-9999" :
+                      data.pix_key_type === "random" ? "Chave aleatória" :
+                      "Selecione o tipo primeiro"
+                    }
+                    className="h-9"
+                    disabled={!data.pix_key_type}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => {
+                      if (data.pix_key_type && data.pix_key.trim()) {
+                        updateField("additional_pix_keys", [...data.additional_pix_keys, { type: data.pix_key_type, key: data.pix_key.trim() }]);
+                        updateField("pix_key", "");
+                        updateField("pix_key_type", "");
+                      }
+                    }}
+                    disabled={!data.pix_key_type || !data.pix_key.trim()}
+                    title="Adicionar outra chave PIX"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
+
+            {/* Additional PIX Keys */}
+            {data.additional_pix_keys.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Chaves PIX adicionais</Label>
+                <div className="flex flex-wrap gap-2">
+                  {data.additional_pix_keys.map((pix, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="secondary" 
+                      className="flex items-center gap-1 pl-2 pr-1 py-1"
+                    >
+                      <QrCode className="h-3 w-3 text-primary" />
+                      <span className="text-xs text-muted-foreground">{pix.type}:</span>
+                      {pix.key}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 ml-1 hover:bg-destructive/20 hover:text-destructive"
+                        onClick={() => updateField("additional_pix_keys", data.additional_pix_keys.filter((_, i) => i !== index))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
             <p className="text-[11px] text-muted-foreground">
-              💡 A chave PIX pode ser usada para transferências e pagamentos ao cliente.
+              💡 Use o botão + para adicionar múltiplas chaves PIX.
             </p>
           </div>
 
@@ -1267,7 +1340,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
               <Landmark className="h-3.5 w-3.5" />
-              Conta Bancária
+              Conta Bancária Principal
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1.5 sm:col-span-2">
@@ -1305,7 +1378,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                 </Select>
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Agência</Label>
                 <Input
@@ -1325,7 +1398,69 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   className="h-9"
                 />
               </div>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={() => {
+                    if (data.bank_name.trim() && data.bank_account.trim()) {
+                      updateField("additional_bank_accounts", [...data.additional_bank_accounts, {
+                        bank_name: data.bank_name.trim(),
+                        bank_code: data.bank_code,
+                        account_type: data.bank_account_type,
+                        agency: data.bank_agency,
+                        account: data.bank_account.trim()
+                      }]);
+                      updateField("bank_name", "");
+                      updateField("bank_code", "");
+                      updateField("bank_agency", "");
+                      updateField("bank_account", "");
+                      updateField("bank_account_type", "checking");
+                    }
+                  }}
+                  disabled={!data.bank_name.trim() || !data.bank_account.trim()}
+                >
+                  <Plus className="h-4 w-4" />
+                  Adicionar Conta
+                </Button>
+              </div>
             </div>
+
+            {/* Additional Bank Accounts */}
+            {data.additional_bank_accounts.length > 0 && (
+              <div className="space-y-2 mt-3">
+                <Label className="text-sm font-medium text-muted-foreground">Contas adicionais</Label>
+                <div className="space-y-2">
+                  {data.additional_bank_accounts.map((account, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center justify-between p-2 rounded-md bg-muted/50 border"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Landmark className="h-4 w-4 text-muted-foreground" />
+                        <div className="text-sm">
+                          <span className="font-medium">{account.bank_name}</span>
+                          {account.bank_code && <span className="text-muted-foreground"> ({account.bank_code})</span>}
+                          <span className="text-muted-foreground"> • Ag: {account.agency || '-'} • Conta: {account.account}</span>
+                          <span className="text-muted-foreground"> • {account.account_type === 'checking' ? 'CC' : 'CP'}</span>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-destructive/20 hover:text-destructive"
+                        onClick={() => updateField("additional_bank_accounts", data.additional_bank_accounts.filter((_, i) => i !== index))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -1339,6 +1474,7 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   emails: [],
   additional_phones: [],
   cpf: "",
+  rg: "",
   cnpj: "",
   birth_date: "",
   company_name: "",
@@ -1369,9 +1505,11 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   responsible_user_id: "",
   pix_key_type: "",
   pix_key: "",
+  additional_pix_keys: [],
   bank_code: "",
   bank_name: "",
   bank_agency: "",
   bank_account: "",
   bank_account_type: "checking",
+  additional_bank_accounts: [],
 });
