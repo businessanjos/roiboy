@@ -708,7 +708,7 @@ export default function RoyZapp() {
 
   // Send message via UAZAPI
   const sendMessage = async () => {
-    if (!messageInput.trim() || !selectedConversation || sendingMessage) return;
+    if (!messageInput.trim() || !selectedConversation) return;
     
     const contactInfo = getContactInfo(selectedConversation);
     const phone = contactInfo.phone;
@@ -723,8 +723,10 @@ export default function RoyZapp() {
     const messageContent = messageInput.trim();
     const tempMessageId = `temp-${Date.now()}`;
     const now = new Date().toISOString();
+    const conversationId = selectedConversation.zapp_conversation_id;
+    const accountId = currentUser!.account_id;
     
-    // Optimistic update - add message to UI immediately
+    // Optimistic update - add message to UI immediately and clear input
     const optimisticMessage: Message = {
       id: tempMessageId,
       content: messageContent,
@@ -741,62 +743,61 @@ export default function RoyZapp() {
     
     setMessages(prev => [...prev, optimisticMessage]);
     setMessageInput("");
-    setSendingMessage(true);
     
-    try {
-      // Call UAZAPI to send message
-      const action = isGroup && groupJid ? "send_to_group" : "send_text";
-      const payload: Record<string, string> = {
-        action,
-        message: messageContent,
-      };
-      
-      if (isGroup && groupJid) {
-        payload.group_id = groupJid;
-      } else {
-        payload.phone = phone;
-      }
-      
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: payload,
-      });
-      
-      if (error) throw error;
-      
-      // Save message to zapp_messages
-      if (selectedConversation.zapp_conversation_id) {
-        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
-          account_id: currentUser!.account_id,
-          zapp_conversation_id: selectedConversation.zapp_conversation_id,
-          direction: "outbound",
-          content: messageContent,
-          message_type: "text",
-          sent_at: now,
-        }).select("id").single();
+    // Fire and forget - don't block UI while sending
+    (async () => {
+      try {
+        // Call UAZAPI to send message
+        const action = isGroup && groupJid ? "send_to_group" : "send_text";
+        const payload: Record<string, string> = {
+          action,
+          message: messageContent,
+        };
         
-        // Replace temp message with real one
-        if (insertedMessage) {
-          setMessages(prev => prev.map(m => 
-            m.id === tempMessageId ? { ...m, id: insertedMessage.id } : m
-          ));
+        if (isGroup && groupJid) {
+          payload.group_id = groupJid;
+        } else {
+          payload.phone = phone;
         }
         
-        // Update conversation last message
-        await supabase.from("zapp_conversations").update({
-          last_message_at: now,
-          last_message_preview: messageContent.substring(0, 100),
-          unread_count: 0,
-        }).eq("id", selectedConversation.zapp_conversation_id);
+        const { error } = await supabase.functions.invoke("uazapi-manager", {
+          body: payload,
+        });
+        
+        if (error) throw error;
+        
+        // Save message to zapp_messages in background
+        if (conversationId) {
+          const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+            account_id: accountId,
+            zapp_conversation_id: conversationId,
+            direction: "outbound",
+            content: messageContent,
+            message_type: "text",
+            sent_at: now,
+          }).select("id").single();
+          
+          // Replace temp message with real one
+          if (insertedMessage) {
+            setMessages(prev => prev.map(m => 
+              m.id === tempMessageId ? { ...m, id: insertedMessage.id } : m
+            ));
+          }
+          
+          // Update conversation last message - don't await
+          supabase.from("zapp_conversations").update({
+            last_message_at: now,
+            last_message_preview: messageContent.substring(0, 100),
+            unread_count: 0,
+          }).eq("id", conversationId);
+        }
+      } catch (error: any) {
+        console.error("Error sending message:", error);
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== tempMessageId));
+        toast.error(error.message || "Erro ao enviar mensagem");
       }
-    } catch (error: any) {
-      console.error("Error sending message:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-      setMessageInput(messageContent); // Restore input
-      toast.error(error.message || "Erro ao enviar mensagem");
-    } finally {
-      setSendingMessage(false);
-    }
+    })();
   };
 
   // Send media message (image/document)
