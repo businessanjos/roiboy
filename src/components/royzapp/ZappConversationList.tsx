@@ -67,7 +67,7 @@ export const ZappConversationList = memo(function ZappConversationList({
 }: ZappConversationListProps) {
   // Filter assignments based on current filters
   const filteredAssignments = useMemo(() => {
-    return assignments.filter((a) => {
+    const filtered = assignments.filter((a) => {
       // Hide archived conversations from main inbox
       const isArchived = a.zapp_conversation?.is_archived || false;
       if (isArchived) return false;
@@ -99,6 +99,26 @@ export const ZappConversationList = memo(function ZappConversationList({
       const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesGroups && matchesProduct && matchesTag && matchesAgent;
+    });
+    
+    // Sort: pinned first, then by unread count (desc), then by last message date (desc)
+    return filtered.sort((a, b) => {
+      const contactA = getContactInfo(a);
+      const contactB = getContactInfo(b);
+      
+      // Pinned conversations first
+      if (contactA.isPinned && !contactB.isPinned) return -1;
+      if (!contactA.isPinned && contactB.isPinned) return 1;
+      
+      // Then by unread count (conversations with unread first)
+      const unreadA = contactA.unreadCount > 0 ? 1 : 0;
+      const unreadB = contactB.unreadCount > 0 ? 1 : 0;
+      if (unreadA !== unreadB) return unreadB - unreadA;
+      
+      // Then by last message date
+      const dateA = new Date(contactA.lastMessageAt).getTime();
+      const dateB = new Date(contactB.lastMessageAt).getTime();
+      return dateB - dateA;
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
 
