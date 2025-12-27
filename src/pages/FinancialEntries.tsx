@@ -450,44 +450,64 @@ export default function FinancialEntries() {
           <p className="text-muted-foreground">Gerencie contas a pagar e receber</p>
         </div>
         <div className="flex gap-2 items-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <MoreHorizontal className="h-4 w-4" />
-                Gerenciar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => setIsProfitabilityOpen(true)} className="gap-2 cursor-pointer">
-                <DollarSign className="h-4 w-4" />
-                Relatório de Rentabilidade
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsBudgetOpen(true)} className="gap-2 cursor-pointer">
-                <FileText className="h-4 w-4" />
-                Orçamento Anual
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setIsCostCentersOpen(true)} className="gap-2 cursor-pointer">
-                <Building2 className="h-4 w-4" />
-                Centros de Custo
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsSuppliersOpen(true)} className="gap-2 cursor-pointer">
-                <User className="h-4 w-4" />
-                Fornecedores
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setIsRecurringOpen(true)} className="gap-2 cursor-pointer">
-                <Repeat className="h-4 w-4" />
-                Lançamentos Recorrentes
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsCategoriesOpen(true)} className="gap-2 cursor-pointer">
-                <Filter className="h-4 w-4" />
-                Categorias
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
+          <div className="flex items-center gap-1.5 p-1 rounded-lg bg-muted/50 border">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsProfitabilityOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+              Rentabilidade
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsBudgetOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              Orçamento
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsCostCentersOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <Building2 className="h-3.5 w-3.5 mr-1.5" />
+              Centros
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsSuppliersOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <User className="h-3.5 w-3.5 mr-1.5" />
+              Fornecedores
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsRecurringOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <Repeat className="h-3.5 w-3.5 mr-1.5" />
+              Recorrências
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsCategoriesOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <Filter className="h-3.5 w-3.5 mr-1.5" />
+              Categorias
+            </Button>
+          </div>
+          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="h-8">
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
             Novo Lançamento
           </Button>
         </div>
