@@ -12,6 +12,8 @@ import {
   ZappConversationItem,
   ZappTeamList,
   ZappTagsList,
+  ZappSettingsPanel,
+  ZappDepartmentList,
   getContactInfo as getContactInfoHelper,
   getInitials as getInitialsHelper,
 } from "@/components/royzapp";
@@ -2865,7 +2867,14 @@ export default function RoyZapp() {
             onDeleteAgent={setDeletingAgentId}
           />
         )}
-        {activeView === "departments" && renderDepartmentList()}
+        {activeView === "departments" && (
+          <ZappDepartmentList
+            departments={departments}
+            agents={agents}
+            onOpenDepartmentDialog={openDepartmentDialog}
+            onDeleteDepartment={setDeletingDepartmentId}
+          />
+        )}
         {activeView === "tags" && (
           <ZappTagsList
             tags={tags}
@@ -2873,83 +2882,37 @@ export default function RoyZapp() {
             onDeleteTag={setDeletingTagId}
           />
         )}
-        {activeView === "settings" && renderSettingsPanel()}
+        {activeView === "settings" && (
+          <ZappSettingsPanel
+            whatsappConnected={whatsappConnected}
+            whatsappConnecting={whatsappConnecting}
+            whatsappInstanceName={whatsappInstanceName}
+            roundRobinEnabled={roundRobinEnabled}
+            respectLimitEnabled={respectLimitEnabled}
+            soundEnabled={soundEnabled}
+            importLimit={importLimit}
+            importingConversations={importingConversations}
+            onToggleWhatsAppConnection={toggleWhatsAppConnection}
+            onRoundRobinChange={(checked) => {
+              setRoundRobinEnabled(checked);
+              localStorage.setItem("zapp_roundRobin", String(checked));
+            }}
+            onRespectLimitChange={(checked) => {
+              setRespectLimitEnabled(checked);
+              localStorage.setItem("zapp_respectLimit", String(checked));
+            }}
+            onSoundChange={(checked) => {
+              setSoundEnabled(checked);
+              localStorage.setItem("zapp_sound", String(checked));
+            }}
+            onImportLimitChange={setImportLimit}
+            onImportConversations={importRecentConversations}
+          />
+        )}
       </ScrollArea>
     </div>
   );
 
-
-  // Render department list
-  const renderDepartmentList = () => (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-zapp-text font-medium">Departamentos</h3>
-        <Button
-          size="sm"
-          className="bg-zapp-accent hover:bg-zapp-accent-hover text-white"
-          onClick={() => openDepartmentDialog()}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Novo
-        </Button>
-      </div>
-
-      {departments.length === 0 ? (
-        <div className="text-center py-8">
-          <Building2 className="h-12 w-12 text-zapp-text-muted mx-auto mb-3" />
-          <p className="text-zapp-text-muted text-sm">Nenhum departamento cadastrado</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {departments.map((dept) => (
-            <div
-              key={dept.id}
-              className="p-3 bg-zapp-panel rounded-lg"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: dept.color }}
-                  />
-                  <span className="text-zapp-text font-medium">{dept.name}</span>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zapp-text-muted hover:bg-zapp-bg-dark">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border">
-                    <DropdownMenuItem className="text-zapp-text" onClick={() => openDepartmentDialog(dept)}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-zapp-border" />
-                    <DropdownMenuItem 
-                      className="text-destructive"
-                      onClick={() => setDeletingDepartmentId(dept.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              {dept.description && (
-                <p className="text-zapp-text-muted text-xs mt-1">{dept.description}</p>
-              )}
-              <div className="flex items-center gap-4 mt-2 text-xs text-zapp-text-muted">
-                <span>{agents.filter((a) => a.department_id === dept.id).length} atendentes</span>
-                <span>•</span>
-                <span>{dept.auto_distribution ? "Distribuição automática" : "Manual"}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 
   // Tag functions
   const openTagDialog = (tag?: ZappTag) => {
@@ -3096,200 +3059,6 @@ export default function RoyZapp() {
     }
   };
 
-  // Render settings panel
-  const renderSettingsPanel = () => (
-    <div className="p-4 space-y-6">
-      <h3 className="text-zapp-text font-medium">Configurações</h3>
-
-      {/* WhatsApp Connection */}
-      <div className="space-y-3">
-        <div>
-          <p className="text-zapp-text text-sm font-medium">Conexão WhatsApp</p>
-          <p className="text-zapp-text-muted text-xs">Ative para receber e enviar mensagens pelo zAPP</p>
-        </div>
-        
-        <div className={cn(
-          "p-4 rounded-lg border-2 transition-colors",
-          whatsappConnected 
-            ? "bg-zapp-accent/10 border-zapp-accent" 
-            : "bg-zapp-panel border-zapp-border"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {whatsappConnected ? (
-                <div className="w-10 h-10 rounded-full bg-zapp-accent flex items-center justify-center">
-                  <Wifi className="h-5 w-5 text-white" />
-                </div>
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-zapp-bg flex items-center justify-center">
-                  <WifiOff className="h-5 w-5 text-zapp-text-muted" />
-                </div>
-              )}
-              <div>
-                <p className="text-zapp-text text-sm font-medium">
-                  {whatsappConnected ? "Conectado" : "Desconectado"}
-                </p>
-                <p className="text-zapp-text-muted text-xs">
-                  {whatsappConnected 
-                    ? "Recebendo mensagens em tempo real" 
-                    : "Clique para ativar a conexão"}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant={whatsappConnected ? "outline" : "default"}
-              size="sm"
-              onClick={toggleWhatsAppConnection}
-              disabled={whatsappConnecting}
-              className={cn(
-                whatsappConnected 
-                  ? "border-red-500 text-red-500 hover:bg-red-500/10" 
-                  : "bg-zapp-accent hover:bg-zapp-accent-hover text-white"
-              )}
-            >
-              {whatsappConnecting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Power className="h-4 w-4 mr-1" />
-                  {whatsappConnected ? "Desligar" : "Ligar"}
-                </>
-              )}
-            </Button>
-          </div>
-          {whatsappInstanceName && (
-            <p className="text-zapp-text-muted text-xs mt-2">
-              Instância: {whatsappInstanceName}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Access Configuration Notice */}
-      <div className="space-y-3 pt-4 border-t border-zapp-border">
-        <div>
-          <p className="text-zapp-text text-sm font-medium">Controle de Acesso</p>
-          <p className="text-zapp-text-muted text-xs">
-            O acesso ao ROY zAPP é controlado pela permissão "Acessar ROY zAPP" configurada na página de Equipe → Cargos.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate("/team")}
-          className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
-        >
-          <Users className="h-4 w-4 mr-2" />
-          Gerenciar Cargos
-        </Button>
-      </div>
-
-      {/* Distribution Settings */}
-      <div className="space-y-4 pt-4 border-t border-zapp-border">
-        <p className="text-zapp-text text-sm font-medium">Distribuição</p>
-        
-        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
-          <div>
-            <p className="text-zapp-text text-sm">Distribuição round-robin</p>
-            <p className="text-zapp-text-muted text-xs">Distribui igualmente entre atendentes</p>
-          </div>
-          <Switch 
-            checked={roundRobinEnabled} 
-            onCheckedChange={(checked) => {
-              setRoundRobinEnabled(checked);
-              localStorage.setItem("zapp_roundRobin", String(checked));
-            }}
-            className="data-[state=checked]:bg-zapp-accent" 
-          />
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
-          <div>
-            <p className="text-zapp-text text-sm">Respeitar limite</p>
-            <p className="text-zapp-text-muted text-xs">Não atribuir se atingiu o máximo</p>
-          </div>
-          <Switch 
-            checked={respectLimitEnabled} 
-            onCheckedChange={(checked) => {
-              setRespectLimitEnabled(checked);
-              localStorage.setItem("zapp_respectLimit", String(checked));
-            }}
-            className="data-[state=checked]:bg-zapp-accent" 
-          />
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
-          <div>
-            <p className="text-zapp-text text-sm">Som de nova conversa</p>
-            <p className="text-zapp-text-muted text-xs">Tocar som ao receber mensagem</p>
-          </div>
-          <Switch 
-            checked={soundEnabled} 
-            onCheckedChange={(checked) => {
-              setSoundEnabled(checked);
-              localStorage.setItem("zapp_sound", String(checked));
-            }}
-            className="data-[state=checked]:bg-zapp-accent" 
-          />
-        </div>
-      </div>
-
-      {/* Import Conversations */}
-      <div className="space-y-4 pt-4 border-t border-zapp-border">
-        <div>
-          <p className="text-zapp-text text-sm font-medium">Importar Conversas</p>
-          <p className="text-zapp-text-muted text-xs">
-            Carrega as últimas conversas do WhatsApp para o sistema
-          </p>
-        </div>
-        
-        <div className="p-4 bg-zapp-panel rounded-lg space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <Label htmlFor="importLimit" className="text-zapp-text text-xs">
-                Quantidade de conversas
-              </Label>
-              <Select value={importLimit} onValueChange={setImportLimit}>
-                <SelectTrigger className="mt-1 bg-zapp-input border-zapp-border text-zapp-text">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="20">20 conversas</SelectItem>
-                  <SelectItem value="50">50 conversas</SelectItem>
-                  <SelectItem value="100">100 conversas</SelectItem>
-                  <SelectItem value="200">200 conversas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <Button
-            onClick={importRecentConversations}
-            disabled={importingConversations || !whatsappConnected}
-            className="w-full bg-zapp-accent hover:bg-zapp-accent-hover text-white"
-          >
-            {importingConversations ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Importando...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Carregar Conversas
-              </>
-            )}
-          </Button>
-          
-          {!whatsappConnected && (
-            <p className="text-amber-500 text-xs text-center">
-              Conecte o WhatsApp primeiro para importar conversas
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 
   // Render chat view
   const renderChatView = () => {
