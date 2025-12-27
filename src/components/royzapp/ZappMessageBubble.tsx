@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -20,11 +20,49 @@ interface ZappMessageBubbleProps {
   isGroup: boolean;
 }
 
+// Function to detect and render links in text
+function renderTextWithLinks(text: string): React.ReactNode {
+  // URL regex pattern
+  const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+  
+  const parts = text.split(urlRegex);
+  
+  if (parts.length === 1) {
+    return text;
+  }
+  
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      // Reset regex lastIndex
+      urlRegex.lastIndex = 0;
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part.length > 50 ? `${part.substring(0, 50)}...` : part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 export const ZappMessageBubble = memo(function ZappMessageBubble({
   message,
   showTimestamp,
   isGroup,
 }: ZappMessageBubbleProps) {
+  const renderedContent = useMemo(() => {
+    if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
+      return renderTextWithLinks(message.content);
+    }
+    return null;
+  }, [message.content]);
   return (
     <div>
       {showTimestamp && (
@@ -148,9 +186,9 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           )}
           
           {/* Text content (hide for audio-only messages) */}
-          {(message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") && (
+          {renderedContent && (
             <p className="text-sm whitespace-pre-wrap break-words">
-              {message.content}
+              {renderedContent}
             </p>
           )}
           {(!message.content && !message.media_url) && (
