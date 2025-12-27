@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Book, Plug } from "lucide-react";
+import { Shield, Book, Plug, Users } from "lucide-react";
 import { SessionsManager } from "@/components/settings/SessionsManager";
 import { SecurityAuditViewer } from "@/components/settings/SecurityAuditViewer";
 import { MembersBookSettings } from "@/components/settings/MembersBookSettings";
 import { IntegrationsContent } from "@/components/integrations/IntegrationsContent";
+import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessManager";
 
 export default function Settings() {
   return (
@@ -11,12 +12,16 @@ export default function Settings() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Gerencie segurança, integrações e configurações do Members Book.
+          Gerencie segurança, integrações e configurações do sistema.
         </p>
       </div>
 
-      <Tabs defaultValue="integrations" className="space-y-4">
+      <Tabs defaultValue="sectors" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="sectors" className="gap-2">
+            <Users className="h-4 w-4" />
+            Setores
+          </TabsTrigger>
           <TabsTrigger value="integrations" className="gap-2">
             <Plug className="h-4 w-4" />
             Integrações
@@ -30,6 +35,10 @@ export default function Settings() {
             Members Book
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="sectors" className="space-y-4">
+          <UserSectorAccessManager />
+        </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4">
           <IntegrationsContent />
