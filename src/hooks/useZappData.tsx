@@ -391,18 +391,22 @@ export function useZappData() {
   const fetchMessages = useCallback(async (zappConversationId: string) => {
     console.log("[ZappData] fetchMessages called for:", zappConversationId);
     try {
+      // Fetch latest 100 messages (ordered descending, then reverse for display)
       const { data, error } = await supabase
         .from("zapp_messages")
         .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status")
         .eq("zapp_conversation_id", zappConversationId)
-        .order("sent_at", { ascending: true })
+        .order("sent_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
       
-      console.log("[ZappData] fetched messages count:", data?.length || 0);
+      // Reverse to get chronological order (oldest first for display)
+      const reversedData = (data || []).reverse();
       
-      const msgs = (data || []).map((m: any) => ({
+      console.log("[ZappData] fetched messages count:", reversedData.length);
+      
+      const msgs = reversedData.map((m: any) => ({
         id: m.id,
         content: m.content,
         is_from_client: m.direction === "inbound",
