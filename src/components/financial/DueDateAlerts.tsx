@@ -166,7 +166,7 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
     queryFn: async () => {
       if (!accountId) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("due_date_alerts")
         .select(`
           *,

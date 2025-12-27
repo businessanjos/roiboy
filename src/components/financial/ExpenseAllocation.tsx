@@ -91,7 +91,7 @@ export function ExpenseAllocation({
     queryKey: ["entry-allocations", entryId],
     queryFn: async () => {
       if (!entryId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("financial_entry_allocations")
         .select(`
           id, cost_center_id, percentage, amount,
@@ -118,7 +118,7 @@ export function ExpenseAllocation({
   const saveMutation = useMutation({
     mutationFn: async (allocs: Allocation[]) => {
       // Delete existing allocations
-      await supabase
+      await (supabase as any)
         .from("financial_entry_allocations")
         .delete()
         .eq("entry_id", entryId);
@@ -126,7 +126,7 @@ export function ExpenseAllocation({
       // Insert new allocations
       if (allocs.length > 0 && allocs.some(a => a.cost_center_id)) {
         const validAllocs = allocs.filter(a => a.cost_center_id);
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("financial_entry_allocations")
           .insert(
             validAllocs.map(a => ({
