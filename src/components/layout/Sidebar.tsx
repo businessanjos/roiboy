@@ -154,7 +154,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       if (!item.permission) return true;
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, isImpersonating]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, isImpersonating, currentSector]);
 
   // When impersonating, show regular UI even for super admins
   const showRegularUI = isImpersonating || !isSuperAdmin;
