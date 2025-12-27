@@ -1,4 +1,4 @@
-import { memo, RefObject } from "react";
+import { RefObject } from "react";
 import { MessageSquare, Clock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
@@ -84,7 +84,7 @@ interface ZappChatViewProps {
   onOpenQuickReplies: () => void;
 }
 
-export const ZappChatView = memo(function ZappChatView({
+export function ZappChatView({
   selectedConversation,
   messages,
   contactInfo,
@@ -213,4 +213,4 @@ export const ZappChatView = memo(function ZappChatView({
       />
     </div>
   );
-});
+}
