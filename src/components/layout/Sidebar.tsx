@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -27,6 +27,7 @@ import {
   Bot,
   MessageSquare,
   Activity,
+  Grid3X3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +45,7 @@ import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions"
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
+import { useSector } from "@/contexts/SectorContext";
 import {
   Sheet,
   SheetContent,
@@ -115,6 +117,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { isImpersonating } = useImpersonation();
   const { setTheme, theme } = useTheme();
+  const { currentSector, clearSector } = useSector();
+  const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Check if current user is super admin
@@ -127,18 +131,27 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     checkSuperAdmin();
   }, [user]);
 
-  // Filter nav items based on permissions and super admin status
+  // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
     // Super admins only see admin-related items UNLESS they are impersonating
     if (isSuperAdmin && !isImpersonating) return superAdminNavItems;
     
-    // While loading permissions, show all items to avoid flash
+    // If we have a current sector, use its nav items
+    if (currentSector) {
+      const sectorItems = currentSector.navItems;
+      if (permissionsLoading) return sectorItems;
+      
+      return sectorItems.filter((item) => {
+        if (!item.permission) return true;
+        return hasPermission(item.permission);
+      });
+    }
+    
+    // Fallback to all items if no sector selected
     if (permissionsLoading) return navItems;
     
     return navItems.filter((item) => {
-      // Items without permission requirement are always visible
       if (!item.permission) return true;
-      // Check permission(s)
       return hasPermission(item.permission);
     });
   }, [hasPermission, permissionsLoading, isSuperAdmin, isImpersonating]);
@@ -149,7 +162,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
   const location = useLocation();
-  const navigate = useNavigate();
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -203,10 +215,37 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       .slice(0, 2);
   };
 
+  const handleBackToSectors = () => {
+    clearSector();
+    navigate("/setores");
+    onNavigate?.();
+  };
+
   return (
     <>
+      {/* Back to Sectors Button */}
+      {currentSector && showRegularUI && (
+        <div className="p-3 border-b border-border">
+          <button
+            onClick={handleBackToSectors}
+            className={cn(
+              "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+              "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Grid3X3 className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && (
+              <div className="flex flex-col items-start">
+                <span className="text-xs text-muted-foreground">Setor atual</span>
+                <span className={cn("font-semibold", currentSector.color)}>{currentSector.name}</span>
+              </div>
+            )}
+          </button>
+        </div>
+      )}
+      
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {filteredNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.to);
           return (

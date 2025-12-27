@@ -12,6 +12,7 @@ import { PermissionsProvider } from "@/hooks/usePermissions";
 import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
+import { SectorProvider } from "@/contexts/SectorContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
@@ -55,6 +56,7 @@ const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
 const AIAgent = lazy(() => import("./pages/AIAgent"));
 const RoyZapp = lazy(() => import("./pages/RoyZapp"));
 const BillingPortal = lazy(() => import("./pages/BillingPortal"));
+const Sectors = lazy(() => import("./pages/Sectors"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,9 +85,10 @@ const App = () => (
                     <Sonner />
                     <ImpersonationBanner />
                     <BrowserRouter>
-                      <Suspense fallback={<PageLoader />}>
-                        <Routes>
-                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      <SectorProvider>
+                        <Suspense fallback={<PageLoader />}>
+                          <Routes>
+                            <Route path="/" element={<Navigate to="/setores" replace />} />
                           <Route path="/home" element={<Home />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/f/:formId" element={<PublicForm />} />
@@ -102,6 +105,7 @@ const App = () => (
                           <Route path="/download" element={<Download />} />
                           <Route path="/members" element={<PublicMembersBook />} />
                           <Route element={<AppLayout />}>
+                            <Route path="/setores" element={<Sectors />} />
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/clients" element={<Clients />} />
                             <Route path="/clients/new" element={<Clients />} />
@@ -128,7 +132,8 @@ const App = () => (
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>
-                    </BrowserRouter>
+                    </SectorProvider>
+                  </BrowserRouter>
                   </TooltipProvider>
                 </NotificationsProvider>
               </PlanLimitsProvider>
