@@ -291,26 +291,32 @@ export function useZappData() {
       
       const missingSectors = sectorsToSync.filter(s => !existingSectorIds.includes(s.id));
       
-      if (missingSectors.length > 0) {
+      console.log("[ZappData] Syncing sectors:", { sectorsToSync: sectorsToSync.length, existingDepts: existingDepts.length, missingSectors: missingSectors.length });
+      
+      if (missingSectors.length > 0 && currentUser.account_id) {
         const newDepts = missingSectors.map((sector, idx) => ({
           account_id: currentUser.account_id,
           name: sector.name,
           description: sector.description,
-          color: sector.color.replace("text-", ""),
+          color: sector.color.replace("text-", "").replace("-600", ""),
           sector_id: sector.id,
           display_order: (existingDepts.length + idx + 1),
           auto_distribute: false,
         }));
+        
+        console.log("[ZappData] Creating departments:", newDepts);
         
         const { data: createdDepts, error: createDeptsError } = await supabase
           .from("zapp_departments")
           .insert(newDepts)
           .select("*");
         
-        if (!createDeptsError && createdDepts) {
-          setDepartments([...existingDepts, ...createdDepts]);
-        } else {
+        if (createDeptsError) {
+          console.error("[ZappData] Error creating departments:", createDeptsError);
           setDepartments(existingDepts);
+        } else if (createdDepts) {
+          console.log("[ZappData] Created departments:", createdDepts);
+          setDepartments([...existingDepts, ...createdDepts]);
         }
       } else {
         setDepartments(existingDepts);
