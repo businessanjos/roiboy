@@ -92,7 +92,8 @@ export default function FinancialAgingPage() {
         if (daysOverdue <= 30) bucket = "1-30";
         else if (daysOverdue <= 60) bucket = "31-60";
         else if (daysOverdue <= 90) bucket = "61-90";
-        else bucket = "90+";
+        else if (daysOverdue <= 120) bucket = "91-120";
+        else bucket = "120+";
         
         return {
           ...entry,
@@ -109,7 +110,8 @@ export default function FinancialAgingPage() {
       { label: "1-30 dias", min: 1, max: 30, color: "bg-yellow-500", entries: [], total: 0 },
       { label: "31-60 dias", min: 31, max: 60, color: "bg-orange-500", entries: [], total: 0 },
       { label: "61-90 dias", min: 61, max: 90, color: "bg-red-500", entries: [], total: 0 },
-      { label: "90+ dias", min: 91, max: null, color: "bg-red-700", entries: [], total: 0 },
+      { label: "91-120 dias", min: 91, max: 120, color: "bg-red-700", entries: [], total: 0 },
+      { label: "120+ dias", min: 121, max: null, color: "bg-red-900", entries: [], total: 0 },
     ];
 
     overdueEntries.forEach(entry => {
@@ -174,7 +176,7 @@ export default function FinancialAgingPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -281,7 +283,8 @@ export default function FinancialAgingPage() {
                 <SelectItem value="1-30">1-30 dias</SelectItem>
                 <SelectItem value="31-60">31-60 dias</SelectItem>
                 <SelectItem value="61-90">61-90 dias</SelectItem>
-                <SelectItem value="90+">90+ dias</SelectItem>
+                <SelectItem value="91-120">91-120 dias</SelectItem>
+                <SelectItem value="120+">120+ dias</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm">
