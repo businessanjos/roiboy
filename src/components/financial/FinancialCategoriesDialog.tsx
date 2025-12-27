@@ -52,7 +52,8 @@ const typeLabels = {
 };
 
 export function FinancialCategoriesDialog({ open, onOpenChange }: FinancialCategoriesDialogProps) {
-  const { accountId } = useCurrentUser();
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
