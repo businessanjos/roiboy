@@ -9,13 +9,13 @@ import {
   ZappMessagesList,
   ZappChatHeader,
   ZappMessageInput,
-  ZappConversationItem,
-  ZappTeamList,
-  ZappTagsList,
-  ZappSettingsPanel,
-  ZappDepartmentList,
+  ZappConversationPanel,
   getContactInfo as getContactInfoHelper,
   getInitials as getInitialsHelper,
+  Agent,
+  ZappTag,
+  Department,
+  ConversationAssignment,
 } from "@/components/royzapp";
 import {
   MessageSquare,
@@ -122,53 +122,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ClientQuickEditSheet } from "@/components/client/ClientQuickEditSheet";
 
-interface ZappTag {
-  id: string;
-  account_id: string;
-  name: string;
-  color: string;
-  description: string | null;
-  is_active: boolean;
-  display_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Department {
-  id: string;
-  account_id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  is_active: boolean;
-  auto_distribution: boolean;
-  display_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Agent {
-  id: string;
-  account_id: string;
-  user_id: string;
-  department_id: string | null;
-  is_active: boolean;
-  is_online: boolean;
-  max_concurrent_chats: number;
-  current_chats: number;
-  last_activity_at: string | null;
-  created_at: string;
-  updated_at: string;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    avatar_url: string | null;
-    team_role_id?: string | null;
-  };
-  department?: Department | null;
-}
-
 interface TeamUser {
   id: string;
   name: string;
@@ -197,58 +150,6 @@ interface Message {
   sender_name?: string | null;
   delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
   media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
-}
-
-interface ConversationAssignment {
-  id: string;
-  conversation_id: string | null;
-  zapp_conversation_id: string | null;
-  agent_id: string | null;
-  department_id: string | null;
-  status: "triage" | "pending" | "active" | "waiting" | "closed";
-  priority: number;
-  assigned_at: string | null;
-  first_response_at: string | null;
-  closed_at: string | null;
-  created_at: string;
-  updated_at: string;
-  agent?: Agent | null;
-  department?: Department | null;
-  // Old conversation link (for clients)
-  conversation?: {
-    id: string;
-    client_id: string;
-    client?: {
-      id: string;
-      full_name: string;
-      phone_e164: string;
-      avatar_url: string | null;
-    };
-  };
-  // New zapp_conversation link (for all contacts)
-  zapp_conversation?: {
-    id: string;
-    phone_e164: string;
-    contact_name: string | null;
-    client_id: string | null;
-    last_message_at: string | null;
-    last_message_preview: string | null;
-    unread_count: number;
-    is_group: boolean;
-    group_jid: string | null;
-    is_archived?: boolean;
-    is_muted?: boolean;
-    is_pinned?: boolean;
-    is_favorite?: boolean;
-    is_blocked?: boolean;
-    avatar_url?: string | null;
-    client?: {
-      id: string;
-      full_name: string;
-      phone_e164: string;
-      avatar_url: string | null;
-    } | null;
-  };
 }
 
 
@@ -2476,444 +2377,6 @@ export default function RoyZapp() {
     );
   }
 
-  // Render sidebar navigation
-  const renderSidebarNav = () => (
-    <div className="bg-zapp-panel-header border-b border-zapp-border p-2 flex items-center gap-1">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "inbox" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("inbox")}
-          >
-            <MessageSquare className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Conversas</TooltipContent>
-      </Tooltip>
-
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "tags" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("tags")}
-          >
-            <Tags className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Tags</TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              filterGroups ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setFilterGroups(!filterGroups)}
-          >
-            <Users2 className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">{filterGroups ? "Mostrar todas" : "Filtrar grupos"}</TooltipContent>
-      </Tooltip>
-
-
-      <div className="flex-1" />
-
-      {/* Status indicators */}
-      <div className="flex items-center gap-3 px-2 text-xs">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-zapp-accent" />
-          <span className="text-zapp-text-muted">{onlineAgents} online</span>
-        </div>
-        {totalQueueConversations > 0 && (
-          <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
-            {totalQueueConversations}
-          </Badge>
-        )}
-      </div>
-    </div>
-  );
-
-  // Render conversation list
-  const renderConversationList = () => (
-    <div className="flex flex-col h-full bg-zapp-bg">
-      {/* Header */}
-      <div className="bg-zapp-panel-header px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={currentUser?.avatar_url || undefined} />
-            <AvatarFallback className="bg-zapp-accent text-white text-sm">
-              {currentUser ? getInitials(currentUser.name) : "?"}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-zapp-text font-medium">ROY zAPP</h2>
-            <p className="text-xs text-zapp-text-muted">{activeConversations} em atendimento</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
-                onClick={openNewConversationDialog}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Nova conversa</TooltipContent>
-          </Tooltip>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
-                <Filter className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56 max-h-80 overflow-y-auto">
-              {/* Status filters */}
-              <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
-              <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "all" && "bg-zapp-bg-dark")}
-                onClick={() => setFilterStatus("all")}
-              >
-                Todas
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn("text-zapp-text", filterUnread && "bg-zapp-bg-dark")}
-                onClick={() => setFilterUnread(!filterUnread)}
-              >
-                Não lidas
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "triage" && "bg-zapp-bg-dark")}
-                onClick={() => setFilterStatus("triage")}
-              >
-                Triagem
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "active" && "bg-zapp-bg-dark")}
-                onClick={() => setFilterStatus("active")}
-              >
-                Em atendimento
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn("text-zapp-text", filterStatus === "closed" && "bg-zapp-bg-dark")}
-                onClick={() => setFilterStatus("closed")}
-              >
-                Finalizado
-              </DropdownMenuItem>
-              
-              {/* Product filters */}
-              {availableProducts.length > 0 && (
-                <>
-                  <DropdownMenuSeparator className="bg-zapp-border" />
-                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Produto</div>
-                  <DropdownMenuItem 
-                    className={cn("text-zapp-text", filterProductId === "all" && "bg-zapp-bg-dark")}
-                    onClick={() => setFilterProductId("all")}
-                  >
-                    Todos os produtos
-                  </DropdownMenuItem>
-                  {availableProducts.map((product) => (
-                    <DropdownMenuItem 
-                      key={product.id}
-                      className={cn("text-zapp-text flex items-center gap-2", filterProductId === product.id && "bg-zapp-bg-dark")}
-                      onClick={() => setFilterProductId(product.id)}
-                    >
-                      <div 
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: product.color || '#10b981' }}
-                      />
-                      <span className="truncate">{product.name}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-              
-              {/* Tag filters */}
-              {tags.length > 0 && (
-                <>
-                  <DropdownMenuSeparator className="bg-zapp-border" />
-                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Etiqueta</div>
-                  <DropdownMenuItem 
-                    className={cn("text-zapp-text", filterTagId === "all" && "bg-zapp-bg-dark")}
-                    onClick={() => setFilterTagId("all")}
-                  >
-                    Todas as etiquetas
-                  </DropdownMenuItem>
-                  {tags.filter(t => t.is_active).map((tag) => (
-                    <DropdownMenuItem 
-                      key={tag.id}
-                      className={cn("text-zapp-text flex items-center gap-2", filterTagId === tag.id && "bg-zapp-bg-dark")}
-                      onClick={() => setFilterTagId(tag.id)}
-                    >
-                      <div 
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      <span className="truncate">{tag.name}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-              
-              {/* Agent filters */}
-              {agents.length > 0 && (
-                <>
-                  <DropdownMenuSeparator className="bg-zapp-border" />
-                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Atendente</div>
-                  <DropdownMenuItem 
-                    className={cn("text-zapp-text", filterAgentId === "all" && "bg-zapp-bg-dark")}
-                    onClick={() => setFilterAgentId("all")}
-                  >
-                    Todos os atendentes
-                  </DropdownMenuItem>
-                  {agents.filter(a => a.is_active).map((agent) => (
-                    <DropdownMenuItem 
-                      key={agent.id}
-                      className={cn("text-zapp-text flex items-center gap-2", filterAgentId === agent.id && "bg-zapp-bg-dark")}
-                      onClick={() => setFilterAgentId(agent.id)}
-                    >
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={agent.user?.avatar_url || undefined} />
-                        <AvatarFallback className="text-[8px] bg-zapp-panel">
-                          {agent.user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="truncate">{agent.user?.name || "Atendente"}</span>
-                      {agent.is_online && (
-                        <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(
-                  "text-zapp-text-muted hover:bg-zapp-panel rounded-full",
-                  (activeView === "team" || activeView === "departments" || activeView === "settings") && "text-zapp-accent"
-                )}
-              >
-                <MoreVertical className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text hover:bg-zapp-hover",
-                  activeView === "team" && "bg-zapp-bg-dark"
-                )}
-                onClick={() => setActiveView("team")}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Equipe
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text hover:bg-zapp-hover",
-                  activeView === "departments" && "bg-zapp-bg-dark"
-                )}
-                onClick={() => setActiveView("departments")}
-              >
-                <Building2 className="h-4 w-4 mr-2" />
-                Departamentos
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text hover:bg-zapp-hover",
-                  activeView === "settings" && "bg-zapp-bg-dark"
-                )}
-                onClick={() => setActiveView("settings")}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Configurações
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Tabs: Minhas | Fila */}
-      <div className="flex border-b border-zapp-border bg-zapp-bg">
-        <button
-          onClick={() => setInboxTab("mine")}
-          className={cn(
-            "flex-1 py-3 text-sm font-medium transition-colors relative",
-            inboxTab === "mine" 
-              ? "text-zapp-accent" 
-              : "text-zapp-text-muted hover:text-zapp-text"
-          )}
-        >
-          <span className="flex items-center justify-center gap-2">
-            Minhas
-            <span className="text-zapp-text-muted text-xs">({myConversations})</span>
-            {myUnreadCount > 0 && (
-              <Badge variant="secondary" className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
-                {myUnreadCount}
-              </Badge>
-            )}
-          </span>
-          {inboxTab === "mine" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
-          )}
-        </button>
-        <button
-          onClick={() => setInboxTab("queue")}
-          className={cn(
-            "flex-1 py-3 text-sm font-medium transition-colors relative",
-            inboxTab === "queue" 
-              ? "text-zapp-accent" 
-              : "text-zapp-text-muted hover:text-zapp-text"
-          )}
-        >
-          <span className="flex items-center justify-center gap-2">
-            Fila
-            <span className="text-zapp-text-muted text-xs">({totalQueueConversations})</span>
-            {queueUnreadCount > 0 && (
-              <Badge variant="secondary" className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
-                {queueUnreadCount}
-              </Badge>
-            )}
-          </span>
-          {inboxTab === "queue" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
-          )}
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="px-3 py-2 bg-zapp-bg">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
-          <Input
-            placeholder="Pesquisar conversa..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-9"
-          />
-        </div>
-      </div>
-
-      {renderSidebarNav()}
-
-      {/* Conversation list */}
-      <ScrollArea className="flex-1">
-        {activeView === "inbox" && (
-          <div className="divide-y divide-zapp-border">
-            {filteredAssignments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="w-20 h-20 rounded-full bg-zapp-panel flex items-center justify-center mb-4">
-                  <MessageSquare className="h-10 w-10 text-zapp-text-muted" />
-                </div>
-                <p className="text-zapp-text-muted text-sm">Nenhuma conversa encontrada</p>
-              </div>
-            ) : (
-              filteredAssignments.map((assignment) => (
-                <ZappConversationItem
-                  key={assignment.id}
-                  assignment={assignment}
-                  isSelected={selectedConversation?.id === assignment.id}
-                  currentAgentId={currentAgent?.id || null}
-                  clientProducts={clientProducts}
-                  onSelect={(a) => {
-                    setSelectedConversation(a);
-                    const zappConvId = a.zapp_conversation?.id;
-                    if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
-                      markAsRead(zappConvId);
-                    }
-                  }}
-                  onMarkAsRead={markAsRead}
-                  onMarkAsUnread={markAsUnread}
-                  onUpdateFlag={updateConversationFlag}
-                  onOpenTagDialog={openConversationTagDialog}
-                  onDeleteConversation={deleteConversation}
-                  getAgentName={getAgentName}
-                />
-              ))
-            )}
-          </div>
-        )}
-
-        {activeView === "team" && (
-          <ZappTeamList
-            agents={agents}
-            teamUsers={teamUsers}
-            availableUsersCount={availableUsers.length}
-            onOpenAgentDialog={openAgentDialog}
-            onToggleAgentOnline={toggleAgentOnline}
-            onDeleteAgent={setDeletingAgentId}
-          />
-        )}
-        {activeView === "departments" && (
-          <ZappDepartmentList
-            departments={departments}
-            agents={agents}
-            onOpenDepartmentDialog={openDepartmentDialog}
-            onDeleteDepartment={setDeletingDepartmentId}
-          />
-        )}
-        {activeView === "tags" && (
-          <ZappTagsList
-            tags={tags}
-            onOpenTagDialog={openTagDialog}
-            onDeleteTag={setDeletingTagId}
-          />
-        )}
-        {activeView === "settings" && (
-          <ZappSettingsPanel
-            whatsappConnected={whatsappConnected}
-            whatsappConnecting={whatsappConnecting}
-            whatsappInstanceName={whatsappInstanceName}
-            roundRobinEnabled={roundRobinEnabled}
-            respectLimitEnabled={respectLimitEnabled}
-            soundEnabled={soundEnabled}
-            importLimit={importLimit}
-            importingConversations={importingConversations}
-            onToggleWhatsAppConnection={toggleWhatsAppConnection}
-            onRoundRobinChange={(checked) => {
-              setRoundRobinEnabled(checked);
-              localStorage.setItem("zapp_roundRobin", String(checked));
-            }}
-            onRespectLimitChange={(checked) => {
-              setRespectLimitEnabled(checked);
-              localStorage.setItem("zapp_respectLimit", String(checked));
-            }}
-            onSoundChange={(checked) => {
-              setSoundEnabled(checked);
-              localStorage.setItem("zapp_sound", String(checked));
-            }}
-            onImportLimitChange={setImportLimit}
-            onImportConversations={importRecentConversations}
-          />
-        )}
-      </ScrollArea>
-    </div>
-  );
-
-
   // Tag functions
   const openTagDialog = (tag?: ZappTag) => {
     if (tag) {
@@ -3164,7 +2627,87 @@ export default function RoyZapp() {
           selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
-        {renderConversationList()}
+        <ZappConversationPanel
+          currentUser={currentUser}
+          activeView={activeView}
+          setActiveView={setActiveView}
+          inboxTab={inboxTab}
+          setInboxTab={setInboxTab}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          filterUnread={filterUnread}
+          setFilterUnread={setFilterUnread}
+          filterGroups={filterGroups}
+          setFilterGroups={setFilterGroups}
+          filterProductId={filterProductId}
+          setFilterProductId={setFilterProductId}
+          filterTagId={filterTagId}
+          setFilterTagId={setFilterTagId}
+          filterAgentId={filterAgentId}
+          setFilterAgentId={setFilterAgentId}
+          filteredAssignments={filteredAssignments}
+          agents={agents}
+          tags={tags}
+          departments={departments}
+          teamUsers={teamUsers}
+          availableProducts={availableProducts}
+          availableUsersCount={availableUsers.length}
+          clientProducts={clientProducts}
+          activeConversations={activeConversations}
+          myConversations={myConversations}
+          myUnreadCount={myUnreadCount}
+          totalQueueConversations={totalQueueConversations}
+          queueUnreadCount={queueUnreadCount}
+          onlineAgents={onlineAgents}
+          selectedConversation={selectedConversation}
+          currentAgentId={currentAgent?.id || null}
+          whatsappConnected={whatsappConnected}
+          whatsappConnecting={whatsappConnecting}
+          whatsappInstanceName={whatsappInstanceName}
+          roundRobinEnabled={roundRobinEnabled}
+          respectLimitEnabled={respectLimitEnabled}
+          soundEnabled={soundEnabled}
+          importLimit={importLimit}
+          importingConversations={importingConversations}
+          onSelectConversation={(a) => {
+            setSelectedConversation(a);
+            const zappConvId = a.zapp_conversation?.id;
+            if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
+              markAsRead(zappConvId);
+            }
+          }}
+          onOpenNewConversationDialog={openNewConversationDialog}
+          onOpenAgentDialog={openAgentDialog}
+          onToggleAgentOnline={toggleAgentOnline}
+          onDeleteAgent={setDeletingAgentId}
+          onOpenDepartmentDialog={openDepartmentDialog}
+          onDeleteDepartment={setDeletingDepartmentId}
+          onOpenTagDialog={openTagDialog}
+          onDeleteTag={setDeletingTagId}
+          onMarkAsRead={markAsRead}
+          onMarkAsUnread={markAsUnread}
+          onUpdateFlag={updateConversationFlag}
+          onOpenTagConversationDialog={openConversationTagDialog}
+          onDeleteConversation={deleteConversation}
+          onToggleWhatsAppConnection={toggleWhatsAppConnection}
+          onRoundRobinChange={(checked) => {
+            setRoundRobinEnabled(checked);
+            localStorage.setItem("zapp_roundRobin", String(checked));
+          }}
+          onRespectLimitChange={(checked) => {
+            setRespectLimitEnabled(checked);
+            localStorage.setItem("zapp_respectLimit", String(checked));
+          }}
+          onSoundChange={(checked) => {
+            setSoundEnabled(checked);
+            localStorage.setItem("zapp_sound", String(checked));
+          }}
+          onImportLimitChange={setImportLimit}
+          onImportConversations={importRecentConversations}
+          getAgentName={getAgentName}
+        />
       </div>
 
       {/* Right panel - Chat view */}

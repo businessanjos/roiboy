@@ -9,3 +9,5 @@ export * from "./ZappTeamList";
 export * from "./ZappTagsList";
 export * from "./ZappSettingsPanel";
 export * from "./ZappDepartmentList";
+export * from "./ZappSidebarNav";
+export * from "./ZappConversationPanel";
