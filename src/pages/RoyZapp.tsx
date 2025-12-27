@@ -5,6 +5,7 @@ import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ZappConversationItem } from "@/components/royzapp/ZappConversationItem";
 import {
   MessageSquare,
   Users,
