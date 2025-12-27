@@ -77,6 +77,7 @@ export const sectors: Sector[] = [
     navItems: [
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/billing", icon: CreditCard, label: "Cobrança", permission: PERMISSIONS.SETTINGS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
   {
@@ -89,6 +90,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/roy-zapp",
     navItems: [
       { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
   {
@@ -123,6 +125,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/settings",
     navItems: [
       { to: "/settings", icon: Settings, label: "Configurações" },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
 ];
