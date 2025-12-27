@@ -139,9 +139,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     // If we have a current sector, use its nav items
     if (currentSector) {
       const sectorItems = currentSector.navItems;
-      if (permissionsLoading) return sectorItems;
+      // Filter out notifications since it's rendered separately in the sidebar
+      const itemsWithoutNotifications = sectorItems.filter(item => item.to !== "/notifications");
       
-      return sectorItems.filter((item) => {
+      if (permissionsLoading) return itemsWithoutNotifications;
+      
+      return itemsWithoutNotifications.filter((item) => {
         if (!item.permission) return true;
         return hasPermission(item.permission);
       });
