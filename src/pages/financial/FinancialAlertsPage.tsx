@@ -156,7 +156,7 @@ export default function FinancialAlertsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2 text-yellow-600 text-sm">
