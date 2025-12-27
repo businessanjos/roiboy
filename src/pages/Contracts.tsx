@@ -17,9 +17,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -37,10 +53,16 @@ import {
   Eye,
   TrendingUp,
   TrendingDown,
-  Clock
+  Clock,
+  Plus,
+  Loader2,
+  Upload,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Contract {
   id: string;
@@ -87,16 +109,61 @@ const CONTRACT_TYPES: Record<string, string> = {
   distrato: "Distrato",
 };
 
+const PAYMENT_TYPES = [
+  { value: "a_vista", label: "À Vista" },
+  { value: "parcelado", label: "Parcelado" },
+];
+
+const INSTALLMENT_OPTIONS = [
+  { value: "2x", label: "2x" },
+  { value: "3x", label: "3x" },
+  { value: "4x", label: "4x" },
+  { value: "6x", label: "6x" },
+  { value: "10x", label: "10x" },
+  { value: "12x", label: "12x" },
+];
+
+const PAYMENT_METHODS = [
+  { value: "pix", label: "PIX" },
+  { value: "boleto", label: "Boleto" },
+  { value: "cartao", label: "Cartão" },
+  { value: "cheque", label: "Cheque" },
+];
+
+interface Client {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+}
+
 export default function Contracts() {
   const navigate = useNavigate();
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  
+  // New contract dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    start_date: format(new Date(), "yyyy-MM-dd"),
+    end_date: "",
+    value: "",
+    contract_type: "compra",
+    payment_type: "",
+    installments: "",
+    payment_method: "",
+    notes: "",
+  });
 
   useEffect(() => {
     fetchContracts();
+    fetchClients();
   }, []);
 
   const fetchContracts = async () => {
@@ -117,6 +184,101 @@ export default function Contracts() {
       toast.error("Erro ao carregar contratos");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, full_name, avatar_url")
+        .order("full_name");
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedClient(null);
+    setFormData({
+      start_date: format(new Date(), "yyyy-MM-dd"),
+      end_date: "",
+      value: "",
+      contract_type: "compra",
+      payment_type: "",
+      installments: "",
+      payment_method: "",
+      notes: "",
+    });
+  };
+
+  const openNewContractDialog = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const buildPaymentOption = () => {
+    if (!formData.payment_type) return null;
+    if (formData.payment_type === "a_vista") {
+      return formData.payment_method ? `a_vista_${formData.payment_method}` : "a_vista";
+    }
+    const installments = formData.installments || "1x";
+    return formData.payment_method
+      ? `parcelado_${installments}_${formData.payment_method}`
+      : `parcelado_${installments}`;
+  };
+
+  const handleSaveContract = async () => {
+    if (!selectedClient) {
+      toast.error("Selecione um cliente");
+      return;
+    }
+    if (!formData.start_date || !formData.value) {
+      toast.error("Preencha a data de início e o valor");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      const { data: userProfile } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", userData.user.id)
+        .single();
+
+      if (!userProfile) throw new Error("Perfil não encontrado");
+
+      const contractData = {
+        client_id: selectedClient.id,
+        account_id: userProfile.account_id,
+        start_date: formData.start_date,
+        end_date: formData.end_date || null,
+        value: parseFloat(formData.value) || 0,
+        contract_type: formData.contract_type,
+        payment_option: buildPaymentOption(),
+        notes: formData.notes || null,
+      };
+
+      const { error } = await supabase
+        .from("client_contracts")
+        .insert(contractData);
+
+      if (error) throw error;
+      
+      toast.success("Contrato criado com sucesso");
+      setDialogOpen(false);
+      fetchContracts();
+    } catch (error) {
+      console.error("Error saving contract:", error);
+      toast.error("Erro ao salvar contrato");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -210,6 +372,10 @@ export default function Contracts() {
             Gerencie todos os contratos dos seus clientes
           </p>
         </div>
+        <Button onClick={openNewContractDialog}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Contrato
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -430,6 +596,241 @@ export default function Contracts() {
           )}
         </CardContent>
       </Card>
+
+      {/* New Contract Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Novo Contrato
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Client Selection */}
+            <div className="space-y-2">
+              <Label>Cliente *</Label>
+              <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={clientPopoverOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedClient ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                          {selectedClient.avatar_url ? (
+                            <img src={selectedClient.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
+                        <span className="truncate">{selectedClient.full_name}</span>
+                      </div>
+                    ) : (
+                      "Selecione um cliente..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar cliente..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-auto">
+                        {clients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={client.full_name}
+                            onSelect={() => {
+                              setSelectedClient(client);
+                              setClientPopoverOpen(false);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                {client.avatar_url ? (
+                                  <img src={client.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Users className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </div>
+                              <span>{client.full_name}</span>
+                            </div>
+                            <Check
+                              className={cn(
+                                "ml-auto h-4 w-4",
+                                selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start_date">Data de Início *</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, start_date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">Data de Término</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, end_date: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Contract Type */}
+            <div className="space-y-2">
+              <Label>Tipo de Contrato *</Label>
+              <Select
+                value={formData.contract_type}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, contract_type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Value and Payment */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="value">Valor (R$) *</Label>
+                <Input
+                  id="value"
+                  type="number"
+                  step="0.01"
+                  placeholder="0,00"
+                  value={formData.value}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, value: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de Pagamento</Label>
+                <Select
+                  value={formData.payment_type}
+                  onValueChange={(value) => setFormData((prev) => ({
+                    ...prev,
+                    payment_type: value,
+                    installments: value === "a_vista" ? "" : prev.installments
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_TYPES.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Installments (if parcelado) */}
+            {formData.payment_type === "parcelado" && (
+              <div className="space-y-2">
+                <Label>Número de Parcelas</Label>
+                <Select
+                  value={formData.installments}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, installments: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INSTALLMENT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Payment Method */}
+            {formData.payment_type && (
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Select
+                  value={formData.payment_method}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_method: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Observações</Label>
+              <Textarea
+                id="notes"
+                placeholder="Anotações sobre o contrato..."
+                value={formData.notes}
+                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveContract} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Contrato
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
