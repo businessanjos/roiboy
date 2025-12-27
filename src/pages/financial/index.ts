@@ -1,0 +1,13 @@
+export { default as FinancialEntriesPage } from "./FinancialEntriesPage";
+export { default as FinancialCategoriesPage } from "./FinancialCategoriesPage";
+export { default as FinancialCostCentersPage } from "./FinancialCostCentersPage";
+export { default as FinancialSuppliersPage } from "./FinancialSuppliersPage";
+export { default as FinancialRecurringPage } from "./FinancialRecurringPage";
+export { default as FinancialBudgetPage } from "./FinancialBudgetPage";
+export { default as FinancialReconciliationPage } from "./FinancialReconciliationPage";
+export { default as FinancialCommissionsPage } from "./FinancialCommissionsPage";
+export { default as FinancialAlertsPage } from "./FinancialAlertsPage";
+export { default as FinancialAgingPage } from "./FinancialAgingPage";
+export { default as FinancialProfitabilityPage } from "./FinancialProfitabilityPage";
+export { default as FinancialBankAccountsPage } from "./FinancialBankAccountsPage";
+export { default as FinancialCashFlowPage } from "./FinancialCashFlowPage";
