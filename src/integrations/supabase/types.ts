@@ -1639,6 +1639,63 @@ export type Database = {
           },
         ]
       }
+      cost_centers: {
+        Row: {
+          account_id: string
+          code: string | null
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          code?: string | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          code?: string | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_centers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_centers_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_products: {
         Row: {
           account_id: string
@@ -2897,6 +2954,73 @@ export type Database = {
           },
         ]
       }
+      financial_budgets: {
+        Row: {
+          account_id: string
+          budget_type: string
+          category_id: string | null
+          cost_center_id: string | null
+          created_at: string
+          id: string
+          month: number | null
+          name: string
+          notes: string | null
+          planned_amount: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          account_id: string
+          budget_type?: string
+          category_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string
+          id?: string
+          month?: number | null
+          name: string
+          notes?: string | null
+          planned_amount?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          account_id?: string
+          budget_type?: string
+          category_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string
+          id?: string
+          month?: number | null
+          name?: string
+          notes?: string | null
+          planned_amount?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_budgets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_budgets_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_categories: {
         Row: {
           account_id: string
@@ -2956,6 +3080,7 @@ export type Database = {
           conciliated_at: string | null
           conciliated_by: string | null
           contract_id: string | null
+          cost_center_id: string | null
           created_at: string
           created_by: string | null
           currency: string
@@ -2964,6 +3089,8 @@ export type Database = {
           due_date: string
           entry_type: string
           id: string
+          installment_group_id: string | null
+          installment_number: number | null
           is_conciliated: boolean
           is_recurring: boolean
           notes: string | null
@@ -2974,6 +3101,7 @@ export type Database = {
           recurrence_end_date: string | null
           recurrence_type: string | null
           status: string
+          total_installments: number | null
           updated_at: string
         }
         Insert: {
@@ -2987,6 +3115,7 @@ export type Database = {
           conciliated_at?: string | null
           conciliated_by?: string | null
           contract_id?: string | null
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -2995,6 +3124,8 @@ export type Database = {
           due_date: string
           entry_type?: string
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
           is_conciliated?: boolean
           is_recurring?: boolean
           notes?: string | null
@@ -3005,6 +3136,7 @@ export type Database = {
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string
+          total_installments?: number | null
           updated_at?: string
         }
         Update: {
@@ -3018,6 +3150,7 @@ export type Database = {
           conciliated_at?: string | null
           conciliated_by?: string | null
           contract_id?: string | null
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -3026,6 +3159,8 @@ export type Database = {
           due_date?: string
           entry_type?: string
           id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
           is_conciliated?: boolean
           is_recurring?: boolean
           notes?: string | null
@@ -3036,6 +3171,7 @@ export type Database = {
           recurrence_end_date?: string | null
           recurrence_type?: string | null
           status?: string
+          total_installments?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -3079,6 +3215,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
             referencedColumns: ["id"]
           },
           {
@@ -5976,6 +6119,36 @@ export type Database = {
       generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
       get_ai_queue_stats: { Args: never; Returns: Json }
+      get_budget_vs_actual: {
+        Args: { p_account_id: string; p_month?: number; p_year: number }
+        Returns: {
+          actual_amount: number
+          budget_type: string
+          category_id: string
+          category_name: string
+          cost_center_id: string
+          cost_center_name: string
+          planned_amount: number
+          variance: number
+          variance_percent: number
+        }[]
+      }
+      get_client_profitability: {
+        Args: {
+          p_account_id: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: {
+          client_id: string
+          client_name: string
+          entries_count: number
+          margin: number
+          profit: number
+          total_costs: number
+          total_revenue: number
+        }[]
+      }
       get_event_by_registration_code: {
         Args: { p_code: string }
         Returns: {

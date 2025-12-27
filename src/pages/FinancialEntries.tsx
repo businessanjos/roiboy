@@ -72,6 +72,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FinancialCategoriesDialog } from "@/components/financial/FinancialCategoriesDialog";
 import { RecurringEntriesManager } from "@/components/financial/RecurringEntriesManager";
+import { CostCentersManager } from "@/components/financial/CostCentersManager";
+import { BudgetManager } from "@/components/financial/BudgetManager";
+import { ProfitabilityReport } from "@/components/financial/ProfitabilityReport";
 
 interface FinancialEntry {
   id: string;
@@ -151,9 +154,12 @@ export default function FinancialEntries() {
   const [editingEntry, setEditingEntry] = useState<FinancialEntry | null>(null);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isRecurringOpen, setIsRecurringOpen] = useState(false);
+  const [isCostCentersOpen, setIsCostCentersOpen] = useState(false);
+  const [isBudgetOpen, setIsBudgetOpen] = useState(false);
+  const [isProfitabilityOpen, setIsProfitabilityOpen] = useState(false);
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [payingEntry, setPayingEntry] = useState<FinancialEntry | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     description: "",
@@ -441,7 +447,19 @@ export default function FinancialEntries() {
           <h1 className="text-2xl font-bold">Financeiro</h1>
           <p className="text-muted-foreground">Gerencie contas a pagar e receber</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setIsProfitabilityOpen(true)}>
+            <DollarSign className="h-4 w-4 mr-2" />
+            Rentabilidade
+          </Button>
+          <Button variant="outline" onClick={() => setIsBudgetOpen(true)}>
+            <FileText className="h-4 w-4 mr-2" />
+            Orçamento
+          </Button>
+          <Button variant="outline" onClick={() => setIsCostCentersOpen(true)}>
+            <Building2 className="h-4 w-4 mr-2" />
+            Centros
+          </Button>
           <Button variant="outline" onClick={() => setIsRecurringOpen(true)}>
             <Repeat className="h-4 w-4 mr-2" />
             Recorrências
@@ -925,6 +943,24 @@ export default function FinancialEntries() {
       <RecurringEntriesManager
         open={isRecurringOpen}
         onOpenChange={setIsRecurringOpen}
+      />
+
+      {/* Cost Centers Manager */}
+      <CostCentersManager
+        open={isCostCentersOpen}
+        onOpenChange={setIsCostCentersOpen}
+      />
+
+      {/* Budget Manager */}
+      <BudgetManager
+        open={isBudgetOpen}
+        onOpenChange={setIsBudgetOpen}
+      />
+
+      {/* Profitability Report */}
+      <ProfitabilityReport
+        open={isProfitabilityOpen}
+        onOpenChange={setIsProfitabilityOpen}
       />
     </div>
   );
