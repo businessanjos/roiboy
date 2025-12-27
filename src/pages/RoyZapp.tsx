@@ -426,11 +426,44 @@ export default function RoyZapp() {
   const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
 
+  // Agent heartbeat ref - separate from data fetching
+  const agentHeartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const lastHeartbeatRef = useRef<number>(0);
+  const HEARTBEAT_INTERVAL_MS = 60000; // Update agent status every 60 seconds (not on every fetch)
+
+  // Separate heartbeat for agent online status - only updates periodically
+  const updateAgentHeartbeat = useCallback(async (agentId: string) => {
+    const now = Date.now();
+    if (now - lastHeartbeatRef.current < HEARTBEAT_INTERVAL_MS) {
+      return; // Skip if updated recently
+    }
+    lastHeartbeatRef.current = now;
+    
+    try {
+      await supabase
+        .from("zapp_agents")
+        .update({ 
+          is_online: true, 
+          last_activity_at: new Date().toISOString() 
+        })
+        .eq("id", agentId);
+    } catch (error) {
+      console.error("Error updating agent heartbeat:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (currentUser?.account_id) {
       fetchData();
       checkWhatsAppStatus();
     }
+    
+    // Cleanup heartbeat interval on unmount
+    return () => {
+      if (agentHeartbeatRef.current) {
+        clearInterval(agentHeartbeatRef.current);
+      }
+    };
   }, [currentUser?.account_id]);
 
   // Debounce ref for realtime updates
@@ -878,14 +911,18 @@ export default function RoyZapp() {
           console.error("Error auto-registering agent:", createError);
         }
       } else {
-        // Update last activity and online status
-        await supabase
-          .from("zapp_agents")
-          .update({ 
-            is_online: true, 
-            last_activity_at: new Date().toISOString() 
-          })
-          .eq("id", existingAgent.id);
+        // Set up periodic heartbeat for existing agent (instead of updating on every fetch)
+        if (agentHeartbeatRef.current) {
+          clearInterval(agentHeartbeatRef.current);
+        }
+        
+        // Initial heartbeat
+        updateAgentHeartbeat(existingAgent.id);
+        
+        // Set up periodic heartbeat
+        agentHeartbeatRef.current = setInterval(() => {
+          updateAgentHeartbeat(existingAgent.id);
+        }, HEARTBEAT_INTERVAL_MS);
       }
       
       setAgents(finalAgents);
@@ -2344,33 +2381,39 @@ export default function RoyZapp() {
     return agent?.user?.name || null;
   };
 
-  // Stats
-  const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
-  const totalQueueConversations = assignments.filter((a) => a.status !== "closed").length;
-  const myConversations = assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
-  const activeConversations = assignments.filter((a) => a.status === "active").length;
-  const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
+  // Memoized stats to avoid recalculating on every render
+  const stats = useMemo(() => {
+    const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
+    const totalQueueConversations = assignments.filter((a) => a.status !== "closed").length;
+    const myConversations = assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
+    const activeConversations = assignments.filter((a) => a.status === "active").length;
+    const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
+    
+    const myUnreadCount = assignments.filter((a) => 
+      a.agent_id === currentAgent?.id && 
+      a.status !== "closed" && 
+      (a.zapp_conversation?.unread_count || 0) > 0
+    ).length;
+    const queueUnreadCount = assignments.filter((a) => 
+      a.status !== "closed" && 
+      (a.zapp_conversation?.unread_count || 0) > 0
+    ).length;
+    
+    return { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount };
+  }, [agents, assignments, currentAgent?.id]);
   
-  // Unread counts
-  const myUnreadCount = assignments.filter((a) => 
-    a.agent_id === currentAgent?.id && 
-    a.status !== "closed" && 
-    (a.zapp_conversation?.unread_count || 0) > 0
-  ).length;
-  const queueUnreadCount = assignments.filter((a) => 
-    a.status !== "closed" && 
-    (a.zapp_conversation?.unread_count || 0) > 0
-  ).length;
+  const { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount } = stats;
 
-  const getInitials = (name: string) =>
+  // Memoized helper functions to avoid recreating on every render
+  const getInitials = useCallback((name: string) =>
     name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2);
+      .slice(0, 2), []);
 
-  const formatTime = (date: string) => {
+  const formatTime = useCallback((date: string) => {
     const d = new Date(date);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
@@ -2384,7 +2427,7 @@ export default function RoyZapp() {
     } else {
       return format(d, "dd/MM/yyyy");
     }
-  };
+  }, []);
 
   // Check access permission
   const hasZappAccess = isAdmin || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
