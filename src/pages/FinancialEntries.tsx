@@ -449,31 +449,43 @@ export default function FinancialEntries() {
           <h1 className="text-2xl font-bold">Financeiro</h1>
           <p className="text-muted-foreground">Gerencie contas a pagar e receber</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => setIsProfitabilityOpen(true)}>
-            <DollarSign className="h-4 w-4 mr-2" />
-            Rentabilidade
-          </Button>
-          <Button variant="outline" onClick={() => setIsBudgetOpen(true)}>
-            <FileText className="h-4 w-4 mr-2" />
-            Orçamento
-          </Button>
-          <Button variant="outline" onClick={() => setIsCostCentersOpen(true)}>
-            <Building2 className="h-4 w-4 mr-2" />
-            Centros
-          </Button>
-          <Button variant="outline" onClick={() => setIsSuppliersOpen(true)}>
-            <User className="h-4 w-4 mr-2" />
-            Fornecedores
-          </Button>
-          <Button variant="outline" onClick={() => setIsRecurringOpen(true)}>
-            <Repeat className="h-4 w-4 mr-2" />
-            Recorrências
-          </Button>
-          <Button variant="outline" onClick={() => setIsCategoriesOpen(true)}>
-            <Filter className="h-4 w-4 mr-2" />
-            Categorias
-          </Button>
+        <div className="flex gap-2 items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <MoreHorizontal className="h-4 w-4" />
+                Gerenciar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => setIsProfitabilityOpen(true)} className="gap-2 cursor-pointer">
+                <DollarSign className="h-4 w-4" />
+                Relatório de Rentabilidade
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsBudgetOpen(true)} className="gap-2 cursor-pointer">
+                <FileText className="h-4 w-4" />
+                Orçamento Anual
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsCostCentersOpen(true)} className="gap-2 cursor-pointer">
+                <Building2 className="h-4 w-4" />
+                Centros de Custo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsSuppliersOpen(true)} className="gap-2 cursor-pointer">
+                <User className="h-4 w-4" />
+                Fornecedores
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsRecurringOpen(true)} className="gap-2 cursor-pointer">
+                <Repeat className="h-4 w-4" />
+                Lançamentos Recorrentes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsCategoriesOpen(true)} className="gap-2 cursor-pointer">
+                <Filter className="h-4 w-4" />
+                Categorias
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Lançamento
