@@ -6,10 +6,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  ZappMessagesList,
-  ZappChatHeader,
-  ZappMessageInput,
   ZappConversationPanel,
+  ZappChatView,
   getContactInfo as getContactInfoHelper,
   getInitials as getInitialsHelper,
   Agent,
@@ -32,106 +30,12 @@ import {
 } from "@/components/royzapp/dialogs";
 import {
   MessageSquare,
-  Users,
-  Users2,
-  User,
-  Search,
-  MoreVertical,
-  Phone,
-  Video,
-  Send,
-  Paperclip,
-  Smile,
-  Mic,
-  Check,
-  CheckCheck,
-  Circle,
-  Settings,
-  Plus,
-  Trash2,
-  Pencil,
-  Building2,
-  UserCheck,
   ArrowLeft,
-  Filter,
-  ArrowRightLeft,
   Loader2,
-  Clock,
   X,
-  Power,
-  Wifi,
-  WifiOff,
-  Tags,
-  ExternalLink,
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  Square,
-  Play,
-  Pause,
-  FileText,
-  Download,
-  Image as ImageIcon,
-  Archive,
-  BellOff,
-  Pin,
-  Tag,
-  MailOpen,
-  Heart,
-  Ban,
-  AlertTriangle,
-  Zap,
-  UserPlus,
-  Contact,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ClientQuickEditSheet } from "@/components/client/ClientQuickEditSheet";
 
@@ -2535,101 +2439,18 @@ export default function RoyZapp() {
     }
   };
 
+  // Get contact info for selected conversation
+  const selectedContactInfo = useMemo(() => {
+    if (!selectedConversation) return null;
+    return getContactInfo(selectedConversation);
+  }, [selectedConversation, getContactInfo]);
 
-  // Render chat view
-  const renderChatView = () => {
-    if (!selectedConversation) {
-      return (
-        <div className="flex flex-col flex-1 min-h-0 w-full items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
-          <div className="relative z-10 text-center px-8 max-w-md">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-zapp-accent/10 flex items-center justify-center">
-              <MessageSquare className="h-12 w-12 text-zapp-accent" />
-            </div>
-            <h2 className="text-zapp-text text-2xl font-light mb-3">ROY zAPP</h2>
-            <p className="text-zapp-text-muted text-sm leading-relaxed">
-              Selecione uma conversa para começar a atender. Suas mensagens serão enviadas em nome da conta principal do WhatsApp.
-            </p>
-          </div>
-
-          {/* Stats bar */}
-          <div className="absolute bottom-0 left-0 right-0 bg-zapp-panel-header px-6 py-4 flex items-center justify-center gap-8 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-zapp-accent" />
-              <span className="text-zapp-text-muted">{onlineAgents} atendentes online</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
-              <span className="text-zapp-text-muted">{totalQueueConversations} na fila</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-zapp-accent" />
-              <span className="text-zapp-text-muted">{activeConversations} em atendimento</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const contactInfo = getContactInfo(selectedConversation);
+  // Get client products for selected conversation
+  const selectedClientProducts = useMemo(() => {
+    if (!selectedConversation) return [];
     const clientId = selectedConversation.zapp_conversation?.client_id || selectedConversation.conversation?.client?.id;
-
-    return (
-      <div className="flex flex-col flex-1 min-h-0 w-full bg-zapp-bg overflow-hidden">
-        {/* Chat header - Using memoized component */}
-        <ZappChatHeader
-          assignment={selectedConversation}
-          contactInfo={contactInfo}
-          clientProducts={clientId ? clientProducts[clientId] || [] : []}
-          currentAgentId={currentAgent?.id || null}
-          onBack={() => setSelectedConversation(null)}
-          onOpenClientEdit={(id) => {
-            setEditingClientId(id);
-            setClientEditSheetOpen(true);
-          }}
-          onAssignToMe={assignToMe}
-          onReleaseToQueue={releaseToQueue}
-          onUpdateStatus={updateConversationStatus}
-          onOpenTransfer={() => setTransferDialogOpen(true)}
-          onOpenRoiDialog={() => setRoiDialogOpen(true)}
-          onOpenRiskDialog={() => setRiskDialogOpen(true)}
-          onOpenAddClient={openAddClientDialog}
-        />
-
-        {/* Messages - Using memoized component */}
-        <ZappMessagesList 
-          messages={messages} 
-          isGroup={contactInfo.isGroup} 
-        />
-
-        {/* Message input - Using memoized component */}
-        <ZappMessageInput
-          messageInput={messageInput}
-          sendingMessage={sendingMessage}
-          uploadingMedia={uploadingMedia}
-          isRecording={isRecording}
-          recordingDuration={recordingDuration}
-          audioPreview={audioPreview}
-          showFormatting={showFormatting}
-          messageInputRef={messageInputRef}
-          imageInputRef={imageInputRef}
-          fileInputRef={fileInputRef}
-          onMessageChange={setMessageInput}
-          onSendMessage={sendMessage}
-          onKeyPress={handleKeyPress}
-          onToggleFormatting={() => setShowFormatting(!showFormatting)}
-          onInsertFormatting={insertFormatting}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          onCancelRecording={cancelRecording}
-          onDiscardAudioPreview={discardAudioPreview}
-          onConfirmAudioSend={confirmAudioSend}
-          onFileSelect={handleFileSelect}
-          onOpenContactPicker={() => setContactPickerOpen(true)}
-          onOpenQuickReplies={() => setQuickRepliesOpen(true)}
-        />
-      </div>
-    );
-  };
+    return clientId ? clientProducts[clientId] || [] : [];
+  }, [selectedConversation, clientProducts]);
 
   return (
     <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
@@ -2730,7 +2551,51 @@ export default function RoyZapp() {
           !selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
-        {renderChatView()}
+        <ZappChatView
+          selectedConversation={selectedConversation}
+          messages={messages}
+          contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false }}
+          clientProducts={selectedClientProducts}
+          currentAgentId={currentAgent?.id || null}
+          messageInput={messageInput}
+          sendingMessage={sendingMessage}
+          uploadingMedia={uploadingMedia}
+          isRecording={isRecording}
+          recordingDuration={recordingDuration}
+          audioPreview={audioPreview}
+          showFormatting={showFormatting}
+          messageInputRef={messageInputRef}
+          imageInputRef={imageInputRef}
+          fileInputRef={fileInputRef}
+          onlineAgents={onlineAgents}
+          totalQueueConversations={totalQueueConversations}
+          activeConversations={activeConversations}
+          onBack={() => setSelectedConversation(null)}
+          onOpenClientEdit={(id) => {
+            setEditingClientId(id);
+            setClientEditSheetOpen(true);
+          }}
+          onAssignToMe={assignToMe}
+          onReleaseToQueue={releaseToQueue}
+          onUpdateStatus={updateConversationStatus}
+          onOpenTransfer={() => setTransferDialogOpen(true)}
+          onOpenRoiDialog={() => setRoiDialogOpen(true)}
+          onOpenRiskDialog={() => setRiskDialogOpen(true)}
+          onOpenAddClient={openAddClientDialog}
+          onMessageChange={setMessageInput}
+          onSendMessage={sendMessage}
+          onKeyPress={handleKeyPress}
+          onToggleFormatting={() => setShowFormatting(!showFormatting)}
+          onInsertFormatting={insertFormatting}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          onCancelRecording={cancelRecording}
+          onDiscardAudioPreview={discardAudioPreview}
+          onConfirmAudioSend={confirmAudioSend}
+          onFileSelect={handleFileSelect}
+          onOpenContactPicker={() => setContactPickerOpen(true)}
+          onOpenQuickReplies={() => setQuickRepliesOpen(true)}
+        />
       </div>
 
       {/* Department Dialog */}
