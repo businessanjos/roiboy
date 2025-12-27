@@ -1321,6 +1321,26 @@ export default function RoyZapp() {
     }
   };
 
+  const markAsRead = async (conversationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("zapp_conversations")
+        .update({ unread_count: 0 })
+        .eq("id", conversationId);
+
+      if (error) throw error;
+      
+      // Update local state
+      setAssignments(prev => prev.map(a => 
+        a.zapp_conversation?.id === conversationId 
+          ? { ...a, zapp_conversation: { ...a.zapp_conversation!, unread_count: 0 } }
+          : a
+      ));
+    } catch (error: any) {
+      console.error("Error marking as read:", error);
+    }
+  };
+
   const markAsUnread = async (conversationId: string) => {
     try {
       const { error } = await supabase
@@ -2715,7 +2735,12 @@ export default function RoyZapp() {
                       "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zapp-panel transition-colors group",
                       selectedConversation?.id === assignment.id && "bg-zapp-bg-dark"
                     )}
-                    onClick={() => setSelectedConversation(assignment)}
+                    onClick={() => {
+                      setSelectedConversation(assignment);
+                      if (zappConvId && (assignment.zapp_conversation?.unread_count || 0) > 0) {
+                        markAsRead(zappConvId);
+                      }
+                    }}
                   >
                     <div className="relative">
                       <Avatar className="h-11 w-11">
