@@ -376,7 +376,7 @@ export default function FinancialBudgetPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo</Label>
                 <Select value={formData.budget_type} onValueChange={(v) => setFormData({ ...formData, budget_type: v })}>
@@ -402,6 +402,9 @@ export default function FinancialBudgetPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Categoria</Label>
                 <Select value={formData.category_id} onValueChange={(v) => setFormData({ ...formData, category_id: v })}>
