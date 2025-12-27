@@ -53,13 +53,20 @@ interface FinancialCategory {
 
 const dreGroupLabels: Record<string, string> = {
   gross_revenue: "Receita Bruta",
-  deductions: "(-) Deduções",
+  deductions: "(-) Deduções da Receita",
   cogs: "(-) CMV/CPV",
-  admin_expenses: "(-) Despesas Administrativas",
-  sales_expenses: "(-) Despesas Comerciais",
+  personnel: "(-) Despesas com Pessoal",
+  administrative: "(-) Despesas Administrativas",
+  sales: "(-) Despesas com Vendas",
+  financial_income: "(+) Receitas Financeiras",
   financial_expenses: "(-) Despesas Financeiras",
+  taxes: "(-) Impostos sobre Lucro",
+  depreciation: "(-) Depreciação/Amortização",
   other_revenue: "(+) Outras Receitas",
   other_expenses: "(-) Outras Despesas",
+  // Compatibilidade com nomes antigos
+  admin_expenses: "(-) Despesas Administrativas",
+  sales_expenses: "(-) Despesas Comerciais",
 };
 
 const typeLabels: Record<string, string> = {
@@ -340,11 +347,15 @@ export default function FinancialCategoriesPage() {
                 <SelectContent>
                   <SelectItem value="">Nenhum</SelectItem>
                   <SelectItem value="gross_revenue">Receita Bruta</SelectItem>
-                  <SelectItem value="deductions">(-) Deduções</SelectItem>
+                  <SelectItem value="deductions">(-) Deduções da Receita</SelectItem>
                   <SelectItem value="cogs">(-) CMV/CPV (Custo dos Produtos)</SelectItem>
-                  <SelectItem value="admin_expenses">(-) Despesas Administrativas</SelectItem>
-                  <SelectItem value="sales_expenses">(-) Despesas Comerciais</SelectItem>
+                  <SelectItem value="personnel">(-) Despesas com Pessoal</SelectItem>
+                  <SelectItem value="administrative">(-) Despesas Administrativas</SelectItem>
+                  <SelectItem value="sales">(-) Despesas com Vendas</SelectItem>
+                  <SelectItem value="financial_income">(+) Receitas Financeiras</SelectItem>
                   <SelectItem value="financial_expenses">(-) Despesas Financeiras</SelectItem>
+                  <SelectItem value="taxes">(-) Impostos sobre Lucro (IRPJ/CSLL)</SelectItem>
+                  <SelectItem value="depreciation">(-) Depreciação/Amortização</SelectItem>
                   <SelectItem value="other_revenue">(+) Outras Receitas</SelectItem>
                   <SelectItem value="other_expenses">(-) Outras Despesas</SelectItem>
                 </SelectContent>
