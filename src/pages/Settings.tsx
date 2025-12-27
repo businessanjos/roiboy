@@ -1,9 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Book } from "lucide-react";
+import { Shield, Book, Plug } from "lucide-react";
 import { SessionsManager } from "@/components/settings/SessionsManager";
 import { SecurityAuditViewer } from "@/components/settings/SecurityAuditViewer";
 import { MembersBookSettings } from "@/components/settings/MembersBookSettings";
+import { IntegrationsContent } from "@/components/integrations/IntegrationsContent";
 
 export default function Settings() {
   return (
@@ -11,12 +11,16 @@ export default function Settings() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Gerencie segurança e configurações do Members Book.
+          Gerencie segurança, integrações e configurações do Members Book.
         </p>
       </div>
 
-      <Tabs defaultValue="security" className="space-y-4">
+      <Tabs defaultValue="integrations" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="integrations" className="gap-2">
+            <Plug className="h-4 w-4" />
+            Integrações
+          </TabsTrigger>
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" />
             Segurança
@@ -26,6 +30,10 @@ export default function Settings() {
             Members Book
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="integrations" className="space-y-4">
+          <IntegrationsContent />
+        </TabsContent>
 
         <TabsContent value="security" className="space-y-4">
           <SessionsManager />
