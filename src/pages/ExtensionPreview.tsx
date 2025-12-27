@@ -218,7 +218,7 @@ export default function ExtensionPreview() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/presentation" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/sobre" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             <span>Voltar</span>
           </Link>

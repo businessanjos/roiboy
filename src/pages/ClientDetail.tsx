@@ -1456,7 +1456,7 @@ export default function ClientDetail() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
-            <Link to="/dashboard">
+            <Link to="/clients">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
