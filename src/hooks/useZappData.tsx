@@ -385,8 +385,11 @@ export function useZappData() {
     }
   }, [currentUser?.account_id, currentUser?.id, updateAgentHeartbeat]);
 
-  // Fetch messages
+  // Fetch messages - using ref to avoid stale closure issues
+  const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
+  
   const fetchMessages = useCallback(async (zappConversationId: string) => {
+    console.log("[ZappData] fetchMessages called for:", zappConversationId);
     try {
       const { data, error } = await supabase
         .from("zapp_messages")
@@ -396,6 +399,8 @@ export function useZappData() {
         .limit(100);
 
       if (error) throw error;
+      
+      console.log("[ZappData] fetched messages count:", data?.length || 0);
       
       const msgs = (data || []).map((m: any) => ({
         id: m.id,
@@ -414,6 +419,7 @@ export function useZappData() {
       }));
       
       setMessages(msgs);
+      console.log("[ZappData] setMessages called with", msgs.length, "messages");
       
       // Trigger lazy download for pending media
       const pendingMediaIds = (data || [])
@@ -426,8 +432,8 @@ export function useZappData() {
         }).then(({ data: downloadResult, error: downloadError }) => {
           if (downloadError) {
             console.error("Error triggering media download:", downloadError);
-          } else if (downloadResult?.successful > 0) {
-            fetchMessages(zappConversationId);
+          } else if (downloadResult?.successful > 0 && fetchMessagesRef.current) {
+            fetchMessagesRef.current(zappConversationId);
           }
         });
       }
@@ -435,6 +441,9 @@ export function useZappData() {
       console.error("Error fetching messages:", error);
     }
   }, []);
+  
+  // Keep ref updated
+  fetchMessagesRef.current = fetchMessages;
 
   // Initial data fetch
   useEffect(() => {
