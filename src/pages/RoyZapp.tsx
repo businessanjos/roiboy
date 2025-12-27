@@ -414,6 +414,12 @@ export default function RoyZapp() {
   const [addClientForm, setAddClientForm] = useState({ full_name: "", phone_e164: "" });
   const [savingNewClient, setSavingNewClient] = useState(false);
 
+  // New conversation with client state
+  const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
+  const [newConversationSearch, setNewConversationSearch] = useState("");
+  const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
+  const [creatingConversation, setCreatingConversation] = useState(false);
+
   useEffect(() => {
     if (currentUser?.account_id) {
       fetchData();
@@ -2120,6 +2126,113 @@ export default function RoyZapp() {
     }
   };
 
+  // Open new conversation dialog
+  const openNewConversationDialog = async () => {
+    if (!currentUser?.account_id) return;
+    setNewConversationSearch("");
+    setNewConversationDialogOpen(true);
+    
+    // Fetch clients
+    const { data } = await supabase
+      .from("clients")
+      .select("id, full_name, phone_e164, avatar_url")
+      .eq("account_id", currentUser.account_id)
+      .eq("status", "active")
+      .order("full_name")
+      .limit(100);
+    
+    setNewConversationClients(data || []);
+  };
+
+  // Create new conversation with client
+  const createConversationWithClient = async (client: any) => {
+    if (!currentUser?.account_id || !currentAgent) return;
+    
+    setCreatingConversation(true);
+    try {
+      // Check if conversation already exists for this client
+      const { data: existingConv } = await supabase
+        .from("zapp_conversations")
+        .select("id")
+        .eq("account_id", currentUser.account_id)
+        .eq("client_id", client.id)
+        .maybeSingle();
+      
+      let zappConvId: string;
+      
+      if (existingConv) {
+        zappConvId = existingConv.id;
+        
+        // Check if assignment exists
+        const { data: existingAssignment } = await supabase
+          .from("zapp_conversation_assignments")
+          .select("id")
+          .eq("zapp_conversation_id", zappConvId)
+          .neq("status", "closed")
+          .maybeSingle();
+        
+        if (existingAssignment) {
+          // Just select the existing conversation
+          const assignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
+          if (assignment) {
+            setSelectedConversation(assignment);
+          }
+          toast.info("Conversa já existe");
+          setNewConversationDialogOpen(false);
+          setCreatingConversation(false);
+          return;
+        }
+      } else {
+        // Create new zapp_conversation
+        const { data: newConv, error: convError } = await supabase
+          .from("zapp_conversations")
+          .insert({
+            account_id: currentUser.account_id,
+            phone_e164: client.phone_e164,
+            contact_name: client.full_name,
+            client_id: client.id,
+            avatar_url: client.avatar_url,
+          })
+          .select("id")
+          .single();
+        
+        if (convError) throw convError;
+        zappConvId = newConv.id;
+      }
+      
+      // Create assignment for current agent
+      const { error: assignError } = await supabase
+        .from("zapp_conversation_assignments")
+        .insert({
+          account_id: currentUser.account_id,
+          zapp_conversation_id: zappConvId,
+          agent_id: currentAgent.id,
+          status: "active",
+        });
+      
+      if (assignError) throw assignError;
+      
+      toast.success("Conversa criada!");
+      setNewConversationDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error creating conversation:", error);
+      toast.error(error.message || "Erro ao criar conversa");
+    } finally {
+      setCreatingConversation(false);
+    }
+  };
+
+  // Filter clients for new conversation dialog
+  const filteredNewConversationClients = useMemo(() => {
+    if (!newConversationSearch.trim()) return newConversationClients;
+    const search = newConversationSearch.toLowerCase();
+    return newConversationClients.filter(c => 
+      c.full_name?.toLowerCase().includes(search) || 
+      c.phone_e164?.includes(search)
+    );
+  }, [newConversationClients, newConversationSearch]);
+
 
   // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
@@ -2330,6 +2443,19 @@ export default function RoyZapp() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
+                onClick={openNewConversationDialog}
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Nova conversa</TooltipContent>
+          </Tooltip>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
@@ -4743,6 +4869,66 @@ export default function RoyZapp() {
               ) : (
                 "Salvar Cliente"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Conversation Dialog */}
+      <Dialog open={newConversationDialogOpen} onOpenChange={setNewConversationDialogOpen}>
+        <DialogContent className="bg-[#111b21] border-[#3b4a54] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#e9edef] flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-zapp-accent" />
+              Nova Conversa
+            </DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Selecione um cliente para iniciar uma conversa
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8696a0]" />
+              <Input
+                placeholder="Buscar cliente..."
+                value={newConversationSearch}
+                onChange={(e) => setNewConversationSearch(e.target.value)}
+                className="pl-10 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+              />
+            </div>
+            <ScrollArea className="h-64">
+              {filteredNewConversationClients.length === 0 ? (
+                <div className="text-center py-8 text-[#8696a0]">
+                  {newConversationSearch ? "Nenhum cliente encontrado" : "Carregando clientes..."}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredNewConversationClients.map((client) => (
+                    <button
+                      key={client.id}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#202c33] transition-colors text-left"
+                      onClick={() => createConversationWithClient(client)}
+                      disabled={creatingConversation}
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={client.avatar_url || undefined} />
+                        <AvatarFallback className="bg-zapp-accent text-white text-sm">
+                          {getInitials(client.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[#e9edef] font-medium truncate">{client.full_name}</p>
+                        <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewConversationDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+              Cancelar
             </Button>
           </DialogFooter>
         </DialogContent>
