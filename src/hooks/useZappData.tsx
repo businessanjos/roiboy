@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Agent, ZappTag, Department, ConversationAssignment } from "@/components/royzapp";
+import { sectors } from "@/config/sectors";
 
 interface TeamUser {
   id: string;
@@ -283,7 +284,38 @@ export function useZappData() {
       if (assignmentsError) throw assignmentsError;
       if (tagsError) throw tagsError;
 
-      setDepartments(depts || []);
+      // Sync sectors to departments (except "configuracoes")
+      const sectorsToSync = sectors.filter(s => s.id !== "configuracoes" && !s.comingSoon);
+      const existingDepts = depts || [];
+      const existingSectorIds = existingDepts.map(d => d.sector_id).filter(Boolean);
+      
+      const missingSectors = sectorsToSync.filter(s => !existingSectorIds.includes(s.id));
+      
+      if (missingSectors.length > 0) {
+        const newDepts = missingSectors.map((sector, idx) => ({
+          account_id: currentUser.account_id,
+          name: sector.name,
+          description: sector.description,
+          color: sector.color.replace("text-", ""),
+          sector_id: sector.id,
+          display_order: (existingDepts.length + idx + 1),
+          auto_distribute: false,
+        }));
+        
+        const { data: createdDepts, error: createDeptsError } = await supabase
+          .from("zapp_departments")
+          .insert(newDepts)
+          .select("*");
+        
+        if (!createDeptsError && createdDepts) {
+          setDepartments([...existingDepts, ...createdDepts]);
+        } else {
+          setDepartments(existingDepts);
+        }
+      } else {
+        setDepartments(existingDepts);
+      }
+      
       setTeamUsers((usersData || []) as TeamUser[]);
       setTeamRoles(rolesData || []);
       setAssignments(assignmentsData || []);
