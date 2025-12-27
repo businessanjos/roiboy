@@ -375,6 +375,12 @@ export default function RoyZapp() {
   const [savingTag, setSavingTag] = useState(false);
   const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
   
+  // Conversation tagging dialog
+  const [conversationTagDialogOpen, setConversationTagDialogOpen] = useState(false);
+  const [taggingAssignmentId, setTaggingAssignmentId] = useState<string | null>(null);
+  const [selectedConversationTags, setSelectedConversationTags] = useState<string[]>([]);
+  const [savingConversationTags, setSavingConversationTags] = useState(false);
+  
   // Client products state (for badges)
   const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
   
@@ -2840,8 +2846,7 @@ export default function RoyZapp() {
                                     className="text-zapp-text hover:bg-zapp-hover"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // TODO: Open tag dialog
-                                      toast.info("Em breve: Etiquetar conversa");
+                                      openConversationTagDialog(assignment.id);
                                     }}
                                   >
                                     <Tag className="h-4 w-4 mr-3" />
@@ -3219,7 +3224,74 @@ export default function RoyZapp() {
     }
   };
 
-  // Render tags list
+  // Open conversation tagging dialog
+  const openConversationTagDialog = async (assignmentId: string) => {
+    setTaggingAssignmentId(assignmentId);
+    
+    // Fetch existing tags for this conversation
+    try {
+      const { data, error } = await supabase
+        .from("zapp_conversation_tags")
+        .select("tag_id")
+        .eq("assignment_id", assignmentId);
+      
+      if (error) throw error;
+      setSelectedConversationTags(data?.map(t => t.tag_id) || []);
+    } catch (error) {
+      console.error("Error fetching conversation tags:", error);
+      setSelectedConversationTags([]);
+    }
+    
+    setConversationTagDialogOpen(true);
+  };
+
+  // Toggle tag for conversation
+  const toggleConversationTag = (tagId: string) => {
+    setSelectedConversationTags(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  // Save conversation tags
+  const saveConversationTags = async () => {
+    if (!taggingAssignmentId || !currentUser?.account_id) return;
+    
+    setSavingConversationTags(true);
+    try {
+      // Delete existing tags for this conversation
+      await supabase
+        .from("zapp_conversation_tags")
+        .delete()
+        .eq("assignment_id", taggingAssignmentId);
+      
+      // Insert new tags
+      if (selectedConversationTags.length > 0) {
+        const { error } = await supabase
+          .from("zapp_conversation_tags")
+          .insert(
+            selectedConversationTags.map(tagId => ({
+              account_id: currentUser.account_id,
+              assignment_id: taggingAssignmentId,
+              tag_id: tagId,
+              created_by: currentUser.id,
+            }))
+          );
+        
+        if (error) throw error;
+      }
+      
+      toast.success("Tags atualizadas!");
+      setConversationTagDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error saving conversation tags:", error);
+      toast.error(error.message || "Erro ao salvar tags");
+    } finally {
+      setSavingConversationTags(false);
+    }
+  };
+
   const renderTagsList = () => (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -4674,6 +4746,82 @@ export default function RoyZapp() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Conversation Tagging Dialog */}
+      <Dialog open={conversationTagDialogOpen} onOpenChange={setConversationTagDialogOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle>Etiquetar Conversa</DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Selecione as tags para esta conversa
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {tags.length === 0 ? (
+              <div className="text-center py-4">
+                <Tags className="h-8 w-8 text-zapp-text-muted mx-auto mb-2" />
+                <p className="text-zapp-text-muted text-sm">Nenhuma tag cadastrada</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 border-[#3b4a54] text-[#8696a0]"
+                  onClick={() => {
+                    setConversationTagDialogOpen(false);
+                    setActiveView("tags");
+                  }}
+                >
+                  Criar tags
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {tags.map((tag) => (
+                  <div
+                    key={tag.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
+                      selectedConversationTags.includes(tag.id)
+                        ? "bg-zapp-accent/20 border border-zapp-accent"
+                        : "bg-[#202c33] hover:bg-[#2a3942] border border-transparent"
+                    )}
+                    onClick={() => toggleConversationTag(tag.id)}
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#e9edef] text-sm font-medium truncate">{tag.name}</p>
+                      {tag.description && (
+                        <p className="text-[#8696a0] text-xs truncate">{tag.description}</p>
+                      )}
+                    </div>
+                    {selectedConversationTags.includes(tag.id) && (
+                      <CheckCheck className="h-4 w-4 text-zapp-accent flex-shrink-0" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setConversationTagDialogOpen(false)} 
+              className="border-[#3b4a54] text-[#8696a0]"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={saveConversationTags} 
+              disabled={savingConversationTags || tags.length === 0}
+              className="bg-[#00a884] hover:bg-[#00a884]/90"
+            >
+              {savingConversationTags ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Client Quick Edit Sheet */}
       <ClientQuickEditSheet
