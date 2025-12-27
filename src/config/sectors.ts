@@ -120,7 +120,7 @@ export const sectors: Sector[] = [
     bgColor: "bg-slate-500/10",
     defaultRoute: "/settings",
     navItems: [
-      { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
+      { to: "/settings", icon: Settings, label: "Configurações" },
     ],
   },
 ];
