@@ -54,6 +54,7 @@ const operationsNavItems: NavItem[] = [
 
 const reportsNavItems: NavItem[] = [
   { title: "DRE", href: "/financial/dre", icon: FileText },
+  { title: "DRF", href: "/financial/drf", icon: Receipt },
   { title: "Aging", href: "/financial/aging", icon: BarChart3 },
   { title: "Rentabilidade", href: "/financial/profitability", icon: DollarSign },
 ];

@@ -12,3 +12,4 @@ export { default as FinancialProfitabilityPage } from "./FinancialProfitabilityP
 export { default as FinancialBankAccountsPage } from "./FinancialBankAccountsPage";
 export { default as FinancialCashFlowPage } from "./FinancialCashFlowPage";
 export { default as FinancialDREPage } from "./FinancialDREPage";
+export { default as FinancialDRFPage } from "./FinancialDRFPage";
