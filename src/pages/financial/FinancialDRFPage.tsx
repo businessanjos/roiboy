@@ -25,8 +25,10 @@ interface DRFData {
   adminExpenses: number;
   salesExpenses: number;
   financialExpenses: number;
+  depreciation: number;
   totalOperatingExpenses: number;
   operatingResult: number;
+  ebitda: number;
   otherRevenue: number;
   otherExpenses: number;
   netResult: number;
@@ -107,8 +109,10 @@ export default function FinancialDRFPage() {
         adminExpenses: 0,
         salesExpenses: 0,
         financialExpenses: 0,
+        depreciation: 0,
         totalOperatingExpenses: 0,
         operatingResult: 0,
+        ebitda: 0,
         otherRevenue: 0,
         otherExpenses: 0,
         netResult: 0,
@@ -148,6 +152,9 @@ export default function FinancialDRFPage() {
           case "financial_expenses":
             drf.financialExpenses += amount;
             break;
+          case "depreciation":
+            drf.depreciation += amount;
+            break;
           case "other_revenue":
             drf.otherRevenue += amount;
             break;
@@ -167,8 +174,10 @@ export default function FinancialDRFPage() {
       // Calculate derived values
       drf.netRevenue = drf.grossRevenue - drf.deductions;
       drf.grossProfit = drf.netRevenue - drf.cogs;
-      drf.totalOperatingExpenses = drf.adminExpenses + drf.salesExpenses + drf.financialExpenses;
+      drf.totalOperatingExpenses = drf.adminExpenses + drf.salesExpenses + drf.financialExpenses + drf.depreciation;
       drf.operatingResult = drf.grossProfit - drf.totalOperatingExpenses;
+      // EBITDA = Resultado Operacional + Despesas Financeiras + Depreciação/Amortização
+      drf.ebitda = drf.operatingResult + drf.financialExpenses + drf.depreciation;
       drf.netResult = drf.operatingResult + drf.otherRevenue - drf.otherExpenses;
 
       return drf;
@@ -193,7 +202,9 @@ export default function FinancialDRFPage() {
         { label: "Despesas Administrativas", value: -drfData.adminExpenses, indent: 2 },
         { label: "Despesas Comerciais", value: -drfData.salesExpenses, indent: 2 },
         { label: "Despesas Financeiras", value: -drfData.financialExpenses, indent: 2 },
-        { label: "RESULTADO OPERACIONAL", value: drfData.operatingResult, isSubtotal: true },
+        { label: "Depreciação e Amortização", value: -drfData.depreciation, indent: 2 },
+        { label: "RESULTADO OPERACIONAL (EBIT)", value: drfData.operatingResult, isSubtotal: true },
+        { label: "EBITDA", value: drfData.ebitda, isTotal: true },
         { label: "(+) Outras Receitas", value: drfData.otherRevenue, indent: 1 },
         { label: "(-) Outras Despesas", value: -drfData.otherExpenses, indent: 1 },
         { label: "RESULTADO LÍQUIDO", value: drfData.netResult, isTotal: true },
@@ -247,7 +258,7 @@ export default function FinancialDRFPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Receita Bruta Faturada</div>
@@ -264,9 +275,22 @@ export default function FinancialDRFPage() {
             </div>
           </CardContent>
         </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800">
+          <CardContent className="pt-6">
+            <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">EBITDA</div>
+            <div className={`text-2xl font-bold ${drfData?.ebitda && drfData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+              {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(drfData?.ebitda || 0)}
+            </div>
+            {drfData && drfData.grossRevenue > 0 && (
+              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                {((drfData.ebitda / drfData.grossRevenue) * 100).toFixed(1)}% da receita
+              </div>
+            )}
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Resultado Operacional</div>
+            <div className="text-sm text-muted-foreground">EBIT (Res. Operacional)</div>
             <div className={`text-2xl font-bold ${getValueColor(drfData?.operatingResult || 0)}`}>
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(drfData?.operatingResult || 0)}
             </div>
@@ -342,18 +366,24 @@ export default function FinancialDRFPage() {
             <CardTitle>Análise de Margens (Faturamento)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">
                   {((drfData.grossProfit / drfData.grossRevenue) * 100).toFixed(1)}%
                 </div>
                 <div className="text-sm text-muted-foreground">Margem Bruta</div>
               </div>
+              <div className="text-center p-4 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+                <div className={`text-3xl font-bold ${drfData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+                  {((drfData.ebitda / drfData.grossRevenue) * 100).toFixed(1)}%
+                </div>
+                <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">Margem EBITDA</div>
+              </div>
               <div className="text-center">
                 <div className={`text-3xl font-bold ${getValueColor(drfData.operatingResult)}`}>
                   {((drfData.operatingResult / drfData.grossRevenue) * 100).toFixed(1)}%
                 </div>
-                <div className="text-sm text-muted-foreground">Margem Operacional</div>
+                <div className="text-sm text-muted-foreground">Margem EBIT</div>
               </div>
               <div className="text-center">
                 <div className={`text-3xl font-bold ${getValueColor(drfData.netResult)}`}>

@@ -26,8 +26,10 @@ interface DREData {
   adminExpenses: number;
   salesExpenses: number;
   financialExpenses: number;
+  depreciation: number;
   totalOperatingExpenses: number;
   operatingResult: number;
+  ebitda: number;
   otherRevenue: number;
   otherExpenses: number;
   netResult: number;
@@ -106,8 +108,10 @@ export default function FinancialDREPage() {
         adminExpenses: 0,
         salesExpenses: 0,
         financialExpenses: 0,
+        depreciation: 0,
         totalOperatingExpenses: 0,
         operatingResult: 0,
+        ebitda: 0,
         otherRevenue: 0,
         otherExpenses: 0,
         netResult: 0,
@@ -147,6 +151,9 @@ export default function FinancialDREPage() {
           case "financial_expenses":
             dre.financialExpenses += amount;
             break;
+          case "depreciation":
+            dre.depreciation += amount;
+            break;
           case "other_revenue":
             dre.otherRevenue += amount;
             break;
@@ -166,8 +173,10 @@ export default function FinancialDREPage() {
       // Calculate derived values
       dre.netRevenue = dre.grossRevenue - dre.deductions;
       dre.grossProfit = dre.netRevenue - dre.cogs;
-      dre.totalOperatingExpenses = dre.adminExpenses + dre.salesExpenses + dre.financialExpenses;
+      dre.totalOperatingExpenses = dre.adminExpenses + dre.salesExpenses + dre.financialExpenses + dre.depreciation;
       dre.operatingResult = dre.grossProfit - dre.totalOperatingExpenses;
+      // EBITDA = Resultado Operacional + Despesas Financeiras + Depreciação/Amortização
+      dre.ebitda = dre.operatingResult + dre.financialExpenses + dre.depreciation;
       dre.netResult = dre.operatingResult + dre.otherRevenue - dre.otherExpenses;
 
       return dre;
@@ -192,7 +201,9 @@ export default function FinancialDREPage() {
         { label: "Despesas Administrativas", value: -dreData.adminExpenses, indent: 2 },
         { label: "Despesas Comerciais", value: -dreData.salesExpenses, indent: 2 },
         { label: "Despesas Financeiras", value: -dreData.financialExpenses, indent: 2 },
-        { label: "RESULTADO OPERACIONAL", value: dreData.operatingResult, isSubtotal: true },
+        { label: "Depreciação e Amortização", value: -dreData.depreciation, indent: 2 },
+        { label: "RESULTADO OPERACIONAL (EBIT)", value: dreData.operatingResult, isSubtotal: true },
+        { label: "EBITDA", value: dreData.ebitda, isTotal: true },
         { label: "(+) Outras Receitas", value: dreData.otherRevenue, indent: 1 },
         { label: "(-) Outras Despesas", value: -dreData.otherExpenses, indent: 1 },
         { label: "RESULTADO LÍQUIDO", value: dreData.netResult, isTotal: true },
@@ -246,7 +257,7 @@ export default function FinancialDREPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Receita Bruta</div>
@@ -263,9 +274,22 @@ export default function FinancialDREPage() {
             </div>
           </CardContent>
         </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800">
+          <CardContent className="pt-6">
+            <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">EBITDA</div>
+            <div className={`text-2xl font-bold ${dreData?.ebitda && dreData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+              {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(dreData?.ebitda || 0)}
+            </div>
+            {dreData && dreData.grossRevenue > 0 && (
+              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                {((dreData.ebitda / dreData.grossRevenue) * 100).toFixed(1)}% da receita
+              </div>
+            )}
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Resultado Operacional</div>
+            <div className="text-sm text-muted-foreground">EBIT (Res. Operacional)</div>
             <div className={`text-2xl font-bold ${getValueColor(dreData?.operatingResult || 0)}`}>
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(dreData?.operatingResult || 0)}
             </div>
@@ -331,18 +355,24 @@ export default function FinancialDREPage() {
             <CardTitle>Análise de Margens</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">
                   {((dreData.grossProfit / dreData.grossRevenue) * 100).toFixed(1)}%
                 </div>
                 <div className="text-sm text-muted-foreground">Margem Bruta</div>
               </div>
+              <div className="text-center p-4 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+                <div className={`text-3xl font-bold ${dreData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+                  {((dreData.ebitda / dreData.grossRevenue) * 100).toFixed(1)}%
+                </div>
+                <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">Margem EBITDA</div>
+              </div>
               <div className="text-center">
                 <div className={`text-3xl font-bold ${getValueColor(dreData.operatingResult)}`}>
                   {((dreData.operatingResult / dreData.grossRevenue) * 100).toFixed(1)}%
                 </div>
-                <div className="text-sm text-muted-foreground">Margem Operacional</div>
+                <div className="text-sm text-muted-foreground">Margem EBIT</div>
               </div>
               <div className="text-center">
                 <div className={`text-3xl font-bold ${getValueColor(dreData.netResult)}`}>
