@@ -15,9 +15,13 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   BarChart3,
-  AlertTriangle
+  AlertTriangle,
+  Users,
+  Clock,
+  PieChart as PieChartIcon
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, addWeeks, addMonths, isWithinInterval, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, ComposedChart, Line } from "recharts";
@@ -114,6 +118,82 @@ export default function CashFlow() {
       payableCount,
       total: overdueReceivables + overduePayables,
       entries: filteredOverdue
+    };
+  }, [overdueEntries, selectedBankId]);
+
+  // Delinquency analysis (inadimplência) - focused on receivables
+  const delinquencyAnalysis = useMemo(() => {
+    if (!overdueEntries?.length) return null;
+
+    const filteredOverdue = selectedBankId === "all"
+      ? overdueEntries
+      : overdueEntries.filter(e => e.bank_account_id === selectedBankId);
+
+    const receivables = filteredOverdue.filter(e => e.entry_type === "receivable");
+    if (!receivables.length) return null;
+
+    const today = new Date();
+    
+    // Aging buckets
+    const aging = {
+      "1-15": { amount: 0, count: 0, entries: [] as typeof receivables },
+      "16-30": { amount: 0, count: 0, entries: [] as typeof receivables },
+      "31-60": { amount: 0, count: 0, entries: [] as typeof receivables },
+      "60+": { amount: 0, count: 0, entries: [] as typeof receivables },
+    };
+
+    // Group by client
+    const byClient: Record<string, { name: string; amount: number; count: number; oldestDays: number }> = {};
+
+    receivables.forEach(entry => {
+      const dueDate = new Date(entry.due_date);
+      const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const amount = entry.amount || 0;
+
+      // Aging bucket
+      if (daysOverdue <= 15) {
+        aging["1-15"].amount += amount;
+        aging["1-15"].count++;
+        aging["1-15"].entries.push(entry);
+      } else if (daysOverdue <= 30) {
+        aging["16-30"].amount += amount;
+        aging["16-30"].count++;
+        aging["16-30"].entries.push(entry);
+      } else if (daysOverdue <= 60) {
+        aging["31-60"].amount += amount;
+        aging["31-60"].count++;
+        aging["31-60"].entries.push(entry);
+      } else {
+        aging["60+"].amount += amount;
+        aging["60+"].count++;
+        aging["60+"].entries.push(entry);
+      }
+
+      // Group by client
+      const clientId = entry.client_id || "sem-cliente";
+      const clientName = (entry.clients as any)?.full_name || "Sem cliente";
+      if (!byClient[clientId]) {
+        byClient[clientId] = { name: clientName, amount: 0, count: 0, oldestDays: 0 };
+      }
+      byClient[clientId].amount += amount;
+      byClient[clientId].count++;
+      byClient[clientId].oldestDays = Math.max(byClient[clientId].oldestDays, daysOverdue);
+    });
+
+    const totalAmount = receivables.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const clientsList = Object.values(byClient).sort((a, b) => b.amount - a.amount);
+
+    return {
+      totalAmount,
+      totalCount: receivables.length,
+      aging,
+      byClient: clientsList,
+      avgDaysOverdue: receivables.length > 0 
+        ? Math.round(receivables.reduce((sum, e) => {
+            const daysOverdue = Math.floor((today.getTime() - new Date(e.due_date).getTime()) / (1000 * 60 * 60 * 24));
+            return sum + daysOverdue;
+          }, 0) / receivables.length)
+        : 0
     };
   }, [overdueEntries, selectedBankId]);
 
@@ -776,6 +856,178 @@ export default function CashFlow() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Delinquency Analysis - Inadimplência */}
+        {delinquencyAnalysis && (
+          <Card className="border-red-500/30 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-red-500/10 to-transparent">
+              <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <div className="p-2 rounded-lg bg-red-500/10">
+                  <Users className="h-5 w-5" />
+                </div>
+                Análise de Inadimplência
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {/* Summary Cards */}
+              <div className="grid gap-4 md:grid-cols-4 mb-6">
+                <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <Wallet className="h-4 w-4" />
+                    Total Inadimplente
+                  </div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatCurrency(delinquencyAnalysis.totalAmount)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {delinquencyAnalysis.totalCount} {delinquencyAnalysis.totalCount === 1 ? 'título' : 'títulos'}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <Clock className="h-4 w-4" />
+                    Média de Atraso
+                  </div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {delinquencyAnalysis.avgDaysOverdue} dias
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tempo médio em atraso
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <Users className="h-4 w-4" />
+                    Clientes
+                  </div>
+                  <div className="text-2xl font-bold text-amber-600">
+                    {delinquencyAnalysis.byClient.length}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Com pendências
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <PieChartIcon className="h-4 w-4" />
+                    Crítico (60+ dias)
+                  </div>
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(delinquencyAnalysis.aging["60+"].amount)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {delinquencyAnalysis.aging["60+"].count} títulos
+                  </p>
+                </div>
+              </div>
+
+              {/* Aging Analysis */}
+              <div className="mb-6">
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Análise por Aging
+                </h4>
+                <div className="space-y-3">
+                  {[
+                    { key: "1-15", label: "1-15 dias", color: "bg-yellow-500" },
+                    { key: "16-30", label: "16-30 dias", color: "bg-orange-500" },
+                    { key: "31-60", label: "31-60 dias", color: "bg-red-500" },
+                    { key: "60+", label: "60+ dias", color: "bg-red-700" },
+                  ].map(bucket => {
+                    const data = delinquencyAnalysis.aging[bucket.key as keyof typeof delinquencyAnalysis.aging];
+                    const percentage = delinquencyAnalysis.totalAmount > 0 
+                      ? (data.amount / delinquencyAnalysis.totalAmount) * 100 
+                      : 0;
+                    return (
+                      <div key={bucket.key} className="flex items-center gap-4">
+                        <div className="w-24 text-sm text-muted-foreground">{bucket.label}</div>
+                        <div className="flex-1">
+                          <div className="h-3 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full ${bucket.color} transition-all duration-500`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="w-32 text-right text-sm font-medium">
+                          {formatCurrency(data.amount)}
+                        </div>
+                        <div className="w-16 text-right text-xs text-muted-foreground">
+                          {percentage.toFixed(1)}%
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* By Client */}
+              <div>
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Inadimplência por Cliente
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-3 px-4 text-left font-medium">Cliente</th>
+                        <th className="py-3 px-4 text-center font-medium">Títulos</th>
+                        <th className="py-3 px-4 text-center font-medium">Maior Atraso</th>
+                        <th className="py-3 px-4 text-right font-medium">Valor Total</th>
+                        <th className="py-3 px-4 text-right font-medium">% do Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {delinquencyAnalysis.byClient.slice(0, 10).map((client, idx) => {
+                        const percentage = (client.amount / delinquencyAnalysis.totalAmount) * 100;
+                        return (
+                          <tr key={idx} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-4 font-medium">{client.name}</td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge variant="secondary">{client.count}</Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  client.oldestDays > 60 ? "text-red-600 border-red-500" :
+                                  client.oldestDays > 30 ? "text-orange-600 border-orange-500" :
+                                  "text-yellow-600 border-yellow-500"
+                                }
+                              >
+                                {client.oldestDays} dias
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium text-red-600">
+                              {formatCurrency(client.amount)}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Progress value={percentage} className="w-16 h-2" />
+                                <span className="text-xs text-muted-foreground w-12">
+                                  {percentage.toFixed(1)}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {delinquencyAnalysis.byClient.length > 10 && (
+                    <p className="text-center text-sm text-muted-foreground mt-4">
+                      + {delinquencyAnalysis.byClient.length - 10} outros clientes
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Overdue Table */}
         {overdueSummary && overdueSummary.entries.length > 0 && (
