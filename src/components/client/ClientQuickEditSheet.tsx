@@ -205,7 +205,7 @@ export function ClientQuickEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[540px] bg-zapp-bg border-zapp-border p-0">
+      <SheetContent className="w-[340px] sm:w-[420px] bg-zapp-bg border-zapp-border p-0">
         <SheetHeader className="px-6 py-4 border-b border-zapp-border bg-zapp-panel">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-zapp-text flex items-center gap-3">
