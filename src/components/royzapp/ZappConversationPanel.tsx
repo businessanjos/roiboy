@@ -89,6 +89,7 @@ interface ZappConversationPanelProps {
   soundEnabled: boolean;
   importLimit: string;
   importingConversations: boolean;
+  userSignature: string;
   
   // Callbacks
   onSelectConversation: (assignment: ConversationAssignment) => void;
@@ -111,6 +112,7 @@ interface ZappConversationPanelProps {
   onSoundChange: (checked: boolean) => void;
   onImportLimitChange: (limit: string) => void;
   onImportConversations: () => void;
+  onSignatureChange: (value: string) => void;
   getAgentName: (agentId: string) => string;
 }
 
@@ -158,6 +160,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   soundEnabled,
   importLimit,
   importingConversations,
+  userSignature,
   onSelectConversation,
   onOpenNewConversationDialog,
   onOpenAgentDialog,
@@ -178,6 +181,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onSoundChange,
   onImportLimitChange,
   onImportConversations,
+  onSignatureChange,
   getAgentName,
 }: ZappConversationPanelProps) {
   return (
@@ -573,12 +577,14 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             soundEnabled={soundEnabled}
             importLimit={importLimit}
             importingConversations={importingConversations}
+            userSignature={userSignature}
             onToggleWhatsAppConnection={onToggleWhatsAppConnection}
             onRoundRobinChange={onRoundRobinChange}
             onRespectLimitChange={onRespectLimitChange}
             onSoundChange={onSoundChange}
             onImportLimitChange={onImportLimitChange}
             onImportConversations={onImportConversations}
+            onSignatureChange={onSignatureChange}
           />
         )}
       </ScrollArea>

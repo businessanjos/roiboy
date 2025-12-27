@@ -95,6 +95,10 @@ interface ZappChatViewProps {
   onReplyMessage: (message: Message) => void;
   onCancelReply: () => void;
   onMentionInsert?: (mention: MentionData) => void;
+  // Signature
+  signatureEnabled?: boolean;
+  hasSignature?: boolean;
+  onToggleSignature?: () => void;
 }
 
 export function ZappChatView({
@@ -142,6 +146,9 @@ export function ZappChatView({
   onReplyMessage,
   onCancelReply,
   onMentionInsert,
+  signatureEnabled,
+  hasSignature,
+  onToggleSignature,
 }: ZappChatViewProps) {
   if (!selectedConversation) {
     return (
@@ -233,6 +240,9 @@ export function ZappChatView({
         onOpenQuickReplies={onOpenQuickReplies}
         onCancelReply={onCancelReply}
         onMentionInsert={onMentionInsert}
+        signatureEnabled={signatureEnabled}
+        hasSignature={hasSignature}
+        onToggleSignature={onToggleSignature}
       />
     </div>
   );
