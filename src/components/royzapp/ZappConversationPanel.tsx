@@ -221,8 +221,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
               <DropdownMenuItem 
                 className={cn(
-                  "text-zapp-text flex items-center justify-between", 
-                  filterStatus === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "all" && "bg-zapp-accent text-white font-semibold"
                 )}
                 onClick={() => setFilterStatus("all")}
               >
@@ -231,8 +231,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className={cn(
-                  "text-zapp-text flex items-center justify-between", 
-                  filterUnread && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterUnread && "bg-zapp-accent text-white font-semibold"
                 )}
                 onClick={() => setFilterUnread(!filterUnread)}
               >
@@ -241,8 +241,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className={cn(
-                  "text-zapp-text flex items-center justify-between", 
-                  filterStatus === "triage" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "triage" && "bg-zapp-accent text-white font-semibold"
                 )}
                 onClick={() => setFilterStatus("triage")}
               >
@@ -251,8 +251,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className={cn(
-                  "text-zapp-text flex items-center justify-between", 
-                  filterStatus === "active" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "active" && "bg-zapp-accent text-white font-semibold"
                 )}
                 onClick={() => setFilterStatus("active")}
               >
@@ -261,8 +261,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className={cn(
-                  "text-zapp-text flex items-center justify-between", 
-                  filterStatus === "closed" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "closed" && "bg-zapp-accent text-white font-semibold"
                 )}
                 onClick={() => setFilterStatus("closed")}
               >
@@ -277,8 +277,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Produto</div>
                   <DropdownMenuItem 
                     className={cn(
-                      "text-zapp-text flex items-center justify-between", 
-                      filterProductId === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                      "text-zapp-text flex items-center justify-between cursor-pointer", 
+                      filterProductId === "all" && "bg-zapp-accent text-white font-semibold"
                     )}
                     onClick={() => setFilterProductId("all")}
                   >
@@ -289,8 +289,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                     <DropdownMenuItem 
                       key={product.id}
                       className={cn(
-                        "text-zapp-text flex items-center justify-between", 
-                        filterProductId === product.id && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                        "text-zapp-text flex items-center justify-between cursor-pointer", 
+                        filterProductId === product.id && "bg-zapp-accent text-white font-semibold"
                       )}
                       onClick={() => setFilterProductId(product.id)}
                     >
@@ -314,8 +314,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Etiqueta</div>
                   <DropdownMenuItem 
                     className={cn(
-                      "text-zapp-text flex items-center justify-between", 
-                      filterTagId === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                      "text-zapp-text flex items-center justify-between cursor-pointer", 
+                      filterTagId === "all" && "bg-zapp-accent text-white font-semibold"
                     )}
                     onClick={() => setFilterTagId("all")}
                   >
@@ -326,8 +326,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                     <DropdownMenuItem 
                       key={tag.id}
                       className={cn(
-                        "text-zapp-text flex items-center justify-between", 
-                        filterTagId === tag.id && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                        "text-zapp-text flex items-center justify-between cursor-pointer", 
+                        filterTagId === tag.id && "bg-zapp-accent text-white font-semibold"
                       )}
                       onClick={() => setFilterTagId(tag.id)}
                     >
@@ -351,8 +351,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Atendente</div>
                   <DropdownMenuItem 
                     className={cn(
-                      "text-zapp-text flex items-center justify-between", 
-                      filterAgentId === "all" && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                      "text-zapp-text flex items-center justify-between cursor-pointer", 
+                      filterAgentId === "all" && "bg-zapp-accent text-white font-semibold"
                     )}
                     onClick={() => setFilterAgentId("all")}
                   >
@@ -363,8 +363,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                     <DropdownMenuItem 
                       key={agent.id}
                       className={cn(
-                        "text-zapp-text flex items-center justify-between", 
-                        filterAgentId === agent.id && "bg-zapp-accent/10 text-zapp-accent font-medium"
+                        "text-zapp-text flex items-center justify-between cursor-pointer", 
+                        filterAgentId === agent.id && "bg-zapp-accent text-white font-semibold"
                       )}
                       onClick={() => setFilterAgentId(agent.id)}
                     >
