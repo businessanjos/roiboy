@@ -26,6 +26,8 @@ import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlanUsageCard } from "@/components/plan";
+import { BillingContent } from "@/components/billing/BillingContent";
+import { Receipt } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -391,6 +393,10 @@ export default function Profile() {
             <CreditCard className="h-4 w-4" />
             Assinatura
           </TabsTrigger>
+          <TabsTrigger value="billing" className="gap-2">
+            <Receipt className="h-4 w-4" />
+            Cobranças
+          </TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -704,6 +710,11 @@ export default function Profile() {
         {/* Subscription Tab */}
         <TabsContent value="subscription">
           <SubscriptionManager />
+        </TabsContent>
+
+        {/* Billing Tab */}
+        <TabsContent value="billing">
+          <BillingContent />
         </TabsContent>
       </Tabs>
     </div>

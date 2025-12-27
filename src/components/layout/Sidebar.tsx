@@ -27,7 +27,6 @@ import {
   Bot,
   MessageSquare,
   Activity,
-  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,7 +98,6 @@ const navItems: NavItem[] = [
   { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/integrations", icon: Link2, label: "Integrações", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/billing", icon: CreditCard, label: "Cobrança", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
 ];
 
