@@ -549,9 +549,9 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
         </div>
       )}
 
-      {/* Tabs for Person/Company */}
+      {/* Tabs for Person/Company/Financial */}
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-9">
+        <TabsList className="grid w-full grid-cols-3 h-9">
           <TabsTrigger value="personal" className="text-sm gap-1.5">
             <User className="h-3.5 w-3.5" />
             Pessoa Física
@@ -559,6 +559,10 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
           <TabsTrigger value="company" className="text-sm gap-1.5">
             <Building2 className="h-3.5 w-3.5" />
             Pessoa Jurídica
+          </TabsTrigger>
+          <TabsTrigger value="financial" className="text-sm gap-1.5">
+            <Landmark className="h-3.5 w-3.5" />
+            Financeiro
           </TabsTrigger>
         </TabsList>
 
@@ -889,118 +893,6 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
-          {/* Banking Data */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-              <Landmark className="h-3.5 w-3.5" />
-              Dados Bancários
-            </div>
-            
-            {/* PIX */}
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium flex items-center gap-1.5">
-                  <QrCode className="h-3.5 w-3.5 text-green-500" />
-                  Tipo de Chave PIX
-                </Label>
-                <Select
-                  value={data.pix_key_type || "none"}
-                  onValueChange={(value) => updateField("pix_key_type", value === "none" ? "" : value)}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    <SelectItem value="cpf">CPF</SelectItem>
-                    <SelectItem value="cnpj">CNPJ</SelectItem>
-                    <SelectItem value="email">E-mail</SelectItem>
-                    <SelectItem value="phone">Telefone</SelectItem>
-                    <SelectItem value="random">Chave Aleatória</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-sm font-medium">Chave PIX</Label>
-                <Input
-                  value={data.pix_key}
-                  onChange={(e) => updateField("pix_key", e.target.value)}
-                  placeholder={
-                    data.pix_key_type === "cpf" ? "000.000.000-00" :
-                    data.pix_key_type === "cnpj" ? "00.000.000/0000-00" :
-                    data.pix_key_type === "email" ? "email@exemplo.com" :
-                    data.pix_key_type === "phone" ? "+55 11 99999-9999" :
-                    data.pix_key_type === "random" ? "Chave aleatória" :
-                    "Selecione o tipo primeiro"
-                  }
-                  className="h-9"
-                  disabled={!data.pix_key_type}
-                />
-              </div>
-            </div>
-            
-            {/* Bank Account */}
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-sm font-medium">Banco</Label>
-                <Input
-                  value={data.bank_name}
-                  onChange={(e) => updateField("bank_name", e.target.value)}
-                  placeholder="Banco do Brasil, Itaú, etc."
-                  className="h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Código</Label>
-                <Input
-                  value={data.bank_code}
-                  onChange={(e) => updateField("bank_code", e.target.value.replace(/\D/g, ""))}
-                  placeholder="001"
-                  maxLength={4}
-                  className="h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Tipo</Label>
-                <Select
-                  value={data.bank_account_type || "checking"}
-                  onValueChange={(value) => updateField("bank_account_type", value)}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="checking">Corrente</SelectItem>
-                    <SelectItem value="savings">Poupança</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Agência</Label>
-                <Input
-                  value={data.bank_agency}
-                  onChange={(e) => updateField("bank_agency", e.target.value.replace(/\D/g, ""))}
-                  placeholder="0001"
-                  maxLength={6}
-                  className="h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Conta</Label>
-                <Input
-                  value={data.bank_account}
-                  onChange={(e) => updateField("bank_account", e.target.value)}
-                  placeholder="12345-6"
-                  className="h-9"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-border/50" />
-
           {/* Notes */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Observações</Label>
@@ -1230,6 +1122,125 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   </Select>
                 </div>
               )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Financial Tab */}
+        <TabsContent value="financial" className="mt-4 space-y-5">
+          {/* PIX */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <QrCode className="h-3.5 w-3.5" />
+              Chave PIX
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Tipo de Chave</Label>
+                <Select
+                  value={data.pix_key_type || "none"}
+                  onValueChange={(value) => updateField("pix_key_type", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    <SelectItem value="cpf">CPF</SelectItem>
+                    <SelectItem value="cnpj">CNPJ</SelectItem>
+                    <SelectItem value="email">E-mail</SelectItem>
+                    <SelectItem value="phone">Telefone</SelectItem>
+                    <SelectItem value="random">Chave Aleatória</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium">Chave PIX</Label>
+                <Input
+                  value={data.pix_key}
+                  onChange={(e) => updateField("pix_key", e.target.value)}
+                  placeholder={
+                    data.pix_key_type === "cpf" ? "000.000.000-00" :
+                    data.pix_key_type === "cnpj" ? "00.000.000/0000-00" :
+                    data.pix_key_type === "email" ? "email@exemplo.com" :
+                    data.pix_key_type === "phone" ? "+55 11 99999-9999" :
+                    data.pix_key_type === "random" ? "Chave aleatória" :
+                    "Selecione o tipo primeiro"
+                  }
+                  className="h-9"
+                  disabled={!data.pix_key_type}
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              💡 A chave PIX pode ser usada para transferências e pagamentos ao cliente.
+            </p>
+          </div>
+
+          <div className="h-px bg-border/50" />
+
+          {/* Bank Account */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <Landmark className="h-3.5 w-3.5" />
+              Conta Bancária
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium">Banco</Label>
+                <Input
+                  value={data.bank_name}
+                  onChange={(e) => updateField("bank_name", e.target.value)}
+                  placeholder="Banco do Brasil, Itaú, etc."
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Código</Label>
+                <Input
+                  value={data.bank_code}
+                  onChange={(e) => updateField("bank_code", e.target.value.replace(/\D/g, ""))}
+                  placeholder="001"
+                  maxLength={4}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Tipo de Conta</Label>
+                <Select
+                  value={data.bank_account_type || "checking"}
+                  onValueChange={(value) => updateField("bank_account_type", value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="checking">Corrente</SelectItem>
+                    <SelectItem value="savings">Poupança</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Agência</Label>
+                <Input
+                  value={data.bank_agency}
+                  onChange={(e) => updateField("bank_agency", e.target.value.replace(/\D/g, ""))}
+                  placeholder="0001"
+                  maxLength={6}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Conta</Label>
+                <Input
+                  value={data.bank_account}
+                  onChange={(e) => updateField("bank_account", e.target.value)}
+                  placeholder="12345-6"
+                  className="h-9"
+                />
+              </div>
             </div>
           </div>
         </TabsContent>
