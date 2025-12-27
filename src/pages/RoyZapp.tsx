@@ -409,6 +409,11 @@ export default function RoyZapp() {
   const [quickReplyForm, setQuickReplyForm] = useState({ title: "", content: "" });
   const [savingQuickReply, setSavingQuickReply] = useState(false);
 
+  // Add client from contact state
+  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
+  const [addClientForm, setAddClientForm] = useState({ full_name: "", phone_e164: "" });
+  const [savingNewClient, setSavingNewClient] = useState(false);
+
   useEffect(() => {
     if (currentUser?.account_id) {
       fetchData();
@@ -2056,6 +2061,65 @@ export default function RoyZapp() {
     }
   };
 
+  // Create client from contact
+  const openAddClientDialog = () => {
+    if (!selectedConversation?.zapp_conversation) return;
+    const contactInfo = getContactInfo(selectedConversation);
+    setAddClientForm({
+      full_name: contactInfo.name || "",
+      phone_e164: contactInfo.phone || "",
+    });
+    setAddClientDialogOpen(true);
+  };
+
+  const saveNewClient = async () => {
+    if (!currentUser?.account_id || !selectedConversation?.zapp_conversation) return;
+    if (!addClientForm.full_name.trim() || !addClientForm.phone_e164.trim()) {
+      toast.error("Nome e telefone são obrigatórios");
+      return;
+    }
+
+    setSavingNewClient(true);
+    try {
+      // Create the client
+      const { data: newClient, error: clientError } = await supabase
+        .from("clients")
+        .insert({
+          account_id: currentUser.account_id,
+          full_name: addClientForm.full_name.trim(),
+          phone_e164: addClientForm.phone_e164.trim(),
+          status: "active",
+        })
+        .select("id")
+        .single();
+
+      if (clientError) throw clientError;
+
+      // Link the zapp_conversation to the new client
+      const { error: linkError } = await supabase
+        .from("zapp_conversations")
+        .update({ client_id: newClient.id })
+        .eq("id", selectedConversation.zapp_conversation.id);
+
+      if (linkError) throw linkError;
+
+      toast.success("Cliente cadastrado com sucesso!");
+      setAddClientDialogOpen(false);
+      
+      // Refresh data
+      fetchData();
+    } catch (error: any) {
+      console.error("Error creating client:", error);
+      if (error.code === "23505") {
+        toast.error("Já existe um cliente com este telefone");
+      } else {
+        toast.error(error.message || "Erro ao cadastrar cliente");
+      }
+    } finally {
+      setSavingNewClient(false);
+    }
+  };
+
 
   // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
@@ -3466,20 +3530,29 @@ export default function RoyZapp() {
                       <DropdownMenuSeparator className="bg-zapp-border" />
                     </>
                   )}
-                  <DropdownMenuItem 
-                    className="text-zapp-text hover:bg-zapp-hover"
-                    onClick={() => {
-                      const zc = selectedConversation?.zapp_conversation;
-                      if (zc?.client_id) {
-                        setEditingClientId(zc.client_id);
-                        setClientEditSheetOpen(true);
-                      }
-                    }}
-                    disabled={!selectedConversation?.zapp_conversation?.client_id}
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Editar Cliente
-                  </DropdownMenuItem>
+                  {selectedConversation?.zapp_conversation?.client_id ? (
+                    <DropdownMenuItem 
+                      className="text-zapp-text hover:bg-zapp-hover"
+                      onClick={() => {
+                        const zc = selectedConversation?.zapp_conversation;
+                        if (zc?.client_id) {
+                          setEditingClientId(zc.client_id);
+                          setClientEditSheetOpen(true);
+                        }
+                      }}
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      Editar Cliente
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem 
+                      className="text-zapp-text hover:bg-zapp-hover"
+                      onClick={openAddClientDialog}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2 text-zapp-accent" />
+                      Adicionar Cliente
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -4614,6 +4687,62 @@ export default function RoyZapp() {
             </Button>
             <Button onClick={saveQuickReply} disabled={savingQuickReply} className="bg-[#00a884] hover:bg-[#00a884]/90">
               {savingQuickReply ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Client Dialog */}
+      <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
+        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-zapp-accent" />
+              Adicionar Cliente
+            </DialogTitle>
+            <DialogDescription className="text-[#8696a0]">
+              Cadastre este contato como cliente no sistema
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="client-name" className="text-[#8696a0]">Nome completo</Label>
+              <Input
+                id="client-name"
+                value={addClientForm.full_name}
+                onChange={(e) => setAddClientForm({ ...addClientForm, full_name: e.target.value })}
+                placeholder="Nome do cliente"
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="client-phone" className="text-[#8696a0]">Telefone</Label>
+              <Input
+                id="client-phone"
+                value={addClientForm.phone_e164}
+                onChange={(e) => setAddClientForm({ ...addClientForm, phone_e164: e.target.value })}
+                placeholder="+5511999999999"
+                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddClientDialogOpen(false)} className="border-[#3b4a54] text-[#8696a0]">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={saveNewClient} 
+              disabled={savingNewClient || !addClientForm.full_name.trim() || !addClientForm.phone_e164.trim()} 
+              className="bg-[#00a884] hover:bg-[#00a884]/90"
+            >
+              {savingNewClient ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar Cliente"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
