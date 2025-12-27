@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, parse } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,11 +40,20 @@ import {
   Search,
   Calendar,
   Building2,
+  Loader2,
+  X,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface ParsedTransaction {
+  date: string;
+  description: string;
+  amount: number;
+  type: "credit" | "debit";
+}
 
 interface BankAccount {
   id: string;
@@ -68,12 +77,16 @@ export default function FinancialReconciliationPage() {
   const accountId = currentUser?.account_id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"pending" | "import" | "history">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
-
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
+  const [uploadedFileName, setUploadedFileName] = useState<string>("");
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["bank-accounts", accountId],
     queryFn: async () => {
@@ -201,6 +214,188 @@ export default function FinancialReconciliationPage() {
     total: pendingEntries.length,
     income: pendingEntries.filter(e => e.entry_type === "receivable").reduce((sum, e) => sum + e.amount, 0),
     expense: pendingEntries.filter(e => e.entry_type === "payable").reduce((sum, e) => sum + e.amount, 0),
+  };
+
+  // Parse OFX file
+  const parseOFX = (content: string): ParsedTransaction[] => {
+    const transactions: ParsedTransaction[] = [];
+    
+    // Match STMTTRN blocks
+    const stmttrnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
+    let match;
+    
+    while ((match = stmttrnRegex.exec(content)) !== null) {
+      const block = match[1];
+      
+      const typeMatch = block.match(/<TRNTYPE>(\w+)/i);
+      const dateMatch = block.match(/<DTPOSTED>(\d{8})/i);
+      const amountMatch = block.match(/<TRNAMT>([-\d.,]+)/i);
+      const memoMatch = block.match(/<MEMO>([^<\n]+)/i);
+      const nameMatch = block.match(/<NAME>([^<\n]+)/i);
+      
+      if (dateMatch && amountMatch) {
+        const dateStr = dateMatch[1];
+        const formattedDate = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
+        const amount = parseFloat(amountMatch[1].replace(",", "."));
+        const description = memoMatch?.[1]?.trim() || nameMatch?.[1]?.trim() || "Sem descrição";
+        const trnType = typeMatch?.[1]?.toUpperCase();
+        
+        transactions.push({
+          date: formattedDate,
+          description,
+          amount: Math.abs(amount),
+          type: amount > 0 || trnType === "CREDIT" ? "credit" : "debit",
+        });
+      }
+    }
+    
+    return transactions;
+  };
+
+  // Parse CSV file
+  const parseCSV = (content: string): ParsedTransaction[] => {
+    const transactions: ParsedTransaction[] = [];
+    const lines = content.split("\n").filter(line => line.trim());
+    
+    // Skip header if present
+    const startIndex = lines[0]?.toLowerCase().includes("data") || 
+                      lines[0]?.toLowerCase().includes("date") ? 1 : 0;
+    
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i];
+      // Try different CSV formats
+      const parts = line.split(/[;,]/).map(p => p.trim().replace(/^"|"$/g, ""));
+      
+      if (parts.length >= 3) {
+        // Try to find date, description, and amount
+        let date = "";
+        let description = "";
+        let amount = 0;
+        
+        for (const part of parts) {
+          // Check if it's a date (dd/mm/yyyy or yyyy-mm-dd)
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(part)) {
+            const [day, month, year] = part.split("/");
+            date = `${year}-${month}-${day}`;
+          } else if (/^\d{4}-\d{2}-\d{2}$/.test(part)) {
+            date = part;
+          } else if (/^-?[\d.,]+$/.test(part.replace(/\s/g, ""))) {
+            // It's a number
+            const parsed = parseFloat(part.replace(/\./g, "").replace(",", "."));
+            if (!isNaN(parsed) && parsed !== 0) {
+              amount = parsed;
+            }
+          } else if (part.length > 3 && !description) {
+            description = part;
+          }
+        }
+        
+        if (date && amount !== 0) {
+          transactions.push({
+            date,
+            description: description || "Sem descrição",
+            amount: Math.abs(amount),
+            type: amount > 0 ? "credit" : "debit",
+          });
+        }
+      }
+    }
+    
+    return transactions;
+  };
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (!file) return;
+    
+    const allowedTypes = [".ofx", ".csv"];
+    const extension = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
+    
+    if (!allowedTypes.includes(extension)) {
+      toast({
+        title: "Formato não suportado",
+        description: "Por favor, selecione um arquivo OFX ou CSV.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsUploading(true);
+    setUploadedFileName(file.name);
+    
+    try {
+      const content = await file.text();
+      let transactions: ParsedTransaction[] = [];
+      
+      if (extension === ".ofx") {
+        transactions = parseOFX(content);
+      } else if (extension === ".csv") {
+        transactions = parseCSV(content);
+      }
+      
+      if (transactions.length === 0) {
+        toast({
+          title: "Nenhuma transação encontrada",
+          description: "O arquivo não contém transações válidas ou está em formato não reconhecido.",
+          variant: "destructive",
+        });
+      } else {
+        setParsedTransactions(transactions);
+        toast({
+          title: "Extrato importado",
+          description: `${transactions.length} transações encontradas.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error parsing file:", error);
+      toast({
+        title: "Erro ao processar arquivo",
+        description: "Não foi possível ler o arquivo. Verifique se está no formato correto.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [toast]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  }, [handleFileUpload]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  }, [handleFileUpload]);
+
+  const clearParsedTransactions = () => {
+    setParsedTransactions([]);
+    setUploadedFileName("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const parsedSummary = {
+    total: parsedTransactions.length,
+    credits: parsedTransactions.filter(t => t.type === "credit").reduce((sum, t) => sum + t.amount, 0),
+    debits: parsedTransactions.filter(t => t.type === "debit").reduce((sum, t) => sum + t.amount, 0),
   };
 
   return (
@@ -398,21 +593,155 @@ export default function FinancialReconciliationPage() {
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="import" className="mt-4">
-              <div className="border-2 border-dashed rounded-lg p-12 text-center">
-                <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="font-medium mb-2">Importar Extrato Bancário</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Arraste um arquivo OFX ou CSV aqui ou clique para selecionar
-                </p>
-                <Button variant="outline">
-                  <FileUp className="h-4 w-4 mr-2" />
-                  Selecionar Arquivo
-                </Button>
-                <p className="text-xs text-muted-foreground mt-4">
-                  Formatos suportados: OFX, CSV (padrão bancário)
-                </p>
-              </div>
+            <TabsContent value="import" className="mt-4 space-y-4">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".ofx,.csv"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
+
+              {parsedTransactions.length === 0 ? (
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+                    isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
+                      <h3 className="font-medium mb-2">Processando arquivo...</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {uploadedFileName}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="font-medium mb-2">Importar Extrato Bancário</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Arraste um arquivo OFX ou CSV aqui ou clique para selecionar
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <FileUp className="h-4 w-4 mr-2" />
+                        Selecionar Arquivo
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-4">
+                        Formatos suportados: OFX, CSV (padrão bancário)
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Parsed file info */}
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-8 w-8 text-primary" />
+                      <div>
+                        <p className="font-medium">{uploadedFileName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {parsedTransactions.length} transações importadas
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={clearParsedTransactions}>
+                      <X className="h-4 w-4 mr-1" />
+                      Remover
+                    </Button>
+                  </div>
+
+                  {/* Summary of parsed transactions */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Total
+                        </div>
+                        <div className="text-2xl font-bold">{parsedSummary.total}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center gap-2 text-green-600 text-sm">
+                          <ArrowDownCircle className="h-4 w-4" />
+                          Créditos
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatCurrency(parsedSummary.credits)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center gap-2 text-red-600 text-sm">
+                          <ArrowUpCircle className="h-4 w-4" />
+                          Débitos
+                        </div>
+                        <div className="text-2xl font-bold text-red-600">
+                          {formatCurrency(parsedSummary.debits)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Parsed transactions table */}
+                  <ScrollArea className="h-[300px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {parsedTransactions.map((tx, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm">
+                                <Calendar className="h-3 w-3" />
+                                {format(parseISO(tx.date), "dd/MM/yyyy")}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium max-w-[300px] truncate" title={tx.description}>
+                                {tx.description}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {tx.type === "credit" ? (
+                                <Badge variant="outline" className="border-green-500 text-green-600">
+                                  <ArrowDownCircle className="h-3 w-3 mr-1" />
+                                  Crédito
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="border-red-500 text-red-600">
+                                  <ArrowUpCircle className="h-3 w-3 mr-1" />
+                                  Débito
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className={`text-right font-medium ${tx.type === "credit" ? "text-green-600" : "text-red-600"}`}>
+                              {formatCurrency(tx.amount)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="history" className="mt-4">
