@@ -48,9 +48,9 @@ export default function Sectors() {
           </p>
         </div>
 
-        {/* Sectors Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {sectors.map((sector) => (
+        {/* Main Sectors Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {sectors.filter(s => s.id !== "royzapp").map((sector) => (
             <Card
               key={sector.id}
               onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
@@ -90,6 +90,49 @@ export default function Sectors() {
             </Card>
           ))}
         </div>
+
+        {/* ROY zAPP - Featured Tool */}
+        {sectors.filter(s => s.id === "royzapp").map((sector) => (
+          <Card
+            key={sector.id}
+            onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
+            className={cn(
+              "relative overflow-hidden transition-all duration-300 border-2 cursor-pointer",
+              "hover:shadow-lg hover:scale-[1.01] hover:border-amber-500/50 border-amber-500/20",
+              "bg-gradient-to-r from-amber-500/5 to-orange-500/5"
+            )}
+          >
+            <CardContent className="p-6 flex items-center gap-6">
+              {/* Icon */}
+              <div className={cn(
+                "w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0",
+                "bg-gradient-to-br from-amber-500/20 to-orange-500/20"
+              )}>
+                <sector.icon className="h-10 w-10 text-amber-600" />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1">
+                <Badge variant="outline" className="mb-2 text-amber-600 border-amber-500/30">
+                  Ferramenta
+                </Badge>
+                <h3 className="text-2xl font-bold text-foreground mb-1">
+                  {sector.name}
+                </h3>
+                <p className="text-muted-foreground">
+                  {sector.description}
+                </p>
+              </div>
+
+              {/* Arrow indicator */}
+              <div className="flex-shrink-0 text-amber-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );
