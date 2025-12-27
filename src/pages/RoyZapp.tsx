@@ -206,28 +206,33 @@ export default function RoyZapp() {
 
   // Fetch messages when conversation is selected
   useEffect(() => {
-    if (selectedConversation?.zapp_conversation_id) {
-      fetchMessages(selectedConversation.zapp_conversation_id);
+    // Clear messages first when conversation changes
+    setMessages([]);
+    
+    const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
+    if (zappConvId) {
+      fetchMessages(zappConvId);
     }
-  }, [selectedConversation, fetchMessages]);
+  }, [selectedConversation?.id, fetchMessages, setMessages]);
 
   // Realtime subscription for messages in selected conversation
   useEffect(() => {
-    if (!selectedConversation?.zapp_conversation_id || !currentUser?.account_id) return;
+    const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
+    if (!zappConvId || !currentUser?.account_id) return;
 
     const messagesChannel = supabase
-      .channel(`zapp-messages-${selectedConversation.zapp_conversation_id}`)
+      .channel(`zapp-messages-${zappConvId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'zapp_messages',
-          filter: `zapp_conversation_id=eq.${selectedConversation.zapp_conversation_id}`
+          filter: `zapp_conversation_id=eq.${zappConvId}`
         },
         () => {
           // Refetch messages to ensure proper ordering
-          fetchMessages(selectedConversation.zapp_conversation_id!);
+          fetchMessages(zappConvId);
         }
       )
       .subscribe();
@@ -235,7 +240,7 @@ export default function RoyZapp() {
     return () => {
       supabase.removeChannel(messagesChannel);
     };
-  }, [selectedConversation?.zapp_conversation_id, currentUser?.account_id, fetchMessages]);
+  }, [selectedConversation?.id, currentUser?.account_id, fetchMessages]);
 
   // Department functions
   const openDepartmentDialog = (dept?: Department) => {
