@@ -94,6 +94,7 @@ interface ZappChatViewProps {
   onOpenQuickReplies: () => void;
   onReplyMessage: (message: Message) => void;
   onCancelReply: () => void;
+  onDeleteMessage?: (messageId: string) => void;
   onMentionInsert?: (mention: MentionData) => void;
   // Signature
   signatureEnabled?: boolean;
@@ -145,6 +146,7 @@ export function ZappChatView({
   onOpenQuickReplies,
   onReplyMessage,
   onCancelReply,
+  onDeleteMessage,
   onMentionInsert,
   signatureEnabled,
   hasSignature,
@@ -208,6 +210,7 @@ export function ZappChatView({
         messages={messages} 
         isGroup={contactInfo.isGroup}
         onReplyMessage={onReplyMessage}
+        onDeleteMessage={onDeleteMessage}
       />
 
       {/* Message input */}

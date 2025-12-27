@@ -16,11 +16,13 @@ interface UazapiRequest {
     | "send_media" | "send_media_to_group"
     | "update_group_name" | "update_group_description" | "update_group_image"
     | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status"
-    | "import-conversations";
+    | "import-conversations"
+    | "delete_message";
   limit?: number;
   instance_name?: string;
   phone?: string;
   message?: string;
+  message_id?: string;
   group_id?: string;
   group_name?: string;
   group_description?: string;
@@ -2556,6 +2558,69 @@ serve(async (req) => {
         }
         
         result = { imported, skipped, total: chats.length };
+        break;
+      }
+
+      case "delete_message": {
+        // Delete a message for everyone
+        // UAZAPI GO v2 - POST /message/{message_id}/delete
+        const { message_id, phone: targetPhone } = payload;
+        
+        if (!message_id) {
+          return new Response(
+            JSON.stringify({ error: "message_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get instance token from integration config
+        const { data: integration } = await supabase
+          .from("integrations")
+          .select("config")
+          .eq("account_id", accountId)
+          .eq("type", "whatsapp")
+          .single();
+
+        const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
+        
+        if (!instanceToken) {
+          return new Response(
+            JSON.stringify({ error: "WhatsApp não está conectado" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Clean phone number if provided
+        const cleanPhone = targetPhone ? targetPhone.replace(/\D/g, "") : "";
+        
+        // Try different endpoints for deleting message
+        const deleteEndpoints = [
+          { url: `/message/${message_id}/delete`, method: "POST", body: cleanPhone ? { phone: cleanPhone } : {} },
+          { url: `/message/delete`, method: "POST", body: { messageId: message_id, phone: cleanPhone } },
+          { url: `/chat/delete-message`, method: "POST", body: { messageId: message_id, phone: cleanPhone } },
+        ];
+        
+        let deleted = false;
+        for (const endpoint of deleteEndpoints) {
+          if (deleted) break;
+          try {
+            console.log(`Trying delete: ${endpoint.method} ${endpoint.url}`);
+            result = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, endpoint.body);
+            console.log(`Delete successful via ${endpoint.url}`);
+            deleted = true;
+          } catch (err) {
+            console.log(`Delete ${endpoint.url} failed:`, (err as Error).message);
+          }
+        }
+        
+        if (!deleted) {
+          return new Response(
+            JSON.stringify({ error: "Não foi possível apagar a mensagem. A API pode não suportar esta função." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        result = { deleted: true, message_id };
         break;
       }
 

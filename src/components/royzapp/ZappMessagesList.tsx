@@ -8,12 +8,14 @@ interface ZappMessagesListProps {
   messages: Message[];
   isGroup: boolean;
   onReplyMessage?: (message: Message) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 export function ZappMessagesList({
   messages,
   isGroup,
   onReplyMessage,
+  onDeleteMessage,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +46,7 @@ export function ZappMessagesList({
                 showTimestamp={showTimestamp}
                 isGroup={isGroup}
                 onReply={onReplyMessage}
+                onDelete={onDeleteMessage}
               />
             );
           })

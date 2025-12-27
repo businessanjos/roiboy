@@ -11,17 +11,29 @@ import {
   Download,
   Loader2,
   Reply,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message, getSenderColor } from "./types";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ZappMessageBubbleProps {
   message: Message;
   showTimestamp: boolean;
   isGroup: boolean;
   onReply?: (message: Message) => void;
+  onDelete?: (messageId: string) => void;
 }
 
 // Function to extract domain from URL for display
@@ -127,8 +139,11 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   showTimestamp,
   isGroup,
   onReply,
+  onDelete,
 }: ZappMessageBubbleProps) {
   const [showActions, setShowActions] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const renderedContent = useMemo(() => {
     if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
@@ -136,6 +151,26 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     }
     return null;
   }, [message.content]);
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(message.id);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // Check if message can be deleted (only outbound messages sent less than 1 hour ago)
+  const canDelete = useMemo(() => {
+    if (message.is_from_client) return false; // Only outbound messages
+    const sentAt = new Date(message.created_at);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60);
+    return hoursDiff < 1; // WhatsApp allows delete for ~1 hour
+  }, [message.is_from_client, message.created_at]);
   return (
     <div>
       {showTimestamp && (
@@ -153,25 +188,47 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => setShowActions(false)}
       >
-        {/* Reply button - positioned outside bubble */}
-        {onReply && showActions && (
+        {/* Action buttons - positioned outside bubble */}
+        {showActions && (onReply || (onDelete && canDelete)) && (
           <div className={cn(
             "flex items-center gap-1 absolute top-1/2 -translate-y-1/2 z-10",
             message.is_from_client ? "right-[calc(65%+8px)]" : "left-[calc(65%+8px)]"
           )}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
-                  onClick={() => onReply(message)}
-                >
-                  <Reply className="h-4 w-4 text-zapp-text-muted" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Responder</TooltipContent>
-            </Tooltip>
+            {onReply && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                    onClick={() => onReply(message)}
+                  >
+                    <Reply className="h-4 w-4 text-zapp-text-muted" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Responder</TooltipContent>
+              </Tooltip>
+            )}
+            {onDelete && canDelete && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-4 w-4 text-zapp-text-muted animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Apagar para todos</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         )}
         
@@ -322,6 +379,36 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           </div>
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar mensagem para todos?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta mensagem será apagada para você e para todos os participantes da conversa. 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Apagando...
+                </>
+              ) : (
+                "Apagar para todos"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 });
