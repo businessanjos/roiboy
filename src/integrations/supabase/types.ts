@@ -651,6 +651,125 @@ export type Database = {
           },
         ]
       }
+      boletos: {
+        Row: {
+          account_id: string
+          amount: number
+          bank_account_id: string | null
+          bank_code: string | null
+          bank_name: string | null
+          barcode: string | null
+          client_id: string | null
+          created_at: string
+          description: string | null
+          digitable_line: string | null
+          discount_amount: number | null
+          document_number: string | null
+          due_date: string
+          external_id: string | null
+          external_url: string | null
+          financial_entry_id: string | null
+          fine_amount: number | null
+          id: string
+          interest_amount: number | null
+          issue_date: string
+          notes: string | null
+          our_number: string | null
+          paid_amount: number | null
+          payment_date: string | null
+          pdf_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount?: number
+          bank_account_id?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          barcode?: string | null
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          digitable_line?: string | null
+          discount_amount?: number | null
+          document_number?: string | null
+          due_date: string
+          external_id?: string | null
+          external_url?: string | null
+          financial_entry_id?: string | null
+          fine_amount?: number | null
+          id?: string
+          interest_amount?: number | null
+          issue_date?: string
+          notes?: string | null
+          our_number?: string | null
+          paid_amount?: number | null
+          payment_date?: string | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          bank_account_id?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          barcode?: string | null
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          digitable_line?: string | null
+          discount_amount?: number | null
+          document_number?: string | null
+          due_date?: string
+          external_id?: string | null
+          external_url?: string | null
+          financial_entry_id?: string | null
+          fine_amount?: number | null
+          id?: string
+          interest_amount?: number | null
+          issue_date?: string
+          notes?: string | null
+          our_number?: string | null
+          paid_amount?: number | null
+          payment_date?: string | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boletos_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boletos_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boletos_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boletos_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contracts: {
         Row: {
           account_id: string
@@ -3855,6 +3974,148 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notas_fiscais: {
+        Row: {
+          access_key: string | null
+          account_id: string
+          cancellation_reason: string | null
+          city_code: string | null
+          city_name: string | null
+          client_id: string | null
+          cnae_code: string | null
+          cofins_amount: number | null
+          competence_date: string | null
+          created_at: string
+          csll_amount: number | null
+          description: string | null
+          discount_amount: number | null
+          external_id: string | null
+          financial_entry_id: string | null
+          icms_amount: number | null
+          icms_rate: number | null
+          id: string
+          inss_amount: number | null
+          invoice_number: string | null
+          invoice_type: string
+          ir_amount: number | null
+          iss_amount: number | null
+          iss_rate: number | null
+          issue_date: string
+          notes: string | null
+          pdf_url: string | null
+          pis_amount: number | null
+          products_amount: number | null
+          series: string | null
+          service_code: string | null
+          services_amount: number | null
+          status: string
+          total_amount: number
+          updated_at: string
+          verification_code: string | null
+          xml_url: string | null
+        }
+        Insert: {
+          access_key?: string | null
+          account_id: string
+          cancellation_reason?: string | null
+          city_code?: string | null
+          city_name?: string | null
+          client_id?: string | null
+          cnae_code?: string | null
+          cofins_amount?: number | null
+          competence_date?: string | null
+          created_at?: string
+          csll_amount?: number | null
+          description?: string | null
+          discount_amount?: number | null
+          external_id?: string | null
+          financial_entry_id?: string | null
+          icms_amount?: number | null
+          icms_rate?: number | null
+          id?: string
+          inss_amount?: number | null
+          invoice_number?: string | null
+          invoice_type?: string
+          ir_amount?: number | null
+          iss_amount?: number | null
+          iss_rate?: number | null
+          issue_date?: string
+          notes?: string | null
+          pdf_url?: string | null
+          pis_amount?: number | null
+          products_amount?: number | null
+          series?: string | null
+          service_code?: string | null
+          services_amount?: number | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          verification_code?: string | null
+          xml_url?: string | null
+        }
+        Update: {
+          access_key?: string | null
+          account_id?: string
+          cancellation_reason?: string | null
+          city_code?: string | null
+          city_name?: string | null
+          client_id?: string | null
+          cnae_code?: string | null
+          cofins_amount?: number | null
+          competence_date?: string | null
+          created_at?: string
+          csll_amount?: number | null
+          description?: string | null
+          discount_amount?: number | null
+          external_id?: string | null
+          financial_entry_id?: string | null
+          icms_amount?: number | null
+          icms_rate?: number | null
+          id?: string
+          inss_amount?: number | null
+          invoice_number?: string | null
+          invoice_type?: string
+          ir_amount?: number | null
+          iss_amount?: number | null
+          iss_rate?: number | null
+          issue_date?: string
+          notes?: string | null
+          pdf_url?: string | null
+          pis_amount?: number | null
+          products_amount?: number | null
+          series?: string | null
+          service_code?: string | null
+          services_amount?: number | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          verification_code?: string | null
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_fiscais_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
             referencedColumns: ["id"]
           },
         ]
