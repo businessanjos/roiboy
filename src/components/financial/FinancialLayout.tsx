@@ -33,8 +33,8 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { title: "Lançamentos", href: "/financial/entries", icon: Receipt },
   { title: "Fluxo de Caixa", href: "/financial/cash-flow", icon: TrendingUp },
+  { title: "Lançamentos", href: "/financial/entries", icon: Receipt },
   { title: "Contas Bancárias", href: "/financial/bank-accounts", icon: Building2 },
 ];
 
