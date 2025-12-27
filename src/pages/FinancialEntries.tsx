@@ -29,6 +29,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Percent,
+  Bell,
+  Landmark,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +80,10 @@ import { CostCentersManager } from "@/components/financial/CostCentersManager";
 import { BudgetManager } from "@/components/financial/BudgetManager";
 import { ProfitabilityReport } from "@/components/financial/ProfitabilityReport";
 import { SuppliersManager } from "@/components/financial/SuppliersManager";
+import { BankReconciliation } from "@/components/financial/BankReconciliation";
+import { CommissionsManager } from "@/components/financial/CommissionsManager";
+import { DueDateAlerts } from "@/components/financial/DueDateAlerts";
+import { AgingReport } from "@/components/financial/AgingReport";
 
 interface FinancialEntry {
   id: string;
@@ -161,6 +169,10 @@ export default function FinancialEntries() {
   const [isSuppliersOpen, setIsSuppliersOpen] = useState(false);
   const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
   const [payingEntry, setPayingEntry] = useState<FinancialEntry | null>(null);
+  const [isReconciliationOpen, setIsReconciliationOpen] = useState(false);
+  const [isCommissionsOpen, setIsCommissionsOpen] = useState(false);
+  const [isDueDateAlertsOpen, setIsDueDateAlertsOpen] = useState(false);
+  const [isAgingReportOpen, setIsAgingReportOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -504,6 +516,44 @@ export default function FinancialEntries() {
             >
               <Filter className="h-3.5 w-3.5 mr-1.5" />
               Categorias
+            </Button>
+          </div>
+          <div className="flex items-center gap-1.5 p-1 rounded-lg bg-muted/50 border">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsReconciliationOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <Landmark className="h-3.5 w-3.5 mr-1.5" />
+              Conciliação
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsCommissionsOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <Percent className="h-3.5 w-3.5 mr-1.5" />
+              Comissões
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsDueDateAlertsOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <Bell className="h-3.5 w-3.5 mr-1.5" />
+              Alertas
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsAgingReportOpen(true)}
+              className="h-8 px-3 text-xs font-medium hover:bg-background"
+            >
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              Aging
             </Button>
           </div>
           <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="h-8 px-3 text-xs font-medium">
@@ -1005,6 +1055,30 @@ export default function FinancialEntries() {
       <SuppliersManager
         open={isSuppliersOpen}
         onOpenChange={setIsSuppliersOpen}
+      />
+
+      {/* Bank Reconciliation */}
+      <BankReconciliation
+        open={isReconciliationOpen}
+        onOpenChange={setIsReconciliationOpen}
+      />
+
+      {/* Commissions Manager */}
+      <CommissionsManager
+        open={isCommissionsOpen}
+        onOpenChange={setIsCommissionsOpen}
+      />
+
+      {/* Due Date Alerts */}
+      <DueDateAlerts
+        open={isDueDateAlertsOpen}
+        onOpenChange={setIsDueDateAlertsOpen}
+      />
+
+      {/* Aging Report */}
+      <AgingReport
+        open={isAgingReportOpen}
+        onOpenChange={setIsAgingReportOpen}
       />
     </div>
   );
