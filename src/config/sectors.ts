@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -62,7 +62,6 @@ export const sectors: Sector[] = [
       { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
-      { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
     ],
   },
   {
@@ -76,7 +75,6 @@ export const sectors: Sector[] = [
     navItems: [
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/billing", icon: CreditCard, label: "Cobrança", permission: PERMISSIONS.SETTINGS_VIEW },
-      { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
     ],
   },
   {
@@ -112,6 +110,18 @@ export const sectors: Sector[] = [
     defaultRoute: "/marketing",
     navItems: [],
     comingSoon: true,
+  },
+  {
+    id: "configuracoes",
+    name: "Configurações",
+    description: "Configurações gerais do sistema",
+    icon: Settings,
+    color: "text-slate-600",
+    bgColor: "bg-slate-500/10",
+    defaultRoute: "/settings",
+    navItems: [
+      { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
+    ],
   },
 ];
 
