@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MoreHorizontal, Building2 } from "lucide-react";
+import { Plus, Edit2, Trash2, MoreHorizontal, Building2, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,9 +37,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { brazilianBanks } from "@/data/brazilian-banks";
 
 interface BankAccount {
   id: string;
@@ -77,6 +92,7 @@ export default function FinancialBankAccountsPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [bankPopoverOpen, setBankPopoverOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     bank_name: "",
@@ -333,24 +349,58 @@ export default function FinancialBankAccountsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Banco *</Label>
-                <Input
-                  value={formData.bank_name}
-                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                  placeholder="Ex: Nubank"
-                  required
-                />
+                <Popover open={bankPopoverOpen} onOpenChange={setBankPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={bankPopoverOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {formData.bank_name || "Selecione um banco..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar banco..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {brazilianBanks.map((bank) => (
+                            <CommandItem
+                              key={bank.code}
+                              value={`${bank.name} ${bank.code}`}
+                              onSelect={() => {
+                                setFormData({ 
+                                  ...formData, 
+                                  bank_name: bank.name,
+                                  bank_code: bank.code === "000" ? "" : bank.code
+                                });
+                                setBankPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.bank_name === bank.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="font-medium">{bank.name}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {bank.code !== "000" && bank.code}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Código do Banco</Label>
-                <Input
-                  value={formData.bank_code}
-                  onChange={(e) => setFormData({ ...formData, bank_code: e.target.value })}
-                  placeholder="Ex: 260"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Agência</Label>
                 <Input
