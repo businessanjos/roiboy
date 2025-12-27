@@ -316,6 +316,7 @@ export function useZappData() {
           setDepartments(existingDepts);
         } else if (createdDepts) {
           console.log("[ZappData] Created departments:", createdDepts);
+          toast.success(`${createdDepts.length} departamentos criados automaticamente`);
           setDepartments([...existingDepts, ...createdDepts]);
         }
       } else {
