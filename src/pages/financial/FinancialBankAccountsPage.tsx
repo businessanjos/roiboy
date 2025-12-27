@@ -54,7 +54,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { brazilianBanks } from "@/data/brazilian-banks";
+import { brazilianBanks, findBankByName } from "@/data/brazilian-banks";
 
 interface BankAccount {
   id: string;
@@ -277,7 +277,21 @@ export default function FinancialBankAccountsPage() {
                         <span className="font-medium">{account.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{account.bank_name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {findBankByName(account.bank_name)?.logo ? (
+                          <img 
+                            src={findBankByName(account.bank_name)?.logo} 
+                            alt={account.bank_name}
+                            className="w-5 h-5 rounded object-contain"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <Building2 className="w-5 h-5 text-muted-foreground" />
+                        )}
+                        <span>{account.bank_name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">
                         {accountTypes[account.account_type as keyof typeof accountTypes] || account.account_type}
@@ -386,6 +400,16 @@ export default function FinancialBankAccountsPage() {
                                   formData.bank_name === bank.name ? "opacity-100" : "opacity-0"
                                 )}
                               />
+                              {bank.logo ? (
+                                <img 
+                                  src={bank.logo} 
+                                  alt={bank.name}
+                                  className="w-5 h-5 rounded object-contain mr-2"
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              ) : (
+                                <Building2 className="w-5 h-5 text-muted-foreground mr-2" />
+                              )}
                               <span className="font-medium">{bank.name}</span>
                               <span className="ml-2 text-xs text-muted-foreground">
                                 {bank.code !== "000" && bank.code}
