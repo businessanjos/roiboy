@@ -1650,6 +1650,19 @@ export default function RoyZapp() {
     }
   }, []);
 
+  // Get contact info for selected conversation
+  const selectedContactInfo = useMemo(() => {
+    if (!selectedConversation) return null;
+    return getContactInfo(selectedConversation);
+  }, [selectedConversation, getContactInfo]);
+
+  // Get client products for selected conversation
+  const selectedClientProducts = useMemo(() => {
+    if (!selectedConversation) return [];
+    const clientId = selectedConversation.zapp_conversation?.client_id || selectedConversation.conversation?.client?.id;
+    return clientId ? clientProducts[clientId] || [] : [];
+  }, [selectedConversation, clientProducts]);
+
   // Check access permission
   const hasZappAccess = isAdmin || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
 
@@ -1836,18 +1849,6 @@ export default function RoyZapp() {
     }
   };
 
-  // Get contact info for selected conversation
-  const selectedContactInfo = useMemo(() => {
-    if (!selectedConversation) return null;
-    return getContactInfo(selectedConversation);
-  }, [selectedConversation, getContactInfo]);
-
-  // Get client products for selected conversation
-  const selectedClientProducts = useMemo(() => {
-    if (!selectedConversation) return [];
-    const clientId = selectedConversation.zapp_conversation?.client_id || selectedConversation.conversation?.client?.id;
-    return clientId ? clientProducts[clientId] || [] : [];
-  }, [selectedConversation, clientProducts]);
 
   return (
     <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
