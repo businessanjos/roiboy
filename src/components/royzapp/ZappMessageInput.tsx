@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { ZappGroupMentionInput } from "./ZappGroupMentionInput";
 
 interface ZappMessageInputProps {
   messageInput: string;
@@ -44,6 +45,8 @@ interface ZappMessageInputProps {
   messageInputRef?: React.RefObject<HTMLInputElement>;
   imageInputRef?: React.RefObject<HTMLInputElement>;
   fileInputRef?: React.RefObject<HTMLInputElement>;
+  isGroup?: boolean;
+  groupJid?: string | null;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -76,6 +79,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   messageInputRef,
   imageInputRef,
   fileInputRef,
+  isGroup,
+  groupJid,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -351,15 +356,27 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               onChange={(e) => onFileSelect(e, "document")}
             />
             
-            <Input
-              ref={messageInputRef}
-              placeholder="Digite uma mensagem"
-              value={messageInput}
-              onChange={(e) => onMessageChange(e.target.value)}
-              onKeyDown={onKeyPress}
-              disabled={sendingMessage}
-              className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-10"
-            />
+            {isGroup && groupJid ? (
+              <ZappGroupMentionInput
+                ref={messageInputRef}
+                placeholder="Digite uma mensagem (@ para mencionar)"
+                value={messageInput}
+                onChange={onMessageChange}
+                onKeyDown={onKeyPress}
+                disabled={sendingMessage}
+                groupJid={groupJid}
+              />
+            ) : (
+              <Input
+                ref={messageInputRef}
+                placeholder="Digite uma mensagem"
+                value={messageInput}
+                onChange={(e) => onMessageChange(e.target.value)}
+                onKeyDown={onKeyPress}
+                disabled={sendingMessage}
+                className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-10"
+              />
+            )}
             
             {messageInput.trim() ? (
               <Button

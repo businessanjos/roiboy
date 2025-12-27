@@ -197,6 +197,8 @@ export function ZappChatView({
         messageInputRef={messageInputRef}
         imageInputRef={imageInputRef}
         fileInputRef={fileInputRef}
+        isGroup={contactInfo.isGroup}
+        groupJid={selectedConversation?.zapp_conversation?.group_jid || null}
         onMessageChange={onMessageChange}
         onSendMessage={onSendMessage}
         onKeyPress={onKeyPress}
