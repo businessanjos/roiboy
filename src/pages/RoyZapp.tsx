@@ -2,14 +2,13 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
+import { useZappData, Message, TeamUser } from "@/hooks/useZappData";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   ZappConversationPanel,
   ZappChatView,
-  getContactInfo as getContactInfoHelper,
-  getInitials as getInitialsHelper,
   Agent,
   ZappTag,
   Department,
@@ -39,37 +38,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ClientQuickEditSheet } from "@/components/client/ClientQuickEditSheet";
 
-interface TeamUser {
-  id: string;
-  name: string;
-  email: string;
-  avatar_url: string | null;
-  role: string;
-  team_role_id: string | null;
-  team_role?: {
-    id: string;
-    name: string;
-    color: string;
-  } | null;
-}
-
-interface Message {
-  id: string;
-  content: string | null;
-  is_from_client: boolean;
-  created_at: string;
-  message_type: string;
-  media_url?: string | null;
-  media_type?: string | null;
-  media_mimetype?: string | null;
-  media_filename?: string | null;
-  audio_duration_sec?: number | null;
-  sender_name?: string | null;
-  delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
-  media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
-}
-
-
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
   pending: { label: "Aguardando", color: "text-amber-600", bgColor: "bg-amber-500" },
@@ -78,46 +46,35 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   closed: { label: "Finalizado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
-// Generate a consistent color for a sender name in group chats
-const getSenderColor = (name: string): string => {
-  const colors = [
-    '#E91E63', // Pink
-    '#9C27B0', // Purple
-    '#673AB7', // Deep Purple
-    '#3F51B5', // Indigo
-    '#2196F3', // Blue
-    '#00BCD4', // Cyan
-    '#009688', // Teal
-    '#4CAF50', // Green
-    '#8BC34A', // Light Green
-    '#FF9800', // Orange
-    '#FF5722', // Deep Orange
-    '#795548', // Brown
-  ];
-  
-  // Simple hash function based on name
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  return colors[Math.abs(hash) % colors.length];
-};
-
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const navigate = useNavigate();
+  
+  // Use centralized data hook
+  const {
+    departments,
+    tags,
+    agents,
+    teamUsers,
+    allClients,
+    assignments,
+    messages,
+    loading,
+    availableProducts,
+    clientProducts,
+    currentAgent,
+    whatsappConnected,
+    whatsappConnecting,
+    whatsappInstanceName,
+    toggleWhatsAppConnection,
+    fetchData,
+    fetchMessages,
+    setMessages,
+  } = useZappData();
+
+  // UI state
   const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings">("inbox");
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [tags, setTags] = useState<ZappTag[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
-  const [teamRoles, setTeamRoles] = useState<{ id: string; name: string; color: string }[]>([]);
-  const [allClients, setAllClients] = useState<{ id: string; full_name: string; phone_e164: string; avatar_url: string | null }[]>([]);
-  const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
@@ -125,7 +82,6 @@ export default function RoyZapp() {
   const [filterProductId, setFilterProductId] = useState<string>("all");
   const [filterTagId, setFilterTagId] = useState<string>("all");
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
-  const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -184,11 +140,6 @@ export default function RoyZapp() {
   const [savingAgent, setSavingAgent] = useState(false);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
 
-  // WhatsApp connection state
-  const [whatsappConnected, setWhatsappConnected] = useState(false);
-  const [whatsappConnecting, setWhatsappConnecting] = useState(false);
-  const [whatsappInstanceName, setWhatsappInstanceName] = useState<string | null>(null);
-
   // Transfer dialog
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<{ type: "agent" | "department"; id: string }>({ type: "agent", id: "" });
@@ -209,9 +160,6 @@ export default function RoyZapp() {
   const [taggingAssignmentId, setTaggingAssignmentId] = useState<string | null>(null);
   const [selectedConversationTags, setSelectedConversationTags] = useState<string[]>([]);
   const [savingConversationTags, setSavingConversationTags] = useState(false);
-  
-  // Client products state (for badges)
-  const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
   
   // Client quick edit sheet
   const [clientEditSheetOpen, setClientEditSheetOpen] = useState(false);
@@ -255,561 +203,12 @@ export default function RoyZapp() {
   const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
 
-  // Agent heartbeat ref - separate from data fetching
-  const agentHeartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  const lastHeartbeatRef = useRef<number>(0);
-  const HEARTBEAT_INTERVAL_MS = 60000; // Update agent status every 60 seconds (not on every fetch)
-
-  // Separate heartbeat for agent online status - only updates periodically
-  const updateAgentHeartbeat = useCallback(async (agentId: string) => {
-    const now = Date.now();
-    if (now - lastHeartbeatRef.current < HEARTBEAT_INTERVAL_MS) {
-      return; // Skip if updated recently
-    }
-    lastHeartbeatRef.current = now;
-    
-    try {
-      await supabase
-        .from("zapp_agents")
-        .update({ 
-          is_online: true, 
-          last_activity_at: new Date().toISOString() 
-        })
-        .eq("id", agentId);
-    } catch (error) {
-      console.error("Error updating agent heartbeat:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (currentUser?.account_id) {
-      fetchData();
-      checkWhatsAppStatus();
-    }
-    
-    // Cleanup heartbeat interval on unmount
-    return () => {
-      if (agentHeartbeatRef.current) {
-        clearInterval(agentHeartbeatRef.current);
-      }
-    };
-  }, [currentUser?.account_id]);
-
-  // Debounce ref for realtime updates
-  const realtimeFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastFetchTimeRef = useRef<number>(0);
-  const REALTIME_DEBOUNCE_MS = 2000; // Wait 2 seconds before fetching after realtime update
-  const MIN_FETCH_INTERVAL_MS = 3000; // Minimum 3 seconds between fetches
-
-  // Optimized fetch for realtime updates - only fetches assignments
-  const fetchAssignmentsOnly = useCallback(async () => {
-    if (!currentUser?.account_id) return;
-    
-    // Prevent fetching too frequently
-    const now = Date.now();
-    if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL_MS) {
-      return;
-    }
-    lastFetchTimeRef.current = now;
-    
-    try {
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from("zapp_conversation_assignments")
-        .select(`
-          *,
-          agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
-          department:zapp_departments(*),
-          conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
-        `)
-        .eq("account_id", currentUser.account_id)
-        .neq("status", "closed")
-        .order("updated_at", { ascending: false })
-        .limit(100);
-
-      if (assignmentsError) throw assignmentsError;
-      
-      setAssignments(assignmentsData || []);
-      
-      // Update client products for new clients
-      const clientIds = (assignmentsData || [])
-        .map((a: ConversationAssignment) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
-        .filter((id: string | null | undefined): id is string => !!id);
-      
-      if (clientIds.length > 0) {
-        const { data: cpData } = await supabase
-          .from("client_products")
-          .select("client_id, product:products(id, name, color)")
-          .in("client_id", clientIds);
-        
-        if (cpData) {
-          const productsMap: Record<string, { id: string; name: string; color?: string }[]> = {};
-          cpData.forEach((cp: any) => {
-            if (cp.client_id && cp.product) {
-              if (!productsMap[cp.client_id]) {
-                productsMap[cp.client_id] = [];
-              }
-              productsMap[cp.client_id].push({ 
-                id: cp.product.id, 
-                name: cp.product.name,
-                color: cp.product.color 
-              });
-            }
-          });
-          setClientProducts(prev => ({ ...prev, ...productsMap }));
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching assignments:", error);
-    }
-  }, [currentUser?.account_id]);
-  
-  // Debounced version for realtime updates
-  const debouncedFetchAssignments = useCallback(() => {
-    // Clear any pending fetch
-    if (realtimeFetchTimeoutRef.current) {
-      clearTimeout(realtimeFetchTimeoutRef.current);
-    }
-    
-    // Schedule a new fetch
-    realtimeFetchTimeoutRef.current = setTimeout(() => {
-      fetchAssignmentsOnly();
-    }, REALTIME_DEBOUNCE_MS);
-  }, [fetchAssignmentsOnly]);
-
-  // Realtime subscription for conversations and assignments
-  useEffect(() => {
-    if (!currentUser?.account_id) return;
-
-    const conversationsChannel = supabase
-      .channel('zapp-conversations-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'zapp_conversations',
-          filter: `account_id=eq.${currentUser.account_id}`
-        },
-        () => {
-          // Use debounced fetch to avoid constant updates
-          debouncedFetchAssignments();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'zapp_conversation_assignments',
-          filter: `account_id=eq.${currentUser.account_id}`
-        },
-        () => {
-          // Use debounced fetch to avoid constant updates
-          debouncedFetchAssignments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      // Clear pending timeout on cleanup
-      if (realtimeFetchTimeoutRef.current) {
-        clearTimeout(realtimeFetchTimeoutRef.current);
-      }
-      supabase.removeChannel(conversationsChannel);
-    };
-  }, [currentUser?.account_id, debouncedFetchAssignments]);
-
-  // Realtime subscription for messages in selected conversation
-  useEffect(() => {
-    if (!selectedConversation?.zapp_conversation_id) return;
-
-    const messagesChannel = supabase
-      .channel(`zapp-messages-${selectedConversation.zapp_conversation_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'zapp_messages',
-          filter: `zapp_conversation_id=eq.${selectedConversation.zapp_conversation_id}`
-        },
-        (payload) => {
-          console.log("Realtime new message:", payload);
-          const newMsg = payload.new as any;
-          setMessages((prev) => {
-            // Avoid duplicates - check by id or if it's a temp message being replaced
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            
-            // For outbound messages, check if we already have an optimistic version
-            // (temp messages start with "temp-")
-            if (newMsg.direction === "outbound") {
-              const hasOptimistic = prev.some(m => 
-                m.id.startsWith("temp-") && 
-                m.content === newMsg.content &&
-                !m.is_from_client
-              );
-              if (hasOptimistic) {
-                // Replace optimistic message with real one
-                const updated = prev.map(m => 
-                  m.id.startsWith("temp-") && m.content === newMsg.content && !m.is_from_client
-                    ? {
-                        id: newMsg.id,
-                        content: newMsg.content,
-                        is_from_client: false,
-                        created_at: newMsg.sent_at,
-                        message_type: newMsg.message_type || "text",
-                        media_url: newMsg.media_url,
-                        media_type: newMsg.media_type,
-                        media_mimetype: newMsg.media_mimetype,
-                        media_filename: newMsg.media_filename,
-                        audio_duration_sec: newMsg.audio_duration_sec,
-                        sender_name: newMsg.sender_name,
-                        delivery_status: newMsg.delivery_status || "sent",
-                      }
-                    : m
-                );
-                // Sort by timestamp to ensure correct order
-                return updated.sort((a, b) => 
-                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-                );
-              }
-            }
-            
-            const newMessage: Message = {
-              id: newMsg.id,
-              content: newMsg.content,
-              is_from_client: newMsg.direction === "inbound",
-              created_at: newMsg.sent_at,
-              message_type: newMsg.message_type || "text",
-              media_url: newMsg.media_url,
-              media_type: newMsg.media_type,
-              media_mimetype: newMsg.media_mimetype,
-              media_filename: newMsg.media_filename,
-              audio_duration_sec: newMsg.audio_duration_sec,
-              sender_name: newMsg.sender_name,
-              delivery_status: newMsg.delivery_status || "sent",
-            };
-            
-            // Add new message and sort by timestamp to maintain correct order
-            return [...prev, newMessage].sort((a, b) => 
-              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
-          });
-        }
-      )
-      // Also listen for updates (delivery status changes)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'zapp_messages',
-          filter: `zapp_conversation_id=eq.${selectedConversation.zapp_conversation_id}`
-        },
-        (payload) => {
-          console.log("Realtime message update:", payload);
-          const updatedMsg = payload.new as any;
-          setMessages((prev) => 
-            prev.map(m => 
-              m.id === updatedMsg.id 
-                ? { ...m, delivery_status: updatedMsg.delivery_status }
-                : m
-            )
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(messagesChannel);
-    };
-  }, [selectedConversation?.zapp_conversation_id]);
-
+  // Fetch messages when conversation is selected
   useEffect(() => {
     if (selectedConversation?.zapp_conversation_id) {
       fetchMessages(selectedConversation.zapp_conversation_id);
     }
-  }, [selectedConversation]);
-
-  const checkWhatsAppStatus = async () => {
-    try {
-      const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "status" },
-      });
-
-      if (response.data) {
-        const state = response.data?.state || response.data?.data?.state;
-        const connected = state === "open" || response.data?.connected || response.data?.data?.connected;
-        setWhatsappConnected(connected);
-        setWhatsappInstanceName(response.data?.instance || response.data?.data?.instance || null);
-      }
-    } catch (error) {
-      console.log("WhatsApp status check failed:", error);
-    }
-  };
-
-  const toggleWhatsAppConnection = async () => {
-    setWhatsappConnecting(true);
-    try {
-      if (whatsappConnected) {
-        // Disconnect
-        const response = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "disconnect" },
-        });
-
-        if (response.error) throw new Error(response.error.message);
-        
-        setWhatsappConnected(false);
-        toast.success("WhatsApp desconectado do zAPP");
-      } else {
-        // Connect - check if already connected via main integration
-        const statusResponse = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "status" },
-        });
-
-        const state = statusResponse.data?.state || statusResponse.data?.data?.state;
-        const connected = state === "open" || statusResponse.data?.connected || statusResponse.data?.data?.connected;
-
-        if (connected) {
-          setWhatsappConnected(true);
-          toast.success("WhatsApp conectado ao zAPP!");
-        } else {
-          toast.warning("Configure a conexão WhatsApp primeiro em Integrações");
-        }
-      }
-    } catch (error: any) {
-      console.error("WhatsApp toggle error:", error);
-      toast.error(error.message || "Erro ao alterar conexão WhatsApp");
-    } finally {
-      setWhatsappConnecting(false);
-    }
-  };
-
-  const fetchData = async () => {
-    if (!currentUser?.account_id) return;
-    setLoading(true);
-
-    try {
-      const [
-        { data: depts, error: deptsError },
-        { data: agentsData, error: agentsError },
-        { data: usersData, error: usersError },
-        { data: rolesData, error: rolesError },
-        { data: assignmentsData, error: assignmentsError },
-        { data: tagsData, error: tagsError },
-      ] = await Promise.all([
-        supabase
-          .from("zapp_departments")
-          .select("*")
-          .eq("account_id", currentUser.account_id)
-          .order("display_order"),
-        supabase
-          .from("zapp_agents")
-          .select(`
-            *,
-            user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id),
-            department:zapp_departments(*)
-          `)
-          .eq("account_id", currentUser.account_id)
-          .order("created_at"),
-        supabase
-          .from("users")
-          .select("id, name, email, avatar_url, role, team_role_id, team_role:team_roles(id, name, color)")
-          .eq("account_id", currentUser.account_id)
-          .order("name"),
-        supabase
-          .from("team_roles")
-          .select("id, name, color")
-          .eq("account_id", currentUser.account_id)
-          .order("display_order"),
-        supabase
-          .from("zapp_conversation_assignments")
-          .select(`
-            *,
-            agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
-            department:zapp_departments(*),
-            conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
-          `)
-          .eq("account_id", currentUser.account_id)
-          .neq("status", "closed")
-          .order("updated_at", { ascending: false })
-          .limit(100),
-        supabase
-          .from("zapp_tags")
-          .select("*")
-          .eq("account_id", currentUser.account_id)
-          .order("display_order"),
-      ]);
-
-      if (deptsError) throw deptsError;
-      if (agentsError) throw agentsError;
-      if (usersError) throw usersError;
-      if (rolesError) throw rolesError;
-      if (assignmentsError) throw assignmentsError;
-      if (tagsError) throw tagsError;
-
-      setDepartments(depts || []);
-      setTeamUsers((usersData || []) as TeamUser[]);
-      setTeamRoles(rolesData || []);
-      setAssignments(assignmentsData || []);
-      setTags(tagsData || []);
-      
-      // Fetch available products for filter dropdown
-      const { data: productsData } = await supabase
-        .from("products")
-        .select("id, name, color")
-        .eq("account_id", currentUser.account_id)
-        .eq("is_active", true)
-        .order("name");
-      
-      setAvailableProducts(productsData || []);
-      
-      // Fetch all clients for contact picker
-      const { data: clientsData } = await supabase
-        .from("clients")
-        .select("id, full_name, phone_e164, avatar_url")
-        .eq("account_id", currentUser.account_id)
-        .eq("status", "active")
-        .order("full_name")
-        .limit(500);
-      
-      setAllClients(clientsData || []);
-      // Fetch products for all clients in the conversations
-      const clientIds = (assignmentsData || [])
-        .map((a: ConversationAssignment) => a.zapp_conversation?.client_id || a.conversation?.client?.id)
-        .filter((id: string | null | undefined): id is string => !!id);
-      
-      if (clientIds.length > 0) {
-        const { data: cpData } = await supabase
-          .from("client_products")
-          .select("client_id, product:products(id, name, color)")
-          .in("client_id", clientIds);
-        
-        if (cpData) {
-          const productsMap: Record<string, { id: string; name: string; color?: string }[]> = {};
-          cpData.forEach((cp: any) => {
-            if (cp.client_id && cp.product) {
-              if (!productsMap[cp.client_id]) {
-                productsMap[cp.client_id] = [];
-              }
-              productsMap[cp.client_id].push({ 
-                id: cp.product.id, 
-                name: cp.product.name,
-                color: cp.product.color 
-              });
-            }
-          });
-          setClientProducts(productsMap);
-        }
-      }
-      
-      // Check if current user is already an agent, if not, auto-register
-      let finalAgents = agentsData || [];
-      const existingAgent = finalAgents.find((a: Agent) => a.user_id === currentUser.id);
-      
-      if (!existingAgent) {
-        // Auto-register current user as agent
-        const { data: newAgent, error: createError } = await supabase
-          .from("zapp_agents")
-          .insert({
-            account_id: currentUser.account_id,
-            user_id: currentUser.id,
-            is_online: true,
-            last_activity_at: new Date().toISOString(),
-          })
-          .select(`
-            *,
-            user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id),
-            department:zapp_departments(*)
-          `)
-          .single();
-        
-        if (!createError && newAgent) {
-          finalAgents = [...finalAgents, newAgent];
-          console.log("Auto-registered as agent:", newAgent.id);
-        } else if (createError) {
-          console.error("Error auto-registering agent:", createError);
-        }
-      } else {
-        // Set up periodic heartbeat for existing agent (instead of updating on every fetch)
-        if (agentHeartbeatRef.current) {
-          clearInterval(agentHeartbeatRef.current);
-        }
-        
-        // Initial heartbeat
-        updateAgentHeartbeat(existingAgent.id);
-        
-        // Set up periodic heartbeat
-        agentHeartbeatRef.current = setInterval(() => {
-          updateAgentHeartbeat(existingAgent.id);
-        }, HEARTBEAT_INTERVAL_MS);
-      }
-      
-      setAgents(finalAgents);
-    } catch (error: any) {
-      console.error("Error fetching zapp data:", error);
-      toast.error("Erro ao carregar dados");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMessages = async (zappConversationId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status")
-        .eq("zapp_conversation_id", zappConversationId)
-        .order("sent_at", { ascending: true })
-        .limit(100);
-
-      if (error) throw error;
-      
-      const msgs = (data || []).map((m: any) => ({
-        id: m.id,
-        content: m.content,
-        is_from_client: m.direction === "inbound",
-        created_at: m.sent_at,
-        message_type: m.message_type || "text",
-        media_url: m.media_url,
-        media_type: m.media_type,
-        media_mimetype: m.media_mimetype,
-        media_filename: m.media_filename,
-        audio_duration_sec: m.audio_duration_sec,
-        sender_name: m.sender_name,
-        delivery_status: m.delivery_status,
-        media_download_status: m.media_download_status,
-      }));
-      
-      setMessages(msgs);
-      
-      // Trigger lazy download for pending media
-      const pendingMediaIds = (data || [])
-        .filter((m: any) => m.media_download_status === "pending")
-        .map((m: any) => m.id);
-      
-      if (pendingMediaIds.length > 0) {
-        console.log(`Triggering lazy download for ${pendingMediaIds.length} media messages`);
-        // Fire and forget - don't await
-        supabase.functions.invoke("download-media", {
-          body: { message_ids: pendingMediaIds }
-        }).then(({ data: downloadResult, error: downloadError }) => {
-          if (downloadError) {
-            console.error("Error triggering media download:", downloadError);
-          } else if (downloadResult?.successful > 0) {
-            console.log(`Downloaded ${downloadResult.successful} media files`);
-            // Refresh messages to show downloaded media
-            fetchMessages(zappConversationId);
-          }
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-    }
-  };
-
+  }, [selectedConversation, fetchMessages]);
   // Department functions
   const openDepartmentDialog = (dept?: Department) => {
     if (dept) {
