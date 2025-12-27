@@ -2811,7 +2811,7 @@ export default function RoyZapp() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56 z-50">
-                              {zappConvId && (
+                              {zappConvId ? (
                                 <>
                                   <DropdownMenuItem 
                                     className="text-zapp-text hover:bg-zapp-hover"
@@ -2895,7 +2895,7 @@ export default function RoyZapp() {
                                     Apagar conversa
                                   </DropdownMenuItem>
                                 </>
-                              )}
+                              ) : null}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
