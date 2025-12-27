@@ -52,17 +52,31 @@ export function IntegrationsContent() {
   const [evolutionInstanceName, setEvolutionInstanceName] = useState("");
   const [savingEvolution, setSavingEvolution] = useState(false);
 
-  const availableIntegrations = [
-    { id: "openai", name: "OpenAI", description: "Conecte sua API Key para análise de IA avançada", icon: Brain, category: "IA" },
-    { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video, category: "Videoconferência" },
-    { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar, category: "Videoconferência" },
-    { id: "whatsapp", name: "WhatsApp Web", description: "Captura de mensagens via Chrome Extension", icon: MessageSquare, category: "Comunicação" },
-    { id: "evolution", name: "Evolution API", description: "WhatsApp API estável via webhooks", icon: MessageSquare, category: "Comunicação" },
-    { id: "pipedrive", name: "Pipedrive", description: "Cadastre clientes ao fechar vendas", icon: Users, category: "CRM" },
-    { id: "liberty", name: "Liberty", description: "Receba mensagens WhatsApp e dados de CRM", icon: Webhook, category: "CRM" },
-    { id: "ryka", name: "Clínica Ryka", description: "Receba metas e vendas automaticamente", icon: TrendingUp, category: "Vendas" },
-    { id: "omie", name: "Omie", description: "Sincronize dados financeiros e pagamentos", icon: DollarSign, category: "Financeiro" },
-  ];
+  const integrationsBySector = {
+    operacoes: [
+      { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
+      { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
+      { id: "whatsapp", name: "WhatsApp Web", description: "Captura de mensagens via Chrome Extension", icon: MessageSquare },
+      { id: "evolution", name: "Evolution API", description: "WhatsApp API estável via webhooks", icon: Webhook },
+      { id: "openai", name: "OpenAI", description: "Conecte sua API Key para análise de IA avançada", icon: Brain },
+    ],
+    financeiro: [
+      { id: "omie", name: "Omie", description: "Sincronize dados financeiros e pagamentos", icon: DollarSign },
+    ],
+    vendas: [
+      { id: "pipedrive", name: "Pipedrive", description: "Cadastre clientes ao fechar vendas", icon: Users },
+      { id: "liberty", name: "Liberty", description: "Receba mensagens WhatsApp e dados de CRM", icon: Webhook },
+      { id: "ryka", name: "Clínica Ryka", description: "Receba metas e vendas automaticamente", icon: TrendingUp },
+    ],
+  };
+
+  const sectorLabels: Record<string, { name: string; color: string }> = {
+    operacoes: { name: "Operações", color: "text-primary" },
+    financeiro: { name: "Finanças", color: "text-emerald-600" },
+    vendas: { name: "Vendas", color: "text-blue-600" },
+  };
+
+  const availableIntegrations = Object.values(integrationsBySector).flat();
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   
@@ -430,84 +444,116 @@ export function IntegrationsContent() {
                 Selecione uma ferramenta para integrar ao ROY
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-3 py-4">
-              {availableIntegrations.map((integration) => {
-                const Icon = integration.icon;
-                const connectedIntegration = integrations.find(i => i.type === integration.id);
-                const isConnected = connectedIntegration?.status === "connected";
-                return (
-                  <button
-                    key={integration.id}
-                    onClick={() => {
-                      setActiveTab(integration.id);
-                      setNewIntegrationOpen(false);
-                    }}
-                    className="flex items-center gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-left"
-                  >
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{integration.name}</h4>
-                        {isConnected && (
-                          <Badge variant="default" className="text-xs gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Conectado
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{integration.description}</p>
-                      <span className="text-xs text-muted-foreground">{integration.category}</span>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="space-y-6 py-4">
+              {Object.entries(integrationsBySector).map(([sectorKey, sectorIntegrations]) => (
+                <div key={sectorKey}>
+                  <h4 className={`font-semibold mb-3 ${sectorLabels[sectorKey]?.color || 'text-foreground'}`}>
+                    {sectorLabels[sectorKey]?.name || sectorKey}
+                  </h4>
+                  <div className="grid gap-2">
+                    {sectorIntegrations.map((integration) => {
+                      const Icon = integration.icon;
+                      const connectedIntegration = integrations.find(i => i.type === integration.id);
+                      const isConnected = connectedIntegration?.status === "connected";
+                      return (
+                        <button
+                          key={integration.id}
+                          onClick={() => {
+                            setActiveTab(integration.id);
+                            setNewIntegrationOpen(false);
+                          }}
+                          className="flex items-center gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className="p-2 bg-primary/10 rounded-lg">
+                            <Icon className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{integration.name}</h4>
+                              {isConnected && (
+                                <Badge variant="default" className="text-xs gap-1">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Conectado
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{integration.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="overflow-x-auto pb-2">
-          <TabsList className="inline-flex h-auto gap-1 p-1 flex-wrap sm:flex-nowrap">
-            <TabsTrigger value="openai" className="gap-2 px-3 py-2">
-              <Brain className="h-4 w-4" />
-              <span>OpenAI</span>
-            </TabsTrigger>
-            <TabsTrigger value="zoom" className="gap-2 px-3 py-2">
-              <Video className="h-4 w-4" />
-              <span>Zoom</span>
-            </TabsTrigger>
-            <TabsTrigger value="google" className="gap-2 px-3 py-2">
-              <Calendar className="h-4 w-4" />
-              <span>Meet</span>
-            </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="gap-2 px-3 py-2">
-              <MessageSquare className="h-4 w-4" />
-              <span>WhatsApp</span>
-            </TabsTrigger>
-            <TabsTrigger value="evolution" className="gap-2 px-3 py-2">
-              <Webhook className="h-4 w-4" />
-              <span>Evolution</span>
-            </TabsTrigger>
-            <TabsTrigger value="pipedrive" className="gap-2 px-3 py-2">
-              <Users className="h-4 w-4" />
-              <span>Pipedrive</span>
-            </TabsTrigger>
-            <TabsTrigger value="liberty" className="gap-2 px-3 py-2">
-              <Webhook className="h-4 w-4" />
-              <span>Liberty</span>
-            </TabsTrigger>
-            <TabsTrigger value="ryka" className="gap-2 px-3 py-2">
-              <TrendingUp className="h-4 w-4" />
-              <span>Ryka</span>
-            </TabsTrigger>
-            <TabsTrigger value="omie" className="gap-2 px-3 py-2">
-              <DollarSign className="h-4 w-4" />
-              <span>Omie</span>
-            </TabsTrigger>
-          </TabsList>
+        <div className="space-y-3">
+          {/* Operações */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-primary">Operações</h4>
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex h-auto gap-1 p-1">
+                <TabsTrigger value="zoom" className="gap-2 px-3 py-2">
+                  <Video className="h-4 w-4" />
+                  <span>Zoom</span>
+                </TabsTrigger>
+                <TabsTrigger value="google" className="gap-2 px-3 py-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Meet</span>
+                </TabsTrigger>
+                <TabsTrigger value="whatsapp" className="gap-2 px-3 py-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>WhatsApp</span>
+                </TabsTrigger>
+                <TabsTrigger value="evolution" className="gap-2 px-3 py-2">
+                  <Webhook className="h-4 w-4" />
+                  <span>Evolution</span>
+                </TabsTrigger>
+                <TabsTrigger value="openai" className="gap-2 px-3 py-2">
+                  <Brain className="h-4 w-4" />
+                  <span>OpenAI</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+
+          {/* Finanças */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-emerald-600">Finanças</h4>
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex h-auto gap-1 p-1">
+                <TabsTrigger value="omie" className="gap-2 px-3 py-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Omie</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
+
+          {/* Vendas */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-blue-600">Vendas</h4>
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex h-auto gap-1 p-1">
+                <TabsTrigger value="pipedrive" className="gap-2 px-3 py-2">
+                  <Users className="h-4 w-4" />
+                  <span>Pipedrive</span>
+                </TabsTrigger>
+                <TabsTrigger value="liberty" className="gap-2 px-3 py-2">
+                  <Webhook className="h-4 w-4" />
+                  <span>Liberty</span>
+                </TabsTrigger>
+                <TabsTrigger value="ryka" className="gap-2 px-3 py-2">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Ryka</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
         </div>
 
         {/* OpenAI Tab */}
