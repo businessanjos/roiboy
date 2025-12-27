@@ -20,6 +20,16 @@ interface ZappMessageBubbleProps {
   isGroup: boolean;
 }
 
+// Function to extract domain from URL for display
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace('www.', '');
+  } catch {
+    return url.substring(0, 30);
+  }
+}
+
 // Function to detect and render links in text
 function renderTextWithLinks(text: string): React.ReactNode {
   // URL regex pattern
@@ -35,16 +45,17 @@ function renderTextWithLinks(text: string): React.ReactNode {
     if (urlRegex.test(part)) {
       // Reset regex lastIndex
       urlRegex.lastIndex = 0;
+      const domain = extractDomain(part);
       return (
         <a
           key={index}
           href={part}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-400 hover:text-blue-300 underline break-all"
+          className="inline-flex items-center gap-1 text-[#53bdeb] hover:text-[#7dd3fc] underline underline-offset-2"
           onClick={(e) => e.stopPropagation()}
         >
-          {part.length > 50 ? `${part.substring(0, 50)}...` : part}
+          🔗 {domain}
         </a>
       );
     }
