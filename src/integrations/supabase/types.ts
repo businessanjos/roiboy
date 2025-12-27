@@ -6284,6 +6284,16 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_dre_report: {
+        Args: { p_account_id: string; p_end_date: string; p_start_date: string }
+        Returns: {
+          category_id: string
+          category_name: string
+          category_type: string
+          display_order: number
+          total_amount: number
+        }[]
+      }
       get_event_by_registration_code: {
         Args: { p_code: string }
         Returns: {
