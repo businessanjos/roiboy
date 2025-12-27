@@ -1,11 +1,15 @@
-import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { toast } from "sonner";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ZappConversationItem } from "@/components/royzapp/ZappConversationItem";
+import { 
+  ZappMessagesList,
+  getContactInfo as getContactInfoHelper,
+  getInitials as getInitialsHelper,
+} from "@/components/royzapp";
 import {
   MessageSquare,
   Users,
@@ -312,7 +316,6 @@ export default function RoyZapp() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
   // Distribution settings state (persisted to localStorage)
@@ -703,13 +706,6 @@ export default function RoyZapp() {
       fetchMessages(selectedConversation.zapp_conversation_id);
     }
   }, [selectedConversation]);
-
-  // Auto-scroll to bottom when messages change or conversation is selected
-  useLayoutEffect(() => {
-    if (messagesEndRef.current && messages.length > 0) {
-      messagesEndRef.current.scrollIntoView({ behavior: "instant" });
-    }
-  }, [messages, selectedConversation?.zapp_conversation_id]);
 
   const checkWhatsAppStatus = async () => {
     try {
@@ -3882,168 +3878,11 @@ export default function RoyZapp() {
           </div>
         </div>
 
-        {/* Messages */}
-        <ScrollArea className="flex-1 px-4 py-2">
-          <div className="space-y-1">
-            {messages.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
-              </div>
-            ) : (
-              messages.map((message, index) => {
-                const showTimestamp = index === 0 ||
-                  new Date(message.created_at).toDateString() !== new Date(messages[index - 1].created_at).toDateString();
-
-                return (
-                  <div key={message.id}>
-                    {showTimestamp && (
-                      <div className="flex justify-center my-3">
-                        <span className="bg-zapp-panel text-zapp-text-muted text-xs px-3 py-1 rounded-lg shadow">
-                          {format(new Date(message.created_at), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                        </span>
-                      </div>
-                    )}
-                    <div className={cn(
-                      "flex mb-1",
-                      message.is_from_client ? "justify-start" : "justify-end"
-                    )}>
-                      <div className={cn(
-                        "max-w-[65%] px-3 py-2 rounded-lg relative shadow",
-                        message.is_from_client
-                          ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
-                          : "bg-zapp-message-out text-zapp-text rounded-tr-none"
-                      )}>
-                        {/* Sender name for group messages */}
-                        {message.is_from_client && contactInfo.isGroup && message.sender_name && (
-                          <p 
-                            className="text-xs font-medium mb-1"
-                            style={{ color: getSenderColor(message.sender_name) }}
-                          >
-                            {message.sender_name}
-                          </p>
-                        )}
-                        {/* Media content - show loading state for pending downloads */}
-                        {message.media_download_status === "pending" && message.media_type && (
-                          <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
-                            <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
-                            <span className="text-xs text-zapp-text-muted">Carregando mídia...</span>
-                          </div>
-                        )}
-                        {message.media_download_status === "failed" && message.media_type && (
-                          <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
-                            <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                            <span className="text-xs text-zapp-text-muted">Falha ao carregar mídia</span>
-                          </div>
-                        )}
-                        {message.media_url && message.media_type === "image" && (
-                          <div className="mb-2 rounded-lg overflow-hidden">
-                            <img 
-                              src={message.media_url} 
-                              alt="Imagem"
-                              className="max-w-full max-h-72 object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                              onClick={() => window.open(message.media_url!, '_blank')}
-                            />
-                          </div>
-                        )}
-                        {message.media_url && message.media_type === "audio" && (
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="flex items-center gap-2 bg-black/20 rounded-full px-3 py-2 min-w-[200px]">
-                              <Mic className="h-4 w-4 text-zapp-text-muted" />
-                              <audio 
-                                controls 
-                                className="h-8 max-w-[180px]" 
-                                style={{ width: '100%' }}
-                              >
-                                <source src={message.media_url} type={message.media_mimetype || "audio/ogg"} />
-                              </audio>
-                              {message.audio_duration_sec && (
-                                <span className="text-[10px] text-zapp-text-muted">
-                                  {Math.floor(message.audio_duration_sec / 60)}:{(message.audio_duration_sec % 60).toString().padStart(2, '0')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        {message.media_url && message.media_type === "video" && (
-                          <div className="mb-2 rounded-lg overflow-hidden">
-                            <video 
-                              src={message.media_url} 
-                              controls
-                              className="max-w-full max-h-72"
-                            />
-                          </div>
-                        )}
-                        {message.media_url && message.media_type === "document" && (
-                          <a 
-                            href={message.media_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 bg-black/20 rounded-lg px-3 py-2 mb-2 hover:bg-black/30 transition-colors"
-                          >
-                            <FileText className="h-8 w-8 text-zapp-text-muted" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-zapp-text text-sm truncate">
-                                {message.media_filename || "Documento"}
-                              </p>
-                              <p className="text-zapp-text-muted text-xs">Clique para baixar</p>
-                            </div>
-                            <Download className="h-4 w-4 text-zapp-text-muted" />
-                          </a>
-                        )}
-                        {message.media_url && message.media_type === "sticker" && (
-                          <div className="mb-2">
-                            <img 
-                              src={message.media_url} 
-                              alt="Figurinha"
-                              className="max-w-[150px] max-h-[150px] object-contain"
-                            />
-                          </div>
-                        )}
-                        
-                        {/* Text content (hide for audio-only messages) */}
-                        {(message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") && (
-                          <p className="text-sm whitespace-pre-wrap break-words">
-                            {message.content}
-                          </p>
-                        )}
-                        {(!message.content && !message.media_url) && (
-                          <p className="text-sm whitespace-pre-wrap break-words opacity-50">
-                            [Mensagem não suportada]
-                          </p>
-                        )}
-                        <div className={cn(
-                          "flex items-center justify-end gap-1 mt-1",
-                          message.is_from_client ? "text-zapp-text-muted" : "opacity-70"
-                        )}>
-                          <span className="text-[10px]">
-                            {format(new Date(message.created_at), "HH:mm")}
-                          </span>
-                          {!message.is_from_client && (
-                            <>
-                              {message.delivery_status === "failed" ? (
-                                <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
-                              ) : message.delivery_status === "read" ? (
-                                <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
-                              ) : message.delivery_status === "delivered" ? (
-                                <CheckCheck className="h-3.5 w-3.5 text-zapp-text-muted" />
-                              ) : message.delivery_status === "pending" ? (
-                                <Clock className="h-3 w-3 text-zapp-text-muted" />
-                              ) : (
-                                // sent or default
-                                <Check className="h-3.5 w-3.5 text-zapp-text-muted" />
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+        {/* Messages - Using memoized component */}
+        <ZappMessagesList 
+          messages={messages} 
+          isGroup={contactInfo.isGroup} 
+        />
 
         {/* Formatting toolbar */}
         {showFormatting && (
