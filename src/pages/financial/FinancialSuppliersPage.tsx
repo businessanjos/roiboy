@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit2, Trash2, Truck, Building2, Download, Upload } from "lucide-react";
+import { Plus, Edit2, Trash2, Truck, Building2, Download, Upload, FileSpreadsheet } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -304,6 +304,114 @@ export default function FinancialSuppliersPage() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "Nome",
+      "Tipo Doc",
+      "Documento",
+      "E-mail",
+      "Telefone",
+      "Contato",
+      "Rua",
+      "Número",
+      "Complemento",
+      "Bairro",
+      "Cidade",
+      "Estado",
+      "CEP",
+      "Banco",
+      "Agência",
+      "Conta",
+      "PIX",
+      "Observações",
+      "Ativo",
+    ];
+
+    // Exemplo com dados fictícios para facilitar o entendimento
+    const exampleRows = [
+      [
+        "Fornecedor Exemplo LTDA",
+        "cnpj",
+        "12.345.678/0001-99",
+        "contato@fornecedor.com.br",
+        "(11) 99999-9999",
+        "João Silva",
+        "Rua das Flores",
+        "123",
+        "Sala 45",
+        "Centro",
+        "São Paulo",
+        "SP",
+        "01234-567",
+        "Banco do Brasil",
+        "1234-5",
+        "12345-6",
+        "12345678901234",
+        "Fornecedor de materiais de escritório",
+        "Sim",
+      ],
+      [
+        "Maria Prestadora de Serviços",
+        "cpf",
+        "123.456.789-00",
+        "maria@email.com",
+        "(21) 98888-7777",
+        "",
+        "Av. Principal",
+        "456",
+        "",
+        "Jardins",
+        "Rio de Janeiro",
+        "RJ",
+        "22222-000",
+        "Itaú",
+        "0001",
+        "98765-4",
+        "maria@email.com",
+        "Consultoria e treinamentos",
+        "Sim",
+      ],
+      [
+        "", // Linha em branco para o usuário preencher
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+    ];
+
+    const csvContent =
+      "\uFEFF" +
+      [
+        headers.join(";"),
+        ...exampleRows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")),
+      ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "modelo_importacao_fornecedores.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Modelo baixado!", description: "Preencha e importe o arquivo." });
+  };
+
   const handleEdit = (supplier: Supplier) => {
     setEditingSupplier(supplier);
     setFormData({
@@ -353,7 +461,16 @@ export default function FinancialSuppliersPage() {
                 </CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadTemplate}
+                title="Baixar modelo de importação"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Modelo
+              </Button>
               <Button
                 variant="outline"
                 size="icon"
