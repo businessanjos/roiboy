@@ -85,7 +85,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { to: "/presentation", icon: Presentation, label: "Apresentação" },
+  { to: "/sobre", icon: Presentation, label: "Apresentação" },
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: PERMISSIONS.REPORTS_VIEW },
   { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
   { to: "/team", icon: UserCircle, label: "Equipe", permission: PERMISSIONS.TEAM_VIEW },

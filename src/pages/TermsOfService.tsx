@@ -7,7 +7,7 @@ export default function TermsOfService() {
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <Button variant="ghost" asChild className="mb-6">
-          <Link to="/">
+          <Link to="/home">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Link>

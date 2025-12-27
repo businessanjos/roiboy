@@ -115,7 +115,6 @@ const App = () => (
                             <Route path="/team" element={<Team />} />
                             <Route path="/profile" element={<Profile />} />
                             <Route path="/notifications" element={<Notifications />} />
-                            <Route path="/presentation" element={<Presentation />} />
                             <Route path="/api-docs" element={<ApiDocs />} />
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/account-settings" element={<AccountSettings />} />
