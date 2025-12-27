@@ -1641,10 +1641,12 @@ export default function RoyZapp() {
     const myUnreadCount = assignments.filter((a) => 
       a.agent_id === currentAgent?.id && 
       a.status !== "closed" && 
+      !a.zapp_conversation?.is_archived &&
       (a.zapp_conversation?.unread_count || 0) > 0
     ).length;
     const queueUnreadCount = assignments.filter((a) => 
       a.status !== "closed" && 
+      !a.zapp_conversation?.is_archived &&
       (a.zapp_conversation?.unread_count || 0) > 0
     ).length;
     
