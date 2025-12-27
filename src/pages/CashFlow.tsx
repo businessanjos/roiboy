@@ -14,8 +14,10 @@ import {
   Calendar,
   ArrowUpCircle,
   ArrowDownCircle,
-  BarChart3
+  BarChart3,
+  AlertTriangle
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, addWeeks, addMonths, isWithinInterval, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, ComposedChart, Line } from "recharts";
@@ -66,6 +68,54 @@ export default function CashFlow() {
     },
     enabled: !!accountId,
   });
+
+  // Fetch overdue entries
+  const { data: overdueEntries, isLoading: loadingOverdue } = useQuery({
+    queryKey: ["financial-entries-overdue", accountId],
+    queryFn: async () => {
+      const today = format(new Date(), "yyyy-MM-dd");
+      
+      const { data, error } = await supabase
+        .from("financial_entries")
+        .select("*, bank_accounts(name, color), financial_categories(name, color), clients(full_name)")
+        .eq("account_id", accountId!)
+        .in("status", ["pending", "scheduled"])
+        .lt("due_date", today)
+        .order("due_date", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!accountId,
+  });
+
+  // Overdue summary
+  const overdueSummary = useMemo(() => {
+    if (!overdueEntries?.length) return null;
+
+    const filteredOverdue = selectedBankId === "all"
+      ? overdueEntries
+      : overdueEntries.filter(e => e.bank_account_id === selectedBankId);
+
+    const overdueReceivables = filteredOverdue
+      .filter(e => e.entry_type === "receivable")
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const overduePayables = filteredOverdue
+      .filter(e => e.entry_type === "payable")
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const receivableCount = filteredOverdue.filter(e => e.entry_type === "receivable").length;
+    const payableCount = filteredOverdue.filter(e => e.entry_type === "payable").length;
+
+    return {
+      receivables: overdueReceivables,
+      payables: overduePayables,
+      receivableCount,
+      payableCount,
+      total: overdueReceivables + overduePayables,
+      entries: filteredOverdue
+    };
+  }, [overdueEntries, selectedBankId]);
 
   // Calculate projections
   const projectionData = useMemo(() => {
@@ -170,7 +220,7 @@ export default function CashFlow() {
     }).format(value);
   };
 
-  const isLoading = loadingBanks || loadingEntries;
+  const isLoading = loadingBanks || loadingEntries || loadingOverdue;
 
   return (
     <div className="container mx-auto p-6 max-w-7xl space-y-6">
@@ -222,15 +272,53 @@ export default function CashFlow() {
           </div>
         </div>
 
+        {/* Overdue Alert */}
+        {overdueSummary && overdueSummary.total > 0 && (
+          <Alert variant="destructive" className="border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Lançamentos em Atraso</AlertTitle>
+            <AlertDescription className="mt-2">
+              <div className="flex flex-wrap gap-4">
+                {overdueSummary.receivableCount > 0 && (
+                  <span>
+                    <strong className="text-green-600">{formatCurrency(overdueSummary.receivables)}</strong> a receber ({overdueSummary.receivableCount} {overdueSummary.receivableCount === 1 ? 'lançamento' : 'lançamentos'})
+                  </span>
+                )}
+                {overdueSummary.payableCount > 0 && (
+                  <span>
+                    <strong className="text-red-600">{formatCurrency(overdueSummary.payables)}</strong> a pagar ({overdueSummary.payableCount} {overdueSummary.payableCount === 1 ? 'lançamento' : 'lançamentos'})
+                  </span>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Summary Cards */}
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-4">
-            {[1, 2, 3, 4].map(i => (
+          <div className="grid gap-4 md:grid-cols-5">
+            {[1, 2, 3, 4, 5].map(i => (
               <Skeleton key={i} className="h-[120px]" />
             ))}
           </div>
         ) : summary && (
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
+            {/* Overdue Card */}
+            <Card className={overdueSummary?.total ? "border-orange-500/50" : ""}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Em Atraso</CardTitle>
+                <AlertTriangle className={`h-4 w-4 ${overdueSummary?.total ? "text-orange-500" : "text-muted-foreground"}`} />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${overdueSummary?.total ? "text-orange-500" : "text-muted-foreground"}`}>
+                  {formatCurrency(overdueSummary?.total || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {(overdueSummary?.receivableCount || 0) + (overdueSummary?.payableCount || 0)} lançamentos
+                </p>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">A Receber</CardTitle>
@@ -500,6 +588,77 @@ export default function CashFlow() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Overdue Table */}
+        {overdueSummary && overdueSummary.entries.length > 0 && (
+          <Card className="border-orange-500/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <AlertTriangle className="h-5 w-5" />
+                Lançamentos em Atraso
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="py-3 px-4 text-left font-medium">Vencimento</th>
+                      <th className="py-3 px-4 text-left font-medium">Descrição</th>
+                      <th className="py-3 px-4 text-left font-medium">Cliente/Fornecedor</th>
+                      <th className="py-3 px-4 text-left font-medium">Categoria</th>
+                      <th className="py-3 px-4 text-center font-medium">Tipo</th>
+                      <th className="py-3 px-4 text-right font-medium">Valor</th>
+                      <th className="py-3 px-4 text-center font-medium">Dias Atraso</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overdueSummary.entries.map((entry) => {
+                      const daysOverdue = Math.floor((new Date().getTime() - new Date(entry.due_date).getTime()) / (1000 * 60 * 60 * 24));
+                      return (
+                        <tr key={entry.id} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-4 font-medium">
+                            {format(new Date(entry.due_date), "dd/MM/yyyy")}
+                          </td>
+                          <td className="py-3 px-4">{entry.description}</td>
+                          <td className="py-3 px-4">
+                            {(entry.clients as any)?.full_name || "-"}
+                          </td>
+                          <td className="py-3 px-4">
+                            {(entry.financial_categories as any)?.name && (
+                              <Badge 
+                                variant="outline" 
+                                style={{ 
+                                  borderColor: (entry.financial_categories as any)?.color || undefined,
+                                  color: (entry.financial_categories as any)?.color || undefined
+                                }}
+                              >
+                                {(entry.financial_categories as any)?.name}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <Badge variant={entry.entry_type === "receivable" ? "default" : "destructive"}>
+                              {entry.entry_type === "receivable" ? "Receber" : "Pagar"}
+                            </Badge>
+                          </td>
+                          <td className={`py-3 px-4 text-right font-medium ${entry.entry_type === "receivable" ? "text-green-600" : "text-red-600"}`}>
+                            {formatCurrency(entry.amount || 0)}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <Badge variant="outline" className="text-orange-600 border-orange-500">
+                              {daysOverdue} {daysOverdue === 1 ? 'dia' : 'dias'}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Details Table */}
         <Card>
