@@ -2804,7 +2804,7 @@ export default function RoyZapp() {
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zapp-text-muted hover:bg-zapp-hover"
+                                className="h-6 w-6 text-zapp-text-muted hover:bg-zapp-hover"
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
