@@ -151,6 +151,21 @@ function normalizePhone(phone: string | undefined): string {
 }
 
 serve(async (req) => {
+  // ============ LATENCY MONITORING ============
+  const latencyMarks: { step: string; timestamp: number; elapsed: number }[] = [];
+  const startTime = Date.now();
+  
+  const markLatency = (step: string) => {
+    const now = Date.now();
+    latencyMarks.push({
+      step,
+      timestamp: now,
+      elapsed: now - startTime
+    });
+  };
+  
+  markLatency("webhook_received");
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -159,8 +174,22 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    markLatency("supabase_client_created");
 
     const payload: UazapiWebhookPayload = await req.json();
+    
+    markLatency("payload_parsed");
+    
+    // Extract message timestamp from payload for end-to-end latency calculation
+    const msgTimestamp = payload.message?.timestamp;
+    let messageOriginTime: number | null = null;
+    if (msgTimestamp) {
+      // UAZAPI sends timestamp in seconds
+      messageOriginTime = Number(msgTimestamp) * 1000;
+      const webhookDelay = startTime - messageOriginTime;
+      console.log(`[LATENCY] Message origin → Webhook received: ${webhookDelay}ms (UAZAPI provider delay)`);
+    }
     
     // Log the raw payload for debugging
     console.log("UAZAPI Webhook raw payload:", JSON.stringify(payload).substring(0, 1000));
@@ -231,6 +260,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
+    
+    markLatency("integration_found");
 
     const accountId = integration.account_id;
     console.log(`Processing for account: ${accountId}`);
@@ -616,6 +647,8 @@ serve(async (req) => {
             .from("zapp_conversations")
             .update(updateData)
             .eq("id", zappConversationId);
+          
+          markLatency("conversation_updated");
         } else {
           // Find client if exists (to link) - only for direct messages
           let clientId = null;
@@ -731,6 +764,7 @@ serve(async (req) => {
               if (zappMsgError) {
                 console.error("Error saving zapp_message:", zappMsgError);
               } else {
+                markLatency("message_saved");
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
               }
             }
@@ -753,6 +787,7 @@ serve(async (req) => {
                 status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
               })
               .eq("id", existingAssignment.id);
+            markLatency("assignment_updated");
             console.log("Updated existing zapp assignment");
           } else {
             const { error: assignmentError } = await supabase
@@ -891,9 +926,20 @@ serve(async (req) => {
         } else if (direction === "outbound") {
           console.log(`Outbound message saved to Zapp`);
         }
+        
+        // Log final latency summary
+        markLatency("processing_complete");
+        console.log(`[LATENCY SUMMARY] Total processing: ${Date.now() - startTime}ms`);
+        console.log(`[LATENCY DETAILS]`, JSON.stringify(latencyMarks));
 
         return new Response(
-          JSON.stringify({ success: true, zapp_conversation_id: zappConversationId, phone }),
+          JSON.stringify({ 
+            success: true, 
+            zapp_conversation_id: zappConversationId, 
+            phone,
+            latency_ms: Date.now() - startTime,
+            latency_breakdown: latencyMarks
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
