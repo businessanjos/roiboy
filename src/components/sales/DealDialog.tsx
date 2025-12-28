@@ -167,12 +167,27 @@ export function DealDialog({
           .order("name"),
       ]);
 
-      if (clientsRes.data) setClients(clientsRes.data);
+      let clientList = clientsRes.data || [];
+      
+      // If deal has a client that's not in the list, fetch it separately
+      if (deal?.client_id && !clientList.find(c => c.id === deal.client_id)) {
+        const { data: dealClient } = await supabase
+          .from("clients")
+          .select("id, full_name, phone_e164, avatar_url")
+          .eq("id", deal.client_id)
+          .maybeSingle();
+        
+        if (dealClient) {
+          clientList = [dealClient, ...clientList];
+        }
+      }
+
+      setClients(clientList);
       if (teamRes.data) setTeamMembers(teamRes.data);
     };
 
     loadData();
-  }, [currentUser?.account_id]);
+  }, [currentUser?.account_id, deal?.client_id]);
 
   // Reset form when deal changes
   useEffect(() => {
