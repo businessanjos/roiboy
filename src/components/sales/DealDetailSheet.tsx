@@ -415,100 +415,118 @@ export function DealDetailSheet({
         </SheetHeader>
 
         <ScrollArea className="flex-1">
-          <div className="p-4">
+          <div className="p-5">
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column - Deal Info */}
-              <div className="space-y-4">
-                {/* Stats Cards */}
+              <div className="space-y-5">
+                {/* Stats Cards - Improved Grid */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <DollarSign className="h-4 w-4 text-emerald-500" />
-                      <span className="text-xs text-muted-foreground">Valor</span>
+                  <div className="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20">
+                        <DollarSign className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">Valor</span>
                     </div>
-                    <p className="text-lg font-bold text-primary">{formatCurrency(deal.value)}</p>
+                    <p className="text-xl font-bold text-emerald-500">{formatCurrency(deal.value)}</p>
                   </div>
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingUp className="h-4 w-4 text-blue-500" />
-                      <span className="text-xs text-muted-foreground">Probabilidade</span>
+                  <div className="rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 rounded-lg bg-blue-500/20">
+                        <TrendingUp className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">Probabilidade</span>
                     </div>
-                    <p className="text-lg font-bold">{deal.probability}%</p>
+                    <p className="text-xl font-bold text-blue-500">{deal.probability}%</p>
                   </div>
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Clock className="h-4 w-4 text-amber-500" />
-                      <span className="text-xs text-muted-foreground">Idade</span>
+                  <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 rounded-lg bg-amber-500/20">
+                        <Clock className="h-4 w-4 text-amber-500" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">Idade</span>
                     </div>
-                    <p className="text-lg font-bold">{daysSinceCreation} dias</p>
+                    <p className="text-xl font-bold text-amber-500">{daysSinceCreation} dias</p>
                   </div>
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="h-4 w-4 text-violet-500" />
-                      <span className="text-xs text-muted-foreground">Previsão</span>
+                  <div className="rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-transparent p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 rounded-lg bg-violet-500/20">
+                        <Calendar className="h-4 w-4 text-violet-500" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">Previsão</span>
                     </div>
-                    <p className="text-lg font-bold">
+                    <p className="text-xl font-bold text-violet-500">
                       {deal.expected_close_date
                         ? format(new Date(deal.expected_close_date), "dd/MM/yy")
-                        : "-"}
+                        : "—"}
                     </p>
                   </div>
                 </div>
 
                 {/* Details Card */}
-                <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="rounded-xl border bg-card p-4 space-y-4">
                   {/* Stage Selector (only for open deals) */}
                   {!isClosed && (
-                    <div className="flex items-center gap-2">
-                      <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Etapa:</span>
-                      <Select
-                        value={deal.stage_id || ""}
-                        onValueChange={handleStageChange}
-                        disabled={changingStage}
-                      >
-                        <SelectTrigger className="h-8 text-sm flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {stages.map(stage => (
-                            <SelectItem key={stage.id} value={stage.id}>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: stage.color }}
-                                />
-                                {stage.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-xs text-muted-foreground block mb-1">Etapa</span>
+                        <Select
+                          value={deal.stage_id || ""}
+                          onValueChange={handleStageChange}
+                          disabled={changingStage}
+                        >
+                          <SelectTrigger className="h-9 text-sm bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {stages.map(stage => (
+                              <SelectItem key={stage.id} value={stage.id}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-2.5 h-2.5 rounded-full"
+                                    style={{ backgroundColor: stage.color }}
+                                  />
+                                  {stage.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       {changingStage && <Loader2 className="h-4 w-4 animate-spin" />}
                     </div>
                   )}
 
                   {/* Responsible User */}
                   {deal.responsible_user && (
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Responsável:</span>
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
-                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                          {getInitials(deal.responsible_user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{deal.responsible_user.name}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-xs text-muted-foreground block mb-1">Responsável</span>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6 border border-primary/20">
+                            <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                              {getInitials(deal.responsible_user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{deal.responsible_user.name}</span>
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   {/* Tags */}
                   {deal.tags && deal.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5 pt-2 border-t">
                       {deal.tags.map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
+                        <Badge key={index} variant="secondary" className="text-xs rounded-full px-3">
                           {tag}
                         </Badge>
                       ))}
@@ -517,54 +535,63 @@ export function DealDetailSheet({
 
                   {/* Notes */}
                   {deal.notes && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Notas</p>
-                      <p className="text-sm whitespace-pre-wrap bg-background/50 rounded p-2">{deal.notes}</p>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">Observações</p>
+                      <p className="text-sm whitespace-pre-wrap bg-muted/50 rounded-lg p-3">{deal.notes}</p>
                     </div>
                   )}
                 </div>
 
-                {/* Lead Custom Fields */}
+                {/* Lead Custom Fields - Only show filled fields */}
                 {deal.lead_id && leadCustomFields.length > 0 && (
-                  <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-                    <h4 className="font-semibold text-sm flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
+                  <div className="rounded-xl border bg-card p-4">
+                    <h4 className="font-semibold text-sm flex items-center gap-2 mb-4">
+                      <div className="p-1.5 rounded-lg bg-primary/10">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
                       Campos do Lead
                     </h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {leadCustomFields.map(field => (
-                        <div key={field.id} className="space-y-0.5">
-                          <p className="text-xs text-muted-foreground">{field.name}</p>
-                          <FieldValueBadge 
-                            field={field} 
-                            value={leadFieldValues[field.id]} 
-                          />
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      {leadCustomFields.map(field => {
+                        const value = leadFieldValues[field.id];
+                        const hasValue = value !== undefined && value !== null && value !== '';
+                        return (
+                          <div key={field.id} className="space-y-1">
+                            <p className="text-xs text-muted-foreground">{field.name}</p>
+                            {hasValue ? (
+                              <FieldValueBadge field={field} value={value} />
+                            ) : (
+                              <span className="text-xs text-muted-foreground/50 italic">Não preenchido</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Right Column - Timeline */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Clock className="h-4 w-4 text-primary" />
+                  </div>
                   Histórico Comercial
                 </h4>
 
                 {/* Add new activity */}
-                <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                <div className="rounded-xl border bg-card p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Select value={eventType} onValueChange={setEventType}>
-                      <SelectTrigger className="w-[130px] h-8 text-xs">
+                      <SelectTrigger className="w-[140px] h-9 text-sm bg-background">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover">
                         {EVENT_TYPES.map((type) => (
                           <SelectItem key={type.value} value={type.value}>
                             <div className="flex items-center gap-2">
-                              <type.icon className="h-3.5 w-3.5" />
+                              <type.icon className="h-4 w-4" />
                               {type.label}
                             </div>
                           </SelectItem>
@@ -577,19 +604,20 @@ export function DealDetailSheet({
                     placeholder="Descreva a interação..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    rows={2}
-                    className="resize-none text-sm"
+                    rows={3}
+                    className="resize-none text-sm bg-background"
                   />
                   <div className="flex justify-end">
                     <Button
                       size="sm"
                       onClick={handleAddActivity}
                       disabled={!newNote.trim() || submitting}
+                      className="gap-1.5"
                     >
                       {submitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Plus className="h-4 w-4 mr-1" />
+                        <Plus className="h-4 w-4" />
                       )}
                       Adicionar
                     </Button>
@@ -597,64 +625,74 @@ export function DealDetailSheet({
                 </div>
 
                 {/* Activities Timeline */}
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : activities.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    Nenhuma atividade registrada ainda
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {activities.map((activity) => {
-                      const config = getEventConfig(activity.type);
-                      const Icon = config.icon;
-                      const userName = activity.user?.name || "Sistema";
-                      const userAvatar = activity.user?.avatar_url;
+                <div className="rounded-xl border bg-card overflow-hidden">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground text-sm">
+                      <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      Nenhuma atividade registrada
+                    </div>
+                  ) : (
+                    <div className="max-h-[380px] overflow-y-auto">
+                      {activities.map((activity, index) => {
+                        const config = getEventConfig(activity.type);
+                        const Icon = config.icon;
+                        const userName = activity.user?.name || "Sistema";
+                        const userAvatar = activity.user?.avatar_url;
+                        const isLast = index === activities.length - 1;
 
-                      return (
-                        <div key={activity.id} className="flex gap-3">
-                          <div className="flex flex-col items-center">
-                            <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0", config.bgColor)}>
-                              <Icon className="h-3.5 w-3.5" />
-                            </div>
-                            <div className="w-px flex-1 bg-border mt-2" />
-                          </div>
-                          <div className="flex-1 pb-3">
-                            <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
-                              <Avatar className="h-4 w-4">
-                                <AvatarImage src={userAvatar || undefined} />
-                                <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
-                                  {getInitials(userName)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xs font-medium">{userName}</span>
-                              <span className="text-xs text-muted-foreground">·</span>
-                              <span className={cn("text-xs font-medium", config.textColor)}>
-                                {activity.title || config.label}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground ml-auto">
-                                {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
-                              </span>
-                            </div>
-                            {activity.content && (
-                              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                                {activity.content}
-                              </p>
+                        return (
+                          <div 
+                            key={activity.id} 
+                            className={cn(
+                              "flex gap-3 p-4",
+                              !isLast && "border-b"
                             )}
-                            {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
-                              <p className="text-xs text-muted-foreground">
-                                De <span className="font-medium">{activity.old_value}</span> para{" "}
-                                <span className="font-medium">{activity.new_value}</span>
-                              </p>
-                            )}
+                          >
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0",
+                              config.bgColor
+                            )}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center flex-wrap gap-1.5 mb-1">
+                                <Avatar className="h-5 w-5 border border-border">
+                                  <AvatarImage src={userAvatar || undefined} />
+                                  <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                                    {getInitials(userName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium">{userName}</span>
+                                <span className="text-muted-foreground">·</span>
+                                <span className={cn("text-sm font-medium", config.textColor)}>
+                                  {activity.title || config.label}
+                                </span>
+                                <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
+                                  {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
+                                </span>
+                              </div>
+                              {activity.content && (
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">
+                                  {activity.content}
+                                </p>
+                              )}
+                              {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  De <span className="font-medium text-foreground">{activity.old_value}</span> para{" "}
+                                  <span className="font-medium text-foreground">{activity.new_value}</span>
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
