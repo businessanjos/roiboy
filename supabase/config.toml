@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.classify-transactions]
 verify_jwt = false
+
+[functions.sector-agent-chat]
+verify_jwt = true
