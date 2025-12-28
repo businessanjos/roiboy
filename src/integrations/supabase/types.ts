@@ -2205,6 +2205,7 @@ export type Database = {
           currency: string | null
           expected_close_date: string | null
           id: string
+          lead_id: string | null
           lost_at: string | null
           lost_reason: string | null
           notes: string | null
@@ -2229,6 +2230,7 @@ export type Database = {
           currency?: string | null
           expected_close_date?: string | null
           id?: string
+          lead_id?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
@@ -2253,6 +2255,7 @@ export type Database = {
           currency?: string | null
           expected_close_date?: string | null
           id?: string
+          lead_id?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
@@ -2280,6 +2283,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
@@ -3898,6 +3908,79 @@ export type Database = {
             columns: ["custom_status_id"]
             isOneToOne: false
             referencedRelation: "task_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          account_id: string
+          converted_at: string | null
+          converted_to_client_id: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          responsible_user_id: string | null
+          source: string | null
+          status: string
+          tags: Json | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          converted_at?: string | null
+          converted_to_client_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          responsible_user_id?: string | null
+          source?: string | null
+          status?: string
+          tags?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          converted_at?: string | null
+          converted_to_client_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          responsible_user_id?: string | null
+          source?: string | null
+          status?: string
+          tags?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_to_client_id_fkey"
+            columns: ["converted_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
