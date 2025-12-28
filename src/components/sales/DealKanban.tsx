@@ -113,7 +113,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
       onDragEnd={handleDragEnd}
     >
       <ScrollArea className="w-full">
-        <div className="flex gap-3 min-h-[450px] pb-4">
+        <div className="flex gap-2 min-h-[400px] pb-2">
           {stages.map(stage => (
             <DealKanbanColumn
               key={stage.id}

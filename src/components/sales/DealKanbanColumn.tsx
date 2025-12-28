@@ -53,19 +53,19 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
     <div
       ref={setNodeRef}
       className={cn(
-        "min-w-[200px] flex-1 flex flex-col transition-all",
+        "min-w-[160px] flex-1 flex flex-col transition-all",
         isOver && "scale-[1.01]"
       )}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2 px-1">
+        <div className="flex items-center gap-1.5 min-w-0">
           {getStageIcon(stage.name, stage.color)}
-          <span className="font-medium text-sm">{stage.name}</span>
+          <span className="font-medium text-xs truncate">{stage.name}</span>
         </div>
         <Badge 
           variant="secondary" 
-          className="text-xs font-semibold rounded-md"
+          className="text-[10px] px-1.5 py-0 font-semibold rounded-full flex-shrink-0"
           style={{ 
             backgroundColor: `${stage.color}20`,
             color: stage.color,
@@ -78,8 +78,8 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
       {/* Cards Container */}
       <div 
         className={cn(
-          "flex-1 space-y-2 min-h-[400px] p-1.5 rounded-lg transition-colors",
-          isOver && "bg-primary/5 ring-2 ring-primary/20"
+          "flex-1 space-y-2 min-h-[350px] p-1 rounded-lg transition-colors",
+          isOver && "bg-primary/5 ring-1 ring-primary/20"
         )}
       >
         <SortableContext
@@ -87,7 +87,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
           strategy={verticalListSortingStrategy}
         >
           {deals.length === 0 ? (
-            <div className="flex items-center justify-center h-24 text-xs text-muted-foreground border border-dashed border-border/50 rounded-lg bg-muted/20">
+            <div className="flex items-center justify-center h-20 text-[10px] text-muted-foreground border border-dashed border-border/40 rounded-md bg-muted/10">
               Arraste negociações aqui
             </div>
           ) : (
