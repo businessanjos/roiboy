@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SectorAgentChat } from "./SectorAgentChat";
 
 interface SectorAgentConfig {
   id: string;
@@ -136,7 +137,15 @@ export function SectorAgentConfig({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Chat flutuante */}
+      <SectorAgentChat
+        agentName={currentData.name || sectorName}
+        agentDisplayName={currentData.display_name || ""}
+        agentAvatar={currentData.avatar_url}
+        greetingMessage={currentData.greeting_message}
+        sectorColor={sectorColor}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
