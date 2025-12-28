@@ -111,10 +111,19 @@ export default function Leads() {
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
   const [convertLeadId, setConvertLeadId] = useState<string | null>(null);
   
-  // Existing client state
+  // Flow state for new lead creation
+  const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form'>('phone');
+  const [checkingPhone, setCheckingPhone] = useState(false);
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
-  const [showExistingClientDialog, setShowExistingClientDialog] = useState(false);
   const [creatingDeal, setCreatingDeal] = useState(false);
+  
+  // Deal form state
+  const [dealFormData, setDealFormData] = useState({
+    title: "",
+    value: "",
+    stage_id: "",
+    notes: "",
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -133,8 +142,15 @@ export default function Leads() {
       source: "",
       notes: "",
     });
+    setDealFormData({
+      title: "",
+      value: "",
+      stage_id: "",
+      notes: "",
+    });
     setSelectedLead(null);
     setExistingClient(null);
+    setDialogStep('phone');
   };
 
   const openNewDialog = () => {
@@ -151,22 +167,48 @@ export default function Leads() {
       source: lead.source || "",
       notes: lead.notes || "",
     });
+    setDialogStep('lead-form');
     setIsDialogOpen(true);
   };
 
-  const checkExistingClient = async (phone: string): Promise<{ id: string; full_name: string; phone_e164: string } | null> => {
-    if (!phone || phone.length < 8) return null;
+  const handlePhoneCheck = async () => {
+    if (!formData.phone || formData.phone.replace(/\D/g, '').length < 8) {
+      toast.error("Informe um telefone válido");
+      return;
+    }
     
-    // Normalize phone for search
-    const normalizedPhone = phone.replace(/\D/g, '');
-    
-    const { data } = await supabase
-      .from("clients")
-      .select("id, full_name, phone_e164")
-      .or(`phone_e164.ilike.%${normalizedPhone}%`)
-      .limit(1);
-    
-    return data && data.length > 0 ? data[0] : null;
+    setCheckingPhone(true);
+    try {
+      const normalizedPhone = formData.phone.replace(/\D/g, '');
+      
+      const { data } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164")
+        .or(`phone_e164.ilike.%${normalizedPhone}%`)
+        .limit(1);
+      
+      if (data && data.length > 0) {
+        // Client exists - go to deal form
+        setExistingClient(data[0]);
+        const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+        setDealFormData({
+          title: `Novo negócio - ${data[0].full_name}`,
+          value: "",
+          stage_id: firstStage?.id || "",
+          notes: "",
+        });
+        setDialogStep('deal-form');
+      } else {
+        // No client - go to lead form
+        setExistingClient(null);
+        setDialogStep('lead-form');
+      }
+    } catch (error) {
+      console.error("Error checking phone:", error);
+      toast.error("Erro ao verificar telefone");
+    } finally {
+      setCheckingPhone(false);
+    }
   };
 
   const handleSave = async () => {
@@ -180,40 +222,27 @@ export default function Leads() {
       return;
     }
 
-    // Check if client already exists with this phone
-    if (formData.phone) {
-      const client = await checkExistingClient(formData.phone);
-      if (client) {
-        setExistingClient(client);
-        setShowExistingClientDialog(true);
-        return;
-      }
-    }
-
     // Create new lead
     await createLead(formData);
     setIsDialogOpen(false);
     resetForm();
   };
 
-  const handleCreateDealForClient = async () => {
+  const handleCreateDeal = async () => {
     if (!existingClient) return;
     
     setCreatingDeal(true);
     try {
-      const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
-      
       const deal = await createDeal({
-        title: `Novo negócio - ${existingClient.full_name}`,
+        title: dealFormData.title || `Novo negócio - ${existingClient.full_name}`,
         client_id: existingClient.id,
-        stage_id: firstStage?.id,
-        source: formData.source || undefined,
-        notes: formData.notes || undefined,
+        stage_id: dealFormData.stage_id || undefined,
+        value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
+        notes: dealFormData.notes || undefined,
       });
 
       if (deal) {
         toast.success("Negócio criado com sucesso!");
-        setShowExistingClientDialog(false);
         setIsDialogOpen(false);
         resetForm();
         navigate("/pipeline");
@@ -226,11 +255,9 @@ export default function Leads() {
     }
   };
 
-  const handleCreateLeadAnyway = async () => {
-    setShowExistingClientDialog(false);
-    await createLead(formData);
-    setIsDialogOpen(false);
-    resetForm();
+  const handleCreateLeadAnyway = () => {
+    setExistingClient(null);
+    setDialogStep('lead-form');
   };
 
   const handleDelete = async () => {
@@ -439,85 +466,234 @@ export default function Leads() {
         )}
       </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Create/Edit Dialog with Step Flow */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { 
+        setIsDialogOpen(open); 
+        if (!open) resetForm(); 
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{selectedLead ? "Editar Lead" : "Novo Lead"}</DialogTitle>
+            <DialogTitle>
+              {selectedLead ? "Editar Lead" : 
+                dialogStep === 'phone' ? "Verificar Telefone" :
+                dialogStep === 'deal-form' ? "Criar Negócio" : "Novo Lead"}
+            </DialogTitle>
+            {dialogStep === 'phone' && !selectedLead && (
+              <DialogDescription>
+                Informe o telefone para verificar se já é um cliente
+              </DialogDescription>
+            )}
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Nome *</Label>
-              <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                placeholder="Nome completo"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          {/* Step 1: Phone Check */}
+          {dialogStep === 'phone' && !selectedLead && (
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone">Telefone *</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="+55 11 99999-9999"
+                  autoFocus
                 />
               </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handlePhoneCheck} 
+                  disabled={checkingPhone || !formData.phone.trim()}
+                >
+                  {checkingPhone ? "Verificando..." : "Continuar"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {/* Step 2a: Lead Form (if no existing client) */}
+          {(dialogStep === 'lead-form' || selectedLead) && (
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="full_name">Nome *</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="email@exemplo.com"
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="Nome completo"
+                  autoFocus
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="source">Origem</Label>
-              <Select
-                value={formData.source}
-                onValueChange={(value) => setFormData({ ...formData, source: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="De onde veio o lead?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEAD_SOURCES.map((source) => (
-                    <SelectItem key={source.value} value={source.value}>
-                      {source.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+55 11 99999-9999"
+                    disabled={!selectedLead}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Observações</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Anotações sobre o lead..."
-                rows={3}
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="source">Origem</Label>
+                <Select
+                  value={formData.source}
+                  onValueChange={(value) => setFormData({ ...formData, source: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="De onde veio o lead?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_SOURCES.map((source) => (
+                      <SelectItem key={source.value} value={source.value}>
+                        {source.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={!formData.full_name.trim()}>
-              {selectedLead ? "Salvar" : "Criar Lead"}
-            </Button>
-          </DialogFooter>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Observações</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Anotações sobre o lead..."
+                  rows={3}
+                />
+              </div>
+
+              <DialogFooter>
+                {!selectedLead && (
+                  <Button variant="ghost" onClick={() => setDialogStep('phone')}>
+                    Voltar
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSave} disabled={!formData.full_name.trim()}>
+                  {selectedLead ? "Salvar" : "Criar Lead"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {/* Step 2b: Deal Form (if existing client found) */}
+          {dialogStep === 'deal-form' && existingClient && !selectedLead && (
+            <div className="space-y-4">
+              {/* Client Info */}
+              <div className="p-4 rounded-lg bg-muted/50 border">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                      {existingClient.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{existingClient.full_name}</p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {existingClient.phone_e164}
+                    </p>
+                  </div>
+                  <Badge className="ml-auto bg-emerald-500 text-white">
+                    <UserCheck className="h-3 w-3 mr-1" />
+                    Cliente
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="deal_title">Título do Negócio</Label>
+                <Input
+                  id="deal_title"
+                  value={dealFormData.title}
+                  onChange={(e) => setDealFormData({ ...dealFormData, title: e.target.value })}
+                  placeholder="Ex: Consultoria inicial"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="deal_value">Valor (R$)</Label>
+                  <Input
+                    id="deal_value"
+                    type="number"
+                    value={dealFormData.value}
+                    onChange={(e) => setDealFormData({ ...dealFormData, value: e.target.value })}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deal_stage">Etapa</Label>
+                  <Select
+                    value={dealFormData.stage_id}
+                    onValueChange={(value) => setDealFormData({ ...dealFormData, stage_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages.sort((a, b) => a.display_order - b.display_order).map((stage) => (
+                        <SelectItem key={stage.id} value={stage.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: stage.color }}
+                            />
+                            {stage.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="deal_notes">Observações</Label>
+                <Textarea
+                  id="deal_notes"
+                  value={dealFormData.notes}
+                  onChange={(e) => setDealFormData({ ...dealFormData, notes: e.target.value })}
+                  placeholder="Anotações sobre o negócio..."
+                  rows={2}
+                />
+              </div>
+
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button variant="ghost" onClick={handleCreateLeadAnyway} className="sm:mr-auto">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Criar lead mesmo assim
+                </Button>
+                <Button variant="outline" onClick={() => setDialogStep('phone')}>
+                  Voltar
+                </Button>
+                <Button onClick={handleCreateDeal} disabled={creatingDeal}>
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  {creatingDeal ? "Criando..." : "Criar Negócio"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -538,63 +714,6 @@ export default function Leads() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Existing Client Dialog */}
-      <Dialog open={showExistingClientDialog} onOpenChange={setShowExistingClientDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5 text-emerald-500" />
-              Cliente já cadastrado
-            </DialogTitle>
-            <DialogDescription>
-              O telefone informado já pertence a um cliente cadastrado.
-            </DialogDescription>
-          </DialogHeader>
-
-          {existingClient && (
-            <div className="p-4 rounded-lg bg-muted/50 border">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="text-sm bg-primary/10 text-primary">
-                    {existingClient.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold">{existingClient.full_name}</p>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    {existingClient.phone_e164}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>O que você gostaria de fazer?</p>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={handleCreateLeadAnyway}
-              className="flex-1"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Criar lead mesmo assim
-            </Button>
-            <Button
-              onClick={handleCreateDealForClient}
-              disabled={creatingDeal}
-              className="flex-1"
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              {creatingDeal ? "Criando..." : "Criar novo negócio"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Convert Confirmation */}
       <AlertDialog open={!!convertLeadId} onOpenChange={() => setConvertLeadId(null)}>
