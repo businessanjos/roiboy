@@ -53,7 +53,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
     <div
       ref={setNodeRef}
       className={cn(
-        "min-w-[240px] flex-1 max-w-[320px] flex flex-col transition-all",
+        "min-w-[200px] flex-1 flex flex-col transition-all",
         isOver && "scale-[1.01]"
       )}
     >
@@ -78,7 +78,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
       {/* Cards Container */}
       <div 
         className={cn(
-          "flex-1 space-y-3 min-h-[450px] p-2 rounded-lg transition-colors",
+          "flex-1 space-y-2 min-h-[400px] p-1.5 rounded-lg transition-colors",
           isOver && "bg-primary/5 ring-2 ring-primary/20"
         )}
       >

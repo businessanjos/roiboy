@@ -165,8 +165,8 @@ export default function SalesPipeline() {
           </div>
         </div>
 
-        {/* Funnel Stats - Based on Real Stages */}
-        <div className="flex items-stretch gap-0 overflow-x-auto">
+        {/* Funnel Stats - Compact */}
+        <div className="flex items-center gap-0 overflow-x-auto border rounded-lg bg-muted/30 p-1">
           {stages.map((stage, index) => {
             const dealsInStage = openDeals.filter(d => d.stage_id === stage.id);
             const prevStageDeals = index > 0 
@@ -176,67 +176,42 @@ export default function SalesPipeline() {
               ? Math.round((dealsInStage.length / prevStageDeals) * 100) 
               : 0;
             
-            const getStageIcon = (name: string) => {
-              const lowerName = name.toLowerCase();
-              if (lowerName.includes('lead') || lowerName.includes('cadastr') || lowerName.includes('novo')) return Users;
-              if (lowerName.includes('trial') || lowerName.includes('qualific')) return Clock;
-              if (lowerName.includes('follow') || lowerName.includes('proposta') || lowerName.includes('negocia')) return MessageSquare;
-              if (lowerName.includes('ativo') || lowerName.includes('ganho') || lowerName.includes('fechamento')) return CheckCircle;
-              return Users;
-            };
-            
-            const IconComponent = getStageIcon(stage.name);
-            
             return (
-              <div key={stage.id} className="flex items-center">
-                {/* Stage Card */}
-                <div className="flex items-center gap-3 px-4 py-3 min-w-fit border-r border-border last:border-r-0">
-                  <div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center"
-                    style={{ 
-                      borderWidth: '3px',
-                      borderStyle: 'solid',
-                      borderColor: stage.color,
-                      backgroundColor: `${stage.color}15`
-                    }}
-                  >
-                    <IconComponent className="h-5 w-5" style={{ color: stage.color }} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{dealsInStage.length}</p>
-                    <p className="text-xs text-muted-foreground">{stage.name}</p>
-                  </div>
-                  {index > 0 && (
-                    <span className="text-xs text-muted-foreground ml-1">
-                      {conversionRate}%
-                    </span>
-                  )}
+              <div key={stage.id} className="flex items-center gap-2 px-3 py-1.5 min-w-fit border-r border-border/50 last:border-r-0">
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{ 
+                    borderWidth: '2px',
+                    borderStyle: 'solid',
+                    borderColor: stage.color,
+                    backgroundColor: `${stage.color}15`,
+                    color: stage.color
+                  }}
+                >
+                  {dealsInStage.length}
                 </div>
+                <span className="text-xs text-muted-foreground hidden sm:inline">{stage.name}</span>
+                {index > 0 && (
+                  <span className="text-[10px] text-muted-foreground">{conversionRate}%</span>
+                )}
               </div>
             );
           })}
           
           {/* Won */}
-          <div className="flex items-center gap-3 px-4 py-3 min-w-fit border-r border-border">
-            <div className="w-12 h-12 rounded-full border-[3px] border-emerald-500 flex items-center justify-center bg-emerald-500/10">
-              <Trophy className="h-5 w-5 text-emerald-500" />
+          <div className="flex items-center gap-2 px-3 py-1.5 min-w-fit border-r border-border/50">
+            <div className="w-8 h-8 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-emerald-500/10 text-xs font-bold text-emerald-500">
+              {wonDeals.length}
             </div>
-            <div>
-              <p className="text-2xl font-bold">{wonDeals.length}</p>
-              <p className="text-xs text-muted-foreground">Ganhas</p>
-              <p className="text-[10px] text-emerald-500">{formatCurrency(totalWonValue)}</p>
-            </div>
+            <span className="text-xs text-muted-foreground hidden sm:inline">Ganhas</span>
           </div>
           
           {/* Lost */}
-          <div className="flex items-center gap-3 px-4 py-3 min-w-fit">
-            <div className="w-12 h-12 rounded-full border-[3px] border-red-500 flex items-center justify-center bg-red-500/10">
-              <XCircle className="h-5 w-5 text-red-500" />
+          <div className="flex items-center gap-2 px-3 py-1.5 min-w-fit">
+            <div className="w-8 h-8 rounded-full border-2 border-red-500 flex items-center justify-center bg-red-500/10 text-xs font-bold text-red-500">
+              {lostDeals.length}
             </div>
-            <div>
-              <p className="text-2xl font-bold">{lostDeals.length}</p>
-              <p className="text-xs text-muted-foreground">Perdidas</p>
-            </div>
+            <span className="text-xs text-muted-foreground hidden sm:inline">Perdidas</span>
           </div>
         </div>
 
