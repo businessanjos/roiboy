@@ -59,25 +59,25 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate }: 
       )}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-2 px-1">
-        <div className="flex items-center gap-1 min-w-0">
-          {getStageIcon(stage.name, stage.color)}
-          <span className="font-medium text-xs truncate">{stage.name}</span>
-          <Badge 
-            variant="secondary" 
-            className="text-[10px] px-1.5 py-0 font-semibold rounded-full flex-shrink-0 ml-1"
-            style={{ 
-              backgroundColor: `${stage.color}20`,
-              color: stage.color,
-            }}
-          >
-            {deals.length}
-          </Badge>
-        </div>
-        {conversionRate !== undefined && (
-          <span className="text-[9px] text-muted-foreground/70 tabular-nums">
+      <div className="flex items-center gap-1.5 mb-2 px-1 h-5">
+        {getStageIcon(stage.name, stage.color)}
+        <span className="font-medium text-xs truncate flex-1 min-w-0">{stage.name}</span>
+        <Badge 
+          variant="secondary" 
+          className="text-[10px] w-5 h-5 p-0 font-semibold rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ 
+            backgroundColor: `${stage.color}20`,
+            color: stage.color,
+          }}
+        >
+          {deals.length}
+        </Badge>
+        {conversionRate !== undefined ? (
+          <span className="text-[9px] text-muted-foreground/70 tabular-nums w-6 text-right flex-shrink-0">
             {conversionRate}%
           </span>
+        ) : (
+          <span className="w-6 flex-shrink-0" />
         )}
       </div>
 
