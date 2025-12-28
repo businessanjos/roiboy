@@ -36,7 +36,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ClientQuickEditSheet } from "@/components/client/ClientQuickEditSheet";
+import { ClientZappSheet } from "@/components/client/ClientZappSheet";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -2234,8 +2234,8 @@ export default function RoyZapp() {
         onNavigateToTags={() => setActiveView("tags")}
       />
 
-      {/* Client Quick Edit Sheet */}
-      <ClientQuickEditSheet
+      {/* Client Quick Edit Sheet with Deals */}
+      <ClientZappSheet
         clientId={editingClientId}
         open={clientEditSheetOpen}
         onOpenChange={setClientEditSheetOpen}
