@@ -76,6 +76,7 @@ export interface DealActivity {
 interface CreateDealData {
   title: string;
   client_id?: string;
+  lead_id?: string;
   contact_name?: string;
   contact_phone?: string;
   contact_email?: string;
