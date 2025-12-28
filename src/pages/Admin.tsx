@@ -56,8 +56,9 @@ import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager"
 import { SupportWhatsAppConfig } from "@/components/admin/SupportWhatsAppConfig";
 import { SupportKnowledgeBase } from "@/components/admin/SupportKnowledgeBase";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
-import { Tag, Headset, BookOpen, Activity as ActivityIcon, Cloud, Map } from "lucide-react";
+import { Tag, Headset, BookOpen, Activity as ActivityIcon, Cloud, Map, Sparkles } from "lucide-react";
 import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
+import { AIAssistantConfig } from "@/components/admin/AIAssistantConfig";
 import SystemMap from "@/pages/admin/SystemMap";
 
 interface SubscriptionPlan {
@@ -312,6 +313,10 @@ export default function Admin() {
             <Headset className="h-4 w-4" />
             Suporte
           </TabsTrigger>
+          <TabsTrigger value="assistant" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Sparkles className="h-4 w-4" />
+            Anjo Zad
+          </TabsTrigger>
           <TabsTrigger value="map" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Map className="h-4 w-4" />
             Mapa
@@ -384,6 +389,10 @@ export default function Admin() {
               <SupportWhatsAppConfig />
             </TabsContent>
           </Tabs>
+        </TabsContent>
+
+        <TabsContent value="assistant" className="mt-0">
+          <AIAssistantConfig />
         </TabsContent>
 
         <TabsContent value="map" className="mt-0">

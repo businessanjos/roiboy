@@ -372,6 +372,60 @@ export type Database = {
           },
         ]
       }
+      ai_assistant_config: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          description: string | null
+          display_name: string
+          features: Json | null
+          greeting_message: string | null
+          id: string
+          is_enabled: boolean
+          max_tokens: number | null
+          model: string
+          name: string
+          personality: string | null
+          system_prompt: string | null
+          temperature: number | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          features?: Json | null
+          greeting_message?: string | null
+          id?: string
+          is_enabled?: boolean
+          max_tokens?: number | null
+          model?: string
+          name?: string
+          personality?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          features?: Json | null
+          greeting_message?: string | null
+          id?: string
+          is_enabled?: boolean
+          max_tokens?: number | null
+          model?: string
+          name?: string
+          personality?: string | null
+          system_prompt?: string | null
+          temperature?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_usage_logs: {
         Row: {
           account_id: string
