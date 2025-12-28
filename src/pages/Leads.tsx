@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,9 +58,12 @@ import {
   Users,
   UserCheck,
   MessageSquare,
+  X,
+  Clock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { LeadTimeline } from "@/components/leads/LeadTimeline";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -89,6 +99,7 @@ export default function Leads() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
   const [convertLeadId, setConvertLeadId] = useState<string | null>(null);
 
@@ -263,7 +274,11 @@ export default function Leads() {
         ) : (
           <div className="space-y-2">
             {filteredLeads.map((lead) => (
-              <Card key={lead.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={lead.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setDetailLead(lead)}
+              >
                 <CardContent className="p-3">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
@@ -461,6 +476,102 @@ export default function Leads() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Lead Detail Sheet with Timeline */}
+      <Sheet open={!!detailLead} onOpenChange={(open) => !open && setDetailLead(null)}>
+        <SheetContent className="sm:max-w-md overflow-hidden flex flex-col">
+          <SheetHeader className="flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                    {detailLead ? getInitials(detailLead.full_name) : ""}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <span className="block">{detailLead?.full_name}</span>
+                  {detailLead && getStatusBadge(detailLead.status)}
+                </div>
+              </SheetTitle>
+            </div>
+          </SheetHeader>
+
+          {detailLead && (
+            <div className="flex-1 overflow-hidden flex flex-col mt-4">
+              {/* Lead Info */}
+              <div className="flex-shrink-0 space-y-2 pb-4 border-b">
+                {detailLead.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{detailLead.phone}</span>
+                  </div>
+                )}
+                {detailLead.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{detailLead.email}</span>
+                  </div>
+                )}
+                {detailLead.source && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <Badge variant="outline" className="text-xs">
+                      {LEAD_SOURCES.find((s) => s.value === detailLead.source)?.label || detailLead.source}
+                    </Badge>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>Criado em {format(new Date(detailLead.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                </div>
+                {detailLead.notes && (
+                  <p className="text-sm text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
+                    {detailLead.notes}
+                  </p>
+                )}
+              </div>
+
+              {/* Timeline */}
+              <div className="flex-1 overflow-hidden pt-4">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Jornada de Compra
+                </h3>
+                <ScrollArea className="h-[calc(100vh-400px)]">
+                  <LeadTimeline leadId={detailLead.id} />
+                </ScrollArea>
+              </div>
+
+              {/* Actions */}
+              <div className="flex-shrink-0 pt-4 border-t flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    openEditDialog(detailLead);
+                    setDetailLead(null);
+                  }}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    setConvertLeadId(detailLead.id);
+                    setDetailLead(null);
+                  }}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Converter em Cliente
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
