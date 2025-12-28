@@ -59,6 +59,7 @@ import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
 import { Tag, Headset, BookOpen, Activity as ActivityIcon, Cloud, Map, Sparkles, Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
 import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
 import { SectorAgentConfig } from "@/components/admin/SectorAgentConfig";
+import { GlobalAgentChat } from "@/components/admin/GlobalAgentChat";
 import SystemMap from "@/pages/admin/SystemMap";
 
 interface SubscriptionPlan {
@@ -257,6 +258,8 @@ export default function Admin() {
 
   return (
     <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Chat global com todos os agentes */}
+      <GlobalAgentChat />
       <div className="flex items-center gap-4">
         <div className="p-3 rounded-xl bg-primary/10">
           <Shield className="h-6 w-6 text-primary" />
