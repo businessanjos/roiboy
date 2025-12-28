@@ -17,6 +17,7 @@ import {
   Megaphone,
   Settings,
   FileSignature,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
@@ -105,6 +106,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/pipeline",
     navItems: [
       { to: "/pipeline", icon: TrendingUp, label: "Pipeline", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
