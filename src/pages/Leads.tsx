@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals } from "@/hooks/useDeals";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,11 +66,14 @@ import {
   X,
   Clock,
   TrendingUp,
+  Settings2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { toast } from "sonner";
+import { LeadCustomFieldsManager, LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
+import { CustomField } from "@/components/custom-fields";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -91,6 +95,7 @@ const LEAD_STATUS = [
 
 export default function Leads() {
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const {
     leads,
     loading,
@@ -110,6 +115,11 @@ export default function Leads() {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
   const [convertLeadId, setConvertLeadId] = useState<string | null>(null);
+  const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
+  
+  // Custom fields state
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, Record<string, any>>>({});
   
   // Flow state for new lead creation
   const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form'>('phone');
@@ -133,6 +143,70 @@ export default function Leads() {
     source: "",
     notes: "",
   });
+
+  // Fetch custom fields
+  const fetchCustomFields = useCallback(async () => {
+    const { data } = await supabase
+      .from("custom_fields")
+      .select("*")
+      .eq("is_active", true)
+      .eq("show_in_leads", true)
+      .order("display_order");
+    
+    if (data) {
+      setCustomFields(data.map(f => ({
+        id: f.id,
+        name: f.name,
+        field_type: f.field_type as CustomField["field_type"],
+        options: (f.options as unknown as FieldOption[]) || [],
+        is_required: f.is_required,
+        display_order: f.display_order,
+        is_active: f.is_active,
+        show_in_clients: f.show_in_clients,
+      })));
+    }
+  }, []);
+
+  // Fetch field values for leads
+  const fetchFieldValues = useCallback(async () => {
+    if (leads.length === 0) return;
+    
+    const leadIds = leads.map(l => l.id);
+    const { data } = await supabase
+      .from("lead_field_values")
+      .select("*")
+      .in("lead_id", leadIds);
+    
+    if (data) {
+      const valuesMap: Record<string, Record<string, any>> = {};
+      data.forEach(fv => {
+        if (!valuesMap[fv.lead_id]) valuesMap[fv.lead_id] = {};
+        const value = fv.value_boolean ?? fv.value_number ?? fv.value_text ?? fv.value_date ?? fv.value_json;
+        valuesMap[fv.lead_id][fv.field_id] = value;
+      });
+      setFieldValues(valuesMap);
+    }
+  }, [leads]);
+
+  useEffect(() => {
+    fetchCustomFields();
+  }, [fetchCustomFields]);
+
+  useEffect(() => {
+    if (leads.length > 0) {
+      fetchFieldValues();
+    }
+  }, [leads, fetchFieldValues]);
+
+  const handleFieldValueChange = (leadId: string, fieldId: string, newValue: any) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [leadId]: {
+        ...(prev[leadId] || {}),
+        [fieldId]: newValue
+      }
+    }));
+  };
 
   const resetForm = () => {
     setFormData({
@@ -330,10 +404,16 @@ export default function Leads() {
               Gerencie seus leads antes de se tornarem clientes
             </p>
           </div>
-          <Button onClick={openNewDialog} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Lead
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setFieldsDialogOpen(true)}>
+              <Settings2 className="h-4 w-4 mr-2" />
+              Campos
+            </Button>
+            <Button onClick={openNewDialog} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Lead
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -395,9 +475,25 @@ export default function Leads() {
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm truncate">{lead.full_name}</span>
                         {getStatusBadge(lead.status)}
+                        {/* Custom field badges */}
+                        {customFields.slice(0, 2).map(field => {
+                          const value = fieldValues[lead.id]?.[field.id];
+                          if (value === undefined || value === null) return null;
+                          return (
+                            <div key={field.id} onClick={(e) => e.stopPropagation()}>
+                              <LeadFieldValueEditor
+                                field={field}
+                                leadId={lead.id}
+                                accountId={currentUser?.account_id || ""}
+                                currentValue={value}
+                                onValueChange={(fId, nv) => handleFieldValueChange(lead.id, fId, nv)}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         {lead.phone && (
@@ -787,13 +883,34 @@ export default function Leads() {
                 )}
               </div>
 
+              {/* Custom Fields */}
+              {customFields.length > 0 && (
+                <div className="flex-shrink-0 pt-4 border-t">
+                  <h3 className="text-sm font-semibold mb-3">Campos Personalizados</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {customFields.map(field => (
+                      <div key={field.id} className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">{field.name}:</span>
+                        <LeadFieldValueEditor
+                          field={field}
+                          leadId={detailLead.id}
+                          accountId={currentUser?.account_id || ""}
+                          currentValue={fieldValues[detailLead.id]?.[field.id]}
+                          onValueChange={(fId, nv) => handleFieldValueChange(detailLead.id, fId, nv)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Timeline */}
               <div className="flex-1 overflow-hidden pt-4">
                 <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
                   Jornada de Compra
                 </h3>
-                <ScrollArea className="h-[calc(100vh-400px)]">
+                <ScrollArea className="h-[calc(100vh-500px)]">
                   <LeadTimeline leadId={detailLead.id} />
                 </ScrollArea>
               </div>
@@ -828,6 +945,20 @@ export default function Leads() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Custom Fields Manager Dialog */}
+      <Dialog open={fieldsDialogOpen} onOpenChange={setFieldsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Campos Personalizados de Leads</DialogTitle>
+          </DialogHeader>
+          <LeadCustomFieldsManager 
+            open={true} 
+            onOpenChange={() => {}} 
+            onFieldsChange={fetchCustomFields}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
