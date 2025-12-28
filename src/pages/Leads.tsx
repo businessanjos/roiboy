@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
-import { useDeals } from "@/hooks/useDeals";
+import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -67,10 +68,15 @@ import {
   Clock,
   TrendingUp,
   Settings2,
+  Trophy,
+  XCircle,
+  DollarSign,
+  ChevronRight,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
+import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { toast } from "sonner";
 import { LeadCustomFieldsManager, LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
 import { CustomField } from "@/components/custom-fields";
@@ -107,7 +113,7 @@ export default function Leads() {
     deleteLead,
     markAsConvertedToDeal,
   } = useLeads();
-  const { createDeal, stages } = useDeals();
+  const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -115,6 +121,10 @@ export default function Leads() {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
+  
+  // Deal detail state
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
   
   // Custom fields state
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
@@ -126,6 +136,11 @@ export default function Leads() {
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
   const [creatingDeal, setCreatingDeal] = useState(false);
   const [leadForDeal, setLeadForDeal] = useState<Lead | null>(null);
+
+  // Get deals for the current lead
+  const getLeadDeals = useCallback((leadId: string) => {
+    return deals.filter(d => d.lead_id === leadId);
+  }, [deals]);
   
   // Deal form state
   const [dealFormData, setDealFormData] = useState({
@@ -935,6 +950,75 @@ export default function Leads() {
                   </div>
                 )}
 
+                {/* Deals Section */}
+                {(() => {
+                  const leadDeals = getLeadDeals(detailLead.id);
+                  return leadDeals.length > 0 ? (
+                    <div className="py-4 border-b">
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Negócios ({leadDeals.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {leadDeals.map((deal) => {
+                          const stage = stages.find(s => s.id === deal.stage_id);
+                          return (
+                            <div
+                              key={deal.id}
+                              className="p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors"
+                              onClick={() => {
+                                setSelectedDeal(deal);
+                                setIsDealDetailOpen(true);
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{deal.title}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {stage && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] px-1.5"
+                                        style={{ 
+                                          borderColor: stage.color,
+                                          color: stage.color,
+                                        }}
+                                      >
+                                        {stage.name}
+                                      </Badge>
+                                    )}
+                                    {deal.status === 'won' && (
+                                      <Badge className="bg-emerald-500 text-[10px] px-1.5 gap-0.5">
+                                        <Trophy className="h-2.5 w-2.5" />
+                                        Ganha
+                                      </Badge>
+                                    )}
+                                    {deal.status === 'lost' && (
+                                      <Badge variant="destructive" className="text-[10px] px-1.5 gap-0.5">
+                                        <XCircle className="h-2.5 w-2.5" />
+                                        Perdida
+                                      </Badge>
+                                    )}
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {formatDistanceToNow(new Date(deal.created_at), { locale: ptBR, addSuffix: true })}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-semibold text-primary">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}
+                                  </span>
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
                 {/* Timeline */}
                 <div className="pt-4">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -977,6 +1061,37 @@ export default function Leads() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Deal Detail Sheet */}
+      <DealDetailSheet
+        open={isDealDetailOpen}
+        onOpenChange={setIsDealDetailOpen}
+        deal={selectedDeal}
+        stages={stages}
+        onEdit={() => {
+          // Navigate to pipeline page for editing
+          setIsDealDetailOpen(false);
+          navigate('/pipeline');
+        }}
+        onMarkAsWon={async (dealId) => {
+          await markAsWon(dealId);
+          setIsDealDetailOpen(false);
+          setSelectedDeal(null);
+        }}
+        onMarkAsLost={async (dealId, reason) => {
+          await markAsLost(dealId, reason);
+          setIsDealDetailOpen(false);
+          setSelectedDeal(null);
+        }}
+        onReopen={async (dealId) => {
+          await reopenDeal(dealId);
+          setIsDealDetailOpen(false);
+          setSelectedDeal(null);
+        }}
+        onStageChange={async (dealId, stageId) => {
+          return await moveDeal(dealId, stageId);
+        }}
+      />
 
       {/* Custom Fields Manager Dialog */}
       <Dialog open={fieldsDialogOpen} onOpenChange={setFieldsDialogOpen}>
