@@ -68,6 +68,7 @@ import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { TaskKanban } from "@/components/tasks/TaskKanban";
 import { TaskStatusManager } from "@/components/tasks/TaskStatusManager";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
@@ -142,6 +143,7 @@ type ViewMode = "list" | "kanban";
 
 export default function Tasks() {
   const { currentUser } = useCurrentUser();
+  const { hasVendasAccess } = useSectorAccess();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
@@ -437,7 +439,9 @@ export default function Tasks() {
                 <TableHead className="font-medium text-center min-w-[100px]">Status</TableHead>
                 <TableHead className="font-medium text-center min-w-[100px]">Prioridade</TableHead>
                 <TableHead className="font-medium text-center min-w-[100px]">Prazo</TableHead>
-                <TableHead className="font-medium min-w-[120px]">Contexto</TableHead>
+                <TableHead className="font-medium min-w-[120px]">
+                  {hasVendasAccess ? "Contexto" : "Cliente"}
+                </TableHead>
                 <TableHead className="font-medium text-center min-w-[80px]">Responsável</TableHead>
                 <TableHead className="font-medium text-right min-w-[60px]">Ação</TableHead>
               </TableRow>
@@ -614,7 +618,7 @@ export default function Tasks() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
-                          {task.deals ? (
+                          {hasVendasAccess && task.deals ? (
                             <Link 
                               to={`/pipeline?deal=${task.deal_id}`}
                               className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
@@ -623,7 +627,7 @@ export default function Tasks() {
                               <span className="truncate max-w-[100px]">{task.deals.title}</span>
                             </Link>
                           ) : null}
-                          {task.leads ? (
+                          {hasVendasAccess && task.leads ? (
                             <Link 
                               to={`/leads?lead=${task.lead_id}`}
                               className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
@@ -641,7 +645,7 @@ export default function Tasks() {
                               <span className="truncate max-w-[100px]">{task.clients.full_name}</span>
                             </Link>
                           ) : null}
-                          {!task.deals && !task.leads && !task.clients && (
+                          {(!hasVendasAccess || (!task.deals && !task.leads)) && !task.clients && (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </div>
