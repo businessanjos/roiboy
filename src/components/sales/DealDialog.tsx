@@ -1,0 +1,816 @@
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Deal, DealStage } from "@/hooks/useDeals";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Trash2, 
+  Trophy, 
+  XCircle, 
+  RotateCcw,
+  User,
+  Building2,
+  Phone,
+  Mail,
+  Calendar,
+  DollarSign,
+  Tag,
+  FileText,
+  Loader2,
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+const dealSchema = z.object({
+  title: z.string().min(1, "Título é obrigatório"),
+  client_id: z.string().optional(),
+  contact_name: z.string().optional(),
+  contact_phone: z.string().optional(),
+  contact_email: z.string().email("Email inválido").optional().or(z.literal("")),
+  stage_id: z.string().optional(),
+  value: z.number().min(0).default(0),
+  expected_close_date: z.string().optional(),
+  probability: z.number().min(0).max(100).default(0),
+  source: z.string().optional(),
+  responsible_user_id: z.string().optional(),
+  notes: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+});
+
+type DealFormValues = z.infer<typeof dealSchema>;
+
+interface DealDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  deal?: Deal | null;
+  stages: DealStage[];
+  onSave: (data: DealFormValues) => Promise<void>;
+  onDelete?: (dealId: string) => Promise<void>;
+  onMarkAsWon?: (dealId: string) => Promise<void>;
+  onMarkAsLost?: (dealId: string, reason?: string) => Promise<void>;
+  onReopen?: (dealId: string) => Promise<void>;
+}
+
+interface Client {
+  id: string;
+  full_name: string;
+  phone_e164: string;
+  avatar_url: string | null;
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+}
+
+export function DealDialog({
+  open,
+  onOpenChange,
+  deal,
+  stages,
+  onSave,
+  onDelete,
+  onMarkAsWon,
+  onMarkAsLost,
+  onReopen,
+}: DealDialogProps) {
+  const { currentUser } = useCurrentUser();
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
+  const [lostReason, setLostReason] = useState("");
+  const [clients, setClients] = useState<Client[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [newTag, setNewTag] = useState("");
+
+  const isEditing = !!deal;
+  const isClosed = deal?.status !== 'open';
+
+  const form = useForm<DealFormValues>({
+    resolver: zodResolver(dealSchema),
+    defaultValues: {
+      title: "",
+      client_id: "",
+      contact_name: "",
+      contact_phone: "",
+      contact_email: "",
+      stage_id: stages[0]?.id || "",
+      value: 0,
+      expected_close_date: "",
+      probability: stages[0]?.probability || 0,
+      source: "",
+      responsible_user_id: currentUser?.id || "",
+      notes: "",
+      tags: [],
+    },
+  });
+
+  // Load clients and team members
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+
+    const loadData = async () => {
+      const [clientsRes, teamRes] = await Promise.all([
+        supabase
+          .from("clients")
+          .select("id, full_name, phone_e164, avatar_url")
+          .eq("account_id", currentUser.account_id)
+          .eq("status", "active")
+          .order("full_name")
+          .limit(100),
+        supabase
+          .from("users")
+          .select("id, name, avatar_url")
+          .eq("account_id", currentUser.account_id)
+          .order("name"),
+      ]);
+
+      if (clientsRes.data) setClients(clientsRes.data);
+      if (teamRes.data) setTeamMembers(teamRes.data);
+    };
+
+    loadData();
+  }, [currentUser?.account_id]);
+
+  // Reset form when deal changes
+  useEffect(() => {
+    if (deal) {
+      form.reset({
+        title: deal.title,
+        client_id: deal.client_id || "",
+        contact_name: deal.contact_name || "",
+        contact_phone: deal.contact_phone || "",
+        contact_email: deal.contact_email || "",
+        stage_id: deal.stage_id || "",
+        value: deal.value || 0,
+        expected_close_date: deal.expected_close_date || "",
+        probability: deal.probability || 0,
+        source: deal.source || "",
+        responsible_user_id: deal.responsible_user_id || "",
+        notes: deal.notes || "",
+        tags: deal.tags || [],
+      });
+    } else {
+      form.reset({
+        title: "",
+        client_id: "",
+        contact_name: "",
+        contact_phone: "",
+        contact_email: "",
+        stage_id: stages[0]?.id || "",
+        value: 0,
+        expected_close_date: "",
+        probability: stages[0]?.probability || 0,
+        source: "",
+        responsible_user_id: currentUser?.id || "",
+        notes: "",
+        tags: [],
+      });
+    }
+  }, [deal, stages, form, currentUser?.id]);
+
+  const handleSubmit = async (data: DealFormValues) => {
+    setSaving(true);
+    try {
+      await onSave(data);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deal && onDelete) {
+      await onDelete(deal.id);
+      setDeleteConfirmOpen(false);
+    }
+  };
+
+  const handleMarkAsWon = async () => {
+    if (deal && onMarkAsWon) {
+      await onMarkAsWon(deal.id);
+    }
+  };
+
+  const handleMarkAsLost = async () => {
+    if (deal && onMarkAsLost) {
+      await onMarkAsLost(deal.id, lostReason);
+      setLostDialogOpen(false);
+      setLostReason("");
+    }
+  };
+
+  const handleReopen = async () => {
+    if (deal && onReopen) {
+      await onReopen(deal.id);
+    }
+  };
+
+  const handleAddTag = () => {
+    if (newTag.trim()) {
+      const currentTags = form.getValues("tags");
+      if (!currentTags.includes(newTag.trim())) {
+        form.setValue("tags", [...currentTags, newTag.trim()]);
+      }
+      setNewTag("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    const currentTags = form.getValues("tags");
+    form.setValue("tags", currentTags.filter(t => t !== tagToRemove));
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isEditing ? "Editar Negociação" : "Nova Negociação"}
+              {deal?.status === 'won' && (
+                <Badge className="bg-emerald-500">Ganha</Badge>
+              )}
+              {deal?.status === 'lost' && (
+                <Badge variant="destructive">Perdida</Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing 
+                ? "Atualize os detalhes da negociação"
+                : "Adicione uma nova oportunidade ao pipeline"
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <Tabs defaultValue="info">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="info">Informações</TabsTrigger>
+                  <TabsTrigger value="contact">Contato</TabsTrigger>
+                  <TabsTrigger value="details">Detalhes</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="info" className="space-y-4 mt-4">
+                  {/* Title */}
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Título da Negociação *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Ex: Consultoria para Empresa XYZ" 
+                            {...field} 
+                            disabled={isClosed}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Stage */}
+                    <FormField
+                      control={form.control}
+                      name="stage_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Etapa</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            disabled={isClosed}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a etapa" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {stages.map(stage => (
+                                <SelectItem key={stage.id} value={stage.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-2 h-2 rounded-full"
+                                      style={{ backgroundColor: stage.color }}
+                                    />
+                                    {stage.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Value */}
+                    <FormField
+                      control={form.control}
+                      name="value"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor (R$)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="pl-9"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                disabled={isClosed}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Expected Close Date */}
+                    <FormField
+                      control={form.control}
+                      name="expected_close_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Previsão de Fechamento</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="date"
+                                className="pl-9"
+                                {...field}
+                                disabled={isClosed}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Probability */}
+                    <FormField
+                      control={form.control}
+                      name="probability"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Probabilidade (%)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              disabled={isClosed}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Responsible */}
+                  <FormField
+                    control={form.control}
+                    name="responsible_user_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Responsável</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value}
+                          disabled={isClosed}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o responsável" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {teamMembers.map(member => (
+                              <SelectItem key={member.id} value={member.id}>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={member.avatar_url || undefined} />
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(member.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  {member.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                <TabsContent value="contact" className="space-y-4 mt-4">
+                  {/* Client Selection */}
+                  <FormField
+                    control={form.control}
+                    name="client_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cliente Existente</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value}
+                          disabled={isClosed}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Vincular a um cliente existente" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">Nenhum</SelectItem>
+                            {clients.map(client => (
+                              <SelectItem key={client.id} value={client.id}>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={client.avatar_url || undefined} />
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(client.full_name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  {client.full_name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="text-center text-sm text-muted-foreground">
+                    — ou preencha os dados do contato manualmente —
+                  </div>
+
+                  {/* Contact Name */}
+                  <FormField
+                    control={form.control}
+                    name="contact_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome do Contato</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                              className="pl-9"
+                              placeholder="Nome completo" 
+                              {...field} 
+                              disabled={isClosed}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Contact Phone */}
+                    <FormField
+                      control={form.control}
+                      name="contact_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input 
+                                className="pl-9"
+                                placeholder="(11) 99999-9999" 
+                                {...field} 
+                                disabled={isClosed}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Contact Email */}
+                    <FormField
+                      control={form.control}
+                      name="contact_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input 
+                                type="email"
+                                className="pl-9"
+                                placeholder="email@exemplo.com" 
+                                {...field} 
+                                disabled={isClosed}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="details" className="space-y-4 mt-4">
+                  {/* Source */}
+                  <FormField
+                    control={form.control}
+                    name="source"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Origem do Lead</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Ex: Indicação, Site, LinkedIn" 
+                            {...field} 
+                            disabled={isClosed}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Tags */}
+                  <div className="space-y-2">
+                    <FormLabel>Tags</FormLabel>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        placeholder="Adicionar tag"
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                        disabled={isClosed}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleAddTag}
+                        disabled={isClosed}
+                      >
+                        <Tag className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {form.watch("tags").map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="cursor-pointer"
+                          onClick={() => !isClosed && handleRemoveTag(tag)}
+                        >
+                          {tag}
+                          {!isClosed && <span className="ml-1">×</span>}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Observações</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Notas sobre esta negociação..."
+                            className="min-h-[100px]"
+                            {...field} 
+                            disabled={isClosed}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Lost Reason (if lost) */}
+                  {deal?.status === 'lost' && deal.lost_reason && (
+                    <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                      <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                        Motivo da Perda
+                      </p>
+                      <p className="text-sm text-red-600 dark:text-red-300">
+                        {deal.lost_reason}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  {deal && (
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Criado em: {format(new Date(deal.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                      {deal.won_at && (
+                        <p className="text-emerald-600">
+                          Ganho em: {format(new Date(deal.won_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </p>
+                      )}
+                      {deal.lost_at && (
+                        <p className="text-red-600">
+                          Perdido em: {format(new Date(deal.lost_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                {/* Left side actions */}
+                <div className="flex gap-2 flex-1">
+                  {isEditing && onDelete && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  {isEditing && deal?.status === 'open' && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleMarkAsWon}
+                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                      >
+                        <Trophy className="h-4 w-4 mr-1" />
+                        Ganhar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLostDialogOpen(true)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Perder
+                      </Button>
+                    </>
+                  )}
+
+                  {isEditing && deal?.status !== 'open' && onReopen && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReopen}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Reabrir
+                    </Button>
+                  )}
+                </div>
+
+                {/* Right side actions */}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  {!isClosed && (
+                    <Button type="submit" disabled={saving}>
+                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      {isEditing ? "Salvar" : "Criar"}
+                    </Button>
+                  )}
+                </div>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Negociação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta negociação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Lost Reason Dialog */}
+      <AlertDialog open={lostDialogOpen} onOpenChange={setLostDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar como Perdida</AlertDialogTitle>
+            <AlertDialogDescription>
+              Qual foi o motivo da perda? (opcional)
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={lostReason}
+            onChange={(e) => setLostReason(e.target.value)}
+            placeholder="Ex: Preço, concorrente, timing..."
+            className="min-h-[80px]"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setLostReason("")}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkAsLost} className="bg-destructive text-destructive-foreground">
+              Confirmar Perda
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

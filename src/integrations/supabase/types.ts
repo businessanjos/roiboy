@@ -2083,6 +2083,221 @@ export type Database = {
           },
         ]
       }
+      deal_activities: {
+        Row: {
+          account_id: string
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          deal_id: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          scheduled_at: string | null
+          title: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          deal_id: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          scheduled_at?: string | null
+          title?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          deal_id?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          scheduled_at?: string | null
+          title?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_activities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_stages: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          probability: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          probability?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          probability?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_stages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          currency: string | null
+          expected_close_date: string | null
+          id: string
+          lost_at: string | null
+          lost_reason: string | null
+          notes: string | null
+          probability: number | null
+          responsible_user_id: string | null
+          source: string | null
+          stage_id: string | null
+          status: string
+          tags: Json | null
+          title: string
+          updated_at: string
+          value: number | null
+          won_at: string | null
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          currency?: string | null
+          expected_close_date?: string | null
+          id?: string
+          lost_at?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          probability?: number | null
+          responsible_user_id?: string | null
+          source?: string | null
+          stage_id?: string | null
+          status?: string
+          tags?: Json | null
+          title: string
+          updated_at?: string
+          value?: number | null
+          won_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          currency?: string | null
+          expected_close_date?: string | null
+          id?: string
+          lost_at?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          probability?: number | null
+          responsible_user_id?: string | null
+          source?: string | null
+          stage_id?: string | null
+          status?: string
+          tags?: Json | null
+          title?: string
+          updated_at?: string
+          value?: number | null
+          won_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "deal_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_checklist: {
         Row: {
           account_id: string
