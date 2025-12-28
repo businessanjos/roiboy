@@ -59,6 +59,7 @@ const BillingPortal = lazy(() => import("./pages/BillingPortal"));
 const Sectors = lazy(() => import("./pages/Sectors"));
 const Contracts = lazy(() => import("./pages/Contracts"));
 const SalesPipeline = lazy(() => import("./pages/SalesPipeline"));
+const Leads = lazy(() => import("./pages/Leads"));
 // Financial module with sub-routes
 import { FinancialLayout } from "@/components/financial/FinancialLayout";
 const FinancialEntriesPage = lazy(() => import("./pages/financial/FinancialEntriesPage"));
@@ -134,6 +135,7 @@ const App = () => (
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
+                            <Route path="/leads" element={<Leads />} />
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/entries" replace />} />
                               <Route path="entries" element={<FinancialEntriesPage />} />
