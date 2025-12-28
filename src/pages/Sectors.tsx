@@ -32,8 +32,8 @@ export default function Sectors() {
     navigate(defaultRoute);
   };
 
-  const mainSectors = sectors.filter(s => s.id !== "royzapp");
-  const royzappSector = sectors.find(s => s.id === "royzapp");
+  const mainSectors = sectors.filter(s => s.id !== "royzapp" && s.id !== "roychat");
+  const toolSectors = sectors.filter(s => s.id === "royzapp" || s.id === "roychat");
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,38 +92,43 @@ export default function Sectors() {
           ))}
         </div>
 
-        {/* ROY zAPP - Featured Tool */}
-        {royzappSector && (
-          <div
-            onClick={() => handleSectorClick(royzappSector.id, royzappSector.defaultRoute)}
-            className="group relative p-6 rounded-lg border border-primary/20 bg-primary/5 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:bg-primary/10"
-          >
-            <div className="flex items-center gap-5">
-              {/* Icon */}
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10">
-                <royzappSector.icon className="h-7 w-7 text-primary" />
-              </div>
+        {/* Tools - ROY zAPP & ROY Chat */}
+        {toolSectors.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {toolSectors.map((tool) => (
+              <div
+                key={tool.id}
+                onClick={() => handleSectorClick(tool.id, tool.defaultRoute)}
+                className="group relative p-5 rounded-lg border border-primary/20 bg-primary/5 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:bg-primary/10"
+              >
+                <div className="flex items-center gap-4">
+                  {/* Icon */}
+                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0", tool.bgColor)}>
+                    <tool.icon className={cn("h-6 w-6", tool.color)} />
+                  </div>
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium text-primary uppercase tracking-wider">
-                  Ferramenta
-                </span>
-                <h3 className="text-xl font-medium text-foreground">
-                  {royzappSector.name}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {royzappSector.description}
-                </p>
-              </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-primary uppercase tracking-wider">
+                      Ferramenta
+                    </span>
+                    <h3 className="text-lg font-medium text-foreground">
+                      {tool.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      {tool.description}
+                    </p>
+                  </div>
 
-              {/* Arrow */}
-              <div className="text-primary/60 group-hover:text-primary transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                </svg>
+                  {/* Arrow */}
+                  <div className="text-primary/60 group-hover:text-primary transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
