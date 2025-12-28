@@ -2146,6 +2146,7 @@ export default function RoyZapp() {
           onOpenRoiDialog={() => setRoiDialogOpen(true)}
           onOpenRiskDialog={() => setRiskDialogOpen(true)}
           onOpenAddClient={openAddContactDialog}
+          showLeadOption={currentSector?.id === "vendas"}
           onMessageChange={setMessageInput}
           onSendMessage={sendMessage}
           onKeyPress={handleKeyPress}
