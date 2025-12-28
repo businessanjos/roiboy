@@ -3835,9 +3835,11 @@ export type Database = {
           created_at: string
           created_by: string
           custom_status_id: string | null
+          deal_id: string | null
           description: string | null
           due_date: string | null
           id: string
+          lead_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           status: Database["public"]["Enums"]["task_status"]
           title: string
@@ -3852,9 +3854,11 @@ export type Database = {
           created_at?: string
           created_by: string
           custom_status_id?: string | null
+          deal_id?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           title: string
@@ -3869,9 +3873,11 @@ export type Database = {
           created_at?: string
           created_by?: string
           custom_status_id?: string | null
+          deal_id?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
@@ -3911,6 +3917,20 @@ export type Database = {
             columns: ["custom_status_id"]
             isOneToOne: false
             referencedRelation: "task_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_tasks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
