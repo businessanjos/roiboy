@@ -81,7 +81,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       onClick={onClick}
     >
     <CardContent className="p-3 space-y-2">
-        {/* Header with Avatar and Name */}
+        {/* Header with Title and Client */}
         <div className="flex items-start gap-2">
           <Avatar className="h-8 w-8 border border-primary/20">
             <AvatarImage src={avatarUrl || undefined} />
@@ -90,10 +90,8 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-xs truncate">{contactName}</h4>
-            {deal.title !== contactName && (
-              <p className="text-[10px] text-muted-foreground truncate">{deal.title}</p>
-            )}
+            <h4 className="font-semibold text-xs truncate">{deal.title}</h4>
+            <p className="text-[10px] text-muted-foreground truncate">{contactName}</p>
           </div>
         </div>
 
