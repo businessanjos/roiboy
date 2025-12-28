@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Bot, User, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -82,7 +84,7 @@ export function SectorAgentChat({
     }
   }, [isOpen]);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading || !selectedAgent) return;
 
     const userMessage: Message = {
@@ -93,29 +95,133 @@ export function SectorAgentChat({
       agentId: selectedAgent.id,
     };
 
+    const currentMessages = messagesByAgent[selectedAgent.id] || [];
     setMessagesByAgent((prev) => ({
       ...prev,
-      [selectedAgent.id]: [...(prev[selectedAgent.id] || []), userMessage],
+      [selectedAgent.id]: [...currentMessages, userMessage],
     }));
     setInput("");
     setIsLoading(true);
 
-    // Simular resposta do agente (será integrado com edge function depois)
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: `[${selectedAgent.name}] Esta é uma resposta de demonstração. A integração com a IA será implementada em breve.`,
-        timestamp: new Date(),
-        agentId: selectedAgent.id,
-      };
+    // Preparar histórico de mensagens para a API
+    const apiMessages = [...currentMessages, userMessage]
+      .filter((m) => m.id !== `greeting-${selectedAgent.id}` || m.role === "assistant")
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error("Não autenticado");
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sector-agent-chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            agentId: selectedAgent.id,
+            messages: apiMessages,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erro ${response.status}`);
+      }
+
+      // Processar stream SSE
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Sem resposta");
+
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+      let assistantMessageId = (Date.now() + 1).toString();
+      let textBuffer = "";
+
+      // Adicionar mensagem vazia do assistente
       setMessagesByAgent((prev) => ({
         ...prev,
-        [selectedAgent.id]: [...(prev[selectedAgent.id] || []), assistantMessage],
+        [selectedAgent.id]: [
+          ...(prev[selectedAgent.id] || []),
+          {
+            id: assistantMessageId,
+            role: "assistant",
+            content: "",
+            timestamp: new Date(),
+            agentId: selectedAgent.id,
+          },
+        ],
       }));
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        // Processar linha por linha
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              // Atualizar mensagem do assistente
+              setMessagesByAgent((prev) => {
+                const agentMessages = prev[selectedAgent.id] || [];
+                return {
+                  ...prev,
+                  [selectedAgent.id]: agentMessages.map((m) =>
+                    m.id === assistantMessageId
+                      ? { ...m, content: assistantContent }
+                      : m
+                  ),
+                };
+              });
+            }
+          } catch {
+            // JSON incompleto, colocar de volta no buffer
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erro no chat:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar mensagem");
+      
+      // Remover mensagem do usuário em caso de erro
+      setMessagesByAgent((prev) => ({
+        ...prev,
+        [selectedAgent.id]: (prev[selectedAgent.id] || []).filter(
+          (m) => m.id !== userMessage.id
+        ),
+      }));
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  };
+    }
+  }, [input, isLoading, selectedAgent, messagesByAgent]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
