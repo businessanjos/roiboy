@@ -20,6 +20,7 @@ export interface Deal {
   account_id: string;
   title: string;
   client_id: string | null;
+  lead_id: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
