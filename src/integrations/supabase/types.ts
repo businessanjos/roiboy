@@ -3702,6 +3702,99 @@ export type Database = {
           },
         ]
       }
+      financial_entry_templates: {
+        Row: {
+          account_id: string
+          category_id: string | null
+          client_id: string | null
+          cost_center_id: string | null
+          created_at: string
+          default_amount: number | null
+          description: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          notes: string | null
+          supplier_id: string | null
+          type: string
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          account_id: string
+          category_id?: string | null
+          client_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string
+          default_amount?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name: string
+          notes?: string | null
+          supplier_id?: string | null
+          type: string
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          account_id?: string
+          category_id?: string | null
+          client_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string
+          default_amount?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          notes?: string | null
+          supplier_id?: string | null
+          type?: string
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entry_templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entry_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entry_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entry_templates_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entry_templates_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_pending_classifications: {
         Row: {
           account_id: string
@@ -7416,6 +7509,10 @@ export type Database = {
         }[]
       }
       get_user_account_id: { Args: never; Returns: string }
+      increment_template_usage: {
+        Args: { template_id: string }
+        Returns: undefined
+      }
       initialize_ai_agent_functions: {
         Args: { p_account_id: string }
         Returns: undefined

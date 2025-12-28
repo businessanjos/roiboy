@@ -68,6 +68,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCardInvoiceImport } from "@/components/financial/CreditCardInvoiceImport";
 import { GoogleSheetsIntegration } from "@/components/financial/GoogleSheetsIntegration";
+import { EntryTemplatesManager } from "@/components/financial/EntryTemplatesManager";
 import {
   DropdownMenu as ImportDropdown,
   DropdownMenuContent as ImportDropdownContent,
@@ -496,34 +497,55 @@ export default function FinancialEntriesPage() {
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4 mt-4">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(totals.total)}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {activeTab === "receivable" ? "Recebido" : "Pago"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(totals.paid)}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Pendente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{formatCurrency(totals.pending)}</div>
-              </CardContent>
-            </Card>
+          {/* Summary Cards + Templates */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(totals.total)}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {activeTab === "receivable" ? "Recebido" : "Pago"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{formatCurrency(totals.paid)}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Pendente</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-600">{formatCurrency(totals.pending)}</div>
+                </CardContent>
+              </Card>
+            </div>
+            <EntryTemplatesManager
+              activeTab={activeTab === "receivable" ? "income" : "expense"}
+              onUseTemplate={(template) => {
+                setFormData({
+                  description: template.name,
+                  amount: template.default_amount?.toString() || "",
+                  due_date: format(new Date(), "yyyy-MM-dd"),
+                  category_id: template.category_id || "",
+                  bank_account_id: "",
+                  client_id: template.client_id || "",
+                  is_recurring: false,
+                  recurrence_type: "monthly",
+                  recurrence_end_date: "",
+                  document_number: "",
+                  notes: template.notes || "",
+                });
+                setIsDialogOpen(true);
+              }}
+            />
           </div>
 
           {/* Filters */}
