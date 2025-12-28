@@ -402,16 +402,18 @@ export default function Admin() {
         <TabsContent value="zad-operacoes" className="mt-0">
           <SectorAgentConfig
             sectorId="operacoes"
-            sectorName="Operações"
+            sectorName="Operações (CX/CS)"
             sectorIcon={<Briefcase className="h-6 w-6 text-white" />}
             sectorColor="from-blue-500/20 to-indigo-500/20"
             featuresList={[
-              { key: "canSearchClients", label: "Buscar Clientes", description: "Pesquisar informações de clientes", icon: <UsersIcon className="h-5 w-5 text-blue-500" /> },
-              { key: "canManageEvents", label: "Gerenciar Eventos", description: "Criar e editar eventos", icon: <Calendar className="h-5 w-5 text-green-500" /> },
-              { key: "canAnswerOperational", label: "Dúvidas Operacionais", description: "Responder sobre processos", icon: <Lightbulb className="h-5 w-5 text-yellow-500" /> },
-              { key: "canSuggestActions", label: "Sugerir Ações", description: "Recomendar próximos passos", icon: <Target className="h-5 w-5 text-purple-500" /> },
-              { key: "canManageTasks", label: "Gerenciar Tarefas", description: "Criar e acompanhar tarefas", icon: <FileTextIcon className="h-5 w-5 text-orange-500" /> },
-              { key: "canTrackStages", label: "Acompanhar Stages", description: "Monitorar jornada do cliente", icon: <BarChart3 className="h-5 w-5 text-cyan-500" /> },
+              { key: "roi_analysis", label: "Análise de ROI", description: "Calcular e monitorar retorno do cliente", icon: <TrendingUpIcon className="h-5 w-5 text-green-500" /> },
+              { key: "risk_detection", label: "Detecção de Riscos", description: "Identificar sinais de churn e insatisfação", icon: <Bell className="h-5 w-5 text-red-500" /> },
+              { key: "vnps_tracking", label: "Monitorar V-NPS", description: "Acompanhar satisfação virtual", icon: <Target className="h-5 w-5 text-purple-500" /> },
+              { key: "engagement_metrics", label: "Métricas de Engajamento", description: "Analisar participação e interações", icon: <BarChart3 className="h-5 w-5 text-cyan-500" /> },
+              { key: "event_management", label: "Gestão de Eventos/Lives", description: "Organizar e acompanhar eventos", icon: <Calendar className="h-5 w-5 text-blue-500" /> },
+              { key: "client_health", label: "Health Score", description: "Calcular saúde do cliente", icon: <Activity className="h-5 w-5 text-emerald-500" /> },
+              { key: "journey_tracking", label: "Jornada do Cliente", description: "Acompanhar stages e checklist", icon: <UsersIcon className="h-5 w-5 text-indigo-500" /> },
+              { key: "cs_support", label: "Suporte ao CS/CX", description: "Auxiliar equipe de experiência", icon: <Lightbulb className="h-5 w-5 text-yellow-500" /> },
             ]}
           />
         </TabsContent>
