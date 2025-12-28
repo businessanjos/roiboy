@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ const PRIORITY_LABELS = {
 
 export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialStatus, onSuccess }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
+  const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
   const { statuses: customStatuses } = useTaskStatuses();
   const [users, setUsers] = useState<User[]>([]);
@@ -103,8 +105,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     if (open) {
       fetchUsers();
       if (!clientId) fetchClients();
-      if (!dealId) fetchDeals();
-      if (!leadId) fetchLeads();
+      if (!dealId && hasVendasAccess) fetchDeals();
+      if (!leadId && hasVendasAccess) fetchLeads();
       
       if (task) {
         setFormData({
@@ -344,7 +346,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </div>
           )}
 
-          {!dealId && deals.length > 0 && (
+          {hasVendasAccess && !dealId && deals.length > 0 && (
             <div className="space-y-2">
               <Label>Negócio (opcional)</Label>
               <Select
@@ -366,7 +368,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </div>
           )}
 
-          {!leadId && leads.length > 0 && (
+          {hasVendasAccess && !leadId && leads.length > 0 && (
             <div className="space-y-2">
               <Label>Lead (opcional)</Label>
               <Select
