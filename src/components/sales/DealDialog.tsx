@@ -511,81 +511,110 @@ export function DealDialog({
                     )}
                   />
 
-                  <div className="text-center text-sm text-muted-foreground">
-                    — ou preencha os dados do contato manualmente —
-                  </div>
-
-                  {/* Contact Name */}
-                  <FormField
-                    control={form.control}
-                    name="contact_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome do Contato</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              className="pl-9"
-                              placeholder="Nome completo" 
-                              {...field} 
-                              disabled={isClosed}
-                            />
+                  {/* Show client info if selected, otherwise show manual fields */}
+                  {form.watch("client_id") && form.watch("client_id") !== "__none__" ? (
+                    (() => {
+                      const selectedClient = clients.find(c => c.id === form.watch("client_id"));
+                      if (!selectedClient) return null;
+                      return (
+                        <div className="p-4 rounded-lg bg-muted/50 border">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={selectedClient.avatar_url || undefined} />
+                              <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                                {getInitials(selectedClient.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{selectedClient.full_name}</p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {selectedClient.phone_e164}
+                              </p>
+                            </div>
                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <>
+                      <div className="text-center text-sm text-muted-foreground">
+                        — ou preencha os dados do contato manualmente —
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Contact Phone */}
-                    <FormField
-                      control={form.control}
-                      name="contact_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telefone</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input 
-                                className="pl-9"
-                                placeholder="(11) 99999-9999" 
-                                {...field} 
-                                disabled={isClosed}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      {/* Contact Name */}
+                      <FormField
+                        control={form.control}
+                        name="contact_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome do Contato</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                  className="pl-9"
+                                  placeholder="Nome completo" 
+                                  {...field} 
+                                  disabled={isClosed}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    {/* Contact Email */}
-                    <FormField
-                      control={form.control}
-                      name="contact_email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input 
-                                type="email"
-                                className="pl-9"
-                                placeholder="email@exemplo.com" 
-                                {...field} 
-                                disabled={isClosed}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Contact Phone */}
+                        <FormField
+                          control={form.control}
+                          name="contact_phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Telefone</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input 
+                                    className="pl-9"
+                                    placeholder="(11) 99999-9999" 
+                                    {...field} 
+                                    disabled={isClosed}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Contact Email */}
+                        <FormField
+                          control={form.control}
+                          name="contact_email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input 
+                                    type="email"
+                                    className="pl-9"
+                                    placeholder="email@exemplo.com" 
+                                    {...field} 
+                                    disabled={isClosed}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="details" className="space-y-4 mt-4">
