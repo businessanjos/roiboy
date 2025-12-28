@@ -6653,6 +6653,7 @@ export type Database = {
           is_pinned: boolean
           last_message_at: string | null
           last_message_preview: string | null
+          lead_id: string | null
           muted_until: string | null
           phone_e164: string
           pinned_at: string | null
@@ -6678,6 +6679,7 @@ export type Database = {
           is_pinned?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
+          lead_id?: string | null
           muted_until?: string | null
           phone_e164: string
           pinned_at?: string | null
@@ -6703,6 +6705,7 @@ export type Database = {
           is_pinned?: boolean
           last_message_at?: string | null
           last_message_preview?: string | null
+          lead_id?: string | null
           muted_until?: string | null
           phone_e164?: string
           pinned_at?: string | null
@@ -6722,6 +6725,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

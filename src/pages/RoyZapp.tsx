@@ -1585,7 +1585,7 @@ export default function RoyZapp() {
       // Link the zapp_conversation to the new lead
       const { error: linkError } = await supabase
         .from("zapp_conversations")
-        .update({ lead_id: newLead.id })
+        .update({ lead_id: newLead.id } as any)
         .eq("id", selectedConversation.zapp_conversation.id);
 
       if (linkError) throw linkError;
@@ -2145,7 +2145,7 @@ export default function RoyZapp() {
           onOpenTransfer={() => setTransferDialogOpen(true)}
           onOpenRoiDialog={() => setRoiDialogOpen(true)}
           onOpenRiskDialog={() => setRiskDialogOpen(true)}
-          onOpenAddClient={openAddClientDialog}
+          onOpenAddClient={openAddContactDialog}
           onMessageChange={setMessageInput}
           onSendMessage={sendMessage}
           onKeyPress={handleKeyPress}
@@ -2329,14 +2329,17 @@ export default function RoyZapp() {
         saving={savingQuickReply}
       />
 
-      {/* Add Client Dialog */}
-      <ZappAddClientDialog
-        open={addClientDialogOpen}
-        onOpenChange={setAddClientDialogOpen}
-        form={addClientForm}
-        onFormChange={setAddClientForm}
-        onSave={saveNewClient}
-        saving={savingNewClient}
+      {/* Add Client/Lead Dialog */}
+      <ZappAddContactDialog
+        open={addContactDialogOpen}
+        onOpenChange={setAddContactDialogOpen}
+        phone={addContactPhone}
+        contactName={addContactName}
+        showLeadOption={currentSector?.id === "vendas"}
+        onSaveClient={saveNewClient}
+        onSaveLead={saveNewLead}
+        savingClient={savingNewClient}
+        savingLead={savingNewLead}
       />
 
       {/* New Conversation Dialog */}
