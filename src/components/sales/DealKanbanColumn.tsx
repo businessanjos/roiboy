@@ -4,7 +4,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Users, Clock, MessageSquare, CheckCircle, XCircle, TrendingDown } from "lucide-react";
+import { Users, Clock, MessageSquare, CheckCircle, XCircle } from "lucide-react";
 
 interface DealKanbanColumnProps {
   stage: DealStage;
@@ -75,8 +75,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate }: 
           </Badge>
         </div>
         {conversionRate !== undefined && (
-          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-            <TrendingDown className="h-2.5 w-2.5" />
+          <span className="text-[9px] text-muted-foreground/70 tabular-nums">
             {conversionRate}%
           </span>
         )}
