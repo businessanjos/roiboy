@@ -84,7 +84,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate }: 
       {/* Cards Container */}
       <div 
         className={cn(
-          "flex-1 space-y-2 min-h-[350px] p-1 rounded-lg transition-colors",
+          "flex-1 space-y-2 p-1 rounded-lg transition-colors overflow-y-auto",
           isOver && "bg-primary/5 ring-1 ring-primary/20"
         )}
       >
