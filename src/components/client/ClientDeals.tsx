@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -26,7 +25,6 @@ import {
 } from "@/components/ui/select";
 import {
   Plus,
-  TrendingUp,
   Trophy,
   XCircle,
   Clock,
@@ -38,6 +36,8 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
+import { Deal as DealType, DealStage as DealStageType } from "@/hooks/useDeals";
 
 interface Deal {
   id: string;
@@ -82,6 +82,10 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  
+  // Deal detail sheet state
+  const [selectedDeal, setSelectedDeal] = useState<DealType | null>(null);
+  const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -192,10 +196,145 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
     }).format(value);
   };
 
+  const handleOpenDealDetail = (deal: Deal) => {
+    // Convert local Deal to DealType for the sheet
+    const dealForSheet: DealType = {
+      id: deal.id,
+      account_id: "",
+      title: deal.title,
+      value: deal.value,
+      currency: deal.currency,
+      status: deal.status,
+      probability: 50,
+      expected_close_date: deal.expected_close_date,
+      won_at: deal.won_at,
+      lost_at: deal.lost_at,
+      lost_reason: deal.lost_reason,
+      notes: deal.notes,
+      source: deal.source,
+      tags: [],
+      created_at: deal.created_at,
+      updated_at: deal.created_at,
+      stage_id: deal.stage?.id || null,
+      client_id: clientId,
+      lead_id: null,
+      responsible_user_id: deal.responsible_user?.id || null,
+      contact_name: null,
+      contact_phone: null,
+      contact_email: null,
+      stage: deal.stage ? {
+        id: deal.stage.id,
+        account_id: "",
+        name: deal.stage.name,
+        color: deal.stage.color,
+        display_order: 0,
+        is_active: true,
+        probability: 50,
+        created_at: "",
+        updated_at: "",
+      } : undefined,
+      responsible_user: deal.responsible_user ? {
+        id: deal.responsible_user.id,
+        name: deal.responsible_user.name,
+        avatar_url: null,
+      } : undefined,
+    };
+    setSelectedDeal(dealForSheet);
+    setIsDetailSheetOpen(true);
+  };
+
+  const handleStageChange = async (dealId: string, newStageId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("deals")
+        .update({ stage_id: newStageId })
+        .eq("id", dealId);
+      
+      if (error) throw error;
+      fetchDeals();
+      return true;
+    } catch (error) {
+      console.error("Error changing stage:", error);
+      return false;
+    }
+  };
+
+  const handleMarkAsWon = async (dealId: string) => {
+    try {
+      const { error } = await supabase
+        .from("deals")
+        .update({ status: "won", won_at: new Date().toISOString() })
+        .eq("id", dealId);
+      
+      if (error) throw error;
+      toast.success("Negócio marcado como ganho!");
+      fetchDeals();
+      setIsDetailSheetOpen(false);
+    } catch (error) {
+      console.error("Error marking as won:", error);
+      toast.error("Erro ao marcar como ganho");
+    }
+  };
+
+  const handleMarkAsLost = async (dealId: string, reason?: string) => {
+    try {
+      const { error } = await supabase
+        .from("deals")
+        .update({ 
+          status: "lost", 
+          lost_at: new Date().toISOString(),
+          lost_reason: reason || null,
+        })
+        .eq("id", dealId);
+      
+      if (error) throw error;
+      toast.success("Negócio marcado como perdido");
+      fetchDeals();
+      setIsDetailSheetOpen(false);
+    } catch (error) {
+      console.error("Error marking as lost:", error);
+      toast.error("Erro ao marcar como perdido");
+    }
+  };
+
+  const handleReopen = async (dealId: string) => {
+    try {
+      const { error } = await supabase
+        .from("deals")
+        .update({ 
+          status: "open", 
+          won_at: null,
+          lost_at: null,
+          lost_reason: null,
+        })
+        .eq("id", dealId);
+      
+      if (error) throw error;
+      toast.success("Negócio reaberto!");
+      fetchDeals();
+      setIsDetailSheetOpen(false);
+    } catch (error) {
+      console.error("Error reopening deal:", error);
+      toast.error("Erro ao reabrir negócio");
+    }
+  };
+
+  const stagesForSheet: DealStageType[] = stages.map(s => ({
+    id: s.id,
+    account_id: "",
+    name: s.name,
+    color: s.color,
+    display_order: s.display_order,
+    is_active: true,
+    probability: 50,
+    created_at: "",
+    updated_at: "",
+  }));
+
   const DealCard = ({ deal }: { deal: Deal }) => (
     <Card 
       className="hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => navigate("/pipeline")}
+      onClick={() => handleOpenDealDetail(deal)}
     >
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-2">
@@ -454,6 +593,19 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Deal Detail Sheet */}
+      <DealDetailSheet
+        open={isDetailSheetOpen}
+        onOpenChange={setIsDetailSheetOpen}
+        deal={selectedDeal}
+        stages={stagesForSheet}
+        onEdit={() => navigate("/pipeline")}
+        onMarkAsWon={handleMarkAsWon}
+        onMarkAsLost={handleMarkAsLost}
+        onReopen={handleReopen}
+        onStageChange={handleStageChange}
+      />
     </div>
   );
 }
