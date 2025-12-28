@@ -60,6 +60,26 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     return grouped;
   }, [stages, deals]);
 
+  // Calculate conversion rates
+  const conversionRates = useMemo(() => {
+    const rates: Record<string, number> = {};
+    const totalDeals = deals.length;
+    
+    stages.forEach((stage, index) => {
+      const dealsInStage = dealsByStage[stage.id]?.length || 0;
+      if (index === 0) {
+        // First stage: percentage of total
+        rates[stage.id] = totalDeals > 0 ? Math.round((dealsInStage / totalDeals) * 100) : 0;
+      } else {
+        // Other stages: percentage from previous stage
+        const prevStageDeals = dealsByStage[stages[index - 1].id]?.length || 0;
+        rates[stage.id] = prevStageDeals > 0 ? Math.round((dealsInStage / prevStageDeals) * 100) : 0;
+      }
+    });
+    
+    return rates;
+  }, [stages, dealsByStage, deals.length]);
+
   const handleDragStart = (event: DragStartEvent) => {
     const dealId = event.active.id as string;
     const deal = deals.find(d => d.id === dealId);
@@ -114,12 +134,13 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     >
       <ScrollArea className="w-full">
         <div className="flex gap-2 min-h-[400px] pb-2">
-          {stages.map(stage => (
+          {stages.map((stage, index) => (
             <DealKanbanColumn
               key={stage.id}
               stage={stage}
               deals={dealsByStage[stage.id] || []}
               onDealClick={onDealClick}
+              conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
             />
           ))}
         </div>

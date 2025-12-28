@@ -165,56 +165,6 @@ export default function SalesPipeline() {
           </div>
         </div>
 
-        {/* Funnel Stats - Compact */}
-        <div className="flex items-center gap-0 overflow-x-auto border rounded-lg bg-muted/30 p-1">
-          {stages.map((stage, index) => {
-            const dealsInStage = openDeals.filter(d => d.stage_id === stage.id);
-            const prevStageDeals = index > 0 
-              ? openDeals.filter(d => d.stage_id === stages[index - 1].id).length 
-              : openDeals.length;
-            const conversionRate = prevStageDeals > 0 
-              ? Math.round((dealsInStage.length / prevStageDeals) * 100) 
-              : 0;
-            
-            return (
-              <div key={stage.id} className="flex items-center gap-2 px-3 py-1.5 min-w-fit border-r border-border/50 last:border-r-0">
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ 
-                    borderWidth: '2px',
-                    borderStyle: 'solid',
-                    borderColor: stage.color,
-                    backgroundColor: `${stage.color}15`,
-                    color: stage.color
-                  }}
-                >
-                  {dealsInStage.length}
-                </div>
-                <span className="text-xs text-muted-foreground hidden sm:inline">{stage.name}</span>
-                {index > 0 && (
-                  <span className="text-[10px] text-muted-foreground">{conversionRate}%</span>
-                )}
-              </div>
-            );
-          })}
-          
-          {/* Won */}
-          <div className="flex items-center gap-2 px-3 py-1.5 min-w-fit border-r border-border/50">
-            <div className="w-8 h-8 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-emerald-500/10 text-xs font-bold text-emerald-500">
-              {wonDeals.length}
-            </div>
-            <span className="text-xs text-muted-foreground hidden sm:inline">Ganhas</span>
-          </div>
-          
-          {/* Lost */}
-          <div className="flex items-center gap-2 px-3 py-1.5 min-w-fit">
-            <div className="w-8 h-8 rounded-full border-2 border-red-500 flex items-center justify-center bg-red-500/10 text-xs font-bold text-red-500">
-              {lostDeals.length}
-            </div>
-            <span className="text-xs text-muted-foreground hidden sm:inline">Perdidas</span>
-          </div>
-        </div>
-
         {/* Tabs for different deal statuses */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
