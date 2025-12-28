@@ -2,12 +2,20 @@ import { useState, useRef, useEffect } from 'react';
 import { useInternalChat } from '@/hooks/useInternalChat';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   MessageSquare, 
   Send, 
@@ -15,7 +23,13 @@ import {
   Search, 
   Users,
   Check,
-  CheckCheck
+  CheckCheck,
+  MoreVertical,
+  Pencil,
+  UserPlus,
+  UserMinus,
+  LogOut,
+  X
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -32,6 +46,10 @@ export default function TeamChat() {
     selectedChat,
     setSelectedChatId,
     createChat,
+    updateChat,
+    addParticipants,
+    removeParticipant,
+    leaveGroup,
     sendMessage,
     currentUserId
   } = useInternalChat();
@@ -40,7 +58,17 @@ export default function TeamChat() {
   const [searchQuery, setSearchQuery] = useState('');
   const [newChatDialogOpen, setNewChatDialogOpen] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState('');
+  const [editGroupDialogOpen, setEditGroupDialogOpen] = useState(false);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [addMembersDialogOpen, setAddMembersDialogOpen] = useState(false);
+  const [newMemberIds, setNewMemberIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -64,10 +92,56 @@ export default function TeamChat() {
   const handleCreateChat = async () => {
     if (selectedMembers.length === 0) return;
     
-    await createChat.mutateAsync(selectedMembers);
+    const isGroup = selectedMembers.length > 1;
+    await createChat.mutateAsync({ 
+      participantIds: selectedMembers, 
+      groupName: isGroup && groupName.trim() ? groupName.trim() : undefined 
+    });
     setNewChatDialogOpen(false);
     setSelectedMembers([]);
+    setGroupName('');
   };
+
+  const handleEditGroup = async () => {
+    if (!selectedChat?.id || !editGroupName.trim()) return;
+    
+    await updateChat.mutateAsync({ chatId: selectedChat.id, name: editGroupName.trim() });
+    setEditGroupDialogOpen(false);
+    setEditGroupName('');
+  };
+
+  const handleAddMembers = async () => {
+    if (!selectedChat?.id || newMemberIds.length === 0) return;
+    
+    await addParticipants.mutateAsync({ chatId: selectedChat.id, userIds: newMemberIds });
+    setAddMembersDialogOpen(false);
+    setNewMemberIds([]);
+  };
+
+  const handleRemoveParticipant = async (userId: string) => {
+    if (!selectedChat?.id) return;
+    await removeParticipant.mutateAsync({ chatId: selectedChat.id, userId });
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!selectedChat?.id) return;
+    await leaveGroup.mutateAsync(selectedChat.id);
+  };
+
+  const openEditGroupDialog = () => {
+    setEditGroupName(selectedChat?.name || '');
+    setEditGroupDialogOpen(true);
+  };
+
+  const openAddMembersDialog = () => {
+    setNewMemberIds([]);
+    setAddMembersDialogOpen(true);
+  };
+
+  // Get members not already in the group
+  const availableMembers = teamMembers.filter(
+    member => !selectedChat?.participants?.some(p => p.user_id === member.id)
+  );
 
   const getChatName = (chat: typeof chats[0]) => {
     if (chat.name) return chat.name;
@@ -116,7 +190,7 @@ export default function TeamChat() {
                   <p className="text-sm text-muted-foreground">
                     Selecione os membros para iniciar uma conversa:
                   </p>
-                  <ScrollArea className="h-64">
+                  <ScrollArea className="h-48">
                     <div className="space-y-2">
                       {teamMembers.map(member => (
                         <label
@@ -147,12 +221,26 @@ export default function TeamChat() {
                       ))}
                     </div>
                   </ScrollArea>
+                  
+                  {/* Group name field - only show when multiple members selected */}
+                  {selectedMembers.length > 1 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="group-name">Nome do Grupo (opcional)</Label>
+                      <Input
+                        id="group-name"
+                        placeholder="Ex: Equipe de Vendas"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  
                   <Button 
                     onClick={handleCreateChat} 
                     disabled={selectedMembers.length === 0 || createChat.isPending}
                     className="w-full"
                   >
-                    {createChat.isPending ? 'Criando...' : 'Iniciar Conversa'}
+                    {createChat.isPending ? 'Criando...' : selectedMembers.length > 1 ? 'Criar Grupo' : 'Iniciar Conversa'}
                   </Button>
                 </div>
               </DialogContent>
@@ -265,7 +353,133 @@ export default function TeamChat() {
                   )}
                 </div>
               </div>
+              
+              {/* Group Options Menu */}
+              {selectedChat.is_group && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={openEditGroupDialog}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Renomear grupo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={openAddMembersDialog}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Adicionar membros
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLeaveGroup}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair do grupo
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
+
+            {/* Edit Group Dialog */}
+            <Dialog open={editGroupDialogOpen} onOpenChange={setEditGroupDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Renomear Grupo</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-group-name">Nome do Grupo</Label>
+                    <Input
+                      id="edit-group-name"
+                      value={editGroupName}
+                      onChange={(e) => setEditGroupName(e.target.value)}
+                      placeholder="Nome do grupo"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditGroupDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleEditGroup}
+                    disabled={!editGroupName.trim() || updateChat.isPending}
+                  >
+                    {updateChat.isPending ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Members Dialog */}
+            <Dialog open={addMembersDialogOpen} onOpenChange={setAddMembersDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Membros</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {availableMembers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Todos os membros já estão no grupo
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Selecione os membros para adicionar:
+                      </p>
+                      <ScrollArea className="h-48">
+                        <div className="space-y-2">
+                          {availableMembers.map(member => (
+                            <label
+                              key={member.id}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={newMemberIds.includes(member.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setNewMemberIds([...newMemberIds, member.id]);
+                                  } else {
+                                    setNewMemberIds(newMemberIds.filter(id => id !== member.id));
+                                  }
+                                }}
+                              />
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={member.avatar_url || undefined} />
+                                <AvatarFallback>
+                                  {member.name?.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-sm">{member.name}</p>
+                                <p className="text-xs text-muted-foreground">{member.email}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddMembersDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleAddMembers}
+                    disabled={newMemberIds.length === 0 || addParticipants.isPending}
+                  >
+                    {addParticipants.isPending ? 'Adicionando...' : 'Adicionar'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Group Participants List (shown in header on click) */}
 
             {/* Messages Area */}
             <ScrollArea className="flex-1 p-4">
