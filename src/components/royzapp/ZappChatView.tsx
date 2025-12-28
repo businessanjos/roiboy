@@ -79,6 +79,7 @@ interface ZappChatViewProps {
   onOpenRoiDialog: () => void;
   onOpenRiskDialog: () => void;
   onOpenAddClient: () => void;
+  showLeadOption?: boolean;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -131,6 +132,7 @@ export function ZappChatView({
   onOpenRoiDialog,
   onOpenRiskDialog,
   onOpenAddClient,
+  showLeadOption = false,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -194,6 +196,7 @@ export function ZappChatView({
         contactInfo={contactInfo}
         clientProducts={clientProducts}
         currentAgentId={currentAgentId}
+        showLeadOption={showLeadOption}
         onBack={onBack}
         onOpenClientEdit={onOpenClientEdit}
         onAssignToMe={onAssignToMe}

@@ -30,6 +30,7 @@ interface ZappChatHeaderProps {
   contactInfo: ContactInfo;
   clientProducts: { id: string; name: string; color?: string }[];
   currentAgentId: string | null;
+  showLeadOption?: boolean;
   onBack: () => void;
   onOpenClientEdit: (clientId: string) => void;
   onAssignToMe: (assignmentId: string) => void;
@@ -46,6 +47,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   contactInfo,
   clientProducts,
   currentAgentId,
+  showLeadOption = false,
   onBack,
   onOpenClientEdit,
   onAssignToMe,
@@ -239,7 +241,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   onClick={onOpenAddClient}
                 >
                   <UserPlus className="h-4 w-4 mr-2 text-zapp-accent" />
-                  Adicionar Cliente
+                  {showLeadOption ? "Adicionar Contato" : "Adicionar Cliente"}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
