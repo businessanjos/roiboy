@@ -26,6 +26,7 @@ import {
   UsersRound,
   Bot,
   MessageSquare,
+  MessageCircle,
   Activity,
   Grid3X3,
   UserPlus,
@@ -100,6 +101,7 @@ const navItems: NavItem[] = [
   { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
   { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
+  { to: "/team-chat", icon: MessageCircle, label: "ROY Chat", permission: PERMISSIONS.TEAM_VIEW },
   { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
   
   { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },

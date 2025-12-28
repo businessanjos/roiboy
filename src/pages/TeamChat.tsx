@@ -101,7 +101,7 @@ export default function TeamChat() {
       <div className="w-80 border-r flex flex-col bg-card">
         <div className="p-4 border-b space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">Chat do Time</h1>
+            <h1 className="text-xl font-semibold">ROY Chat</h1>
             <Dialog open={newChatDialogOpen} onOpenChange={setNewChatDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="ghost">

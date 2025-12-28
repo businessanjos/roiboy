@@ -65,7 +65,7 @@ export const sectors: Sector[] = [
       { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
-      { to: "/team-chat", icon: MessageCircle, label: "Chat do Time" },
+      { to: "/team-chat", icon: MessageCircle, label: "ROY Chat" },
       { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
