@@ -38,6 +38,8 @@ interface CreateLeadData {
 
 interface UpdateLeadData extends Partial<CreateLeadData> {
   status?: string;
+  converted_to_deal_id?: string;
+  converted_at?: string;
 }
 
 export function useLeads() {
@@ -184,59 +186,33 @@ export function useLeads() {
     }
   };
 
-  const convertToClient = async (leadId: string): Promise<string | null> => {
-    if (!currentUser?.account_id) return null;
-
-    const lead = leads.find(l => l.id === leadId);
-    if (!lead) return null;
+  const markAsConvertedToDeal = async (leadId: string, dealId: string): Promise<boolean> => {
+    if (!currentUser?.account_id) return false;
 
     try {
-      // Create client from lead
-      const { data: newClient, error: clientError } = await supabase
-        .from('clients')
-        .insert({
-          account_id: currentUser.account_id,
-          full_name: lead.full_name,
-          phone_e164: lead.phone || '',
-          emails: lead.email ? [lead.email] : [],
-          notes: lead.notes,
-          tags: lead.tags,
-          responsible_user_id: lead.responsible_user_id,
-        })
-        .select()
-        .single();
-
-      if (clientError) throw clientError;
-
-      // Mark lead as converted
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('leads')
         .update({
-          converted_to_client_id: newClient.id,
-          converted_at: new Date().toISOString(),
           status: 'converted',
+          converted_at: new Date().toISOString(),
         })
-        .eq('id', leadId);
+        .eq('id', leadId)
+        .eq('account_id', currentUser.account_id);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
       // Remove from leads list
       setLeads(prev => prev.filter(l => l.id !== leadId));
 
-      toast({
-        title: "Lead convertido",
-        description: `"${lead.full_name}" agora é um cliente`,
-      });
-
-      return newClient.id;
+      return true;
     } catch (error: any) {
-      console.error('Error converting lead:', error);
+      console.error('Error marking lead as converted:', error);
       toast({
         title: "Erro ao converter lead",
         description: error.message,
         variant: "destructive",
       });
-      return null;
+      return false;
     }
   };
 
@@ -254,7 +230,7 @@ export function useLeads() {
     createLead,
     updateLead,
     deleteLead,
-    convertToClient,
+    markAsConvertedToDeal,
     refetch: fetchLeads,
   };
 }

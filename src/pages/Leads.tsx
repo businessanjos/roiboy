@@ -105,7 +105,7 @@ export default function Leads() {
     createLead,
     updateLead,
     deleteLead,
-    convertToClient,
+    markAsConvertedToDeal,
   } = useLeads();
   const { createDeal, stages } = useDeals();
 
@@ -114,18 +114,18 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
-  const [convertLeadId, setConvertLeadId] = useState<string | null>(null);
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
   
   // Custom fields state
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, Record<string, any>>>({});
   
-  // Flow state for new lead creation
+  // Flow state for new lead creation and deal conversion
   const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form'>('phone');
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
   const [creatingDeal, setCreatingDeal] = useState(false);
+  const [leadForDeal, setLeadForDeal] = useState<Lead | null>(null);
   
   // Deal form state
   const [dealFormData, setDealFormData] = useState({
@@ -224,6 +224,7 @@ export default function Leads() {
     });
     setSelectedLead(null);
     setExistingClient(null);
+    setLeadForDeal(null);
     setDialogStep('phone');
   };
 
@@ -303,23 +304,45 @@ export default function Leads() {
   };
 
   const handleCreateDeal = async () => {
-    if (!existingClient) return;
-    
     setCreatingDeal(true);
     try {
-      const deal = await createDeal({
-        title: dealFormData.title || `Novo negócio - ${existingClient.full_name}`,
-        client_id: existingClient.id,
-        stage_id: dealFormData.stage_id || undefined,
-        value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
-        notes: dealFormData.notes || undefined,
-      });
+      // Create deal from existing client or lead
+      if (existingClient) {
+        const deal = await createDeal({
+          title: dealFormData.title || `Novo negócio - ${existingClient.full_name}`,
+          client_id: existingClient.id,
+          stage_id: dealFormData.stage_id || undefined,
+          value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
+          notes: dealFormData.notes || undefined,
+        });
 
-      if (deal) {
-        toast.success("Negócio criado com sucesso!");
-        setIsDialogOpen(false);
-        resetForm();
-        navigate("/pipeline");
+        if (deal) {
+          toast.success("Negócio criado com sucesso!");
+          setIsDialogOpen(false);
+          resetForm();
+          navigate("/pipeline");
+        }
+      } else if (leadForDeal) {
+        // Create deal from lead
+        const deal = await createDeal({
+          title: dealFormData.title || `Novo negócio - ${leadForDeal.full_name}`,
+          lead_id: leadForDeal.id,
+          contact_name: leadForDeal.full_name,
+          contact_phone: leadForDeal.phone || undefined,
+          contact_email: leadForDeal.email || undefined,
+          stage_id: dealFormData.stage_id || undefined,
+          value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
+          notes: dealFormData.notes || leadForDeal.notes || undefined,
+          source: leadForDeal.source || undefined,
+        });
+
+        if (deal) {
+          await markAsConvertedToDeal(leadForDeal.id, deal.id);
+          toast.success("Lead convertido em negócio!");
+          setIsDialogOpen(false);
+          resetForm();
+          navigate("/pipeline");
+        }
       }
     } catch (error) {
       console.error("Error creating deal:", error);
@@ -341,11 +364,17 @@ export default function Leads() {
     }
   };
 
-  const handleConvert = async () => {
-    if (convertLeadId) {
-      await convertToClient(convertLeadId);
-      setConvertLeadId(null);
-    }
+  const openDealDialogForLead = (lead: Lead) => {
+    setLeadForDeal(lead);
+    const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+    setDealFormData({
+      title: `Novo negócio - ${lead.full_name}`,
+      value: "",
+      stage_id: firstStage?.id || "",
+      notes: "",
+    });
+    setDialogStep('deal-form');
+    setIsDialogOpen(true);
   };
 
   const handleStatusChange = async (leadId: string, status: string) => {
@@ -536,9 +565,12 @@ export default function Leads() {
                           Marcar Qualificado
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setConvertLeadId(lead.id)}>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Converter em Cliente
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          openDealDialogForLead(lead);
+                        }}>
+                          <TrendingUp className="h-4 w-4 mr-2" />
+                          Criar Negócio
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => openEditDialog(lead)}>
@@ -692,28 +724,35 @@ export default function Leads() {
             </div>
           )}
 
-          {/* Step 2b: Deal Form (if existing client found) */}
-          {dialogStep === 'deal-form' && existingClient && !selectedLead && (
+          {/* Step 2b: Deal Form (if existing client found OR converting from lead) */}
+          {dialogStep === 'deal-form' && (existingClient || leadForDeal) && !selectedLead && (
             <div className="space-y-4">
-              {/* Client Info */}
+              {/* Client/Lead Info */}
               <div className="p-4 rounded-lg bg-muted/50 border">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
                     <AvatarFallback className="text-sm bg-primary/10 text-primary">
-                      {existingClient.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                      {(existingClient?.full_name || leadForDeal?.full_name || "").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold">{existingClient.full_name}</p>
+                    <p className="font-semibold">{existingClient?.full_name || leadForDeal?.full_name}</p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Phone className="h-3 w-3" />
-                      {existingClient.phone_e164}
+                      {existingClient?.phone_e164 || leadForDeal?.phone || "Sem telefone"}
                     </p>
                   </div>
-                  <Badge className="ml-auto bg-emerald-500 text-white">
-                    <UserCheck className="h-3 w-3 mr-1" />
-                    Cliente
-                  </Badge>
+                  {existingClient ? (
+                    <Badge className="ml-auto bg-emerald-500 text-white">
+                      <UserCheck className="h-3 w-3 mr-1" />
+                      Cliente
+                    </Badge>
+                  ) : (
+                    <Badge className="ml-auto bg-blue-500 text-white">
+                      <Users className="h-3 w-3 mr-1" />
+                      Lead
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -776,12 +815,21 @@ export default function Leads() {
               </div>
 
               <DialogFooter className="flex-col sm:flex-row gap-2">
-                <Button variant="ghost" onClick={handleCreateLeadAnyway} className="sm:mr-auto">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Criar lead mesmo assim
-                </Button>
-                <Button variant="outline" onClick={() => setDialogStep('phone')}>
-                  Voltar
+                {existingClient && (
+                  <Button variant="ghost" onClick={handleCreateLeadAnyway} className="sm:mr-auto">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Criar lead mesmo assim
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => {
+                  if (leadForDeal) {
+                    setIsDialogOpen(false);
+                    resetForm();
+                  } else {
+                    setDialogStep('phone');
+                  }
+                }}>
+                  {leadForDeal ? "Cancelar" : "Voltar"}
                 </Button>
                 <Button onClick={handleCreateDeal} disabled={creatingDeal}>
                   <TrendingUp className="h-4 w-4 mr-2" />
@@ -806,24 +854,6 @@ export default function Leads() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Convert Confirmation */}
-      <AlertDialog open={!!convertLeadId} onOpenChange={() => setConvertLeadId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Converter em cliente?</AlertDialogTitle>
-            <AlertDialogDescription>
-              O lead será convertido em cliente e você poderá adicionar mais informações depois.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConvert}>
-              Converter
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -933,12 +963,12 @@ export default function Leads() {
                   size="sm"
                   className="flex-1"
                   onClick={() => {
-                    setConvertLeadId(detailLead.id);
+                    openDealDialogForLead(detailLead);
                     setDetailLead(null);
                   }}
                 >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Converter em Cliente
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Criar Negócio
                 </Button>
               </div>
             </div>
