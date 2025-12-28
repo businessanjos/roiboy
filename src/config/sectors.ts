@@ -102,9 +102,13 @@ export const sectors: Sector[] = [
     icon: TrendingUp,
     color: "text-blue-600",
     bgColor: "bg-blue-500/10",
-    defaultRoute: "/vendas",
-    navItems: [],
-    comingSoon: true,
+    defaultRoute: "/pipeline",
+    navItems: [
+      { to: "/pipeline", icon: TrendingUp, label: "Pipeline", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
   },
   {
     id: "marketing",
