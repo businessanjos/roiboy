@@ -326,351 +326,336 @@ export function DealDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
-        <SheetHeader className="p-4 pb-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <SheetTitle className="text-lg truncate pr-2">{deal.title}</SheetTitle>
-              <div className="flex items-center gap-2 mt-1">
-                {deal.status === 'won' && (
-                  <Badge className="bg-emerald-500 gap-1">
-                    <Trophy className="h-3 w-3" />
-                    Ganha
-                  </Badge>
-                )}
-                {deal.status === 'lost' && (
-                  <Badge variant="destructive" className="gap-1">
-                    <XCircle className="h-3 w-3" />
-                    Perdida
-                  </Badge>
-                )}
-                {deal.status === 'open' && currentStage && (
-                  <Badge
-                    variant="outline"
-                    style={{ 
-                      borderColor: currentStage.color,
-                      color: currentStage.color,
-                    }}
-                  >
-                    {currentStage.name}
-                  </Badge>
-                )}
+      <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
+        <SheetHeader className="p-4 pb-0 border-b">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <Avatar className="h-12 w-12 border-2 border-primary/20">
+                <AvatarImage src={deal.client?.avatar_url || undefined} />
+                <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
+                  {getInitials(contactName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <SheetTitle className="text-xl truncate pr-2">{deal.title}</SheetTitle>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-sm text-muted-foreground">{contactName}</span>
+                  {deal.client?.phone_e164 && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <span className="text-sm text-muted-foreground">{deal.client.phone_e164}</span>
+                    </>
+                  )}
+                  {deal.status === 'won' && (
+                    <Badge className="bg-emerald-500 gap-1 ml-2">
+                      <Trophy className="h-3 w-3" />
+                      Ganha
+                    </Badge>
+                  )}
+                  {deal.status === 'lost' && (
+                    <Badge variant="destructive" className="gap-1 ml-2">
+                      <XCircle className="h-3 w-3" />
+                      Perdida
+                    </Badge>
+                  )}
+                  {deal.status === 'open' && currentStage && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2"
+                      style={{ 
+                        borderColor: currentStage.color,
+                        color: currentStage.color,
+                      }}
+                    >
+                      {currentStage.name}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              <Edit className="h-4 w-4 mr-1" />
-              Editar
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isClosed && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                    onClick={() => onMarkAsWon(deal.id)}
+                  >
+                    <Trophy className="h-4 w-4 mr-1" />
+                    Ganha
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    onClick={() => onMarkAsLost(deal.id)}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Perdida
+                  </Button>
+                </>
+              )}
+              {isClosed && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onReopen(deal.id)}
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Reabrir
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Edit className="h-4 w-4 mr-1" />
+                Editar
+              </Button>
+            </div>
           </div>
         </SheetHeader>
 
         <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
-            {/* Deal Info Card */}
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-              {/* Contact */}
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border border-primary/20">
-                  <AvatarImage src={deal.client?.avatar_url || undefined} />
-                  <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
-                    {getInitials(contactName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{contactName}</p>
-                  {deal.client?.phone_e164 && (
-                    <p className="text-xs text-muted-foreground">{deal.client.phone_e164}</p>
-                  )}
-                  {!deal.client?.phone_e164 && deal.contact_phone && (
-                    <p className="text-xs text-muted-foreground">{deal.contact_phone}</p>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-emerald-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Valor</p>
-                    <p className="font-semibold text-primary">{formatCurrency(deal.value)}</p>
+          <div className="p-4">
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Left Column - Deal Info */}
+              <div className="space-y-4">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="h-4 w-4 text-emerald-500" />
+                      <span className="text-xs text-muted-foreground">Valor</span>
+                    </div>
+                    <p className="text-lg font-bold text-primary">{formatCurrency(deal.value)}</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Probabilidade</p>
-                    <p className="font-semibold">{deal.probability}%</p>
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      <span className="text-xs text-muted-foreground">Probabilidade</span>
+                    </div>
+                    <p className="text-lg font-bold">{deal.probability}%</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Idade</p>
-                    <p className="font-medium">{daysSinceCreation} dias</p>
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="h-4 w-4 text-amber-500" />
+                      <span className="text-xs text-muted-foreground">Idade</span>
+                    </div>
+                    <p className="text-lg font-bold">{daysSinceCreation} dias</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-violet-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Previsão</p>
-                    <p className="font-medium">
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="h-4 w-4 text-violet-500" />
+                      <span className="text-xs text-muted-foreground">Previsão</span>
+                    </div>
+                    <p className="text-lg font-bold">
                       {deal.expected_close_date
                         ? format(new Date(deal.expected_close_date), "dd/MM/yy")
                         : "-"}
                     </p>
                   </div>
                 </div>
+
+                {/* Details Card */}
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                  {/* Stage Selector (only for open deals) */}
+                  {!isClosed && (
+                    <div className="flex items-center gap-2">
+                      <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Etapa:</span>
+                      <Select
+                        value={deal.stage_id || ""}
+                        onValueChange={handleStageChange}
+                        disabled={changingStage}
+                      >
+                        <SelectTrigger className="h-8 text-sm flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stages.map(stage => (
+                            <SelectItem key={stage.id} value={stage.id}>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: stage.color }}
+                                />
+                                {stage.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {changingStage && <Loader2 className="h-4 w-4 animate-spin" />}
+                    </div>
+                  )}
+
+                  {/* Responsible User */}
+                  {deal.responsible_user && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Responsável:</span>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {getInitials(deal.responsible_user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">{deal.responsible_user.name}</span>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {deal.tags && deal.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {deal.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {deal.notes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Notas</p>
+                      <p className="text-sm whitespace-pre-wrap bg-background/50 rounded p-2">{deal.notes}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lead Custom Fields */}
+                {deal.lead_id && leadCustomFields.length > 0 && (
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Campos do Lead
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {leadCustomFields.map(field => (
+                        <div key={field.id} className="space-y-0.5">
+                          <p className="text-xs text-muted-foreground">{field.name}</p>
+                          <FieldValueBadge 
+                            field={field} 
+                            value={leadFieldValues[field.id]} 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Responsible User */}
-              {deal.responsible_user && (
-                <>
-                  <Separator />
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Responsável:</span>
-                    <Avatar className="h-5 w-5">
-                      <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
-                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                        {getInitials(deal.responsible_user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{deal.responsible_user.name}</span>
-                  </div>
-                </>
-              )}
+              {/* Right Column - Timeline */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Histórico Comercial
+                </h4>
 
-              {/* Stage Selector (only for open deals) */}
-              {!isClosed && (
-                <>
-                  <Separator />
+                {/* Add new activity */}
+                <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
                   <div className="flex items-center gap-2">
-                    <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Etapa:</span>
-                    <Select
-                      value={deal.stage_id || ""}
-                      onValueChange={handleStageChange}
-                      disabled={changingStage}
-                    >
-                      <SelectTrigger className="h-7 text-xs flex-1">
+                    <Select value={eventType} onValueChange={setEventType}>
+                      <SelectTrigger className="w-[130px] h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {stages.map(stage => (
-                          <SelectItem key={stage.id} value={stage.id}>
+                        {EVENT_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
                             <div className="flex items-center gap-2">
-                              <div 
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: stage.color }}
-                              />
-                              {stage.name}
+                              <type.icon className="h-3.5 w-3.5" />
+                              {type.label}
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {changingStage && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <span className="text-xs text-muted-foreground">Registrar atividade</span>
                   </div>
-                </>
-              )}
-
-              {/* Notes */}
-              {deal.notes && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Notas</p>
-                    <p className="text-sm whitespace-pre-wrap">{deal.notes}</p>
+                  <Textarea
+                    placeholder="Descreva a interação..."
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    rows={2}
+                    className="resize-none text-sm"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={handleAddActivity}
+                      disabled={!newNote.trim() || submitting}
+                    >
+                      {submitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-1" />
+                      )}
+                      Adicionar
+                    </Button>
                   </div>
-                </>
-              )}
-
-              {/* Tags */}
-              {deal.tags && deal.tags.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="flex flex-wrap gap-1">
-                    {deal.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Lead Custom Fields */}
-            {deal.lead_id && leadCustomFields.length > 0 && (
-              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-                <h4 className="font-semibold text-sm flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Campos do Lead
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {leadCustomFields.map(field => (
-                    <div key={field.id} className="space-y-0.5">
-                      <p className="text-xs text-muted-foreground">{field.name}</p>
-                      <FieldValueBadge 
-                        field={field} 
-                        value={leadFieldValues[field.id]} 
-                      />
-                    </div>
-                  ))}
                 </div>
-              </div>
-            )}
 
-            {/* Action Buttons */}
-            {!isClosed && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                  onClick={() => onMarkAsWon(deal.id)}
-                >
-                  <Trophy className="h-4 w-4 mr-1" />
-                  Marcar Ganha
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={() => onMarkAsLost(deal.id)}
-                >
-                  <XCircle className="h-4 w-4 mr-1" />
-                  Marcar Perdida
-                </Button>
-              </div>
-            )}
+                {/* Activities Timeline */}
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : activities.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Nenhuma atividade registrada ainda
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    {activities.map((activity) => {
+                      const config = getEventConfig(activity.type);
+                      const Icon = config.icon;
+                      const userName = activity.user?.name || "Sistema";
+                      const userAvatar = activity.user?.avatar_url;
 
-            {isClosed && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => onReopen(deal.id)}
-              >
-                <RotateCcw className="h-4 w-4 mr-1" />
-                Reabrir Negociação
-              </Button>
-            )}
-
-            <Separator />
-
-            {/* Timeline Section */}
-            <div className="space-y-3">
-              <h4 className="font-semibold text-sm flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Histórico Comercial
-              </h4>
-
-              {/* Add new activity */}
-              <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Select value={eventType} onValueChange={setEventType}>
-                    <SelectTrigger className="w-[130px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EVENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex items-center gap-2">
-                            <type.icon className="h-3.5 w-3.5" />
-                            {type.label}
+                      return (
+                        <div key={activity.id} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0", config.bgColor)}>
+                              <Icon className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="w-px flex-1 bg-border mt-2" />
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-xs text-muted-foreground">Registrar atividade</span>
-                </div>
-                <Textarea
-                  placeholder="Descreva a interação..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  rows={2}
-                  className="resize-none text-sm"
-                />
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    onClick={handleAddActivity}
-                    disabled={!newNote.trim() || submitting}
-                  >
-                    {submitting ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-1" />
-                    )}
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
-
-              {/* Activities Timeline */}
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : activities.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  Nenhuma atividade registrada ainda
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {activities.map((activity) => {
-                    const config = getEventConfig(activity.type);
-                    const Icon = config.icon;
-                    const userName = activity.user?.name || "Sistema";
-                    const userAvatar = activity.user?.avatar_url;
-
-                    return (
-                      <div key={activity.id} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0", config.bgColor)}>
-                            <Icon className="h-3.5 w-3.5" />
+                          <div className="flex-1 pb-3">
+                            <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
+                              <Avatar className="h-4 w-4">
+                                <AvatarImage src={userAvatar || undefined} />
+                                <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
+                                  {getInitials(userName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs font-medium">{userName}</span>
+                              <span className="text-xs text-muted-foreground">·</span>
+                              <span className={cn("text-xs font-medium", config.textColor)}>
+                                {activity.title || config.label}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground ml-auto">
+                                {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
+                              </span>
+                            </div>
+                            {activity.content && (
+                              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                                {activity.content}
+                              </p>
+                            )}
+                            {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
+                              <p className="text-xs text-muted-foreground">
+                                De <span className="font-medium">{activity.old_value}</span> para{" "}
+                                <span className="font-medium">{activity.new_value}</span>
+                              </p>
+                            )}
                           </div>
-                          <div className="w-px flex-1 bg-border mt-2" />
                         </div>
-                        <div className="flex-1 pb-3">
-                          <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
-                            <Avatar className="h-4 w-4">
-                              <AvatarImage src={userAvatar || undefined} />
-                              <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
-                                {getInitials(userName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs font-medium">{userName}</span>
-                            <span className="text-xs text-muted-foreground">·</span>
-                            <span className={cn("text-xs font-medium", config.textColor)}>
-                              {activity.title || config.label}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground ml-auto">
-                              {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
-                            </span>
-                          </div>
-                          {activity.content && (
-                            <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                              {activity.content}
-                            </p>
-                          )}
-                          {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
-                            <p className="text-xs text-muted-foreground">
-                              De <span className="font-medium">{activity.old_value}</span> para{" "}
-                              <span className="font-medium">{activity.new_value}</span>
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </ScrollArea>
