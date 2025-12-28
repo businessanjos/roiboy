@@ -23,6 +23,7 @@ interface UazapiRequest {
   phone?: string;
   message?: string;
   message_id?: string;
+  quoted_message_id?: string;
   group_id?: string;
   group_name?: string;
   group_description?: string;
@@ -849,10 +850,16 @@ serve(async (req) => {
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         const cleanPhone = phone.replace(/\D/g, "");
+        const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
         
         // UAZAPI GO v2 - Documentação oficial: POST /send/text
-        // Body: { number: "5511999999999", text: "mensagem" }
-        const messageBody = { number: cleanPhone, text: message };
+        // Body: { number: "5511999999999", text: "mensagem", quoted?: { key: { id: "..." } } }
+        const messageBody: Record<string, unknown> = { number: cleanPhone, text: message };
+        
+        // Add quoted message for replies
+        if (quotedMessageId) {
+          messageBody.quoted = { key: { id: quotedMessageId } };
+        }
         
         if (instanceToken) {
           // Use instance token with /send/text endpoint (documentação oficial UAZAPI)
@@ -1516,7 +1523,8 @@ serve(async (req) => {
         // Ensure group_id has @g.us suffix
         const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
         const mentionsList = (payload as UazapiRequest).mentions || [];
-        console.log(`Sending message to group: ${groupJid}, mentions: ${mentionsList.length}`);
+        const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
+        console.log(`Sending message to group: ${groupJid}, mentions: ${mentionsList.length}, quoted: ${quotedMessageId || 'none'}`);
         
         let sendResult: unknown = null;
         let sendSuccess = false;
@@ -1529,14 +1537,22 @@ serve(async (req) => {
           return `${phone}@s.whatsapp.net`;
         });
         
+        // Base message body
+        const baseBody: Record<string, unknown> = { number: groupJid, text: message };
+        
+        // Add quoted message for replies
+        if (quotedMessageId) {
+          baseBody.quoted = { key: { id: quotedMessageId } };
+        }
+        
         // First try WITHOUT mentions (to ensure message is sent)
         // Then try WITH mentions in different formats
         const sendEndpoints = [
           // Without mentions first (fallback)
-          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message } },
+          { url: `/send/text`, method: "POST", body: { ...baseBody } },
           // With mentions in different formats
-          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message, mentions: formattedMentions } },
-          { url: `/send/text`, method: "POST", body: { number: groupJid, text: message, mentionedJid: formattedMentions } },
+          { url: `/send/text`, method: "POST", body: { ...baseBody, mentions: formattedMentions } },
+          { url: `/send/text`, method: "POST", body: { ...baseBody, mentionedJid: formattedMentions } },
         ];
 
         for (const endpoint of sendEndpoints) {

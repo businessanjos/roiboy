@@ -92,7 +92,7 @@ export default function RoyZapp() {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean; external_message_id?: string | null } | null>(null);
   const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string }[]>([]);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -755,6 +755,9 @@ export default function RoyZapp() {
     const conversationId = selectedConversation.zapp_conversation_id;
     const accountId = currentUser!.account_id;
     
+    // Capture reply context before clearing
+    const replyContext = replyingTo ? { ...replyingTo } : null;
+    
     // Optimistic update - add message to UI immediately and clear input
     const optimisticMessage: Message = {
       id: tempMessageId,
@@ -802,6 +805,11 @@ export default function RoyZapp() {
           }
         } else {
           payload.phone = phone;
+        }
+        
+        // Add quoted message for replies (use external_message_id if available, fallback to id)
+        if (replyContext?.external_message_id) {
+          payload.quoted_message_id = replyContext.external_message_id;
         }
         
         const { error } = await supabase.functions.invoke("uazapi-manager", {
@@ -2108,6 +2116,7 @@ export default function RoyZapp() {
               content: msg.content,
               sender_name: msg.sender_name || null,
               is_from_client: msg.is_from_client,
+              external_message_id: msg.external_message_id || null,
             });
             messageInputRef.current?.focus();
           }}

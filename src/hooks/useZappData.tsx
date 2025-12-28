@@ -433,7 +433,7 @@ export function useZappData() {
       // Fetch latest 100 messages (ordered descending, then reverse for display)
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status")
+        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status, external_message_id")
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: false })
         .limit(100);
@@ -459,6 +459,7 @@ export function useZappData() {
         sender_name: m.sender_name,
         delivery_status: m.delivery_status,
         media_download_status: m.media_download_status,
+        external_message_id: m.external_message_id,
       }));
       
       setMessages(msgs);
