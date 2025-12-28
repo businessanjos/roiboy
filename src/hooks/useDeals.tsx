@@ -203,10 +203,19 @@ export function useDeals() {
     if (!currentUser?.account_id) return null;
 
     try {
+      // Convert empty strings to null for UUID fields
+      const cleanData: any = { ...data };
+      const uuidFields = ['client_id', 'lead_id', 'stage_id', 'responsible_user_id'];
+      uuidFields.forEach(field => {
+        if (cleanData[field] === '') {
+          cleanData[field] = null;
+        }
+      });
+
       const { data: newDeal, error } = await supabase
         .from('deals')
         .insert({
-          ...data,
+          ...cleanData,
           account_id: currentUser.account_id,
           tags: data.tags || [],
         })
@@ -260,6 +269,14 @@ export function useDeals() {
 
     try {
       const updateData: any = { ...data };
+      
+      // Convert empty strings to null for UUID fields
+      const uuidFields = ['client_id', 'lead_id', 'stage_id', 'responsible_user_id'];
+      uuidFields.forEach(field => {
+        if (updateData[field] === '') {
+          updateData[field] = null;
+        }
+      });
       
       // Handle status changes
       if (data.status === 'won' && !data.won_at) {
