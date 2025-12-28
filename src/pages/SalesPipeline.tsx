@@ -162,63 +162,90 @@ export default function SalesPipeline() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Em Aberto</p>
-                  <p className="text-xl font-bold">{openDeals.length}</p>
-                </div>
+        {/* Stats Cards - Circular Style */}
+        <div className="flex items-center gap-6 overflow-x-auto pb-2">
+          {/* Em Aberto */}
+          <div className="flex items-center gap-3 min-w-fit">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-full border-4 border-primary flex items-center justify-center bg-primary/10">
+                <TrendingUp className="h-6 w-6 text-primary" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div>
+              <p className="text-3xl font-bold">{openDeals.length}</p>
+              <p className="text-sm text-muted-foreground">Em Aberto</p>
+            </div>
+            {stages.length > 1 && (
+              <span className="text-xs text-muted-foreground ml-2">
+                {Math.round((openDeals.filter(d => d.stage_id === stages[1]?.id).length / Math.max(openDeals.length, 1)) * 100)}%
+              </span>
+            )}
+          </div>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <DollarSign className="h-5 w-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Pipeline</p>
-                  <p className="text-xl font-bold">{formatCurrency(totalPipelineValue)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Separator */}
+          <div className="h-10 w-px bg-border" />
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/10">
-                  <Target className="h-5 w-5 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Ponderado</p>
-                  <p className="text-xl font-bold">{formatCurrency(weightedPipelineValue)}</p>
-                </div>
+          {/* Valor Pipeline */}
+          <div className="flex items-center gap-3 min-w-fit">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-full border-4 border-blue-500 flex items-center justify-center bg-blue-500/10">
+                <DollarSign className="h-6 w-6 text-blue-500" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div>
+              <p className="text-3xl font-bold">{formatCurrency(totalPipelineValue)}</p>
+              <p className="text-sm text-muted-foreground">Pipeline</p>
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-500/10">
-                  <Trophy className="h-5 w-5 text-emerald-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Ganho</p>
-                  <p className="text-xl font-bold">{formatCurrency(totalWonValue)}</p>
-                </div>
+          {/* Separator */}
+          <div className="h-10 w-px bg-border" />
+
+          {/* Valor Ponderado */}
+          <div className="flex items-center gap-3 min-w-fit">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-full border-4 border-amber-500 flex items-center justify-center bg-amber-500/10">
+                <Target className="h-6 w-6 text-amber-500" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div>
+              <p className="text-3xl font-bold">{formatCurrency(weightedPipelineValue)}</p>
+              <p className="text-sm text-muted-foreground">Ponderado</p>
+            </div>
+          </div>
+
+          {/* Separator */}
+          <div className="h-10 w-px bg-border" />
+
+          {/* Total Ganho */}
+          <div className="flex items-center gap-3 min-w-fit">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-full border-4 border-emerald-500 flex items-center justify-center bg-emerald-500/10">
+                <Trophy className="h-6 w-6 text-emerald-500" />
+              </div>
+            </div>
+            <div>
+              <p className="text-3xl font-bold">{wonDeals.length}</p>
+              <p className="text-sm text-muted-foreground">Ganhas</p>
+              <p className="text-xs text-emerald-500">{formatCurrency(totalWonValue)}</p>
+            </div>
+          </div>
+
+          {/* Separator */}
+          <div className="h-10 w-px bg-border" />
+
+          {/* Perdidas */}
+          <div className="flex items-center gap-3 min-w-fit">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-full border-4 border-red-500 flex items-center justify-center bg-red-500/10">
+                <XCircle className="h-6 w-6 text-red-500" />
+              </div>
+            </div>
+            <div>
+              <p className="text-3xl font-bold">{lostDeals.length}</p>
+              <p className="text-sm text-muted-foreground">Perdidas</p>
+            </div>
+          </div>
         </div>
 
         {/* Tabs for different deal statuses */}
