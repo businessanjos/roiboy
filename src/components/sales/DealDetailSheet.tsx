@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Deal, DealStage } from "@/hooks/useDeals";
 import {
@@ -117,6 +118,7 @@ export function DealDetailSheet({
   onReopen,
   onStageChange,
 }: DealDetailSheetProps) {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState<DealActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -366,7 +368,29 @@ export function DealDetailSheet({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                  <span>{contactName}</span>
+                  {deal.client_id ? (
+                    <button
+                      onClick={() => {
+                        onOpenChange(false);
+                        navigate(`/clients/${deal.client_id}`);
+                      }}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      {contactName}
+                    </button>
+                  ) : deal.lead_id ? (
+                    <button
+                      onClick={() => {
+                        onOpenChange(false);
+                        navigate(`/leads?lead=${deal.lead_id}`);
+                      }}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      {contactName}
+                    </button>
+                  ) : (
+                    <span>{contactName}</span>
+                  )}
                   {deal.client?.phone_e164 && (
                     <>
                       <span>·</span>
