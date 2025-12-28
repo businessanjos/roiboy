@@ -3457,6 +3457,69 @@ export type Database = {
           },
         ]
       }
+      financial_classification_rules: {
+        Row: {
+          account_id: string
+          category_id: string | null
+          confidence: number | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          pattern: string
+          pattern_type: string
+          suggested_description: string | null
+          times_confirmed: number | null
+          times_rejected: number | null
+          times_used: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          category_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          pattern: string
+          pattern_type?: string
+          suggested_description?: string | null
+          times_confirmed?: number | null
+          times_rejected?: number | null
+          times_used?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          category_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          pattern?: string
+          pattern_type?: string
+          suggested_description?: string | null
+          times_confirmed?: number | null
+          times_rejected?: number | null
+          times_used?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_classification_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_classification_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_entries: {
         Row: {
           account_id: string
@@ -3635,6 +3698,112 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_pending_classifications: {
+        Row: {
+          account_id: string
+          ai_confidence: number | null
+          ai_reasoning: string | null
+          amount: number
+          bank_account_id: string | null
+          created_at: string
+          external_id: string | null
+          id: string
+          matched_rule_id: string | null
+          original_description: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_category_id: string | null
+          suggested_client_id: string | null
+          suggested_description: string | null
+          transaction_date: string
+          transaction_type: string
+        }
+        Insert: {
+          account_id: string
+          ai_confidence?: number | null
+          ai_reasoning?: string | null
+          amount: number
+          bank_account_id?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          matched_rule_id?: string | null
+          original_description: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_category_id?: string | null
+          suggested_client_id?: string | null
+          suggested_description?: string | null
+          transaction_date: string
+          transaction_type: string
+        }
+        Update: {
+          account_id?: string
+          ai_confidence?: number | null
+          ai_reasoning?: string | null
+          amount?: number
+          bank_account_id?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          matched_rule_id?: string | null
+          original_description?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_category_id?: string | null
+          suggested_client_id?: string | null
+          suggested_description?: string | null
+          transaction_date?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_pending_classifications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_pending_classifications_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_pending_classifications_matched_rule_id_fkey"
+            columns: ["matched_rule_id"]
+            isOneToOne: false
+            referencedRelation: "financial_classification_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_pending_classifications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_pending_classifications_suggested_category_id_fkey"
+            columns: ["suggested_category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_pending_classifications_suggested_client_id_fkey"
+            columns: ["suggested_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]

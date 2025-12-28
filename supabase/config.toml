@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.parse-credit-card-invoice]
 verify_jwt = false
+
+[functions.classify-transactions]
+verify_jwt = false
