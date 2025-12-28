@@ -885,12 +885,12 @@ export default function Leads() {
 
               {/* Custom Fields */}
               {customFields.length > 0 && (
-                <div className="flex-shrink-0 pt-4 border-t">
+                <div className="flex-shrink-0 py-4 border-t">
                   <h3 className="text-sm font-semibold mb-3">Campos Personalizados</h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 gap-3">
                     {customFields.map(field => (
-                      <div key={field.id} className="flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground">{field.name}:</span>
+                      <div key={field.id} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground shrink-0">{field.name}:</span>
                         <LeadFieldValueEditor
                           field={field}
                           leadId={detailLead.id}
