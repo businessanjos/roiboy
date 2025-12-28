@@ -23,14 +23,20 @@ import {
   Pencil,
   UserPlus,
   LogOut,
+  Bot,
+  Sparkles,
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { TeamChatMessageInput, TeamChatMessage } from '@/components/team-chat';
+import { ZappAIAgentChat, AIAgent } from '@/components/royzapp';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function TeamChat() {
+  const { currentUser } = useCurrentUser();
   const {
     chats,
     chatsLoading,
@@ -59,6 +65,45 @@ export default function TeamChat() {
   const [addMembersDialogOpen, setAddMembersDialogOpen] = useState(false);
   const [newMemberIds, setNewMemberIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // AI Agents state
+  const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
+  const [selectedAIAgent, setSelectedAIAgent] = useState<AIAgent | null>(null);
+
+  // Fetch AI agents
+  useEffect(() => {
+    const fetchAIAgents = async () => {
+      const { data } = await supabase
+        .from('ai_sector_agents')
+        .select('*')
+        .eq('is_enabled', true)
+        .order('name');
+      
+      if (data) {
+        setAiAgents(data.map(agent => ({
+          id: agent.id,
+          sector_id: agent.sector_id,
+          name: agent.name,
+          display_name: agent.display_name,
+          avatar_url: agent.avatar_url,
+          greeting_message: agent.greeting_message,
+          is_enabled: agent.is_enabled,
+        })));
+      }
+    };
+    
+    fetchAIAgents();
+  }, []);
+
+  const handleSelectAIAgent = (agent: AIAgent) => {
+    setSelectedAIAgent(agent);
+    setSelectedChatId(null); // Deselect any regular chat
+  };
+
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChatId(chatId);
+    setSelectedAIAgent(null); // Deselect AI agent
+  };
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -250,11 +295,61 @@ export default function TeamChat() {
         </div>
 
         <ScrollArea className="flex-1">
+          {/* AI Agents Section */}
+          {aiAgents.length > 0 && (
+            <div className="border-b">
+              <div className="px-4 py-2 bg-muted/30">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" />
+                  Assistentes IA
+                </p>
+              </div>
+              <div className="divide-y">
+                {aiAgents.map(agent => (
+                  <button
+                    key={agent.id}
+                    onClick={() => handleSelectAIAgent(agent)}
+                    className={cn(
+                      "w-full p-3 text-left hover:bg-muted/50 transition-colors",
+                      selectedAIAgent?.id === agent.id && "bg-muted"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={agent.avatar_url || undefined} />
+                          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                            <Bot className="h-5 w-5" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-0.5 -right-0.5 p-0.5 bg-card rounded-full">
+                          <Sparkles className="h-3 w-3 text-primary" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium truncate">{agent.name}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                            IA
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {agent.display_name}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Regular Chats */}
           {chatsLoading ? (
             <div className="p-4 text-center text-muted-foreground">
               Carregando conversas...
             </div>
-          ) : filteredChats.length === 0 ? (
+          ) : filteredChats.length === 0 && aiAgents.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
               <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-20" />
               <p>Nenhuma conversa ainda</p>
@@ -265,10 +360,10 @@ export default function TeamChat() {
               {filteredChats.map(chat => (
                 <button
                   key={chat.id}
-                  onClick={() => setSelectedChatId(chat.id)}
+                  onClick={() => handleSelectChat(chat.id)}
                   className={cn(
                     "w-full p-3 text-left hover:bg-muted/50 transition-colors",
-                    selectedChatId === chat.id && "bg-muted"
+                    selectedChatId === chat.id && !selectedAIAgent && "bg-muted"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -316,7 +411,14 @@ export default function TeamChat() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {selectedChat ? (
+        {selectedAIAgent ? (
+          <ZappAIAgentChat
+            agent={selectedAIAgent}
+            currentUserName={currentUser?.name || ''}
+            currentUserAvatar={currentUser?.avatar_url || null}
+            onBack={() => setSelectedAIAgent(null)}
+          />
+        ) : selectedChat ? (
           <>
             {/* Chat Header */}
             <div className="h-16 border-b flex items-center justify-between px-4 bg-card">
