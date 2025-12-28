@@ -5,8 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
@@ -18,22 +16,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
   MessageSquare, 
-  Send, 
   Plus, 
   Search, 
   Users,
-  Check,
-  CheckCheck,
   MoreVertical,
   Pencil,
   UserPlus,
-  UserMinus,
   LogOut,
-  X
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { TeamChatMessageInput, TeamChatMessage } from '@/components/team-chat';
 
 export default function TeamChat() {
   const {
@@ -70,24 +65,20 @@ export default function TeamChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSendMessage = async () => {
-    if (!messageInput.trim()) return;
-    
-    await sendMessage.mutateAsync({ content: messageInput.trim() });
-    setMessageInput('');
+  const handleSendMessage = async (data: {
+    content?: string;
+    messageType: 'text' | 'audio' | 'file' | 'image';
+    file?: File;
+    audioDuration?: number;
+  }) => {
+    await sendMessage.mutateAsync({
+      content: data.content,
+      messageType: data.messageType,
+      file: data.file,
+      audioDuration: data.audioDuration
+    });
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
 
   const handleCreateChat = async () => {
     if (selectedMembers.length === 0) return;
@@ -501,56 +492,21 @@ export default function TeamChat() {
                       messages[index - 1].sender_id !== message.sender_id;
 
                     return (
-                      <div
+                      <TeamChatMessage
                         key={message.id}
-                        className={cn(
-                          "flex gap-2",
-                          isOwn && "flex-row-reverse"
-                        )}
-                      >
-                        {showAvatar && !isOwn && (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.sender?.avatar_url || undefined} />
-                            <AvatarFallback>
-                              {message.sender?.name?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        {!showAvatar && !isOwn && <div className="w-8" />}
-                        
-                        <div className={cn("max-w-[70%]", isOwn && "items-end")}>
-                          {showAvatar && !isOwn && (
-                            <p className="text-xs text-muted-foreground mb-1 ml-1">
-                              {message.sender?.name}
-                            </p>
-                          )}
-                          <Card className={cn(
-                            "p-3 shadow-sm",
-                            isOwn 
-                              ? "bg-primary text-primary-foreground rounded-br-sm" 
-                              : "bg-muted rounded-bl-sm"
-                          )}>
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                            <div className={cn(
-                              "flex items-center gap-1 mt-1",
-                              isOwn ? "justify-end" : "justify-start"
-                            )}>
-                              <span className={cn(
-                                "text-[10px]",
-                                isOwn ? "text-primary-foreground/70" : "text-muted-foreground"
-                              )}>
-                                {format(new Date(message.created_at), 'HH:mm')}
-                              </span>
-                              {isOwn && (
-                                <CheckCheck className={cn(
-                                  "h-3 w-3",
-                                  "text-primary-foreground/70"
-                                )} />
-                              )}
-                            </div>
-                          </Card>
-                        </div>
-                      </div>
+                        message={{
+                          ...message,
+                          message_type: (message as any).message_type || 'text',
+                          file_url: (message as any).file_url || null,
+                          file_name: (message as any).file_name || null,
+                          file_size: (message as any).file_size || null,
+                          file_type: (message as any).file_type || null,
+                          audio_duration: (message as any).audio_duration || null,
+                        }}
+                        isOwn={isOwn}
+                        showAvatar={showAvatar}
+                        currentUserId={currentUserId}
+                      />
                     );
                   })}
                   <div ref={messagesEndRef} />
@@ -559,25 +515,10 @@ export default function TeamChat() {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 border-t bg-card">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Digite sua mensagem..."
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={sendMessage.isPending}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={handleSendMessage}
-                  disabled={!messageInput.trim() || sendMessage.isPending}
-                  size="icon"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <TeamChatMessageInput
+              onSendMessage={handleSendMessage}
+              disabled={sendMessage.isPending}
+            />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/30">
