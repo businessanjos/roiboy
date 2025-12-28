@@ -80,77 +80,75 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       )}
       onClick={onClick}
     >
-      <CardContent className="p-4 space-y-3">
+    <CardContent className="p-3 space-y-2">
         {/* Header with Avatar and Name */}
-        <div className="flex items-start gap-3">
-          <Avatar className="h-10 w-10 border-2 border-primary/20">
+        <div className="flex items-start gap-2">
+          <Avatar className="h-8 w-8 border border-primary/20">
             <AvatarImage src={avatarUrl || undefined} />
-            <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+            <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
               {getInitials(contactName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-sm truncate">{contactName}</h4>
+            <h4 className="font-semibold text-xs truncate">{contactName}</h4>
             {deal.title !== contactName && (
-              <p className="text-xs text-muted-foreground truncate">{deal.title}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{deal.title}</p>
             )}
           </div>
         </div>
 
-        {/* Contact Details */}
-        <div className="space-y-1.5">
+        {/* Contact Details - Compact */}
+        <div className="space-y-0.5 text-[10px] text-muted-foreground">
           {contactEmail && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Mail className="h-3 w-3 flex-shrink-0" />
+            <div className="flex items-center gap-1.5 truncate">
+              <Mail className="h-2.5 w-2.5 flex-shrink-0" />
               <span className="truncate">{contactEmail}</span>
             </div>
           )}
           {contactPhone && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Phone className="h-3 w-3 flex-shrink-0" />
+            <div className="flex items-center gap-1.5">
+              <Phone className="h-2.5 w-2.5 flex-shrink-0" />
               <span>{contactPhone}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3 flex-shrink-0" />
-            <span>Cadastro: {createdDate}</span>
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-2.5 w-2.5 flex-shrink-0" />
+            <span>{createdDate}</span>
           </div>
         </div>
 
-        {/* Time Badge */}
-        <Badge 
-          variant="secondary" 
-          className={cn("text-xs", timeBadge.bg, timeBadge.text)}
-        >
-          {timeBadge.label}
-        </Badge>
+        {/* Time Badge and Value - Same Row */}
+        <div className="flex items-center justify-between pt-1">
+          <Badge 
+            variant="secondary" 
+            className={cn("text-[10px] px-1.5 py-0", timeBadge.bg, timeBadge.text)}
+          >
+            {timeBadge.label}
+          </Badge>
+          <span className="text-xs font-bold text-primary">
+            {formatCurrency(deal.value)}
+          </span>
+        </div>
 
-        {/* Tags */}
+        {/* Tags - Only if exists */}
         {deal.tags && deal.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap gap-1">
             {deal.tags.slice(0, 2).map((tag, index) => (
               <Badge 
                 key={index} 
                 variant="outline" 
-                className="text-xs px-2 py-0.5 bg-background"
+                className="text-[10px] px-1.5 py-0 bg-background"
               >
                 {tag}
               </Badge>
             ))}
             {deal.tags.length > 2 && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-background">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-background">
                 +{deal.tags.length - 2}
               </Badge>
             )}
           </div>
         )}
-
-        {/* Value */}
-        <div className="pt-2 border-t border-border/50">
-          <span className="text-sm font-bold text-primary">
-            {formatCurrency(deal.value)}/mês
-          </span>
-        </div>
       </CardContent>
     </Card>
   );

@@ -53,8 +53,8 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
     <div
       ref={setNodeRef}
       className={cn(
-        "w-[300px] flex-shrink-0 flex flex-col transition-all",
-        isOver && "scale-[1.02]"
+        "min-w-[240px] flex-1 max-w-[320px] flex flex-col transition-all",
+        isOver && "scale-[1.01]"
       )}
     >
       {/* Column Header */}
