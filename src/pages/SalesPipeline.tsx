@@ -66,7 +66,10 @@ export default function SalesPipeline() {
 
   const handleEditFromDetail = () => {
     setIsDetailOpen(false);
-    setIsEditDialogOpen(true);
+    // Small delay to ensure Sheet closes before Dialog opens
+    setTimeout(() => {
+      setIsEditDialogOpen(true);
+    }, 100);
   };
 
   const handleDealMove = async (dealId: string, newStageId: string): Promise<boolean> => {
