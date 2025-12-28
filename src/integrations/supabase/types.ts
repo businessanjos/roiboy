@@ -3912,6 +3912,64 @@ export type Database = {
           },
         ]
       }
+      lead_timeline: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          lead_id: string
+          metadata: Json | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_timeline_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_timeline_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_timeline_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           account_id: string
