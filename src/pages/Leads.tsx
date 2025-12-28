@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { useDeals } from "@/hooks/useDeals";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Sheet,
@@ -60,10 +64,12 @@ import {
   MessageSquare,
   X,
   Clock,
+  TrendingUp,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
+import { toast } from "sonner";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -84,6 +90,7 @@ const LEAD_STATUS = [
 ];
 
 export default function Leads() {
+  const navigate = useNavigate();
   const {
     leads,
     loading,
@@ -95,6 +102,7 @@ export default function Leads() {
     deleteLead,
     convertToClient,
   } = useLeads();
+  const { createDeal, stages } = useDeals();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -102,6 +110,11 @@ export default function Leads() {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
   const [convertLeadId, setConvertLeadId] = useState<string | null>(null);
+  
+  // Existing client state
+  const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
+  const [showExistingClientDialog, setShowExistingClientDialog] = useState(false);
+  const [creatingDeal, setCreatingDeal] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -121,6 +134,7 @@ export default function Leads() {
       notes: "",
     });
     setSelectedLead(null);
+    setExistingClient(null);
   };
 
   const openNewDialog = () => {
@@ -140,15 +154,81 @@ export default function Leads() {
     setIsDialogOpen(true);
   };
 
+  const checkExistingClient = async (phone: string): Promise<{ id: string; full_name: string; phone_e164: string } | null> => {
+    if (!phone || phone.length < 8) return null;
+    
+    // Normalize phone for search
+    const normalizedPhone = phone.replace(/\D/g, '');
+    
+    const { data } = await supabase
+      .from("clients")
+      .select("id, full_name, phone_e164")
+      .or(`phone_e164.ilike.%${normalizedPhone}%`)
+      .limit(1);
+    
+    return data && data.length > 0 ? data[0] : null;
+  };
+
   const handleSave = async () => {
     if (!formData.full_name.trim()) return;
 
+    // If editing, just update
     if (selectedLead) {
       await updateLead(selectedLead.id, formData);
-    } else {
-      await createLead(formData);
+      setIsDialogOpen(false);
+      resetForm();
+      return;
     }
 
+    // Check if client already exists with this phone
+    if (formData.phone) {
+      const client = await checkExistingClient(formData.phone);
+      if (client) {
+        setExistingClient(client);
+        setShowExistingClientDialog(true);
+        return;
+      }
+    }
+
+    // Create new lead
+    await createLead(formData);
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
+  const handleCreateDealForClient = async () => {
+    if (!existingClient) return;
+    
+    setCreatingDeal(true);
+    try {
+      const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+      
+      const deal = await createDeal({
+        title: `Novo negócio - ${existingClient.full_name}`,
+        client_id: existingClient.id,
+        stage_id: firstStage?.id,
+        source: formData.source || undefined,
+        notes: formData.notes || undefined,
+      });
+
+      if (deal) {
+        toast.success("Negócio criado com sucesso!");
+        setShowExistingClientDialog(false);
+        setIsDialogOpen(false);
+        resetForm();
+        navigate("/pipeline");
+      }
+    } catch (error) {
+      console.error("Error creating deal:", error);
+      toast.error("Erro ao criar negócio");
+    } finally {
+      setCreatingDeal(false);
+    }
+  };
+
+  const handleCreateLeadAnyway = async () => {
+    setShowExistingClientDialog(false);
+    await createLead(formData);
     setIsDialogOpen(false);
     resetForm();
   };
@@ -458,6 +538,63 @@ export default function Leads() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Existing Client Dialog */}
+      <Dialog open={showExistingClientDialog} onOpenChange={setShowExistingClientDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-emerald-500" />
+              Cliente já cadastrado
+            </DialogTitle>
+            <DialogDescription>
+              O telefone informado já pertence a um cliente cadastrado.
+            </DialogDescription>
+          </DialogHeader>
+
+          {existingClient && (
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                    {existingClient.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{existingClient.full_name}</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {existingClient.phone_e164}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>O que você gostaria de fazer?</p>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCreateLeadAnyway}
+              className="flex-1"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Criar lead mesmo assim
+            </Button>
+            <Button
+              onClick={handleCreateDealForClient}
+              disabled={creatingDeal}
+              className="flex-1"
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              {creatingDeal ? "Criando..." : "Criar novo negócio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Convert Confirmation */}
       <AlertDialog open={!!convertLeadId} onOpenChange={() => setConvertLeadId(null)}>
