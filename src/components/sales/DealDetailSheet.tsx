@@ -155,12 +155,12 @@ export function DealDetailSheet({
     if (!accountId) return;
 
     try {
-      // Fetch custom fields for leads using RPC or direct query with explicit typing
+      // Fetch custom fields for leads
       const { data: fields, error: fieldsError } = await (supabase as any)
         .from("custom_fields")
         .select("id, account_id, name, field_type, options, display_order, is_active, is_required, show_in_clients, show_in_leads, created_at, updated_at")
         .eq("account_id", accountId)
-        .eq("entity_type", "lead")
+        .eq("show_in_leads", true)
         .eq("is_active", true)
         .order("display_order");
       
