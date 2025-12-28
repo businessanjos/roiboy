@@ -27,7 +27,7 @@ import {
   ZappAddContactDialog,
   ZappNewConversationDialog,
 } from "@/components/royzapp/dialogs";
-import { useSector } from "@/contexts/SectorContext";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import {
   MessageSquare,
   ArrowLeft,
@@ -50,7 +50,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
-  const { currentSector } = useSector();
+  const { hasVendasAccess } = useSectorAccess();
   const navigate = useNavigate();
   
   // Use centralized data hook
@@ -2146,7 +2146,7 @@ export default function RoyZapp() {
           onOpenRoiDialog={() => setRoiDialogOpen(true)}
           onOpenRiskDialog={() => setRiskDialogOpen(true)}
           onOpenAddClient={openAddContactDialog}
-          showLeadOption={currentSector?.id === "vendas"}
+          showLeadOption={hasVendasAccess}
           onMessageChange={setMessageInput}
           onSendMessage={sendMessage}
           onKeyPress={handleKeyPress}
@@ -2336,7 +2336,7 @@ export default function RoyZapp() {
         onOpenChange={setAddContactDialogOpen}
         phone={addContactPhone}
         contactName={addContactName}
-        showLeadOption={currentSector?.id === "vendas"}
+        showLeadOption={hasVendasAccess}
         onSaveClient={saveNewClient}
         onSaveLead={saveNewLead}
         savingClient={savingNewClient}
