@@ -50,22 +50,14 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
         </span>
       );
     }
-    return (
-      <span className={`inline-flex items-center gap-1 ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
-        <Minus className="h-3 w-3" />
-      </span>
-    );
+    return <span className={`text-muted-foreground ${textSize}`}>—</span>;
   }
 
   // Select field
   if (field.field_type === "select") {
     const option = field.options.find(opt => opt.value === value);
     if (!option) {
-      return (
-        <span className={`inline-flex items-center ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
-          —
-        </span>
-      );
+      return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     return (
       <span className={`inline-flex items-center ${padding} rounded border font-medium ${getColorClasses(option.color)} ${textSize}`}>
@@ -78,11 +70,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
   if (field.field_type === "multi_select") {
     const selectedValues = Array.isArray(value) ? value : [];
     if (selectedValues.length === 0) {
-      return (
-        <span className={`inline-flex items-center ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
-          —
-        </span>
-      );
+      return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     const selectedOptions = field.options.filter(opt => selectedValues.includes(opt.value));
     return (
@@ -108,11 +96,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
   if (field.field_type === "user") {
     const selectedUserIds = Array.isArray(value) ? value : [];
     if (selectedUserIds.length === 0) {
-      return (
-        <span className={`inline-flex items-center ${padding} rounded bg-muted text-muted-foreground ${textSize}`}>
-          —
-        </span>
-      );
+      return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     
     // If we have team users data, show names
