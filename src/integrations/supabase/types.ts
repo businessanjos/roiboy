@@ -2045,6 +2045,7 @@ export type Database = {
           name: string
           options: Json | null
           show_in_clients: boolean
+          show_in_leads: boolean
           updated_at: string
         }
         Insert: {
@@ -2058,6 +2059,7 @@ export type Database = {
           name: string
           options?: Json | null
           show_in_clients?: boolean
+          show_in_leads?: boolean
           updated_at?: string
         }
         Update: {
@@ -2071,6 +2073,7 @@ export type Database = {
           name?: string
           options?: Json | null
           show_in_clients?: boolean
+          show_in_leads?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -3908,6 +3911,70 @@ export type Database = {
             columns: ["custom_status_id"]
             isOneToOne: false
             referencedRelation: "task_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_field_values: {
+        Row: {
+          account_id: string
+          created_at: string
+          field_id: string
+          id: string
+          lead_id: string
+          updated_at: string
+          value_boolean: boolean | null
+          value_date: string | null
+          value_json: Json | null
+          value_number: number | null
+          value_text: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          field_id: string
+          id?: string
+          lead_id: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_json?: Json | null
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          field_id?: string
+          id?: string
+          lead_id?: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_json?: Json | null
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_field_values_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "custom_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_field_values_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
