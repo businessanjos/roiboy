@@ -56,8 +56,9 @@ import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager"
 import { SupportWhatsAppConfig } from "@/components/admin/SupportWhatsAppConfig";
 import { SupportKnowledgeBase } from "@/components/admin/SupportKnowledgeBase";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
-import { Tag, Headset, BookOpen, Activity as ActivityIcon, Cloud } from "lucide-react";
+import { Tag, Headset, BookOpen, Activity as ActivityIcon, Cloud, Map } from "lucide-react";
 import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
+import SystemMap from "@/pages/admin/SystemMap";
 
 interface SubscriptionPlan {
   id: string;
@@ -311,6 +312,10 @@ export default function Admin() {
             <Headset className="h-4 w-4" />
             Suporte
           </TabsTrigger>
+          <TabsTrigger value="map" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Map className="h-4 w-4" />
+            Mapa
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-0">
@@ -379,6 +384,10 @@ export default function Admin() {
               <SupportWhatsAppConfig />
             </TabsContent>
           </Tabs>
+        </TabsContent>
+
+        <TabsContent value="map" className="mt-0">
+          <SystemMap />
         </TabsContent>
       </Tabs>
     </div>
