@@ -167,11 +167,13 @@ export function useInternalChat() {
 
   // Create new chat
   const createChat = useMutation({
-    mutationFn: async (participantIds: string[]) => {
+    mutationFn: async ({ participantIds, groupName }: { participantIds: string[]; groupName?: string }) => {
       if (!currentUser?.account_id || !currentUser?.id) throw new Error('User not found');
 
+      const isGroup = participantIds.length > 1;
+
       // Check if 1:1 chat already exists
-      if (participantIds.length === 1) {
+      if (!isGroup) {
         const existingChat = chats.find(chat => 
           !chat.is_group && 
           chat.participants?.some(p => p.user_id === participantIds[0])
@@ -186,7 +188,8 @@ export function useInternalChat() {
         .from('internal_chats')
         .insert({
           account_id: currentUser.account_id,
-          is_group: participantIds.length > 1,
+          is_group: isGroup,
+          name: isGroup ? (groupName || null) : null,
           created_by: currentUser.id
         })
         .select()
@@ -216,6 +219,110 @@ export function useInternalChat() {
     onError: (error) => {
       toast({
         title: 'Erro ao criar conversa',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Update chat (rename group)
+  const updateChat = useMutation({
+    mutationFn: async ({ chatId, name }: { chatId: string; name: string }) => {
+      const { data, error } = await supabase
+        .from('internal_chats')
+        .update({ name, updated_at: new Date().toISOString() })
+        .eq('id', chatId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal-chats'] });
+      toast({ title: 'Grupo atualizado!' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao atualizar grupo',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Add participants to group
+  const addParticipants = useMutation({
+    mutationFn: async ({ chatId, userIds }: { chatId: string; userIds: string[] }) => {
+      const { error } = await supabase
+        .from('internal_chat_participants')
+        .insert(
+          userIds.map(userId => ({
+            chat_id: chatId,
+            user_id: userId
+          }))
+        );
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal-chats'] });
+      toast({ title: 'Participantes adicionados!' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao adicionar participantes',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Remove participant from group
+  const removeParticipant = useMutation({
+    mutationFn: async ({ chatId, userId }: { chatId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('internal_chat_participants')
+        .delete()
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal-chats'] });
+      toast({ title: 'Participante removido!' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao remover participante',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Leave group
+  const leaveGroup = useMutation({
+    mutationFn: async (chatId: string) => {
+      if (!currentUser?.id) throw new Error('User not found');
+      
+      const { error } = await supabase
+        .from('internal_chat_participants')
+        .delete()
+        .eq('chat_id', chatId)
+        .eq('user_id', currentUser.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal-chats'] });
+      setSelectedChatId(null);
+      toast({ title: 'Você saiu do grupo' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao sair do grupo',
         description: error.message,
         variant: 'destructive'
       });
@@ -319,6 +426,10 @@ export function useInternalChat() {
     selectedChat,
     setSelectedChatId,
     createChat,
+    updateChat,
+    addParticipants,
+    removeParticipant,
+    leaveGroup,
     sendMessage,
     markAsRead,
     currentUserId: currentUser?.id
