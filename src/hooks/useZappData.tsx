@@ -508,6 +508,8 @@ export function useZappData() {
   useEffect(() => {
     if (!currentUser?.account_id) return;
 
+    console.log("[ZappData] Setting up realtime subscriptions for account:", currentUser.account_id);
+
     const conversationsChannel = supabase
       .channel('zapp-conversations-realtime')
       .on(
@@ -518,8 +520,14 @@ export function useZappData() {
           table: 'zapp_conversations',
           filter: `account_id=eq.${currentUser.account_id}`
         },
-        () => {
-          debouncedFetchAssignments();
+        (payload) => {
+          console.log("[ZappData] zapp_conversations change detected:", payload.eventType);
+          // Fetch immediately for new conversations, debounce for updates
+          if (payload.eventType === 'INSERT') {
+            fetchAssignmentsOnly();
+          } else {
+            debouncedFetchAssignments();
+          }
         }
       )
       .on(
@@ -530,19 +538,37 @@ export function useZappData() {
           table: 'zapp_conversation_assignments',
           filter: `account_id=eq.${currentUser.account_id}`
         },
-        () => {
+        (payload) => {
+          console.log("[ZappData] zapp_conversation_assignments change detected:", payload.eventType);
           debouncedFetchAssignments();
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'zapp_messages',
+          filter: `account_id=eq.${currentUser.account_id}`
+        },
+        (payload) => {
+          console.log("[ZappData] zapp_messages INSERT detected, refreshing conversation list");
+          // When new message arrives, update the conversation list to show latest message preview
+          debouncedFetchAssignments();
+        }
+      )
+      .subscribe((status) => {
+        console.log("[ZappData] Realtime subscription status:", status);
+      });
 
     return () => {
+      console.log("[ZappData] Cleaning up realtime subscriptions");
       if (realtimeFetchTimeoutRef.current) {
         clearTimeout(realtimeFetchTimeoutRef.current);
       }
       supabase.removeChannel(conversationsChannel);
     };
-  }, [currentUser?.account_id, debouncedFetchAssignments]);
+  }, [currentUser?.account_id, debouncedFetchAssignments, fetchAssignmentsOnly]);
 
   return {
     // Data
