@@ -44,7 +44,10 @@ import {
   TrendingUp,
   RotateCcw,
   Building2,
+  FileText,
 } from "lucide-react";
+import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
+import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 interface DealActivity {
   id: string;
@@ -121,13 +124,116 @@ export function DealDetailSheet({
   const [eventType, setEventType] = useState("note");
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [changingStage, setChangingStage] = useState(false);
+  
+  // Lead custom fields
+  const [leadCustomFields, setLeadCustomFields] = useState<CustomField[]>([]);
+  const [leadFieldValues, setLeadFieldValues] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (deal?.id && open) {
       fetchActivities();
       fetchCurrentUser();
+      if (deal.lead_id) {
+        fetchLeadCustomFields();
+      } else {
+        setLeadCustomFields([]);
+        setLeadFieldValues({});
+      }
     }
-  }, [deal?.id, open]);
+  }, [deal?.id, deal?.lead_id, open]);
+
+  const fetchLeadCustomFields = async () => {
+    if (!deal?.lead_id) return;
+    
+    // Get account_id
+    const userRes = await supabase
+      .from("users")
+      .select("account_id")
+      .single();
+    
+    const accountId = userRes.data?.account_id;
+    if (!accountId) return;
+
+    try {
+      // Fetch custom fields for leads using RPC or direct query with explicit typing
+      const { data: fields, error: fieldsError } = await (supabase as any)
+        .from("custom_fields")
+        .select("id, account_id, name, field_type, options, display_order, is_active, is_required, show_in_clients, show_in_leads, created_at, updated_at")
+        .eq("account_id", accountId)
+        .eq("entity_type", "lead")
+        .eq("is_active", true)
+        .order("display_order");
+      
+      if (fieldsError) {
+        console.error("Error fetching custom fields:", fieldsError);
+        return;
+      }
+
+      if (!fields || fields.length === 0) {
+        setLeadCustomFields([]);
+        setLeadFieldValues({});
+        return;
+      }
+
+      const formattedFields: CustomField[] = fields.map((f) => ({
+        id: f.id,
+        account_id: f.account_id,
+        name: f.name,
+        field_type: f.field_type as CustomField['field_type'],
+        options: Array.isArray(f.options) 
+          ? (f.options as Array<{ value: string; label: string; color: string }>)
+          : [],
+        display_order: f.display_order,
+        is_active: f.is_active,
+        is_required: f.is_required,
+        show_in_clients: f.show_in_clients,
+        show_in_leads: f.show_in_leads,
+        created_at: f.created_at,
+        updated_at: f.updated_at,
+      }));
+      setLeadCustomFields(formattedFields);
+
+      // Fetch field values for this lead
+      const valuesRes = await supabase
+        .from("lead_field_values")
+        .select("*")
+        .eq("lead_id", deal.lead_id);
+      
+      const values = valuesRes.data;
+
+      if (values) {
+        const valuesMap: Record<string, any> = {};
+        values.forEach((v) => {
+          const field = formattedFields.find(f => f.id === v.field_id);
+          if (field) {
+            switch (field.field_type) {
+              case "boolean":
+                valuesMap[v.field_id] = v.value_boolean;
+                break;
+              case "number":
+              case "currency":
+                valuesMap[v.field_id] = v.value_number;
+                break;
+              case "date":
+                valuesMap[v.field_id] = v.value_date;
+                break;
+              case "select":
+              case "text":
+                valuesMap[v.field_id] = v.value_text;
+                break;
+              case "multi_select":
+              case "user":
+                valuesMap[v.field_id] = v.value_json;
+                break;
+            }
+          }
+        });
+        setLeadFieldValues(valuesMap);
+      }
+    } catch (error) {
+      console.error("Error fetching lead custom fields:", error);
+    }
+  };
 
   const fetchCurrentUser = async () => {
     const { data } = await supabase
@@ -396,6 +502,27 @@ export function DealDetailSheet({
                 </>
               )}
             </div>
+
+            {/* Lead Custom Fields */}
+            {deal.lead_id && leadCustomFields.length > 0 && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Campos do Lead
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {leadCustomFields.map(field => (
+                    <div key={field.id} className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">{field.name}</p>
+                      <FieldValueBadge 
+                        field={field} 
+                        value={leadFieldValues[field.id]} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             {!isClosed && (
