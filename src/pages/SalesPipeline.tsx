@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
+import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,11 +17,6 @@ import {
   Settings2,
   LayoutGrid,
   List,
-  Users,
-  Clock,
-  MessageSquare,
-  CheckCircle,
-  RefreshCw
 } from "lucide-react";
 
 export default function SalesPipeline() {
@@ -49,6 +45,8 @@ export default function SalesPipeline() {
   } = useDeals();
 
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewDealOpen, setIsNewDealOpen] = useState(false);
   const [isStagesManagerOpen, setIsStagesManagerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
@@ -63,6 +61,12 @@ export default function SalesPipeline() {
 
   const handleDealClick = (deal: Deal) => {
     setSelectedDeal(deal);
+    setIsDetailOpen(true);
+  };
+
+  const handleEditFromDetail = () => {
+    setIsDetailOpen(false);
+    setIsEditDialogOpen(true);
   };
 
   const handleDealMove = async (dealId: string, newStageId: string): Promise<boolean> => {
@@ -70,32 +74,37 @@ export default function SalesPipeline() {
   };
 
   const handleSaveDeal = async (data: any) => {
-    if (selectedDeal) {
+    if (isEditDialogOpen && selectedDeal) {
       await updateDeal(selectedDeal.id, data);
     } else {
       await createDeal(data);
     }
     setSelectedDeal(null);
+    setIsEditDialogOpen(false);
     setIsNewDealOpen(false);
   };
 
   const handleMarkAsWon = async (dealId: string) => {
     await markAsWon(dealId);
+    setIsDetailOpen(false);
     setSelectedDeal(null);
   };
 
   const handleMarkAsLost = async (dealId: string, reason?: string) => {
     await markAsLost(dealId, reason);
+    setIsDetailOpen(false);
     setSelectedDeal(null);
   };
 
   const handleDeleteDeal = async (dealId: string) => {
     await deleteDeal(dealId);
+    setIsEditDialogOpen(false);
     setSelectedDeal(null);
   };
 
   const handleReopen = async (dealId: string) => {
     await reopenDeal(dealId);
+    setIsDetailOpen(false);
     setSelectedDeal(null);
   };
 
@@ -234,10 +243,26 @@ export default function SalesPipeline() {
         onSave={handleSaveDeal}
       />
 
+      {/* Deal Detail Sheet */}
+      <DealDetailSheet
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        deal={selectedDeal}
+        stages={stages}
+        onEdit={handleEditFromDetail}
+        onMarkAsWon={handleMarkAsWon}
+        onMarkAsLost={handleMarkAsLost}
+        onReopen={handleReopen}
+        onStageChange={handleDealMove}
+      />
+
       {/* Edit Deal Dialog */}
       <DealDialog
-        open={!!selectedDeal}
-        onOpenChange={(open) => !open && setSelectedDeal(null)}
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) setSelectedDeal(null);
+        }}
         deal={selectedDeal}
         stages={stages}
         onSave={handleSaveDeal}
