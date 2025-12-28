@@ -861,8 +861,8 @@ export default function Leads() {
 
       {/* Lead Detail Sheet with Timeline */}
       <Sheet open={!!detailLead} onOpenChange={(open) => !open && setDetailLead(null)}>
-        <SheetContent className="sm:max-w-md overflow-hidden flex flex-col">
-          <SheetHeader className="flex-shrink-0">
+        <SheetContent className="sm:max-w-md flex flex-col p-0">
+          <SheetHeader className="flex-shrink-0 p-6 pb-0">
             <div className="flex items-center justify-between">
               <SheetTitle className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
@@ -879,98 +879,100 @@ export default function Leads() {
           </SheetHeader>
 
           {detailLead && (
-            <div className="flex-1 overflow-hidden flex flex-col mt-4">
-              {/* Lead Info */}
-              <div className="flex-shrink-0 space-y-2 pb-4 border-b">
-                {detailLead.phone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{detailLead.phone}</span>
+            <ScrollArea className="flex-1 px-6">
+              <div className="space-y-4 pb-6">
+                {/* Lead Info */}
+                <div className="space-y-2 pb-4 border-b">
+                  {detailLead.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{detailLead.phone}</span>
+                    </div>
+                  )}
+                  {detailLead.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{detailLead.email}</span>
+                    </div>
+                  )}
+                  {detailLead.source && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <Badge variant="outline" className="text-xs">
+                        {LEAD_SOURCES.find((s) => s.value === detailLead.source)?.label || detailLead.source}
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>Criado em {format(new Date(detailLead.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                   </div>
-                )}
-                {detailLead.email && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{detailLead.email}</span>
-                  </div>
-                )}
-                {detailLead.source && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <Badge variant="outline" className="text-xs">
-                      {LEAD_SOURCES.find((s) => s.value === detailLead.source)?.label || detailLead.source}
-                    </Badge>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>Criado em {format(new Date(detailLead.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                  {detailLead.notes && (
+                    <p className="text-sm text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
+                      {detailLead.notes}
+                    </p>
+                  )}
                 </div>
-                {detailLead.notes && (
-                  <p className="text-sm text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
-                    {detailLead.notes}
-                  </p>
-                )}
-              </div>
 
-              {/* Custom Fields */}
-              {customFields.length > 0 && (
-                <div className="flex-shrink-0 py-4 border-t">
-                  <h3 className="text-sm font-semibold mb-3">Campos Personalizados</h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    {customFields.map(field => (
-                      <div key={field.id} className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-muted-foreground shrink-0">{field.name}:</span>
-                        <LeadFieldValueEditor
-                          field={field}
-                          leadId={detailLead.id}
-                          accountId={currentUser?.account_id || ""}
-                          currentValue={fieldValues[detailLead.id]?.[field.id]}
-                          onValueChange={(fId, nv) => handleFieldValueChange(detailLead.id, fId, nv)}
-                        />
-                      </div>
-                    ))}
+                {/* Custom Fields */}
+                {customFields.length > 0 && (
+                  <div className="py-4 border-b">
+                    <h3 className="text-sm font-semibold mb-3">Campos Personalizados</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                      {customFields.map(field => (
+                        <div key={field.id} className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-muted-foreground shrink-0">{field.name}:</span>
+                          <LeadFieldValueEditor
+                            field={field}
+                            leadId={detailLead.id}
+                            accountId={currentUser?.account_id || ""}
+                            currentValue={fieldValues[detailLead.id]?.[field.id]}
+                            onValueChange={(fId, nv) => handleFieldValueChange(detailLead.id, fId, nv)}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Timeline */}
-              <div className="flex-1 overflow-hidden pt-4">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Jornada de Compra
-                </h3>
-                <ScrollArea className="h-[calc(100vh-500px)]">
+                {/* Timeline */}
+                <div className="pt-4">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Jornada de Compra
+                  </h3>
                   <LeadTimeline leadId={detailLead.id} />
-                </ScrollArea>
+                </div>
               </div>
+            </ScrollArea>
+          )}
 
-              {/* Actions */}
-              <div className="flex-shrink-0 pt-4 border-t flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    openEditDialog(detailLead);
-                    setDetailLead(null);
-                  }}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => {
-                    openDealDialogForLead(detailLead);
-                    setDetailLead(null);
-                  }}
-                >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Criar Negócio
-                </Button>
-              </div>
+          {/* Actions - Fixed at bottom */}
+          {detailLead && (
+            <div className="flex-shrink-0 p-6 pt-4 border-t flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  openEditDialog(detailLead);
+                  setDetailLead(null);
+                }}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  openDealDialogForLead(detailLead);
+                  setDetailLead(null);
+                }}
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Criar Negócio
+              </Button>
             </div>
           )}
         </SheetContent>
