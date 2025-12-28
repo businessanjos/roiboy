@@ -13,7 +13,9 @@ import {
   ZappTag,
   Department,
   ConversationAssignment,
+  ZappAIAgentChat,
 } from "@/components/royzapp";
+import type { AIAgent } from "@/components/royzapp/ZappAIAgentItem";
 import {
   ZappDepartmentDialog,
   ZappAgentDialog,
@@ -219,6 +221,27 @@ export default function RoyZapp() {
   const [newConversationSearch, setNewConversationSearch] = useState("");
   const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
+
+  // AI Agents state
+  const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
+  const [selectedAIAgent, setSelectedAIAgent] = useState<AIAgent | null>(null);
+
+  // Fetch AI agents
+  useEffect(() => {
+    const fetchAIAgents = async () => {
+      const { data, error } = await supabase
+        .from("ai_sector_agents")
+        .select("id, sector_id, name, display_name, avatar_url, greeting_message, is_enabled")
+        .eq("is_enabled", true)
+        .order("name");
+
+      if (!error && data) {
+        setAiAgents(data as AIAgent[]);
+      }
+    };
+
+    fetchAIAgents();
+  }, []);
 
   // Fetch messages when conversation is selected
   useEffect(() => {
@@ -2065,6 +2088,7 @@ export default function RoyZapp() {
           importLimit={importLimit}
           importingConversations={importingConversations}
           onSelectConversation={(a) => {
+            setSelectedAIAgent(null); // Clear AI agent when selecting regular conversation
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
@@ -2105,18 +2129,33 @@ export default function RoyZapp() {
             localStorage.setItem("zapp_signature", value);
           }}
           getAgentName={getAgentName}
+          aiAgents={aiAgents}
+          selectedAIAgent={selectedAIAgent}
+          onSelectAIAgent={(agent) => {
+            setSelectedConversation(null); // Clear regular conversation when selecting AI agent
+            setSelectedAIAgent(agent);
+          }}
         />
       </div>
 
-      {/* Right panel - Chat view */}
+      {/* Right panel - Chat view or AI Agent Chat */}
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col overflow-hidden",
-          !selectedConversation ? "hidden lg:flex" : "flex"
+          !selectedConversation && !selectedAIAgent ? "hidden lg:flex" : "flex"
         )}
       >
-        <ZappChatView
-          selectedConversation={selectedConversation}
+        {selectedAIAgent ? (
+          <ZappAIAgentChat
+            agent={selectedAIAgent}
+            currentUserName={currentUser?.name || "Usuário"}
+            currentUserAvatar={currentUser?.avatar_url || null}
+            onBack={() => setSelectedAIAgent(null)}
+            isMobile={!!selectedAIAgent}
+          />
+        ) : (
+          <ZappChatView
+            selectedConversation={selectedConversation}
           messages={messages}
           contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false }}
           clientProducts={selectedClientProducts}
@@ -2184,6 +2223,7 @@ export default function RoyZapp() {
             localStorage.setItem("zapp_signatureEnabled", String(newValue));
           }}
         />
+        )}
       </div>
 
       {/* Department Dialog */}
