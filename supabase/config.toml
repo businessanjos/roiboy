@@ -54,9 +54,6 @@ verify_jwt = false
 [functions.test-ai-prompt]
 verify_jwt = false
 
-[functions.liberty-webhook]
-verify_jwt = false
-
 [functions.event-checkin]
 verify_jwt = false
 
@@ -64,9 +61,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-email]
-verify_jwt = false
-
-[functions.evolution-webhook]
 verify_jwt = false
 
 [functions.send-reminder]
