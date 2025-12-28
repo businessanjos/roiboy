@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
@@ -99,29 +98,27 @@ export default function SalesPipeline() {
 
   if (loading || stagesLoading) {
     return (
-      <AppLayout>
-        <div className="p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-[500px] w-[300px] flex-shrink-0" />
-            ))}
-          </div>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-32" />
         </div>
-      </AppLayout>
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-[500px] w-[300px] flex-shrink-0" />
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -317,7 +314,7 @@ export default function SalesPipeline() {
         onDeleteStage={deleteStage}
         onReorderStages={reorderStages}
       />
-    </AppLayout>
+    </>
   );
 }
 
