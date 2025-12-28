@@ -42,11 +42,14 @@ import {
   Building2,
   Loader2,
   X,
+  Sparkles,
+  Brain,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PendingClassifications } from "@/components/financial/PendingClassifications";
 
 interface ParsedTransaction {
   date: string;
@@ -80,10 +83,11 @@ export default function FinancialReconciliationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"pending" | "import" | "history">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "import" | "ai" | "history">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [isUploading, setIsUploading] = useState(false);
+  const [isClassifying, setIsClassifying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
@@ -392,6 +396,49 @@ export default function FinancialReconciliationPage() {
     }
   };
 
+  // Send transactions to AI classification
+  const classifyWithAI = async () => {
+    if (!accountId || parsedTransactions.length === 0) return;
+    
+    setIsClassifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('classify-transactions', {
+        body: {
+          account_id: accountId,
+          bank_account_id: selectedBankAccount !== 'all' ? selectedBankAccount : null,
+          transactions: parsedTransactions.map((tx, index) => ({
+            description: tx.description,
+            amount: tx.amount,
+            date: tx.date,
+            type: tx.type,
+            external_id: `ofx-${uploadedFileName}-${index}`,
+          })),
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Classificação concluída",
+        description: `${data.classified} transações classificadas. Verifique na aba "Classificação IA".`,
+      });
+      
+      // Switch to AI tab and refresh
+      setActiveTab('ai');
+      queryClient.invalidateQueries({ queryKey: ['pending-classifications'] });
+      clearParsedTransactions();
+    } catch (error) {
+      console.error('Classification error:', error);
+      toast({
+        title: "Erro na classificação",
+        description: "Não foi possível classificar as transações.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClassifying(false);
+    }
+  };
+
   const parsedSummary = {
     total: parsedTransactions.length,
     credits: parsedTransactions.filter(t => t.type === "credit").reduce((sum, t) => sum + t.amount, 0),
@@ -475,7 +522,11 @@ export default function FinancialReconciliationPage() {
               </TabsTrigger>
               <TabsTrigger value="import" className="flex items-center gap-2">
                 <FileUp className="h-4 w-4" />
-                Importar Extrato
+                Importar OFX
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                Classificação IA
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4" />
@@ -694,6 +745,22 @@ export default function FinancialReconciliationPage() {
                     </Card>
                   </div>
 
+                  {/* Action button to classify with AI */}
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={classifyWithAI}
+                      disabled={isClassifying}
+                      className="gap-2"
+                    >
+                      {isClassifying ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {isClassifying ? "Classificando..." : "Classificar com IA"}
+                    </Button>
+                  </div>
+
                   {/* Parsed transactions table */}
                   <ScrollArea className="h-[300px]">
                     <Table>
@@ -742,6 +809,10 @@ export default function FinancialReconciliationPage() {
                   </ScrollArea>
                 </>
               )}
+            </TabsContent>
+
+            <TabsContent value="ai" className="mt-4">
+              <PendingClassifications />
             </TabsContent>
 
             <TabsContent value="history" className="mt-4">
