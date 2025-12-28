@@ -480,8 +480,8 @@ export function DealDialog({
                       <FormItem>
                         <FormLabel>Cliente Existente</FormLabel>
                         <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value}
+                          onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)} 
+                          value={field.value || "__none__"}
                           disabled={isClosed}
                         >
                           <FormControl>
@@ -490,7 +490,7 @@ export function DealDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Nenhum</SelectItem>
+                            <SelectItem value="__none__">Nenhum</SelectItem>
                             {clients.map(client => (
                               <SelectItem key={client.id} value={client.id}>
                                 <div className="flex items-center gap-2">
