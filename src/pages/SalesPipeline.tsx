@@ -11,13 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Plus, 
   TrendingUp, 
-  DollarSign, 
-  Target, 
   Trophy, 
   XCircle,
   Settings2,
   LayoutGrid,
-  List
+  List,
+  Users,
+  Clock,
+  MessageSquare,
+  CheckCircle,
+  RefreshCw
 } from "lucide-react";
 
 export default function SalesPipeline() {
@@ -162,88 +165,77 @@ export default function SalesPipeline() {
           </div>
         </div>
 
-        {/* Stats Cards - Circular Style */}
-        <div className="flex items-center gap-6 overflow-x-auto pb-2">
-          {/* Em Aberto */}
-          <div className="flex items-center gap-3 min-w-fit">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-full border-4 border-primary flex items-center justify-center bg-primary/10">
-                <TrendingUp className="h-6 w-6 text-primary" />
+        {/* Funnel Stats - Based on Real Stages */}
+        <div className="flex items-stretch gap-0 overflow-x-auto">
+          {stages.map((stage, index) => {
+            const dealsInStage = openDeals.filter(d => d.stage_id === stage.id);
+            const prevStageDeals = index > 0 
+              ? openDeals.filter(d => d.stage_id === stages[index - 1].id).length 
+              : openDeals.length;
+            const conversionRate = prevStageDeals > 0 
+              ? Math.round((dealsInStage.length / prevStageDeals) * 100) 
+              : 0;
+            
+            const getStageIcon = (name: string) => {
+              const lowerName = name.toLowerCase();
+              if (lowerName.includes('lead') || lowerName.includes('cadastr') || lowerName.includes('novo')) return Users;
+              if (lowerName.includes('trial') || lowerName.includes('qualific')) return Clock;
+              if (lowerName.includes('follow') || lowerName.includes('proposta') || lowerName.includes('negocia')) return MessageSquare;
+              if (lowerName.includes('ativo') || lowerName.includes('ganho') || lowerName.includes('fechamento')) return CheckCircle;
+              return Users;
+            };
+            
+            const IconComponent = getStageIcon(stage.name);
+            
+            return (
+              <div key={stage.id} className="flex items-center">
+                {/* Stage Card */}
+                <div className="flex items-center gap-3 px-4 py-3 min-w-fit border-r border-border last:border-r-0">
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center"
+                    style={{ 
+                      borderWidth: '3px',
+                      borderStyle: 'solid',
+                      borderColor: stage.color,
+                      backgroundColor: `${stage.color}15`
+                    }}
+                  >
+                    <IconComponent className="h-5 w-5" style={{ color: stage.color }} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{dealsInStage.length}</p>
+                    <p className="text-xs text-muted-foreground">{stage.name}</p>
+                  </div>
+                  {index > 0 && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      {conversionRate}%
+                    </span>
+                  )}
+                </div>
               </div>
+            );
+          })}
+          
+          {/* Won */}
+          <div className="flex items-center gap-3 px-4 py-3 min-w-fit border-r border-border">
+            <div className="w-12 h-12 rounded-full border-[3px] border-emerald-500 flex items-center justify-center bg-emerald-500/10">
+              <Trophy className="h-5 w-5 text-emerald-500" />
             </div>
             <div>
-              <p className="text-3xl font-bold">{openDeals.length}</p>
-              <p className="text-sm text-muted-foreground">Em Aberto</p>
-            </div>
-            {stages.length > 1 && (
-              <span className="text-xs text-muted-foreground ml-2">
-                {Math.round((openDeals.filter(d => d.stage_id === stages[1]?.id).length / Math.max(openDeals.length, 1)) * 100)}%
-              </span>
-            )}
-          </div>
-
-          {/* Separator */}
-          <div className="h-10 w-px bg-border" />
-
-          {/* Valor Pipeline */}
-          <div className="flex items-center gap-3 min-w-fit">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-full border-4 border-blue-500 flex items-center justify-center bg-blue-500/10">
-                <DollarSign className="h-6 w-6 text-blue-500" />
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">{formatCurrency(totalPipelineValue)}</p>
-              <p className="text-sm text-muted-foreground">Pipeline</p>
-            </div>
-          </div>
-
-          {/* Separator */}
-          <div className="h-10 w-px bg-border" />
-
-          {/* Valor Ponderado */}
-          <div className="flex items-center gap-3 min-w-fit">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-full border-4 border-amber-500 flex items-center justify-center bg-amber-500/10">
-                <Target className="h-6 w-6 text-amber-500" />
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">{formatCurrency(weightedPipelineValue)}</p>
-              <p className="text-sm text-muted-foreground">Ponderado</p>
-            </div>
-          </div>
-
-          {/* Separator */}
-          <div className="h-10 w-px bg-border" />
-
-          {/* Total Ganho */}
-          <div className="flex items-center gap-3 min-w-fit">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-full border-4 border-emerald-500 flex items-center justify-center bg-emerald-500/10">
-                <Trophy className="h-6 w-6 text-emerald-500" />
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">{wonDeals.length}</p>
-              <p className="text-sm text-muted-foreground">Ganhas</p>
-              <p className="text-xs text-emerald-500">{formatCurrency(totalWonValue)}</p>
+              <p className="text-2xl font-bold">{wonDeals.length}</p>
+              <p className="text-xs text-muted-foreground">Ganhas</p>
+              <p className="text-[10px] text-emerald-500">{formatCurrency(totalWonValue)}</p>
             </div>
           </div>
-
-          {/* Separator */}
-          <div className="h-10 w-px bg-border" />
-
-          {/* Perdidas */}
-          <div className="flex items-center gap-3 min-w-fit">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-full border-4 border-red-500 flex items-center justify-center bg-red-500/10">
-                <XCircle className="h-6 w-6 text-red-500" />
-              </div>
+          
+          {/* Lost */}
+          <div className="flex items-center gap-3 px-4 py-3 min-w-fit">
+            <div className="w-12 h-12 rounded-full border-[3px] border-red-500 flex items-center justify-center bg-red-500/10">
+              <XCircle className="h-5 w-5 text-red-500" />
             </div>
             <div>
-              <p className="text-3xl font-bold">{lostDeals.length}</p>
-              <p className="text-sm text-muted-foreground">Perdidas</p>
+              <p className="text-2xl font-bold">{lostDeals.length}</p>
+              <p className="text-xs text-muted-foreground">Perdidas</p>
             </div>
           </div>
         </div>
