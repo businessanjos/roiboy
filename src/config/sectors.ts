@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -95,6 +95,19 @@ export const sectors: Sector[] = [
     defaultRoute: "/roy-zapp",
     navItems: [
       { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
+  },
+  {
+    id: "roychat",
+    name: "ROY Chat",
+    description: "Chat interno para comunicação da equipe",
+    icon: MessageCircle,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-500/10",
+    defaultRoute: "/team-chat",
+    navItems: [
+      { to: "/team-chat", icon: MessageCircle, label: "ROY Chat", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
