@@ -4,17 +4,18 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Users, Clock, MessageSquare, CheckCircle, XCircle } from "lucide-react";
+import { Users, Clock, MessageSquare, CheckCircle, XCircle, TrendingDown } from "lucide-react";
 
 interface DealKanbanColumnProps {
   stage: DealStage;
   deals: Deal[];
   onDealClick: (deal: Deal) => void;
+  conversionRate?: number;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
   const lowerName = stageName.toLowerCase();
-  const iconClass = "h-4 w-4";
+  const iconClass = "h-3.5 w-3.5";
   
   if (lowerName.includes('lead') || lowerName.includes('cadastr') || lowerName.includes('novo')) {
     return <Users className={iconClass} style={{ color }} />;
@@ -34,7 +35,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -59,20 +60,26 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
     >
       {/* Column Header */}
       <div className="flex items-center justify-between mb-2 px-1">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1 min-w-0">
           {getStageIcon(stage.name, stage.color)}
           <span className="font-medium text-xs truncate">{stage.name}</span>
+          <Badge 
+            variant="secondary" 
+            className="text-[10px] px-1.5 py-0 font-semibold rounded-full flex-shrink-0 ml-1"
+            style={{ 
+              backgroundColor: `${stage.color}20`,
+              color: stage.color,
+            }}
+          >
+            {deals.length}
+          </Badge>
         </div>
-        <Badge 
-          variant="secondary" 
-          className="text-[10px] px-1.5 py-0 font-semibold rounded-full flex-shrink-0"
-          style={{ 
-            backgroundColor: `${stage.color}20`,
-            color: stage.color,
-          }}
-        >
-          {deals.length}
-        </Badge>
+        {conversionRate !== undefined && (
+          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+            <TrendingDown className="h-2.5 w-2.5" />
+            {conversionRate}%
+          </span>
+        )}
       </div>
 
       {/* Cards Container */}
@@ -104,8 +111,8 @@ export function DealKanbanColumn({ stage, deals, onDealClick }: DealKanbanColumn
 
       {/* Column Footer with Total */}
       {deals.length > 0 && (
-        <div className="mt-3 px-2 py-2 border-t border-border/50">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-2 px-1 py-1.5 border-t border-border/30">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
             <span>Total</span>
             <span className="font-semibold text-foreground">{formatCurrency(totalValue)}</span>
           </div>
