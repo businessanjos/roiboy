@@ -33,7 +33,13 @@ interface InternalMessage {
   id: string;
   chat_id: string;
   sender_id: string;
-  content: string;
+  content: string | null;
+  message_type: string;
+  file_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  file_type: string | null;
+  audio_duration: number | null;
   reply_to_id: string | null;
   is_edited: boolean;
   created_at: string;
@@ -331,15 +337,61 @@ export function useInternalChat() {
 
   // Send message
   const sendMessage = useMutation({
-    mutationFn: async ({ content, replyToId }: { content: string; replyToId?: string }) => {
-      if (!selectedChatId || !currentUser?.id) throw new Error('Chat or user not found');
+    mutationFn: async ({ 
+      content, 
+      replyToId,
+      messageType = 'text',
+      file,
+      audioDuration
+    }: { 
+      content?: string; 
+      replyToId?: string;
+      messageType?: 'text' | 'audio' | 'file' | 'image';
+      file?: File;
+      audioDuration?: number;
+    }) => {
+      if (!selectedChatId || !currentUser?.id || !currentUser?.account_id) {
+        throw new Error('Chat or user not found');
+      }
+
+      let fileUrl = null;
+      let fileName = null;
+      let fileSize = null;
+      let fileType = null;
+
+      // Upload file if provided
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${currentUser.account_id}/${selectedChatId}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('internal-chat-files')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('internal-chat-files')
+          .getPublicUrl(filePath);
+
+        fileUrl = urlData.publicUrl;
+        fileName = file.name;
+        fileSize = file.size;
+        fileType = file.type;
+      }
 
       const { data, error } = await supabase
         .from('internal_messages')
         .insert({
           chat_id: selectedChatId,
           sender_id: currentUser.id,
-          content,
+          content: content || null,
+          message_type: messageType,
+          file_url: fileUrl,
+          file_name: fileName,
+          file_size: fileSize,
+          file_type: fileType,
+          audio_duration: audioDuration || null,
           reply_to_id: replyToId
         })
         .select('*, sender:sender_id(id, name, avatar_url)')

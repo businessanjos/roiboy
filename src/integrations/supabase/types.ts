@@ -3914,31 +3914,49 @@ export type Database = {
       }
       internal_messages: {
         Row: {
+          audio_duration: number | null
           chat_id: string
-          content: string
+          content: string | null
           created_at: string
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
           id: string
           is_edited: boolean | null
+          message_type: string
           reply_to_id: string | null
           sender_id: string
           updated_at: string
         }
         Insert: {
+          audio_duration?: number | null
           chat_id: string
-          content: string
+          content?: string | null
           created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           is_edited?: boolean | null
+          message_type?: string
           reply_to_id?: string | null
           sender_id: string
           updated_at?: string
         }
         Update: {
+          audio_duration?: number | null
           chat_id?: string
-          content?: string
+          content?: string | null
           created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           id?: string
           is_edited?: boolean | null
+          message_type?: string
           reply_to_id?: string | null
           sender_id?: string
           updated_at?: string
