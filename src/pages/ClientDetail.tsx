@@ -31,6 +31,7 @@ import { ContractTimer } from "@/components/client/ContractTimer";
 import { ClientContracts } from "@/components/client/ClientContracts";
 import { ClientFormResponses } from "@/components/client/ClientFormResponses";
 import { ClientRelationships } from "@/components/client/ClientRelationships";
+import { ClientDeals } from "@/components/client/ClientDeals";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import {
   ArrowLeft,
@@ -2037,6 +2038,7 @@ export default function ClientDetail() {
           <TabsList className="w-max sm:w-auto">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+            <TabsTrigger value="deals">Negócios</TabsTrigger>
             <TabsTrigger value="fichas">Fichas</TabsTrigger>
             <TabsTrigger value="campos">Campos</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
@@ -2052,6 +2054,23 @@ export default function ClientDetail() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="deals">
+          <Card className="shadow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Negócios
+              </CardTitle>
+              <CardDescription>
+                Negociações e oportunidades de vendas com este cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <ClientDeals clientId={id!} clientName={client?.full_name} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="fichas">
           <Card className="shadow-card">
