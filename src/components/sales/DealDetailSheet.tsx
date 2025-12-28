@@ -327,68 +327,71 @@ export function DealDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
-        <SheetHeader className="p-4 pb-0 border-b">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              <Avatar className="h-12 w-12 border-2 border-primary/20">
+        <SheetHeader className="px-5 py-4 border-b bg-muted/30">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Avatar className="h-10 w-10 border border-primary/20">
                 <AvatarImage src={deal.client?.avatar_url || undefined} />
-                <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
+                <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
                   {getInitials(contactName)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <SheetTitle className="text-xl truncate pr-2">{deal.title}</SheetTitle>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className="text-sm text-muted-foreground">{contactName}</span>
-                  {deal.client?.phone_e164 && (
-                    <>
-                      <span className="text-muted-foreground">·</span>
-                      <span className="text-sm text-muted-foreground">{deal.client.phone_e164}</span>
-                    </>
-                  )}
+                <div className="flex items-center gap-2">
+                  <SheetTitle className="text-base font-semibold truncate">{deal.title}</SheetTitle>
                   {deal.status === 'won' && (
-                    <Badge className="bg-emerald-500 gap-1 ml-2">
-                      <Trophy className="h-3 w-3" />
+                    <Badge className="bg-emerald-500/90 text-white text-[10px] h-5 px-1.5">
+                      <Trophy className="h-3 w-3 mr-0.5" />
                       Ganha
                     </Badge>
                   )}
                   {deal.status === 'lost' && (
-                    <Badge variant="destructive" className="gap-1 ml-2">
-                      <XCircle className="h-3 w-3" />
+                    <Badge variant="destructive" className="text-[10px] h-5 px-1.5">
+                      <XCircle className="h-3 w-3 mr-0.5" />
                       Perdida
                     </Badge>
                   )}
                   {deal.status === 'open' && currentStage && (
                     <Badge
                       variant="outline"
-                      className="ml-2"
+                      className="text-[10px] h-5 px-1.5"
                       style={{ 
                         borderColor: currentStage.color,
                         color: currentStage.color,
+                        backgroundColor: `${currentStage.color}10`,
                       }}
                     >
                       {currentStage.name}
                     </Badge>
                   )}
                 </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                  <span>{contactName}</span>
+                  {deal.client?.phone_e164 && (
+                    <>
+                      <span>·</span>
+                      <span>{deal.client.phone_e164}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {!isClosed && (
                 <>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                    className="h-8 px-2.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
                     onClick={() => onMarkAsWon(deal.id)}
                   >
                     <Trophy className="h-4 w-4 mr-1" />
                     Ganha
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    className="h-8 px-2.5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
                     onClick={() => onMarkAsLost(deal.id)}
                   >
                     <XCircle className="h-4 w-4 mr-1" />
@@ -398,16 +401,17 @@ export function DealDetailSheet({
               )}
               {isClosed && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
+                  className="h-8 px-2.5"
                   onClick={() => onReopen(deal.id)}
                 >
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Reabrir
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-1" />
+              <Button variant="outline" size="sm" className="h-8" onClick={onEdit}>
+                <Edit className="h-3.5 w-3.5 mr-1" />
                 Editar
               </Button>
             </div>
@@ -415,9 +419,9 @@ export function DealDetailSheet({
         </SheetHeader>
 
         <ScrollArea className="flex-1">
-          <div className="p-5">
+          <div className="p-4">
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Left Column - Deal Info */}
               <div className="space-y-5">
                 {/* Stats Cards - Improved Grid */}
@@ -572,26 +576,24 @@ export function DealDetailSheet({
               </div>
 
               {/* Right Column - Timeline */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-sm flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <Clock className="h-4 w-4 text-primary" />
-                  </div>
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
                   Histórico Comercial
                 </h4>
 
                 {/* Add new activity */}
-                <div className="rounded-xl border bg-card p-4 space-y-3">
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <Select value={eventType} onValueChange={setEventType}>
-                      <SelectTrigger className="w-[140px] h-9 text-sm bg-background">
+                      <SelectTrigger className="w-[120px] h-8 text-xs bg-background">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-popover">
                         {EVENT_TYPES.map((type) => (
                           <SelectItem key={type.value} value={type.value}>
                             <div className="flex items-center gap-2">
-                              <type.icon className="h-4 w-4" />
+                              <type.icon className="h-3.5 w-3.5" />
                               {type.label}
                             </div>
                           </SelectItem>
@@ -604,20 +606,20 @@ export function DealDetailSheet({
                     placeholder="Descreva a interação..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    rows={3}
+                    rows={2}
                     className="resize-none text-sm bg-background"
                   />
                   <div className="flex justify-end">
                     <Button
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={handleAddActivity}
                       disabled={!newNote.trim() || submitting}
-                      className="gap-1.5"
                     >
                       {submitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
                       ) : (
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-3.5 w-3.5 mr-1" />
                       )}
                       Adicionar
                     </Button>
@@ -625,65 +627,49 @@ export function DealDetailSheet({
                 </div>
 
                 {/* Activities Timeline */}
-                <div className="rounded-xl border bg-card overflow-hidden">
+                <div className="rounded-lg border bg-muted/30 overflow-hidden">
                   {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
                   ) : activities.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground text-sm">
-                      <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <div className="text-center py-6 text-muted-foreground text-xs">
                       Nenhuma atividade registrada
                     </div>
                   ) : (
-                    <div className="max-h-[380px] overflow-y-auto">
-                      {activities.map((activity, index) => {
+                    <div className="max-h-[280px] overflow-y-auto divide-y">
+                      {activities.map((activity) => {
                         const config = getEventConfig(activity.type);
                         const Icon = config.icon;
                         const userName = activity.user?.name || "Sistema";
-                        const userAvatar = activity.user?.avatar_url;
-                        const isLast = index === activities.length - 1;
 
                         return (
-                          <div 
-                            key={activity.id} 
-                            className={cn(
-                              "flex gap-3 p-4",
-                              !isLast && "border-b"
-                            )}
-                          >
+                          <div key={activity.id} className="flex gap-2.5 p-3">
                             <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0",
+                              "w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0",
                               config.bgColor
                             )}>
-                              <Icon className="h-4 w-4" />
+                              <Icon className="h-3 w-3" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center flex-wrap gap-1.5 mb-1">
-                                <Avatar className="h-5 w-5 border border-border">
-                                  <AvatarImage src={userAvatar || undefined} />
-                                  <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
-                                    {getInitials(userName)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm font-medium">{userName}</span>
+                              <div className="flex items-center gap-1 text-xs">
+                                <span className="font-medium">{userName}</span>
                                 <span className="text-muted-foreground">·</span>
-                                <span className={cn("text-sm font-medium", config.textColor)}>
+                                <span className={cn("font-medium", config.textColor)}>
                                   {activity.title || config.label}
                                 </span>
-                                <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
+                                <span className="text-[10px] text-muted-foreground ml-auto">
                                   {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
                                 </span>
                               </div>
                               {activity.content && (
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                                   {activity.content}
                                 </p>
                               )}
                               {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  De <span className="font-medium text-foreground">{activity.old_value}</span> para{" "}
-                                  <span className="font-medium text-foreground">{activity.new_value}</span>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {activity.old_value} → {activity.new_value}
                                 </p>
                               )}
                             </div>
