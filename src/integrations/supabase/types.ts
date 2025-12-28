@@ -3796,6 +3796,7 @@ export type Database = {
           config: Json | null
           created_at: string
           id: string
+          sector_id: string | null
           status: Database["public"]["Enums"]["integration_status"]
           type: Database["public"]["Enums"]["integration_type"]
         }
@@ -3804,6 +3805,7 @@ export type Database = {
           config?: Json | null
           created_at?: string
           id?: string
+          sector_id?: string | null
           status?: Database["public"]["Enums"]["integration_status"]
           type: Database["public"]["Enums"]["integration_type"]
         }
@@ -3812,6 +3814,7 @@ export type Database = {
           config?: Json | null
           created_at?: string
           id?: string
+          sector_id?: string | null
           status?: Database["public"]["Enums"]["integration_status"]
           type?: Database["public"]["Enums"]["integration_type"]
         }

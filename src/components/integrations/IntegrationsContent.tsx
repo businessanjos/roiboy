@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
+import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { GoogleSheetsIntegration } from "@/components/financial/GoogleSheetsIntegration";
 
 import type { Tables } from "@/integrations/supabase/types";
@@ -841,6 +842,11 @@ export function IntegrationsContent() {
 
         {/* WhatsApp Tab */}
         <TabsContent value="whatsapp" className="space-y-4">
+          <WhatsAppSectorManager 
+            integrations={integrations} 
+            accountId={accountId} 
+            onRefresh={fetchIntegrations} 
+          />
           <WhatsAppIntegrationCard integrations={integrations} onRefresh={fetchIntegrations} />
         </TabsContent>
 
