@@ -15,6 +15,17 @@ import {
   Calendar,
   DollarSign,
   Lightbulb,
+  TrendingUp,
+  FileText,
+  Receipt,
+  RefreshCcw,
+  CreditCard,
+  PieChart,
+  Target,
+  Bell,
+  Building2,
+  Wallet,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +68,19 @@ interface AIAssistantConfig {
     canSearchEvents?: boolean;
     canAnswerFinancial?: boolean;
     canSuggestActions?: boolean;
+    // Financial capabilities
+    canManageEntries?: boolean;
+    canAnalyzeCashFlow?: boolean;
+    canGenerateReports?: boolean;
+    canClassifyTransactions?: boolean;
+    canManageRecurring?: boolean;
+    canReconcileAccounts?: boolean;
+    canManageBoletos?: boolean;
+    canManageNotasFiscais?: boolean;
+    canAnalyzeProfitability?: boolean;
+    canManageBudget?: boolean;
+    canAlertDueDates?: boolean;
+    canManageSuppliers?: boolean;
   } | null;
 }
 
@@ -353,24 +377,24 @@ export function AIAssistantConfig() {
           </CardContent>
         </Card>
 
-        {/* Capabilities */}
-        <Card className="lg:col-span-2">
+        {/* General Capabilities */}
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Settings2 className="h-4 w-4" />
-              Capacidades
+              Capacidades Gerais
             </CardTitle>
             <CardDescription>
-              O que o Anjo Zad pode fazer para ajudar os usuários
+              Funcionalidades básicas do assistente
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                 <div className="flex items-center gap-3">
                   <Users className="h-5 w-5 text-blue-500" />
                   <div>
-                    <p className="font-medium">Buscar Clientes</p>
+                    <p className="font-medium text-sm">Buscar Clientes</p>
                     <p className="text-xs text-muted-foreground">
                       Pesquisar informações de clientes
                     </p>
@@ -382,11 +406,11 @@ export function AIAssistantConfig() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                 <div className="flex items-center gap-3">
                   <Calendar className="h-5 w-5 text-green-500" />
                   <div>
-                    <p className="font-medium">Buscar Eventos</p>
+                    <p className="font-medium text-sm">Buscar Eventos</p>
                     <p className="text-xs text-muted-foreground">
                       Consultar agenda e eventos
                     </p>
@@ -398,13 +422,45 @@ export function AIAssistantConfig() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                 <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-yellow-500" />
+                  <Lightbulb className="h-5 w-5 text-purple-500" />
                   <div>
-                    <p className="font-medium">Responder sobre Finanças</p>
+                    <p className="font-medium text-sm">Sugerir Ações</p>
                     <p className="text-xs text-muted-foreground">
-                      Ajudar com questões financeiras
+                      Recomendar próximos passos
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canSuggestActions ?? true}
+                  onCheckedChange={(v) => updateFeature("canSuggestActions", v)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Financial Capabilities */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Wallet className="h-4 w-4 text-emerald-500" />
+              Especialista Financeiro
+            </CardTitle>
+            <CardDescription>
+              Capacidades avançadas para o módulo financeiro
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2">
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-emerald-500/5 border-emerald-500/20">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-5 w-5 text-emerald-500" />
+                  <div>
+                    <p className="font-medium text-sm">Módulo Financeiro</p>
+                    <p className="text-xs text-muted-foreground">
+                      Ativar todas as capacidades financeiras
                     </p>
                   </div>
                 </div>
@@ -414,19 +470,195 @@ export function AIAssistantConfig() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                 <div className="flex items-center gap-3">
-                  <Lightbulb className="h-5 w-5 text-purple-500" />
+                  <FileText className="h-5 w-5 text-blue-500" />
                   <div>
-                    <p className="font-medium">Sugerir Ações</p>
+                    <p className="font-medium text-sm">Lançamentos</p>
                     <p className="text-xs text-muted-foreground">
-                      Recomendar próximos passos
+                      Criar, editar e consultar receitas/despesas
                     </p>
                   </div>
                 </div>
                 <Switch
-                  checked={currentData.features?.canSuggestActions ?? true}
-                  onCheckedChange={(v) => updateFeature("canSuggestActions", v)}
+                  checked={currentData.features?.canManageEntries ?? true}
+                  onCheckedChange={(v) => updateFeature("canManageEntries", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-cyan-500" />
+                  <div>
+                    <p className="font-medium text-sm">Fluxo de Caixa</p>
+                    <p className="text-xs text-muted-foreground">
+                      Analisar entradas, saídas e saldo
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canAnalyzeCashFlow ?? true}
+                  onCheckedChange={(v) => updateFeature("canAnalyzeCashFlow", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-violet-500" />
+                  <div>
+                    <p className="font-medium text-sm">Relatórios</p>
+                    <p className="text-xs text-muted-foreground">
+                      Gerar DRE, DRF e balanço patrimonial
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canGenerateReports ?? true}
+                  onCheckedChange={(v) => updateFeature("canGenerateReports", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Brain className="h-5 w-5 text-amber-500" />
+                  <div>
+                    <p className="font-medium text-sm">Classificar Transações</p>
+                    <p className="text-xs text-muted-foreground">
+                      Categorizar automaticamente lançamentos
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canClassifyTransactions ?? true}
+                  onCheckedChange={(v) => updateFeature("canClassifyTransactions", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <RefreshCcw className="h-5 w-5 text-indigo-500" />
+                  <div>
+                    <p className="font-medium text-sm">Recorrências</p>
+                    <p className="text-xs text-muted-foreground">
+                      Gerenciar lançamentos recorrentes
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canManageRecurring ?? true}
+                  onCheckedChange={(v) => updateFeature("canManageRecurring", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-rose-500" />
+                  <div>
+                    <p className="font-medium text-sm">Conciliação Bancária</p>
+                    <p className="text-xs text-muted-foreground">
+                      Conciliar extratos com lançamentos
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canReconcileAccounts ?? true}
+                  onCheckedChange={(v) => updateFeature("canReconcileAccounts", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-5 w-5 text-orange-500" />
+                  <div>
+                    <p className="font-medium text-sm">Boletos</p>
+                    <p className="text-xs text-muted-foreground">
+                      Consultar e gerenciar boletos
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canManageBoletos ?? true}
+                  onCheckedChange={(v) => updateFeature("canManageBoletos", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-teal-500" />
+                  <div>
+                    <p className="font-medium text-sm">Notas Fiscais</p>
+                    <p className="text-xs text-muted-foreground">
+                      Consultar e gerenciar NFs
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canManageNotasFiscais ?? true}
+                  onCheckedChange={(v) => updateFeature("canManageNotasFiscais", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <PieChart className="h-5 w-5 text-pink-500" />
+                  <div>
+                    <p className="font-medium text-sm">Rentabilidade</p>
+                    <p className="text-xs text-muted-foreground">
+                      Analisar lucro por cliente/produto
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canAnalyzeProfitability ?? true}
+                  onCheckedChange={(v) => updateFeature("canAnalyzeProfitability", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Target className="h-5 w-5 text-red-500" />
+                  <div>
+                    <p className="font-medium text-sm">Orçamento</p>
+                    <p className="text-xs text-muted-foreground">
+                      Acompanhar metas e realizado
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canManageBudget ?? true}
+                  onCheckedChange={(v) => updateFeature("canManageBudget", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Bell className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <p className="font-medium text-sm">Alertas de Vencimento</p>
+                    <p className="text-xs text-muted-foreground">
+                      Notificar sobre contas a vencer
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canAlertDueDates ?? true}
+                  onCheckedChange={(v) => updateFeature("canAlertDueDates", v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-5 w-5 text-slate-500" />
+                  <div>
+                    <p className="font-medium text-sm">Fornecedores</p>
+                    <p className="text-xs text-muted-foreground">
+                      Gerenciar cadastro de fornecedores
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={currentData.features?.canManageSuppliers ?? true}
+                  onCheckedChange={(v) => updateFeature("canManageSuppliers", v)}
                 />
               </div>
             </div>
