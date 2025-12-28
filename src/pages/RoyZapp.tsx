@@ -24,9 +24,10 @@ import {
   ZappConversationTagDialog,
   ZappContactPickerDialog,
   ZappQuickRepliesDialog,
-  ZappAddClientDialog,
+  ZappAddContactDialog,
   ZappNewConversationDialog,
 } from "@/components/royzapp/dialogs";
+import { useSector } from "@/contexts/SectorContext";
 import {
   MessageSquare,
   ArrowLeft,
@@ -49,6 +50,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
+  const { currentSector } = useSector();
   const navigate = useNavigate();
   
   // Use centralized data hook
@@ -205,10 +207,12 @@ export default function RoyZapp() {
   const [quickReplyForm, setQuickReplyForm] = useState({ title: "", content: "" });
   const [savingQuickReply, setSavingQuickReply] = useState(false);
 
-  // Add client from contact state
-  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
-  const [addClientForm, setAddClientForm] = useState({ full_name: "", phone_e164: "" });
+  // Add client/lead from contact state
+  const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
+  const [addContactPhone, setAddContactPhone] = useState("");
+  const [addContactName, setAddContactName] = useState("");
   const [savingNewClient, setSavingNewClient] = useState(false);
+  const [savingNewLead, setSavingNewLead] = useState(false);
 
   // New conversation with client state
   const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
@@ -1494,20 +1498,18 @@ export default function RoyZapp() {
     }
   };
 
-  // Create client from contact
-  const openAddClientDialog = () => {
+  // Create client/lead from contact
+  const openAddContactDialog = () => {
     if (!selectedConversation?.zapp_conversation) return;
     const contactInfo = getContactInfo(selectedConversation);
-    setAddClientForm({
-      full_name: contactInfo.name || "",
-      phone_e164: contactInfo.phone || "",
-    });
-    setAddClientDialogOpen(true);
+    setAddContactName(contactInfo.name || "");
+    setAddContactPhone(contactInfo.phone || "");
+    setAddContactDialogOpen(true);
   };
 
-  const saveNewClient = async () => {
+  const saveNewClient = async (data: { full_name: string; phone_e164: string }) => {
     if (!currentUser?.account_id || !selectedConversation?.zapp_conversation) return;
-    if (!addClientForm.full_name.trim() || !addClientForm.phone_e164.trim()) {
+    if (!data.full_name.trim() || !data.phone_e164.trim()) {
       toast.error("Nome e telefone são obrigatórios");
       return;
     }
@@ -1519,8 +1521,8 @@ export default function RoyZapp() {
         .from("clients")
         .insert({
           account_id: currentUser.account_id,
-          full_name: addClientForm.full_name.trim(),
-          phone_e164: addClientForm.phone_e164.trim(),
+          full_name: data.full_name.trim(),
+          phone_e164: data.phone_e164.trim(),
           status: "active",
         })
         .select("id")
@@ -1537,7 +1539,7 @@ export default function RoyZapp() {
       if (linkError) throw linkError;
 
       toast.success("Cliente cadastrado com sucesso!");
-      setAddClientDialogOpen(false);
+      setAddContactDialogOpen(false);
       
       // Refresh data
       fetchData();
@@ -1550,6 +1552,54 @@ export default function RoyZapp() {
       }
     } finally {
       setSavingNewClient(false);
+    }
+  };
+
+  const saveNewLead = async (data: { full_name: string; phone: string; email?: string; source?: string; notes?: string }) => {
+    if (!currentUser?.account_id || !selectedConversation?.zapp_conversation) return;
+    if (!data.full_name.trim()) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+
+    setSavingNewLead(true);
+    try {
+      // Create the lead
+      const { data: newLead, error: leadError } = await supabase
+        .from("leads")
+        .insert({
+          account_id: currentUser.account_id,
+          full_name: data.full_name.trim(),
+          phone: data.phone.trim() || null,
+          email: data.email?.trim() || null,
+          source: data.source || "whatsapp",
+          notes: data.notes?.trim() || null,
+          status: "new",
+          responsible_user_id: currentUser.id,
+        })
+        .select("id")
+        .single();
+
+      if (leadError) throw leadError;
+
+      // Link the zapp_conversation to the new lead
+      const { error: linkError } = await supabase
+        .from("zapp_conversations")
+        .update({ lead_id: newLead.id })
+        .eq("id", selectedConversation.zapp_conversation.id);
+
+      if (linkError) throw linkError;
+
+      toast.success("Lead cadastrado com sucesso!");
+      setAddContactDialogOpen(false);
+      
+      // Refresh data
+      fetchData();
+    } catch (error: any) {
+      console.error("Error creating lead:", error);
+      toast.error(error.message || "Erro ao cadastrar lead");
+    } finally {
+      setSavingNewLead(false);
     }
   };
 
