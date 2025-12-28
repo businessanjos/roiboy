@@ -60,6 +60,7 @@ const Sectors = lazy(() => import("./pages/Sectors"));
 const Contracts = lazy(() => import("./pages/Contracts"));
 const SalesPipeline = lazy(() => import("./pages/SalesPipeline"));
 const Leads = lazy(() => import("./pages/Leads"));
+const TeamChat = lazy(() => import("./pages/TeamChat"));
 // Financial module with sub-routes
 import { FinancialLayout } from "@/components/financial/FinancialLayout";
 const FinancialEntriesPage = lazy(() => import("./pages/financial/FinancialEntriesPage"));
@@ -174,6 +175,8 @@ const App = () => (
                             <Route path="/roy-zapp" element={<RoyZapp />} />
                             <Route path="/ai-agent" element={<AIAgent />} />
                             <Route path="/billing" element={<BillingPortal />} />
+                            <Route path="/team-chat" element={<TeamChat />} />
+                            <Route path="/team-chat/:chatId" element={<TeamChat />} />
                             <Route path="/admin" element={<Admin />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
