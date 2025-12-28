@@ -35,6 +35,16 @@ interface Client {
   full_name: string;
 }
 
+interface Deal {
+  id: string;
+  title: string;
+}
+
+interface Lead {
+  id: string;
+  full_name: string;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -43,6 +53,8 @@ interface Task {
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
   client_id: string | null;
+  deal_id?: string | null;
+  lead_id?: string | null;
   assigned_to: string | null;
   completed_at?: string | null;
   custom_status_id?: string | null;
@@ -53,7 +65,9 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void;
   task?: Task | null;
   clientId?: string;
-  initialStatus?: string; // Now it's the custom_status_id
+  dealId?: string;
+  leadId?: string;
+  initialStatus?: string;
   onSuccess: () => void;
 }
 
@@ -64,12 +78,14 @@ const PRIORITY_LABELS = {
   urgent: "Urgente",
 };
 
-export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, onSuccess }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialStatus, onSuccess }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
   const { logAudit } = useAuditLog();
   const { statuses: customStatuses } = useTaskStatuses();
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -78,15 +94,18 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
     priority: "medium" as Task["priority"],
     due_date: "",
     client_id: clientId || "",
+    deal_id: dealId || "",
+    lead_id: leadId || "",
     assigned_to: "",
   });
 
   useEffect(() => {
     if (open) {
       fetchUsers();
-      if (!clientId) {
-        fetchClients();
-      }
+      if (!clientId) fetchClients();
+      if (!dealId) fetchDeals();
+      if (!leadId) fetchLeads();
+      
       if (task) {
         setFormData({
           title: task.title,
@@ -95,6 +114,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           priority: task.priority,
           due_date: task.due_date || "",
           client_id: task.client_id || "",
+          deal_id: task.deal_id || "",
+          lead_id: task.lead_id || "",
           assigned_to: task.assigned_to || "",
         });
       } else {
@@ -106,11 +127,13 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           priority: "medium",
           due_date: "",
           client_id: clientId || "",
+          deal_id: dealId || "",
+          lead_id: leadId || "",
           assigned_to: "",
         });
       }
     }
-  }, [open, task, clientId, initialStatus, customStatuses]);
+  }, [open, task, clientId, dealId, leadId, initialStatus, customStatuses]);
 
   const fetchUsers = async () => {
     const { data } = await supabase
@@ -126,6 +149,22 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
       .select("id, full_name")
       .order("full_name");
     if (data) setClients(data);
+  };
+
+  const fetchDeals = async () => {
+    const { data } = await supabase
+      .from("deals")
+      .select("id, title")
+      .order("title");
+    if (data) setDeals(data);
+  };
+
+  const fetchLeads = async () => {
+    const { data } = await supabase
+      .from("leads")
+      .select("id, full_name")
+      .order("full_name");
+    if (data) setLeads(data);
   };
 
   const handleSubmit = async () => {
@@ -159,6 +198,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           priority: formData.priority,
           due_date: formData.due_date || null,
           client_id: formData.client_id || null,
+          deal_id: formData.deal_id || null,
+          lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
           completed_at: isCompleted && !task.completed_at 
             ? new Date().toISOString() 
@@ -188,6 +229,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
           priority: formData.priority,
           due_date: formData.due_date || null,
           client_id: formData.client_id || null,
+          deal_id: formData.deal_id || null,
+          lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
           created_by: currentUser.id,
           completed_at: isCompleted ? new Date().toISOString() : null,
@@ -294,6 +337,50 @@ export function TaskDialog({ open, onOpenChange, task, clientId, initialStatus, 
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {!dealId && deals.length > 0 && (
+            <div className="space-y-2">
+              <Label>Negócio (opcional)</Label>
+              <Select
+                value={formData.deal_id}
+                onValueChange={(value) => setFormData({ ...formData, deal_id: value === "none" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Vincular a um negócio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem negócio</SelectItem>
+                  {deals.map((deal) => (
+                    <SelectItem key={deal.id} value={deal.id}>
+                      {deal.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {!leadId && leads.length > 0 && (
+            <div className="space-y-2">
+              <Label>Lead (opcional)</Label>
+              <Select
+                value={formData.lead_id}
+                onValueChange={(value) => setFormData({ ...formData, lead_id: value === "none" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Vincular a um lead" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem lead</SelectItem>
+                  {leads.map((lead) => (
+                    <SelectItem key={lead.id} value={lead.id}>
+                      {lead.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

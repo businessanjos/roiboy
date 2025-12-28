@@ -85,6 +85,16 @@ interface Client {
   full_name: string;
 }
 
+interface Deal {
+  id: string;
+  title: string;
+}
+
+interface Lead {
+  id: string;
+  full_name: string;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -93,9 +103,13 @@ interface Task {
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
   client_id: string | null;
+  deal_id: string | null;
+  lead_id: string | null;
   assigned_to: string | null;
   created_at: string;
   clients: Client | null;
+  deals: Deal | null;
+  leads: Lead | null;
   assigned_user: User | null;
   custom_status_id: string | null;
 }
@@ -155,6 +169,8 @@ export default function Tasks() {
         .select(`
           *,
           clients:client_id (id, full_name),
+          deals:deal_id (id, title),
+          leads:lead_id (id, full_name),
           assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url)
         `)
         .order("created_at", { ascending: false });
@@ -421,7 +437,7 @@ export default function Tasks() {
                 <TableHead className="font-medium text-center min-w-[100px]">Status</TableHead>
                 <TableHead className="font-medium text-center min-w-[100px]">Prioridade</TableHead>
                 <TableHead className="font-medium text-center min-w-[100px]">Prazo</TableHead>
-                <TableHead className="font-medium min-w-[150px]">Cliente</TableHead>
+                <TableHead className="font-medium min-w-[120px]">Contexto</TableHead>
                 <TableHead className="font-medium text-center min-w-[80px]">Responsável</TableHead>
                 <TableHead className="font-medium text-right min-w-[60px]">Ação</TableHead>
               </TableRow>
@@ -597,17 +613,38 @@ export default function Tasks() {
                         </DropdownMenu>
                       </TableCell>
                       <TableCell>
-                        {task.clients ? (
-                          <Link 
-                            to={`/clients/${task.client_id}`}
-                            className="flex items-center gap-1.5 text-sm hover:text-primary transition-colors"
-                          >
-                            <User2 className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="truncate max-w-[120px]">{task.clients.full_name}</span>
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                        <div className="flex flex-col gap-0.5">
+                          {task.deals ? (
+                            <Link 
+                              to={`/pipeline?deal=${task.deal_id}`}
+                              className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
+                            >
+                              <TrendingUp className="h-3 w-3 text-blue-500" />
+                              <span className="truncate max-w-[100px]">{task.deals.title}</span>
+                            </Link>
+                          ) : null}
+                          {task.leads ? (
+                            <Link 
+                              to={`/leads?lead=${task.lead_id}`}
+                              className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
+                            >
+                              <User2 className="h-3 w-3 text-amber-500" />
+                              <span className="truncate max-w-[100px]">{task.leads.full_name}</span>
+                            </Link>
+                          ) : null}
+                          {task.clients ? (
+                            <Link 
+                              to={`/clients/${task.client_id}`}
+                              className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
+                            >
+                              <User2 className="h-3 w-3 text-muted-foreground" />
+                              <span className="truncate max-w-[100px]">{task.clients.full_name}</span>
+                            </Link>
+                          ) : null}
+                          {!task.deals && !task.leads && !task.clients && (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {task.assigned_user ? (
