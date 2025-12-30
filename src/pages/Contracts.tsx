@@ -65,6 +65,7 @@ import { useZapSign } from "@/hooks/useZapSign";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 
 interface Contract {
   id: string;
@@ -164,6 +165,10 @@ export default function Contracts() {
     payment_method: "",
     notes: "",
   });
+
+  // Contract detail sheet state
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
 
   useEffect(() => {
     fetchContracts();
@@ -638,14 +643,19 @@ export default function Contracts() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => navigate(`/clients/${contract.client_id}`)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver Cliente
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedContract(contract);
+                              setDetailSheetOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver Contrato
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -890,6 +900,14 @@ export default function Contracts() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Contract Detail Sheet */}
+      <ContractDetailSheet
+        contract={selectedContract}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+        onUpdate={fetchContracts}
+      />
     </div>
   );
 }
