@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,6 +146,7 @@ const formatCurrency = (value: number) => {
 };
 
 export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: ContractDetailSheetProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -280,7 +282,13 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
 
         <div className="mt-6 space-y-6">
           {/* Client Info */}
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+          <div 
+            className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+            onClick={() => {
+              onOpenChange(false);
+              navigate(`/clients/${contract.client_id}`);
+            }}
+          >
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
               {contract.client?.avatar_url ? (
                 <img
@@ -292,7 +300,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
                 <Users className="h-5 w-5 text-muted-foreground" />
               )}
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-medium">{contract.client?.full_name || "Cliente"}</p>
               {contract.product && (
                 <p className="text-sm text-muted-foreground">{contract.product.name}</p>
