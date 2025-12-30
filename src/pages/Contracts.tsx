@@ -589,7 +589,10 @@ export default function Contracts() {
                   return (
                     <TableRow key={contract.id} className="group">
                       <TableCell>
-                        <div className="flex items-center gap-3">
+                        <div 
+                          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => navigate(`/clients/${contract.client_id}`)}
+                        >
                           <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
                             {contract.client?.avatar_url ? (
                               <img 
@@ -602,7 +605,7 @@ export default function Contracts() {
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-sm">{contract.client?.full_name || "Cliente"}</p>
+                            <p className="font-medium text-sm hover:underline">{contract.client?.full_name || "Cliente"}</p>
                             {contract.product && (
                               <p className="text-xs text-muted-foreground">{contract.product.name}</p>
                             )}
