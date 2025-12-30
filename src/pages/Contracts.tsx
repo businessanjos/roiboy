@@ -639,10 +639,9 @@ export default function Contracts() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
-                          variant="ghost"
+                          variant="default"
                           size="sm"
                           onClick={() => navigate(`/clients/${contract.client_id}`)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           Ver Cliente
