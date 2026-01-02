@@ -30,7 +30,7 @@ const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const Products = lazy(() => import("./pages/Products"));
 const Events = lazy(() => import("./pages/Events"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
-const Team = lazy(() => import("./pages/Team"));
+// Team moved to Settings
 const Tasks = lazy(() => import("./pages/Tasks"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -164,7 +164,7 @@ const App = () => (
                             <Route path="/tasks" element={<Tasks />} />
                             <Route path="/forms" element={<Forms />} />
                             <Route path="/integrations" element={<Integrations />} />
-                            <Route path="/team" element={<Team />} />
+                            <Route path="/team" element={<Navigate to="/settings" replace />} />
                             <Route path="/profile" element={<Profile />} />
                             <Route path="/notifications" element={<Notifications />} />
                             <Route path="/api-docs" element={<ApiDocs />} />

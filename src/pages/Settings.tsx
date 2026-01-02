@@ -1,10 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Book, Plug, Users } from "lucide-react";
+import { Shield, Book, Plug, Users, UserCircle } from "lucide-react";
 import { SessionsManager } from "@/components/settings/SessionsManager";
 import { SecurityAuditViewer } from "@/components/settings/SecurityAuditViewer";
 import { MembersBookSettings } from "@/components/settings/MembersBookSettings";
 import { IntegrationsContent } from "@/components/integrations/IntegrationsContent";
 import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessManager";
+import { TeamManager } from "@/components/settings/TeamManager";
 
 export default function Settings() {
   return (
@@ -12,12 +13,16 @@ export default function Settings() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Gerencie segurança, integrações e configurações do sistema.
+          Gerencie equipe, segurança, integrações e configurações do sistema.
         </p>
       </div>
 
-      <Tabs defaultValue="sectors" className="space-y-4">
+      <Tabs defaultValue="team" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="team" className="gap-2">
+            <UserCircle className="h-4 w-4" />
+            Equipe
+          </TabsTrigger>
           <TabsTrigger value="sectors" className="gap-2">
             <Users className="h-4 w-4" />
             Setores
@@ -35,6 +40,10 @@ export default function Settings() {
             Members Book
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="team" className="space-y-4">
+          <TeamManager />
+        </TabsContent>
 
         <TabsContent value="sectors" className="space-y-4">
           <UserSectorAccessManager />

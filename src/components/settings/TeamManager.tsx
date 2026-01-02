@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List
 } from "lucide-react";
 
 interface TeamRole {
@@ -74,17 +74,16 @@ const PERMISSION_LABELS: Record<string, { label: string; category: string }> = {
 
 const PERMISSION_CATEGORIES = ["Clientes", "Equipe", "Relatórios", "Eventos", "Formulários", "Produtos", "Configurações", "ROY zAPP"];
 
-// Default role colors using design system tokens
 const DEFAULT_ROLE_COLORS = [
-  "hsl(0, 72%, 51%)",      // destructive/red
-  "hsl(39, 55%, 63%)",     // primary/gold
-  "hsl(180, 13%, 36%)",    // accent/teal
-  "hsl(152, 69%, 31%)",    // success/green
-  "hsl(262, 52%, 47%)",    // purple
-  "hsl(199, 89%, 48%)",    // blue
+  "hsl(0, 72%, 51%)",
+  "hsl(39, 55%, 63%)",
+  "hsl(180, 13%, 36%)",
+  "hsl(152, 69%, 31%)",
+  "hsl(262, 52%, 47%)",
+  "hsl(199, 89%, 48%)",
 ];
 
-export default function Team() {
+export function TeamManager() {
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [roles, setRoles] = useState<TeamRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,16 +92,13 @@ export default function Team() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [rolesViewMode, setRolesViewMode] = useState<"grid" | "list">("grid");
   
-  // Member dialogs
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<TeamUser | null>(null);
   
-  // Role dialogs
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<TeamRole | null>(null);
   
-  // Member form state
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formRoleId, setFormRoleId] = useState<string>("");
@@ -111,7 +107,6 @@ export default function Team() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Role form state
   const [roleFormName, setRoleFormName] = useState("");
   const [roleFormDescription, setRoleFormDescription] = useState("");
   const [roleFormColor, setRoleFormColor] = useState("hsl(39, 55%, 63%)");
@@ -123,11 +118,9 @@ export default function Team() {
 
   const fetchData = async () => {
     try {
-      // Get current auth user
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
 
-      // Get current user's account_id
       const { data: currentUser, error: currentUserError } = await supabase
         .from("users")
         .select("account_id")
@@ -137,7 +130,6 @@ export default function Team() {
       if (currentUserError) throw currentUserError;
       if (!currentUser) return;
 
-      // Fetch roles with permissions
       const { data: rolesData, error: rolesError } = await supabase
         .from("team_roles")
         .select("*")
@@ -146,7 +138,6 @@ export default function Team() {
 
       if (rolesError) throw rolesError;
 
-      // Fetch permissions for each role
       const rolesWithPermissions = await Promise.all(
         (rolesData || []).map(async (role) => {
           const { data: perms } = await supabase
@@ -159,7 +150,6 @@ export default function Team() {
 
       setRoles(rolesWithPermissions);
 
-      // Fetch users from the same account
       const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("*")
@@ -168,7 +158,6 @@ export default function Team() {
 
       if (usersError) throw usersError;
 
-      // Map users with their roles
       const usersWithRoles = (usersData || []).map(user => ({
         ...user,
         team_role: rolesWithPermissions.find(r => r.id === user.team_role_id)
@@ -317,7 +306,6 @@ export default function Team() {
     }
   };
 
-  // Role management functions
   const openRoleDialog = (role?: TeamRole) => {
     if (role) {
       setSelectedRole(role);
@@ -352,7 +340,6 @@ export default function Team() {
       let roleId = selectedRole?.id;
 
       if (selectedRole) {
-        // Update existing role
         const { error } = await supabase
           .from("team_roles")
           .update({
@@ -364,7 +351,6 @@ export default function Team() {
 
         if (error) throw error;
       } else {
-        // Create new role
         const { data, error } = await supabase
           .from("team_roles")
           .insert({
@@ -381,15 +367,12 @@ export default function Team() {
         roleId = data.id;
       }
 
-      // Update permissions
       if (roleId) {
-        // Delete existing permissions
         await supabase
           .from("role_permissions")
           .delete()
           .eq("role_id", roleId);
 
-        // Insert new permissions
         if (roleFormPermissions.length > 0) {
           const { error: permError } = await supabase
             .from("role_permissions")
@@ -464,17 +447,7 @@ export default function Team() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Equipe</h1>
-          <p className="text-muted-foreground">
-            Gerencie membros e funções da sua equipe
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-card border border-border">
           <TabsTrigger value="members" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
@@ -504,7 +477,7 @@ export default function Team() {
                 </div>
               </CardContent>
             </Card>
-            {roles.slice(0, 3).map((role, index) => (
+            {roles.slice(0, 3).map((role) => (
               <Card key={role.id} className="shadow-card">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -693,7 +666,6 @@ export default function Team() {
 
         {/* Roles Tab */}
         <TabsContent value="roles" className="space-y-6 mt-6">
-          {/* Header */}
           <Card className="shadow-card border-dashed">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -736,7 +708,6 @@ export default function Team() {
             </CardContent>
           </Card>
 
-          {/* Roles Grid/List */}
           {rolesViewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {roles.map((role) => {
@@ -748,7 +719,6 @@ export default function Team() {
                     key={role.id} 
                     className="group hover:shadow-elevated transition-all duration-300 shadow-card overflow-hidden"
                   >
-                    {/* Color accent bar */}
                     <div 
                       className="h-1.5 w-full"
                       style={{ backgroundColor: role.color }}
@@ -810,7 +780,6 @@ export default function Team() {
                     </CardHeader>
                     
                     <CardContent className="pt-0 space-y-4">
-                      {/* Stats */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
                           <Users className="h-4 w-4 text-muted-foreground" />
@@ -828,7 +797,6 @@ export default function Team() {
                         </div>
                       </div>
                       
-                      {/* Permission preview */}
                       <div className="space-y-2">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
                           Permissões
@@ -1002,7 +970,6 @@ export default function Team() {
               </Select>
             </div>
             
-            {/* Also Admin Checkbox */}
             <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
               <Checkbox
                 id="is-also-admin"
@@ -1035,7 +1002,6 @@ export default function Team() {
             <DialogTitle>Editar Membro</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Avatar Upload */}
             <div className="flex justify-center">
               <div className="relative group">
                 <Avatar className="h-20 w-20 ring-4 ring-card shadow-lg">
@@ -1111,7 +1077,6 @@ export default function Team() {
               </Select>
             </div>
             
-            {/* Also Admin Checkbox */}
             <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
               <Checkbox
                 id="edit-is-also-admin"
@@ -1140,7 +1105,6 @@ export default function Team() {
       {/* Role Dialog */}
       <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
         <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
-          {/* Header */}
           <div className="px-6 pt-6 pb-4 space-y-1.5">
             <DialogHeader>
               <DialogTitle className="text-lg">
@@ -1154,7 +1118,6 @@ export default function Team() {
           
           <ScrollArea className="max-h-[60vh]">
             <div className="px-6 pb-6 space-y-6">
-              {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="role-name" className="text-sm font-medium">Nome *</Label>
                 <Input
@@ -1166,7 +1129,6 @@ export default function Team() {
                 />
               </div>
               
-              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
                 <Input
@@ -1177,7 +1139,6 @@ export default function Team() {
                 />
               </div>
               
-              {/* Color Picker */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Cor</Label>
                 <div className="flex gap-2">
@@ -1201,7 +1162,6 @@ export default function Team() {
                 </div>
               </div>
 
-              {/* Permissions */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">Permissões</Label>

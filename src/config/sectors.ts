@@ -57,7 +57,6 @@ export const sectors: Sector[] = [
       { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: PERMISSIONS.REPORTS_VIEW },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
-      { to: "/team", icon: UserCircle, label: "Equipe", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
       { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
