@@ -69,7 +69,18 @@ import {
   ListChecks,
   ClipboardList,
   Settings2,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useZapSign } from "@/hooks/useZapSign";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -225,6 +236,11 @@ export default function Contracts() {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
 
+  // Delete contract state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<Contract | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Fetch client data when selected
   const fetchClientData = async (clientId: string) => {
     setLoadingClientData(true);
@@ -363,6 +379,30 @@ export default function Contracts() {
       setProducts(data || []);
     } catch (error) {
       console.error("Error fetching products:", error);
+    }
+  };
+
+  const handleDeleteContract = async () => {
+    if (!contractToDelete) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("client_contracts")
+        .delete()
+        .eq("id", contractToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success("Contrato excluído com sucesso");
+      setDeleteDialogOpen(false);
+      setContractToDelete(null);
+      fetchContracts();
+    } catch (error) {
+      console.error("Error deleting contract:", error);
+      toast.error("Erro ao excluir contrato");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1561,6 +1601,18 @@ export default function Contracts() {
                             <Eye className="h-4 w-4 mr-1" />
                             Ver Contrato
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setContractToDelete(contract);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -2169,6 +2221,42 @@ export default function Contracts() {
         onOpenChange={setDetailSheetOpen}
         onUpdate={fetchContracts}
       />
+
+      {/* Delete Contract Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir contrato?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a excluir o contrato de{" "}
+              <span className="font-medium text-foreground">
+                {contractToDelete?.client?.full_name || "cliente"}
+              </span>
+              . Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteContract}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
