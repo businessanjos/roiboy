@@ -302,7 +302,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 </div>
               </div>
               <p className="text-2xl font-bold tracking-tight">{formatCurrency(kpis.totalValue)}</p>
-              <p className="text-sm text-muted-foreground mt-1">Valor Total (MRR)</p>
+              <p className="text-sm text-muted-foreground mt-1">Faturamento Total</p>
             </CardContent>
           </Card>
         </motion.div>
