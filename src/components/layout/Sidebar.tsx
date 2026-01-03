@@ -172,8 +172,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     });
   }, [hasPermission, permissionsLoading, isSuperAdmin, currentSector]);
 
-  // When impersonating, show regular UI even for super admins
-  const showRegularUI = isImpersonating || !isSuperAdmin;
+  // Super admins should always see the full UI
+  const showRegularUI = true;
 
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
