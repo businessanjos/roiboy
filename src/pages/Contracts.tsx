@@ -31,6 +31,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -208,15 +210,86 @@ export default function Contracts() {
   const [installmentsDetail, setInstallmentsDetail] = useState<InstallmentDetail[]>([]);
   const [formTab, setFormTab] = useState<string>("contrato");
   
+  // Client registration data
+  const [clientFormData, setClientFormData] = useState<ClientFormData>(getEmptyClientFormData());
+  const [loadingClientData, setLoadingClientData] = useState(false);
+  
   // Financial data
   const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; bank_name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; type: string }[]>([]);
   const [costCenters, setCostCenters] = useState<{ id: string; name: string }[]>([]);
-  const [teamUsers, setTeamUsers] = useState<{ id: string; name: string }[]>([]);
+  const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
 
   // Contract detail sheet state
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+
+  // Fetch client data when selected
+  const fetchClientData = async (clientId: string) => {
+    setLoadingClientData(true);
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", clientId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setClientFormData({
+          full_name: data.full_name || "",
+          phone_e164: data.phone_e164 || "",
+          emails: Array.isArray(data.emails) ? (data.emails as string[]) : [],
+          additional_phones: Array.isArray(data.additional_phones) ? (data.additional_phones as string[]) : [],
+          cpf: data.cpf || "",
+          rg: data.rg || "",
+          cnpj: data.cnpj || "",
+          birth_date: data.birth_date || "",
+          company_name: data.company_name || "",
+          notes: data.notes || "",
+          instagram: data.instagram || "",
+          instagrams: Array.isArray(data.instagrams) ? (data.instagrams as string[]) : [],
+          bio: data.bio || "",
+          street: data.street || "",
+          street_number: data.street_number || "",
+          complement: data.complement || "",
+          neighborhood: data.neighborhood || "",
+          city: data.city || "",
+          state: data.state || "",
+          zip_code: data.zip_code || "",
+          business_street: data.business_street || "",
+          business_street_number: data.business_street_number || "",
+          business_complement: data.business_complement || "",
+          business_neighborhood: data.business_neighborhood || "",
+          business_city: data.business_city || "",
+          business_state: data.business_state || "",
+          business_zip_code: data.business_zip_code || "",
+          business_segment: data.business_segment || "",
+          business_niche: data.business_niche || "",
+          companies: Array.isArray(data.companies) ? (data.companies as any[]) : [],
+          contract_start_date: data.contract_start_date || "",
+          contract_end_date: data.contract_end_date || "",
+          is_mls: data.is_mls || false,
+          mls_level: data.mls_level || "",
+          responsible_user_id: data.responsible_user_id || "",
+          pix_key_type: data.pix_key_type || "",
+          pix_key: data.pix_key || "",
+          additional_pix_keys: Array.isArray(data.additional_pix_keys) ? (data.additional_pix_keys as any[]) : [],
+          bank_code: data.bank_code || "",
+          bank_name: data.bank_name || "",
+          bank_agency: data.bank_agency || "",
+          bank_account: data.bank_account || "",
+          bank_account_type: data.bank_account_type || "",
+          additional_bank_accounts: Array.isArray(data.additional_bank_accounts) ? (data.additional_bank_accounts as any[]) : [],
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching client data:", error);
+    } finally {
+      setLoadingClientData(false);
+    }
+  };
 
   useEffect(() => {
     fetchContracts();
@@ -231,7 +304,7 @@ export default function Contracts() {
         supabase.from("bank_accounts").select("id, name, bank_name").eq("is_active", true).order("name"),
         supabase.from("financial_categories").select("id, name, type").eq("is_active", true).order("name"),
         supabase.from("cost_centers").select("id, name").eq("is_active", true).order("name"),
-        supabase.from("users").select("id, name").order("name"),
+        supabase.from("users").select("id, name, email").order("name"),
       ]);
 
       if (bankAccountsRes.data) setBankAccounts(bankAccountsRes.data);
@@ -715,6 +788,7 @@ export default function Contracts() {
       receivable_description: "",
     });
     setInstallmentsDetail([]);
+    setClientFormData(getEmptyClientFormData());
     setFormTab("contrato");
   };
 
@@ -775,6 +849,62 @@ export default function Contracts() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const isFutureStart = startDate > today;
+
+      // Update client data first
+      const clientUpdateData = {
+        full_name: clientFormData.full_name,
+        phone_e164: clientFormData.phone_e164,
+        emails: clientFormData.emails.length > 0 ? clientFormData.emails : null,
+        additional_phones: clientFormData.additional_phones.length > 0 ? clientFormData.additional_phones : null,
+        cpf: clientFormData.cpf || null,
+        rg: clientFormData.rg || null,
+        cnpj: clientFormData.cnpj || null,
+        birth_date: clientFormData.birth_date || null,
+        company_name: clientFormData.company_name || null,
+        notes: clientFormData.notes || null,
+        instagram: clientFormData.instagram || null,
+        instagrams: clientFormData.instagrams.length > 0 ? clientFormData.instagrams : null,
+        bio: clientFormData.bio || null,
+        street: clientFormData.street || null,
+        street_number: clientFormData.street_number || null,
+        complement: clientFormData.complement || null,
+        neighborhood: clientFormData.neighborhood || null,
+        city: clientFormData.city || null,
+        state: clientFormData.state || null,
+        zip_code: clientFormData.zip_code || null,
+        business_street: clientFormData.business_street || null,
+        business_street_number: clientFormData.business_street_number || null,
+        business_complement: clientFormData.business_complement || null,
+        business_neighborhood: clientFormData.business_neighborhood || null,
+        business_city: clientFormData.business_city || null,
+        business_state: clientFormData.business_state || null,
+        business_zip_code: clientFormData.business_zip_code || null,
+        business_segment: clientFormData.business_segment || null,
+        business_niche: clientFormData.business_niche || null,
+        companies: clientFormData.companies.length > 0 ? clientFormData.companies : null,
+        is_mls: clientFormData.is_mls,
+        mls_level: clientFormData.mls_level || null,
+        responsible_user_id: clientFormData.responsible_user_id || null,
+        pix_key_type: clientFormData.pix_key_type || null,
+        pix_key: clientFormData.pix_key || null,
+        additional_pix_keys: clientFormData.additional_pix_keys.length > 0 ? clientFormData.additional_pix_keys : null,
+        bank_code: clientFormData.bank_code || null,
+        bank_name: clientFormData.bank_name || null,
+        bank_agency: clientFormData.bank_agency || null,
+        bank_account: clientFormData.bank_account || null,
+        bank_account_type: clientFormData.bank_account_type || null,
+        additional_bank_accounts: clientFormData.additional_bank_accounts.length > 0 ? clientFormData.additional_bank_accounts : null,
+      };
+
+      const { error: clientError } = await supabase
+        .from("clients")
+        .update(clientUpdateData as any)
+        .eq("id", selectedClient.id);
+
+      if (clientError) {
+        console.error("Error updating client:", clientError);
+        // Continue with contract creation even if client update fails
+      }
 
       const contractData = {
         client_id: selectedClient.id,
@@ -1345,7 +1475,7 @@ export default function Contracts() {
 
       {/* New Contract Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -1354,10 +1484,14 @@ export default function Contracts() {
           </DialogHeader>
 
           <Tabs value={formTab} onValueChange={setFormTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="contrato" className="text-xs">
                 <FileText className="h-3.5 w-3.5 mr-1.5" />
                 Contrato
+              </TabsTrigger>
+              <TabsTrigger value="cliente" className="text-xs" disabled={!selectedClient}>
+                <Users className="h-3.5 w-3.5 mr-1.5" />
+                Cliente
               </TabsTrigger>
               <TabsTrigger value="pagamento" className="text-xs">
                 <DollarSign className="h-3.5 w-3.5 mr-1.5" />
@@ -1413,6 +1547,7 @@ export default function Contracts() {
                                 onSelect={() => {
                                   setSelectedClient(client);
                                   setClientPopoverOpen(false);
+                                  fetchClientData(client.id);
                                 }}
                               >
                                 <div className="flex items-center gap-2">
@@ -1524,6 +1659,29 @@ export default function Contracts() {
                     rows={2}
                   />
                 </div>
+              </TabsContent>
+
+              {/* Client Tab */}
+              <TabsContent value="cliente" className="mt-0">
+                {loadingClientData ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-muted-foreground">Carregando dados do cliente...</span>
+                  </div>
+                ) : selectedClient ? (
+                  <ScrollArea className="h-[calc(60vh-120px)]">
+                    <ClientInfoForm
+                      data={clientFormData}
+                      onChange={setClientFormData}
+                      teamUsers={teamUsers}
+                    />
+                  </ScrollArea>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Users className="h-12 w-12 mb-4 opacity-50" />
+                    <p>Selecione um cliente na aba Contrato para editar seus dados</p>
+                  </div>
+                )}
               </TabsContent>
 
               {/* Payment Tab */}
