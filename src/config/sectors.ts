@@ -80,7 +80,7 @@ export const sectors: Sector[] = [
     navItems: [
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial", icon: CreditCard, label: "Financeiro", permission: PERMISSIONS.CLIENTS_VIEW },
-      { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/clients", icon: Users, label: "Clientes Ativos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
