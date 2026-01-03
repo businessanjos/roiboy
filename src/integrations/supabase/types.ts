@@ -7661,6 +7661,7 @@ export type Database = {
       }
     }
     Functions: {
+      activate_scheduled_contracts: { Args: never; Returns: number }
       check_rate_limit: {
         Args: {
           p_action: string
