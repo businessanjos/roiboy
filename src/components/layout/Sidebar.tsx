@@ -137,8 +137,17 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
-    // Super admins only see admin-related items UNLESS they are impersonating
-    if (isSuperAdmin && !isImpersonating) return superAdminNavItems;
+    // Super admins have access to everything - show sector items + admin items
+    if (isSuperAdmin) {
+      // If there's a current sector, show its items (no permission filtering for super admins)
+      if (currentSector) {
+        const sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
+        // Add admin items at the end
+        return [...sectorItems, ...superAdminNavItems];
+      }
+      // No sector selected - show all nav items + admin items
+      return [...navItems, ...superAdminNavItems];
+    }
     
     // If we have a current sector, use its nav items
     if (currentSector) {
@@ -161,7 +170,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       if (!item.permission) return true;
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, isImpersonating, currentSector]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, currentSector]);
 
   // When impersonating, show regular UI even for super admins
   const showRegularUI = isImpersonating || !isSuperAdmin;
