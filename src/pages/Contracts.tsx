@@ -87,6 +87,8 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
+import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
+import { BarChart3 } from "lucide-react";
 
 interface Contract {
   id: string;
@@ -1374,10 +1376,11 @@ export default function Contracts() {
 
       {/* Tabs for Reconciliation Status */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="fila" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
-            Fila de Conciliação
+            <span className="hidden sm:inline">Fila de Conciliação</span>
+            <span className="sm:hidden">Fila</span>
             {queueContracts.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
                 {queueContracts.length}
@@ -1393,11 +1396,21 @@ export default function Contracts() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4">
-          {/* Queue Status Info */}
-          {activeTab === "fila" && (
+        {/* Dashboard Tab */}
+        {activeTab === "dashboard" && (
+          <ContractsDashboard contracts={contracts} />
+        )}
+
+        {activeTab !== "dashboard" && (
+          <TabsContent value={activeTab} className="space-y-4">
+            {/* Queue Status Info */}
+            {activeTab === "fila" && (
             <Card className="border-amber-200 bg-amber-50/50">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -1629,7 +1642,8 @@ export default function Contracts() {
           )}
         </CardContent>
       </Card>
-        </TabsContent>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* New Contract Dialog */}
