@@ -88,7 +88,24 @@ interface BankAccount {
   agency_city: string | null;
   agency_state: string | null;
   agency_zip_code: string | null;
+  // Credit card specific fields
+  card_brand: string | null;
+  card_last_digits: string | null;
+  closing_day: number | null;
+  due_day: number | null;
 }
+
+const cardBrands = [
+  { value: "visa", label: "Visa" },
+  { value: "mastercard", label: "Mastercard" },
+  { value: "elo", label: "Elo" },
+  { value: "amex", label: "American Express" },
+  { value: "hipercard", label: "Hipercard" },
+  { value: "diners", label: "Diners Club" },
+  { value: "discover", label: "Discover" },
+  { value: "jcb", label: "JCB" },
+  { value: "other", label: "Outra" },
+];
 
 // Expanded account types based on reference UI
 const accountTypes: Record<string, string> = {
@@ -159,6 +176,11 @@ export default function FinancialBankAccountsPage() {
     agency_city: "",
     agency_state: "",
     agency_zip_code: "",
+    // Credit card specific
+    card_brand: "",
+    card_last_digits: "",
+    closing_day: "",
+    due_day: "",
   });
 
   const { data: bankAccounts = [], isLoading } = useQuery({
@@ -207,6 +229,11 @@ export default function FinancialBankAccountsPage() {
         agency_city: data.agency_city || null,
         agency_state: data.agency_state || null,
         agency_zip_code: data.agency_zip_code || null,
+        // Credit card specific
+        card_brand: data.card_brand || null,
+        card_last_digits: data.card_last_digits || null,
+        closing_day: data.closing_day ? parseInt(data.closing_day) : null,
+        due_day: data.due_day ? parseInt(data.due_day) : null,
       };
 
       if (editingAccount) {
@@ -275,6 +302,11 @@ export default function FinancialBankAccountsPage() {
       agency_city: "",
       agency_state: "",
       agency_zip_code: "",
+      // Credit card specific
+      card_brand: "",
+      card_last_digits: "",
+      closing_day: "",
+      due_day: "",
     });
     setEditingAccount(null);
     setActiveTab("basic");
@@ -309,6 +341,11 @@ export default function FinancialBankAccountsPage() {
       agency_city: account.agency_city || "",
       agency_state: account.agency_state || "",
       agency_zip_code: account.agency_zip_code || "",
+      // Credit card specific
+      card_brand: account.card_brand || "",
+      card_last_digits: account.card_last_digits || "",
+      closing_day: account.closing_day?.toString() || "",
+      due_day: account.due_day?.toString() || "",
     });
     setActiveTab("basic");
     setIsDialogOpen(true);
@@ -423,9 +460,16 @@ export default function FinancialBankAccountsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {accountTypes[account.account_type] || account.account_type}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {accountTypes[account.account_type] || account.account_type}
+                        </Badge>
+                        {account.account_type === 'credit_card' && account.card_last_digits && (
+                          <span className="text-xs text-muted-foreground">
+                            •••• {account.card_last_digits}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className={`text-right font-medium ${account.current_balance >= 0 ? "text-green-600" : "text-red-600"}`}>
                       {formatCurrency(account.current_balance)}
@@ -693,6 +737,69 @@ export default function FinancialBankAccountsPage() {
                     </Popover>
                   </div>
                 </div>
+
+                {/* Credit Card Specific Fields */}
+                {formData.account_type === 'credit_card' && (
+                  <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      💳 Informações do Cartão de Crédito
+                    </h4>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Bandeira</Label>
+                        <Select 
+                          value={formData.card_brand} 
+                          onValueChange={(v) => setFormData({ ...formData, card_brand: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cardBrands.map((brand) => (
+                              <SelectItem key={brand.value} value={brand.value}>
+                                {brand.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Últimos 4 dígitos</Label>
+                        <Input
+                          value={formData.card_last_digits}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            setFormData({ ...formData, card_last_digits: value });
+                          }}
+                          placeholder="1234"
+                          maxLength={4}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Dia do Fechamento</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={formData.closing_day}
+                          onChange={(e) => setFormData({ ...formData, closing_day: e.target.value })}
+                          placeholder="15"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Dia do Vencimento</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={formData.due_day}
+                          onChange={(e) => setFormData({ ...formData, due_day: e.target.value })}
+                          placeholder="25"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center space-x-2 py-2">
                   <Switch
