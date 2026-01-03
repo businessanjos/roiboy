@@ -6116,6 +6116,7 @@ export type Database = {
           state: string | null
           street: string | null
           street_number: string | null
+          trade_name: string | null
           updated_at: string
           zip_code: string | null
         }
@@ -6143,6 +6144,7 @@ export type Database = {
           state?: string | null
           street?: string | null
           street_number?: string | null
+          trade_name?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -6170,6 +6172,7 @@ export type Database = {
           state?: string | null
           street?: string | null
           street_number?: string | null
+          trade_name?: string | null
           updated_at?: string
           zip_code?: string | null
         }

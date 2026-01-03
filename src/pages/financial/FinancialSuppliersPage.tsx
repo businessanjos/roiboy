@@ -30,6 +30,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 interface Supplier {
   id: string;
   name: string;
+  trade_name: string | null;
   document: string | null;
   document_type: string | null;
   inscricao_estadual: string | null;
@@ -54,6 +55,7 @@ interface Supplier {
 
 const initialFormData = {
   name: "",
+  trade_name: "",
   document: "",
   document_type: "cpf",
   inscricao_estadual: "",
@@ -114,6 +116,7 @@ export default function FinancialSuppliersPage() {
       const payload = {
         account_id: accountId,
         name: data.name,
+        trade_name: data.trade_name || null,
         document: data.document || null,
         document_type: data.document_type || "cpf",
         inscricao_estadual: data.inscricao_estadual || null,
@@ -437,6 +440,7 @@ export default function FinancialSuppliersPage() {
     setEditingSupplier(supplier);
     setFormData({
       name: supplier.name,
+      trade_name: supplier.trade_name || "",
       document: supplier.document || "",
       document_type: supplier.document_type || "cpf",
       inscricao_estadual: supplier.inscricao_estadual || "",
@@ -557,13 +561,20 @@ export default function FinancialSuppliersPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">{supplier.name}</span>
+                        <span className="font-medium truncate">
+                          {supplier.trade_name || supplier.name}
+                        </span>
                         {supplier.document_type && (
                           <Badge variant="outline" className="text-xs shrink-0">
                             {supplier.document_type.toUpperCase()}
                           </Badge>
                         )}
                       </div>
+                      {supplier.trade_name && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {supplier.name}
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                         {supplier.document && (
                           <span className="font-mono">{supplier.document}</span>
@@ -623,14 +634,24 @@ export default function FinancialSuppliersPage() {
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>Nome / Razão Social *</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nome do fornecedor"
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Razão Social / Nome *</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Razão Social ou Nome Completo"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome Fantasia</Label>
+                    <Input
+                      value={formData.trade_name}
+                      onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}
+                      placeholder="Nome Fantasia (opcional)"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
