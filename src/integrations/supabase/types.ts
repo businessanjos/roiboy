@@ -641,17 +641,31 @@ export type Database = {
           account_number: string | null
           account_type: string
           agency: string | null
+          agency_city: string | null
+          agency_complement: string | null
           agency_digit: string | null
+          agency_neighborhood: string | null
+          agency_number: string | null
+          agency_state: string | null
+          agency_street: string | null
+          agency_zip_code: string | null
           bank_code: string | null
           bank_name: string
           color: string
           created_at: string
+          credit_limit: number | null
           currency: string
           current_balance: number
+          exclude_from_reports: boolean | null
           id: string
           initial_balance: number
+          initial_balance_date: string | null
           is_active: boolean
+          linked_account_id: string | null
           logo_url: string | null
+          manager_email: string | null
+          manager_name: string | null
+          manager_phone: string | null
           name: string
           notes: string | null
           updated_at: string
@@ -662,17 +676,31 @@ export type Database = {
           account_number?: string | null
           account_type?: string
           agency?: string | null
+          agency_city?: string | null
+          agency_complement?: string | null
           agency_digit?: string | null
+          agency_neighborhood?: string | null
+          agency_number?: string | null
+          agency_state?: string | null
+          agency_street?: string | null
+          agency_zip_code?: string | null
           bank_code?: string | null
           bank_name: string
           color?: string
           created_at?: string
+          credit_limit?: number | null
           currency?: string
           current_balance?: number
+          exclude_from_reports?: boolean | null
           id?: string
           initial_balance?: number
+          initial_balance_date?: string | null
           is_active?: boolean
+          linked_account_id?: string | null
           logo_url?: string | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
           name: string
           notes?: string | null
           updated_at?: string
@@ -683,17 +711,31 @@ export type Database = {
           account_number?: string | null
           account_type?: string
           agency?: string | null
+          agency_city?: string | null
+          agency_complement?: string | null
           agency_digit?: string | null
+          agency_neighborhood?: string | null
+          agency_number?: string | null
+          agency_state?: string | null
+          agency_street?: string | null
+          agency_zip_code?: string | null
           bank_code?: string | null
           bank_name?: string
           color?: string
           created_at?: string
+          credit_limit?: number | null
           currency?: string
           current_balance?: number
+          exclude_from_reports?: boolean | null
           id?: string
           initial_balance?: number
+          initial_balance_date?: string | null
           is_active?: boolean
+          linked_account_id?: string | null
           logo_url?: string | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
           name?: string
           notes?: string | null
           updated_at?: string
@@ -704,6 +746,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_accounts_linked_account_id_fkey"
+            columns: ["linked_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
         ]
