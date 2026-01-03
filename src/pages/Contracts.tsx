@@ -168,6 +168,7 @@ export default function Contracts() {
     end_date: "",
     value: "",
     contract_type: "compra",
+    product_id: "",
     payment_type: "",
     installments: "",
     payment_method: "",
@@ -641,6 +642,7 @@ export default function Contracts() {
       end_date: "",
       value: "",
       contract_type: "compra",
+      product_id: "",
       payment_type: "",
       installments: "",
       payment_method: "",
@@ -694,6 +696,7 @@ export default function Contracts() {
         end_date: formData.end_date || null,
         value: parseFloat(formData.value) || 0,
         contract_type: formData.contract_type,
+        product_id: formData.product_id || null,
         payment_option: buildPaymentOption(),
         notes: formData.notes || null,
       };
@@ -1305,6 +1308,26 @@ export default function Contracts() {
                 <SelectContent>
                   {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Product Selection */}
+            <div className="space-y-2">
+              <Label>Produto</Label>
+              <Select
+                value={formData.product_id}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, product_id: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um produto (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
