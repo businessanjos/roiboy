@@ -332,17 +332,23 @@ export function useClientsPageData(options?: { page?: number; pageSize?: number;
   // Filter clients to show only those with active or pending contracts
   // All users in Operations section only see clients with contracts
   const filteredClients = useMemo(() => {
-    const enrichments = enrichmentsQuery.data || {};
+    // Wait for enrichments to load before filtering
+    if (enrichmentsQuery.isLoading || !enrichmentsQuery.data) {
+      return []; // Return empty while loading enrichments
+    }
+    
+    const enrichments = enrichmentsQuery.data;
     return clientsData.filter((client) => {
       const contract = enrichments[client.id]?.contract;
       return contract?.status === "active" || contract?.status === "pending";
     });
-  }, [clientsData, enrichmentsQuery.data]);
+  }, [clientsData, enrichmentsQuery.data, enrichmentsQuery.isLoading]);
 
   const isLoading = 
     clientsQuery.isLoading || 
     customFieldsQuery.isLoading || 
     productsQuery.isLoading ||
+    enrichmentsQuery.isLoading || // Include enrichments loading
     roleLoading;
 
   const refetchAll = () => {
@@ -354,11 +360,11 @@ export function useClientsPageData(options?: { page?: number; pageSize?: number;
 
   return {
     clients: filteredClients,
-    allClients: clientsData, // Original unfiltered list for managers who need it
-    totalCount: isOperationRole ? filteredClients.length : (clientsQuery.data?.totalCount ?? 0),
+    allClients: clientsData, // Original unfiltered list for financial module
+    totalCount: filteredClients.length, // Always use filtered count
     page: clientsQuery.data?.page ?? 1,
     pageSize: clientsQuery.data?.pageSize ?? 500,
-    totalPages: clientsQuery.data?.totalPages ?? 1,
+    totalPages: Math.ceil(filteredClients.length / (clientsQuery.data?.pageSize ?? 500)),
     enrichments: enrichmentsQuery.data || {},
     customFields: customFieldsQuery.data || [],
     fieldValues: fieldValuesQuery.data || {},
