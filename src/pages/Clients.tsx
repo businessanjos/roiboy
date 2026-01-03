@@ -275,6 +275,7 @@ export default function Clients() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [importing, setImporting] = useState(false);
+  const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
   // Bulk Omie Sync state
   const [bulkSyncing, setBulkSyncing] = useState(false);
@@ -1325,79 +1326,91 @@ export default function Clients() {
 
                 {csvData.length > 0 && (
                   <>
-                    <div className="flex items-center gap-4 text-sm flex-wrap">
-                      <Badge variant="outline" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                        {validCount} válido(s)
-                      </Badge>
-                      {invalidCount > 0 && (
-                        <Badge variant="outline" className="gap-1 text-destructive border-destructive/30">
-                          <AlertCircle className="h-3 w-3" />
-                          {invalidCount} inválido(s)
+                    <div className="flex items-center justify-between gap-4 text-sm flex-wrap">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge variant="outline" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                          {validCount} válido(s)
                         </Badge>
-                      )}
-                      <span className="text-muted-foreground text-xs">
-                        {csvData.some(r => r.email) && "• Email "}
-                        {csvData.some(r => r.cpf) && "• CPF "}
-                        {csvData.some(r => r.cnpj) && "• CNPJ "}
-                        {csvData.some(r => r.birth_date) && "• Nascimento "}
-                        {csvData.some(r => r.company_name) && "• Empresa "}
-                        {csvData.some(r => r.tags && r.tags.length > 0) && "• Tags "}
-                        {csvData.some(r => r.city) && "• Endereço "}
-                      </span>
+                        {invalidCount > 0 && (
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "gap-1 cursor-pointer transition-colors",
+                              showOnlyInvalid 
+                                ? "bg-destructive text-destructive-foreground border-destructive" 
+                                : "text-destructive border-destructive/30 hover:bg-destructive/10"
+                            )}
+                            onClick={() => setShowOnlyInvalid(!showOnlyInvalid)}
+                          >
+                            <AlertCircle className="h-3 w-3" />
+                            {invalidCount} inválido(s)
+                            {showOnlyInvalid && <X className="h-3 w-3 ml-1" />}
+                          </Badge>
+                        )}
+                        <span className="text-muted-foreground text-xs">
+                          {csvData.some(r => r.email) && "• Email "}
+                          {csvData.some(r => r.cpf) && "• CPF "}
+                          {csvData.some(r => r.cnpj) && "• CNPJ "}
+                          {csvData.some(r => r.birth_date) && "• Nascimento "}
+                          {csvData.some(r => r.company_name) && "• Empresa "}
+                          {csvData.some(r => r.tags && r.tags.length > 0) && "• Tags "}
+                          {csvData.some(r => r.city) && "• Endereço "}
+                        </span>
+                      </div>
                     </div>
 
-                    <ScrollArea className="h-72 border rounded-lg overflow-x-auto">
-                      <div className="min-w-[900px]">
-                        <Table>
+                    <ScrollArea className="h-72 border rounded-lg">
+                      <div className="overflow-x-auto">
+                        <Table className="w-full table-fixed" style={{ minWidth: '1000px' }}>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="w-[50px] sticky left-0 bg-background z-10">Status</TableHead>
-                              <TableHead className="w-[160px]">Nome</TableHead>
-                              <TableHead className="w-[140px]">Telefone</TableHead>
-                              <TableHead className="w-[180px]">Email</TableHead>
-                              <TableHead className="w-[120px]">Empresa</TableHead>
-                              <TableHead className="w-[110px]">Cidade/UF</TableHead>
-                              <TableHead className="w-[80px]">Tags</TableHead>
-                              <TableHead className="w-[160px]">Erro</TableHead>
+                              <TableHead className="w-[60px]">Status</TableHead>
+                              <TableHead className="w-[180px]">Nome</TableHead>
+                              <TableHead className="w-[150px]">Telefone</TableHead>
+                              <TableHead className="w-[200px]">Email</TableHead>
+                              <TableHead className="w-[130px]">Empresa</TableHead>
+                              <TableHead className="w-[120px]">Cidade/UF</TableHead>
+                              <TableHead className="w-[100px]">Tags</TableHead>
+                              <TableHead className="w-[180px]">Erro</TableHead>
                             </TableRow>
                           </TableHeader>
-                        <TableBody>
-                          {csvData.map((row, index) => (
-                            <TableRow key={index} className={!row.valid ? "bg-destructive/5" : ""}>
-                              <TableCell className="sticky left-0 bg-background">
-                                {row.valid ? (
-                                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                ) : (
-                                  <AlertCircle className="h-4 w-4 text-destructive" />
-                                )}
-                              </TableCell>
-                              <TableCell className="font-medium">{row.full_name || "-"}</TableCell>
-                              <TableCell className="font-mono text-sm">{row.phone_e164 || "-"}</TableCell>
-                              <TableCell className="text-sm">{row.email || "-"}</TableCell>
-                              <TableCell className="text-sm">{row.company_name || "-"}</TableCell>
-                              <TableCell className="text-sm">
-                                {row.city && row.state ? `${row.city}/${row.state}` : (row.city || row.state || "-")}
-                              </TableCell>
-                              <TableCell className="text-xs">
-                                {row.tags && row.tags.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {row.tags.slice(0, 2).map((tag, i) => (
-                                      <Badge key={i} variant="secondary" className="text-xs px-1 py-0">
-                                        {tag}
-                                      </Badge>
-                                    ))}
-                                    {row.tags.length > 2 && (
-                                      <Badge variant="secondary" className="text-xs px-1 py-0">
-                                        +{row.tags.length - 2}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                ) : "-"}
-                              </TableCell>
-                              <TableCell className="text-xs text-destructive">{row.error || "-"}</TableCell>
-                            </TableRow>
-                          ))}
+                          <TableBody>
+                            {(showOnlyInvalid ? csvData.filter(r => !r.valid) : csvData).map((row, index) => (
+                              <TableRow key={index} className={!row.valid ? "bg-destructive/5" : ""}>
+                                <TableCell>
+                                  {row.valid ? (
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                  ) : (
+                                    <AlertCircle className="h-4 w-4 text-destructive" />
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-medium truncate">{row.full_name || "-"}</TableCell>
+                                <TableCell className="font-mono text-sm truncate">{row.phone_e164 || "-"}</TableCell>
+                                <TableCell className="text-sm truncate">{row.email || "-"}</TableCell>
+                                <TableCell className="text-sm truncate">{row.company_name || "-"}</TableCell>
+                                <TableCell className="text-sm truncate">
+                                  {row.city && row.state ? `${row.city}/${row.state}` : (row.city || row.state || "-")}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  {row.tags && row.tags.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {row.tags.slice(0, 2).map((tag, i) => (
+                                        <Badge key={i} variant="secondary" className="text-xs px-1 py-0">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                      {row.tags.length > 2 && (
+                                        <Badge variant="secondary" className="text-xs px-1 py-0">
+                                          +{row.tags.length - 2}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ) : "-"}
+                                </TableCell>
+                                <TableCell className="text-xs text-destructive">{row.error || "-"}</TableCell>
+                              </TableRow>
+                            ))}
                           </TableBody>
                         </Table>
                       </div>
