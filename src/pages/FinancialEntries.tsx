@@ -85,6 +85,9 @@ import { CommissionsManager } from "@/components/financial/CommissionsManager";
 import { DueDateAlerts } from "@/components/financial/DueDateAlerts";
 import { AgingReport } from "@/components/financial/AgingReport";
 import { PayableMethodSelector, PayableMethod } from "@/components/financial/PayableMethodSelector";
+import { NfeImportDialog } from "@/components/financial/NfeImportDialog";
+import { BarcodeImportDialog } from "@/components/financial/BarcodeImportDialog";
+import { ManualPayableDialog, PayableFormData } from "@/components/financial/ManualPayableDialog";
 
 interface FinancialEntry {
   id: string;
@@ -175,6 +178,9 @@ export default function FinancialEntries() {
   const [isDueDateAlertsOpen, setIsDueDateAlertsOpen] = useState(false);
   const [isAgingReportOpen, setIsAgingReportOpen] = useState(false);
   const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
+  const [isNfeDialogOpen, setIsNfeDialogOpen] = useState(false);
+  const [isBarcodeDialogOpen, setIsBarcodeDialogOpen] = useState(false);
+  const [isManualPayableOpen, setIsManualPayableOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -1100,13 +1106,76 @@ export default function FinancialEntries() {
         onOpenChange={setIsMethodSelectorOpen}
         onSelect={(method) => {
           if (method === "manual") {
-            setIsDialogOpen(true);
+            setIsManualPayableOpen(true);
           } else if (method === "nfe") {
-            // TODO: Implementar importação NF-e
-            toast({ title: "Em breve", description: "Importação de NF-e será implementada em breve." });
+            setIsNfeDialogOpen(true);
           } else if (method === "barcode") {
-            // TODO: Implementar leitura código de barras
-            toast({ title: "Em breve", description: "Leitura de código de barras será implementada em breve." });
+            setIsBarcodeDialogOpen(true);
+          }
+        }}
+      />
+
+      {/* NF-e Import Dialog */}
+      <NfeImportDialog
+        open={isNfeDialogOpen}
+        onOpenChange={setIsNfeDialogOpen}
+        onImport={(data) => {
+          console.log("NF-e import data:", data);
+          // TODO: Processar importação de NF-e
+        }}
+      />
+
+      {/* Barcode Import Dialog */}
+      <BarcodeImportDialog
+        open={isBarcodeDialogOpen}
+        onOpenChange={setIsBarcodeDialogOpen}
+        onContinue={(data) => {
+          console.log("Barcode data:", data);
+          // TODO: Processar código de barras
+          toast({ title: "Em breve", description: "Processamento de código de barras será implementado." });
+        }}
+      />
+
+      {/* Manual Payable Dialog */}
+      <ManualPayableDialog
+        open={isManualPayableOpen}
+        onOpenChange={setIsManualPayableOpen}
+        onSave={async (data) => {
+          try {
+            const payload = {
+              account_id: accountId,
+              entry_type: "payable",
+              description: data.supplier_name,
+              amount: parseFloat(data.amount.replace(",", ".")),
+              due_date: data.due_date,
+              category_id: data.category_id || null,
+              bank_account_id: data.bank_account_id || null,
+              is_recurring: data.is_recurring,
+              recurrence_type: data.is_recurring ? data.recurrence_type : null,
+              recurrence_end_date: data.is_recurring && data.recurrence_end_date ? data.recurrence_end_date : null,
+              document_number: data.document_number || null,
+              notes: data.notes || null,
+            };
+
+            const { error } = await supabase
+              .from("financial_entries")
+              .insert(payload);
+            
+            if (error) throw error;
+
+            queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+            setIsManualPayableOpen(false);
+            toast({
+              title: "Conta a pagar criada",
+              description: "O lançamento foi criado com sucesso.",
+            });
+          } catch (error) {
+            console.error(error);
+            toast({
+              title: "Erro",
+              description: "Não foi possível salvar o lançamento.",
+              variant: "destructive",
+            });
           }
         }}
       />
