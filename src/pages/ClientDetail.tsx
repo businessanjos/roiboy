@@ -1523,7 +1523,11 @@ export default function ClientDetail() {
               {client.emails && client.emails.length > 0 && (
                 <span className="flex items-center gap-1">
                   <Mail className="h-3.5 w-3.5" />
-                  <span className="truncate max-w-[150px]">{client.emails[0]}</span>
+                  <span className="truncate max-w-[150px]">
+                    {typeof client.emails[0] === 'object' && client.emails[0] !== null
+                      ? (client.emails[0] as any).email
+                      : client.emails[0]}
+                  </span>
                   {client.emails.length > 1 && ` +${client.emails.length - 1}`}
                 </span>
               )}
