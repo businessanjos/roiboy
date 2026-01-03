@@ -2,6 +2,7 @@ import { FileText, Barcode, Keyboard } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -47,6 +48,9 @@ export function PayableMethodSelector({
           <DialogTitle className="text-xl font-semibold text-primary">
             Incluir Conta a Pagar
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Selecione como deseja cadastrar a conta a pagar
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 mt-2">
           {methods.map((method) => {

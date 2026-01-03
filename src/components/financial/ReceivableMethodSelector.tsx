@@ -1,11 +1,11 @@
-import { FileText, Barcode, PenLine } from "lucide-react";
+import { FileText, Barcode, Keyboard } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 export type ReceivableMethod = "nfe" | "barcode" | "manual";
 
@@ -17,22 +17,22 @@ interface ReceivableMethodSelectorProps {
 
 const methods = [
   {
-    id: "nfe" as const,
+    id: "nfe" as ReceivableMethod,
     title: "Nota Fiscal Eletrônica",
-    description: "Importar dados de uma NF-e via chave de acesso ou XML",
+    description: "Importe o arquivo XML de uma Nota Fiscal Eletrônica (NF-e) de serviços prestados para importar automaticamente os dados do recebimento.",
     icon: FileText,
   },
   {
-    id: "barcode" as const,
+    id: "barcode" as ReceivableMethod,
     title: "Código de Barras",
-    description: "Inserir código de barras ou boleto para preenchimento automático",
+    description: "Informe um boleto de cobrança já emitido para vincular a um recebimento existente ou criar um novo.",
     icon: Barcode,
   },
   {
-    id: "manual" as const,
+    id: "manual" as ReceivableMethod,
     title: "Inserção Manual",
-    description: "Preencher todos os dados manualmente",
-    icon: PenLine,
+    description: "Digite manualmente a Conta a Receber",
+    icon: Keyboard,
   },
 ];
 
@@ -43,33 +43,43 @@ export function ReceivableMethodSelector({
 }: ReceivableMethodSelectorProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-primary">
-            Novo Recebimento
+            Incluir Conta a Receber
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Selecione como deseja cadastrar o recebimento
+          </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-3 pt-4">
-          {methods.map((method) => (
-            <Button
-              key={method.id}
-              variant="outline"
-              className="w-full justify-start h-auto p-4 text-left"
-              onClick={() => {
-                onSelect(method.id);
-                onOpenChange(false);
-              }}
-            >
-              <method.icon className="h-5 w-5 mr-3 text-primary" />
-              <div>
-                <div className="font-medium">{method.title}</div>
-                <div className="text-xs text-muted-foreground">
-                  {method.description}
+        <div className="space-y-3 mt-2">
+          {methods.map((method) => {
+            const Icon = method.icon;
+            return (
+              <button
+                key={method.id}
+                onClick={() => {
+                  onSelect(method.id);
+                  onOpenChange(false);
+                }}
+                className="w-full rounded-xl border-2 border-primary/20 bg-primary/5 p-4 text-left transition-all hover:border-primary/40 hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-primary mb-1">
+                      {method.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {method.description}
+                    </p>
+                  </div>
+                  <div className="shrink-0 p-2 rounded-lg bg-primary/10">
+                    <Icon className="h-8 w-8 text-primary/60" />
+                  </div>
                 </div>
-              </div>
-            </Button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </DialogContent>
     </Dialog>
