@@ -101,7 +101,9 @@ interface Contract {
 }
 
 const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; className: string }> = {
+  scheduled: { label: "A Iniciar", icon: Clock, className: "border-indigo-500 text-indigo-600 bg-indigo-50" },
   active: { label: "Ativo", icon: CheckCircle, className: "border-green-500 text-green-600 bg-green-50" },
+  pending: { label: "Pendente", icon: FileText, className: "border-blue-500 text-blue-600 bg-blue-50" },
   suspended: { label: "Suspenso", icon: Ban, className: "border-orange-500 text-orange-600 bg-orange-50" },
   paused: { label: "Pausado", icon: PauseCircle, className: "border-amber-500 text-amber-600 bg-amber-50" },
   cancelled: { label: "Cancelado", icon: XCircle, className: "border-red-500 text-red-600 bg-red-50" },
@@ -689,6 +691,12 @@ export default function Contracts() {
 
       if (!userProfile) throw new Error("Perfil não encontrado");
 
+      // Determine status based on start_date
+      const startDate = new Date(formData.start_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isFutureStart = startDate > today;
+
       const contractData = {
         client_id: selectedClient.id,
         account_id: userProfile.account_id,
@@ -699,6 +707,7 @@ export default function Contracts() {
         product_id: formData.product_id || null,
         payment_option: buildPaymentOption(),
         notes: formData.notes || null,
+        status: isFutureStart ? "scheduled" : "active",
       };
 
       const { error } = await supabase
