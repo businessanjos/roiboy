@@ -105,6 +105,7 @@ serve(async (req: Request) => {
     }
 
     // Create auth user with the admin API
+    // Mark as team member so the handle_new_user trigger skips creating a new account
     const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email: email.toLowerCase(),
       password,
@@ -112,6 +113,7 @@ serve(async (req: Request) => {
       user_metadata: {
         name,
         full_name: name,
+        is_team_member: "true", // This flag tells the trigger to skip account creation
       },
     });
 
