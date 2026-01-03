@@ -1,20 +1,21 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 import {
   TrendingUp,
   TrendingDown,
-  Users,
   DollarSign,
   AlertTriangle,
   CheckCircle,
   XCircle,
-  PauseCircle,
-  Ban,
-  Calendar,
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  Sparkles,
+  Target,
+  Zap,
+  Shield,
 } from "lucide-react";
 import {
   BarChart,
@@ -29,7 +30,6 @@ import {
   Cell,
   LineChart,
   Line,
-  Legend,
   AreaChart,
   Area,
 } from "recharts";
@@ -73,6 +73,28 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
   confissao_divida: "Confissão",
   termo_congelamento: "Congelamento",
   distrato: "Distrato",
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: [0.25, 0.1, 0.25, 1] as const,
+    },
+  },
 };
 
 export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
@@ -209,319 +231,441 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
   const renderTrend = (value: number, inverted = false) => {
     const isPositive = inverted ? value < 0 : value > 0;
     const Icon = value > 0 ? ArrowUpRight : value < 0 ? ArrowDownRight : Minus;
-    const color = isPositive ? "text-green-600" : value === 0 ? "text-muted-foreground" : "text-red-600";
+    const color = isPositive ? "text-emerald-500" : value === 0 ? "text-muted-foreground" : "text-rose-500";
     
     return (
-      <span className={`flex items-center text-xs ${color}`}>
-        <Icon className="h-3 w-3" />
+      <span className={`flex items-center gap-0.5 text-xs font-medium ${color}`}>
+        <Icon className="h-3.5 w-3.5" />
         {Math.abs(value).toFixed(1)}%
       </span>
     );
   };
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload) return null;
+    
+    return (
+      <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl px-4 py-3 shadow-xl">
+        <p className="text-sm font-medium mb-2">{payload[0]?.payload?.fullMonth || label}</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={index} className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-2 h-2 rounded-full" 
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-muted-foreground">{entry.name}:</span>
+            <span className="font-medium">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Contratos Ativos</p>
-                <p className="text-2xl font-bold">{kpis.totalActive}</p>
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Hero KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent shadow-lg shadow-emerald-500/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <CardContent className="p-5 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-emerald-500/15 ring-1 ring-emerald-500/20">
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                </div>
+                <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-xs">
+                  +{kpis.newThisMonth} novos
+                </Badge>
               </div>
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                +{kpis.newThisMonth} este mês
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-3xl font-bold tracking-tight">{kpis.totalActive}</p>
+              <p className="text-sm text-muted-foreground mt-1">Contratos Ativos</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Valor Total (MRR)</p>
-                <p className="text-2xl font-bold">{formatCurrency(kpis.totalValue)}</p>
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent shadow-lg shadow-blue-500/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <CardContent className="p-5 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-blue-500/15 ring-1 ring-blue-500/20">
+                  <DollarSign className="h-5 w-5 text-blue-500" />
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Ticket médio</p>
+                  <p className="text-xs font-semibold text-blue-600">{formatCurrency(kpis.averageTicket)}</p>
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-xs text-muted-foreground">
-                Ticket médio: {formatCurrency(kpis.averageTicket)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-2xl font-bold tracking-tight">{formatCurrency(kpis.totalValue)}</p>
+              <p className="text-sm text-muted-foreground mt-1">Valor Total (MRR)</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Taxa de Retenção</p>
-                <p className="text-2xl font-bold">{kpis.retentionRate.toFixed(1)}%</p>
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent shadow-lg shadow-violet-500/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <CardContent className="p-5 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-violet-500/15 ring-1 ring-violet-500/20">
+                  <Shield className="h-5 w-5 text-violet-500" />
+                </div>
+                {renderTrend(kpis.growthRate)}
               </div>
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-            <div className="mt-2">
-              {renderTrend(kpis.growthRate)}
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-3xl font-bold tracking-tight">{kpis.retentionRate.toFixed(1)}%</p>
+              <p className="text-sm text-muted-foreground mt-1">Taxa de Retenção</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Churn</p>
-                <p className="text-2xl font-bold text-red-600">{kpis.churnThisMonth}</p>
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent shadow-lg shadow-rose-500/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <CardContent className="p-5 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-rose-500/15 ring-1 ring-rose-500/20">
+                  <XCircle className="h-5 w-5 text-rose-500" />
+                </div>
+                <Badge variant="outline" className="border-rose-500/30 text-rose-600 text-xs">
+                  {kpis.churnRate.toFixed(1)}% taxa
+                </Badge>
               </div>
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <XCircle className="h-5 w-5 text-red-600" />
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-xs text-muted-foreground">
-                {kpis.churnRate.toFixed(1)}% este mês
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <p className="text-3xl font-bold tracking-tight text-rose-600">{kpis.churnThisMonth}</p>
+              <p className="text-sm text-muted-foreground mt-1">Churn este mês</p>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Evolution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Evolução Mensal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--background))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    labelFormatter={(label, payload) => {
-                      const data = payload?.[0]?.payload;
-                      return data?.fullMonth || label;
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="novos" name="Novos" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="cancelados" name="Cancelados" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="encerrados" name="Encerrados" fill="#64748b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <CardTitle className="text-base font-semibold">Evolução Mensal</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                    <XAxis 
+                      dataKey="month" 
+                      className="text-xs" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      className="text-xs" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="novos" name="Novos" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="cancelados" name="Cancelados" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="encerrados" name="Encerrados" fill="#64748b" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-xs text-muted-foreground">Novos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-rose-500" />
+                  <span className="text-xs text-muted-foreground">Cancelados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-slate-500" />
+                  <span className="text-xs text-muted-foreground">Encerrados</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        {/* Active Contracts Trend */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Contratos Ativos (Tendência)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--background))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    labelFormatter={(label, payload) => {
-                      const data = payload?.[0]?.payload;
-                      return data?.fullMonth || label;
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="ativos" 
-                    name="Ativos" 
-                    stroke="#3b82f6" 
-                    fill="#3b82f6" 
-                    fillOpacity={0.2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-500/10">
+                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                </div>
+                <CardTitle className="text-base font-semibold">Tendência de Ativos</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorAtivos" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                    <XAxis 
+                      dataKey="month" 
+                      className="text-xs" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis 
+                      className="text-xs" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="ativos" 
+                      name="Ativos" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2.5}
+                      fill="url(#colorAtivos)"
+                      dot={{ fill: "#3b82f6", strokeWidth: 0, r: 4 }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Status Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Distribuição por Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {statusDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--background))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center mt-2">
-              {statusDistribution.map((entry) => (
-                <div key={entry.name} className="flex items-center gap-1 text-xs">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: entry.color }}
-                  />
-                  <span>{entry.name}: {entry.value}</span>
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-violet-500/10">
+                  <Target className="h-4 w-4 text-violet-500" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Type Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Por Tipo de Contrato</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {typeDistribution.map((type, index) => {
-                const percentage = (type.value / contracts.length) * 100;
-                const colors = ["#3b82f6", "#22c55e", "#f59e0b", "#8b5cf6", "#ec4899", "#64748b"];
-                const color = colors[index % colors.length];
-                
-                return (
-                  <div key={type.name}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>{type.name}</span>
-                      <span className="font-medium">{type.value}</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${percentage}%`, backgroundColor: color }}
-                      />
-                    </div>
+                <CardTitle className="text-base font-semibold">Por Status</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {statusDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.[0]) return null;
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2 shadow-xl">
+                            <p className="text-sm font-medium">{data.name}</p>
+                            <p className="text-lg font-bold">{data.value}</p>
+                          </div>
+                        );
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center mt-3">
+                {statusDistribution.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+                    <div 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: entry.color }}
+                    />
+                    <span className="text-xs font-medium">{entry.name}</span>
+                    <span className="text-xs text-muted-foreground">({entry.value})</span>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        {/* Product Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Por Produto</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-[280px] overflow-y-auto">
-              {productDistribution.slice(0, 8).map((product) => {
-                const percentage = (product.count / contracts.length) * 100;
-                
-                return (
-                  <div key={product.name}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="truncate flex-1 mr-2">{product.name}</span>
-                      <span className="font-medium whitespace-nowrap">
-                        {product.count} ({formatCurrency(product.value)})
-                      </span>
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/10">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                </div>
+                <CardTitle className="text-base font-semibold">Por Tipo</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {typeDistribution.map((type, index) => {
+                  const percentage = (type.value / contracts.length) * 100;
+                  const colors = [
+                    "from-blue-500 to-blue-600",
+                    "from-emerald-500 to-emerald-600",
+                    "from-amber-500 to-amber-600",
+                    "from-violet-500 to-violet-600",
+                    "from-rose-500 to-rose-600",
+                    "from-slate-500 to-slate-600",
+                  ];
+                  const color = colors[index % colors.length];
+                  
+                  return (
+                    <div key={type.name} className="group">
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="font-medium">{type.name}</span>
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                          {type.value} <span className="text-xs">({percentage.toFixed(0)}%)</span>
+                        </span>
+                      </div>
+                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                        <motion.div 
+                          className={`h-full rounded-full bg-gradient-to-r ${color}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut", delay: index * 0.1 }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${percentage}%`, backgroundColor: product.color }}
-                      />
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10">
+                  <DollarSign className="h-4 w-4 text-emerald-500" />
+                </div>
+                <CardTitle className="text-base font-semibold">Por Produto</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+                {productDistribution.slice(0, 6).map((product, index) => {
+                  const percentage = (product.count / contracts.length) * 100;
+                  
+                  return (
+                    <div key={product.name} className="group">
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="font-medium truncate flex-1 mr-2">{product.name}</span>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs text-muted-foreground">{product.count}×</span>
+                          <span className="text-xs font-semibold ml-1.5" style={{ color: product.color }}>
+                            {formatCurrency(product.value)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                        <motion.div 
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: product.color }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut", delay: index * 0.1 }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
-      {/* Revenue Trend */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">Valor de Novos Contratos por Mês</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" className="text-xs" />
-                <YAxis 
-                  className="text-xs" 
-                  tickFormatter={(value) => formatCurrency(value)}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--background))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value: number) => [formatCurrency(value), "Valor"]}
-                  labelFormatter={(label, payload) => {
-                    const data = payload?.[0]?.payload;
-                    return data?.fullMonth || label;
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="valorNovos" 
-                  name="Valor" 
-                  stroke="#22c55e" 
-                  strokeWidth={2}
-                  dot={{ fill: "#22c55e", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      {/* Revenue Chart */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10">
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+              </div>
+              <CardTitle className="text-base font-semibold">Valor de Novos Contratos</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[180px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorValor" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#22c55e"/>
+                      <stop offset="100%" stopColor="#10b981"/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                  <XAxis 
+                    dataKey="month" 
+                    className="text-xs" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <YAxis 
+                    className="text-xs" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={(value) => formatCurrency(value)}
+                  />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.[0]) return null;
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl px-4 py-3 shadow-xl">
+                          <p className="text-sm font-medium mb-1">{data?.fullMonth || label}</p>
+                          <p className="text-lg font-bold text-emerald-500">{formatCurrency(payload[0].value as number)}</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="valorNovos" 
+                    name="Valor" 
+                    stroke="url(#colorValor)" 
+                    strokeWidth={3}
+                    dot={{ fill: "#22c55e", strokeWidth: 2, stroke: "#fff", r: 5 }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }
