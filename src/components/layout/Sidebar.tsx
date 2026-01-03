@@ -137,6 +137,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
+    // During loading, show all items to avoid empty sidebar flash
+    const showAllItems = permissionsLoading || isAdmin || isSuperAdmin;
+    
     // Super admins have access to everything - show sector items + admin items
     if (isSuperAdmin) {
       if (currentSector) {
@@ -150,11 +153,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     if (currentSector) {
       const sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
       
-      // Admins see everything without permission filtering
-      if (isAdmin) return sectorItems;
-      
-      // While permissions are loading, show all items to avoid empty sidebar
-      if (permissionsLoading) return sectorItems;
+      // Admins or during loading - show all sector items
+      if (showAllItems) return sectorItems;
       
       return sectorItems.filter((item) => {
         if (!item.permission) return true;
@@ -163,8 +163,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     }
     
     // No sector selected - show all main nav items
-    if (isAdmin) return navItems;
-    if (permissionsLoading) return navItems;
+    if (showAllItems) return navItems;
     
     return navItems.filter((item) => {
       if (!item.permission) return true;
