@@ -2168,7 +2168,7 @@ export default function Clients() {
 
       {viewMode === "table" ? (
         <Card className="shadow-card flex-1 overflow-hidden">
-          <ScrollArea className="h-[calc(100vh-380px)]" orientation="both">
+          <ScrollArea className="h-[calc(100vh-260px)]" orientation="both">
             <Table className="min-w-max">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
