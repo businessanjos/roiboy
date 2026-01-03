@@ -154,17 +154,23 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     start_date: "",
     end_date: "",
     value: "",
     contract_type: "compra",
+    product_id: "",
     payment_type: "",
     installments: "",
     payment_method: "",
     notes: "",
     status: "active",
   });
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     if (contract) {
@@ -174,6 +180,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         end_date: contract.end_date || "",
         value: String(contract.value || 0),
         contract_type: contract.contract_type,
+        product_id: contract.product?.id || "",
         payment_type: paymentParts.type,
         installments: paymentParts.installments,
         payment_method: paymentParts.method,
@@ -183,6 +190,15 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
       setIsEditing(false);
     }
   }, [contract]);
+
+  const fetchProducts = async () => {
+    const { data } = await supabase
+      .from("products")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    setProducts(data || []);
+  };
 
   const buildPaymentOption = () => {
     if (!formData.payment_type) return null;
@@ -205,6 +221,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         end_date: formData.end_date || null,
         value: parseFloat(formData.value) || 0,
         contract_type: formData.contract_type,
+        product_id: formData.product_id || null,
         payment_option: buildPaymentOption(),
         notes: formData.notes || null,
         status: formData.status,
@@ -237,6 +254,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         end_date: contract.end_date || "",
         value: String(contract.value || 0),
         contract_type: contract.contract_type,
+        product_id: contract.product?.id || "",
         payment_type: paymentParts.type,
         installments: paymentParts.installments,
         payment_method: paymentParts.method,
@@ -365,6 +383,32 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
             ) : (
               <p className="text-sm font-medium">
                 {CONTRACT_TYPES[contract.contract_type] || contract.contract_type}
+              </p>
+            )}
+          </div>
+
+          {/* Product */}
+          <div className="space-y-2">
+            <Label>Produto</Label>
+            {isEditing ? (
+              <Select
+                value={formData.product_id}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, product_id: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um produto (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-sm font-medium">
+                {contract.product?.name || "—"}
               </p>
             )}
           </div>
