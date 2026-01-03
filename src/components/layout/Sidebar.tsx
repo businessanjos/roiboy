@@ -155,6 +155,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       // Filter out notifications since it's rendered separately in the sidebar
       const itemsWithoutNotifications = sectorItems.filter(item => item.to !== "/notifications");
       
+      // Admins see everything without permission filtering
+      if (isAdmin) return itemsWithoutNotifications;
+      
       if (permissionsLoading) return itemsWithoutNotifications;
       
       return itemsWithoutNotifications.filter((item) => {
@@ -164,13 +167,16 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     }
     
     // Fallback to all items if no sector selected
+    // Admins see everything without permission filtering
+    if (isAdmin) return navItems;
+    
     if (permissionsLoading) return navItems;
     
     return navItems.filter((item) => {
       if (!item.permission) return true;
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, currentSector]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector]);
 
   // Super admins should always see the full UI
   const showRegularUI = true;
