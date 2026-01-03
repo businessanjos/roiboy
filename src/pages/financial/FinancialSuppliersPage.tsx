@@ -558,13 +558,16 @@ export default function FinancialSuppliersPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium truncate">{supplier.name}</span>
-                        {supplier.document && (
+                        {supplier.document_type && (
                           <Badge variant="outline" className="text-xs shrink-0">
-                            {supplier.document_type?.toUpperCase()}
+                            {supplier.document_type.toUpperCase()}
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                        {supplier.document && (
+                          <span className="font-mono">{supplier.document}</span>
+                        )}
                         {supplier.email && <span>{supplier.email}</span>}
                         {supplier.phone && <span>{supplier.phone}</span>}
                       </div>
