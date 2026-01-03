@@ -901,6 +901,7 @@ export type Database = {
           first_due_date: string | null
           id: string
           installments_count: number | null
+          installments_detail: Json | null
           negotiation_description: string | null
           negotiation_type: string | null
           notes: string | null
@@ -929,6 +930,7 @@ export type Database = {
           first_due_date?: string | null
           id?: string
           installments_count?: number | null
+          installments_detail?: Json | null
           negotiation_description?: string | null
           negotiation_type?: string | null
           notes?: string | null
@@ -957,6 +959,7 @@ export type Database = {
           first_due_date?: string | null
           id?: string
           installments_count?: number | null
+          installments_detail?: Json | null
           negotiation_description?: string | null
           negotiation_type?: string | null
           notes?: string | null

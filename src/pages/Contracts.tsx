@@ -37,6 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -65,12 +66,14 @@ import {
   RefreshCw,
   ListChecks,
   ClipboardList,
+  Settings2,
 } from "lucide-react";
 import { useZapSign } from "@/hooks/useZapSign";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
+import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
 
 interface Contract {
   id: string;
@@ -132,6 +135,7 @@ const CONTRACT_TYPES: Record<string, string> = {
 const PAYMENT_TYPES = [
   { value: "a_vista", label: "À Vista" },
   { value: "parcelado", label: "Parcelado" },
+  { value: "personalizado", label: "Personalizado" },
 ];
 
 const INSTALLMENT_OPTIONS = [
@@ -141,6 +145,7 @@ const INSTALLMENT_OPTIONS = [
   { value: "6x", label: "6x" },
   { value: "10x", label: "10x" },
   { value: "12x", label: "12x" },
+  { value: "custom", label: "Outro" },
 ];
 
 const PAYMENT_METHODS = [
@@ -148,6 +153,8 @@ const PAYMENT_METHODS = [
   { value: "boleto", label: "Boleto" },
   { value: "cartao", label: "Cartão" },
   { value: "cheque", label: "Cheque" },
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "transferencia", label: "Transferência" },
 ];
 
 interface Client {
@@ -184,9 +191,12 @@ export default function Contracts() {
     product_id: "",
     payment_type: "",
     installments: "",
+    custom_installments: "",
     payment_method: "",
+    first_due_date: "",
     notes: "",
   });
+  const [installmentsDetail, setInstallmentsDetail] = useState<InstallmentDetail[]>([]);
 
   // Contract detail sheet state
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
@@ -658,9 +668,12 @@ export default function Contracts() {
       product_id: "",
       payment_type: "",
       installments: "",
+      custom_installments: "",
       payment_method: "",
+      first_due_date: "",
       notes: "",
     });
+    setInstallmentsDetail([]);
   };
 
   const openNewContractDialog = () => {
@@ -668,12 +681,25 @@ export default function Contracts() {
     setDialogOpen(true);
   };
 
+  const getInstallmentsCount = (): number => {
+    if (formData.payment_type === "a_vista") return 1;
+    if (formData.installments === "custom") {
+      return parseInt(formData.custom_installments) || 0;
+    }
+    return parseInt(formData.installments?.replace("x", "")) || 0;
+  };
+
   const buildPaymentOption = () => {
     if (!formData.payment_type) return null;
     if (formData.payment_type === "a_vista") {
       return formData.payment_method ? `a_vista_${formData.payment_method}` : "a_vista";
     }
-    const installments = formData.installments || "1x";
+    if (formData.payment_type === "personalizado") {
+      return "personalizado";
+    }
+    const installments = formData.installments === "custom" 
+      ? `${formData.custom_installments}x` 
+      : formData.installments || "1x";
     return formData.payment_method
       ? `parcelado_${installments}_${formData.payment_method}`
       : `parcelado_${installments}`;
@@ -717,13 +743,19 @@ export default function Contracts() {
         contract_type: formData.contract_type,
         product_id: formData.product_id || null,
         payment_option: buildPaymentOption(),
+        payment_method: formData.payment_method || null,
+        installments_count: getInstallmentsCount() || null,
+        first_due_date: formData.first_due_date || null,
         notes: formData.notes || null,
         status: isFutureStart ? "scheduled" : "active",
+        installments_detail: formData.payment_type === "personalizado" && installmentsDetail.length > 0 
+          ? installmentsDetail 
+          : null,
       };
 
       const { error } = await supabase
         .from("client_contracts")
-        .insert(contractData);
+        .insert(contractData as any);
 
       if (error) throw error;
       
@@ -1271,7 +1303,10 @@ export default function Contracts() {
 
       {/* New Contract Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={cn(
+          "max-w-md",
+          formData.payment_type === "personalizado" && getInstallmentsCount() > 0 && "max-w-2xl"
+        )}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -1279,7 +1314,7 @@ export default function Contracts() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
             {/* Client Selection */}
             <div className="space-y-2">
               <Label>Cliente *</Label>
@@ -1445,30 +1480,100 @@ export default function Contracts() {
               </div>
             </div>
 
-            {/* Installments (if parcelado) */}
-            {formData.payment_type === "parcelado" && (
-              <div className="space-y-2">
-                <Label>Número de Parcelas</Label>
-                <Select
-                  value={formData.installments}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, installments: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INSTALLMENT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Installments (if parcelado or personalizado) */}
+            {(formData.payment_type === "parcelado" || formData.payment_type === "personalizado") && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Número de Parcelas</Label>
+                  <Select
+                    value={formData.installments}
+                    onValueChange={(value) => {
+                      setFormData((prev) => ({ ...prev, installments: value }));
+                      setInstallmentsDetail([]);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INSTALLMENT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.installments === "custom" && (
+                  <div className="space-y-2">
+                    <Label>Qtd. Parcelas</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="60"
+                      placeholder="Ex: 8"
+                      value={formData.custom_installments}
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, custom_installments: e.target.value }));
+                        setInstallmentsDetail([]);
+                      }}
+                    />
+                  </div>
+                )}
+                {formData.installments !== "custom" && (
+                  <div className="space-y-2">
+                    <Label>1º Vencimento</Label>
+                    <Input
+                      type="date"
+                      value={formData.first_due_date}
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, first_due_date: e.target.value }));
+                        setInstallmentsDetail([]);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Payment Method */}
-            {formData.payment_type && (
+            {formData.installments === "custom" && formData.payment_type === "personalizado" && (
+              <div className="space-y-2">
+                <Label>1º Vencimento</Label>
+                <Input
+                  type="date"
+                  value={formData.first_due_date}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, first_due_date: e.target.value }));
+                    setInstallmentsDetail([]);
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Personalized Installments Editor */}
+            {formData.payment_type === "personalizado" && getInstallmentsCount() > 0 && formData.first_due_date && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Settings2 className="h-4 w-4" />
+                    Configurar Parcelas
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {getInstallmentsCount()} parcelas
+                  </span>
+                </div>
+                <InstallmentsEditor
+                  totalValue={parseFloat(formData.value) || 0}
+                  installmentsCount={getInstallmentsCount()}
+                  firstDueDate={formData.first_due_date}
+                  value={installmentsDetail}
+                  onChange={setInstallmentsDetail}
+                />
+              </div>
+            )}
+
+            {/* Payment Method (for non-personalized) */}
+            {formData.payment_type && formData.payment_type !== "personalizado" && (
               <div className="space-y-2">
                 <Label>Forma de Pagamento</Label>
                 <Select
