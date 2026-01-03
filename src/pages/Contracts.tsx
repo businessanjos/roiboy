@@ -109,6 +109,7 @@ const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof Check
 const CONTRACT_TYPES: Record<string, string> = {
   compra: "Compra",
   renovacao: "Renovação",
+  migracao: "Migração",
   confissao_divida: "Confissão de Dívida",
   termo_congelamento: "Termo de Congelamento",
   distrato: "Distrato",
