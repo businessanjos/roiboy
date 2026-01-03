@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -39,8 +40,10 @@ import {
   Download,
   ExternalLink,
   Clock,
+  Handshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ContractNegotiationTab } from "./ContractNegotiationTab";
 
 interface Contract {
   id: string;
@@ -61,6 +64,12 @@ interface Contract {
   contract_type: string;
   created_at: string;
   updated_at: string;
+  negotiation_type?: string | null;
+  negotiation_description?: string | null;
+  payment_method?: string | null;
+  installments_count?: number | null;
+  first_due_date?: string | null;
+  receivables_generated?: boolean;
   client?: {
     id: string;
     full_name: string;
@@ -303,36 +312,46 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
           </div>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
-          {/* Client Info */}
-          <div 
-            className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
-            onClick={() => {
-              onOpenChange(false);
-              navigate(`/clients/${contract.client_id}`);
-            }}
-          >
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-              {contract.client?.avatar_url ? (
-                <img
-                  src={contract.client.avatar_url}
-                  alt={contract.client.full_name}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <Users className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">{contract.client?.full_name || "Cliente"}</p>
-              {contract.product && (
-                <p className="text-sm text-muted-foreground">{contract.product.name}</p>
-              )}
-            </div>
+        {/* Client Info */}
+        <div 
+          className="mt-4 flex items-center gap-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/80 transition-colors"
+          onClick={() => {
+            onOpenChange(false);
+            navigate(`/clients/${contract.client_id}`);
+          }}
+        >
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+            {contract.client?.avatar_url ? (
+              <img
+                src={contract.client.avatar_url}
+                alt={contract.client.full_name}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            ) : (
+              <Users className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
+          <div className="flex-1">
+            <p className="font-medium">{contract.client?.full_name || "Cliente"}</p>
+            {contract.product && (
+              <p className="text-sm text-muted-foreground">{contract.product.name}</p>
+            )}
+          </div>
+        </div>
 
-          <Separator />
+        <Tabs defaultValue="details" className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Detalhes
+            </TabsTrigger>
+            <TabsTrigger value="negotiation" className="flex items-center gap-2">
+              <Handshake className="h-4 w-4" />
+              Negociação
+            </TabsTrigger>
+          </TabsList>
 
+          <TabsContent value="details" className="mt-4 space-y-6">
           {/* Status */}
           <div className="space-y-2">
             <Label>Status</Label>
@@ -595,7 +614,24 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
             <p>Criado em: {format(new Date(contract.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
             <p>Atualizado em: {format(new Date(contract.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
           </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="negotiation" className="mt-4">
+            <ContractNegotiationTab
+              contractId={contract.id}
+              contractValue={contract.value}
+              clientId={contract.client_id}
+              accountId={contract.account_id}
+              negotiationType={contract.negotiation_type || null}
+              negotiationDescription={contract.negotiation_description || null}
+              paymentMethod={contract.payment_method || null}
+              installmentsCount={contract.installments_count || null}
+              firstDueDate={contract.first_due_date || null}
+              receivablesGenerated={contract.receivables_generated || false}
+              onUpdate={onUpdate}
+            />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

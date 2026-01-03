@@ -898,11 +898,18 @@ export type Database = {
           end_date: string | null
           file_name: string | null
           file_url: string | null
+          first_due_date: string | null
           id: string
+          installments_count: number | null
+          negotiation_description: string | null
+          negotiation_type: string | null
           notes: string | null
           parent_contract_id: string | null
+          payment_method: string | null
           payment_option: string | null
           product_id: string | null
+          receivables_generated: boolean | null
+          receivables_generated_at: string | null
           start_date: string
           status: string
           status_changed_at: string | null
@@ -919,11 +926,18 @@ export type Database = {
           end_date?: string | null
           file_name?: string | null
           file_url?: string | null
+          first_due_date?: string | null
           id?: string
+          installments_count?: number | null
+          negotiation_description?: string | null
+          negotiation_type?: string | null
           notes?: string | null
           parent_contract_id?: string | null
+          payment_method?: string | null
           payment_option?: string | null
           product_id?: string | null
+          receivables_generated?: boolean | null
+          receivables_generated_at?: string | null
           start_date: string
           status?: string
           status_changed_at?: string | null
@@ -940,11 +954,18 @@ export type Database = {
           end_date?: string | null
           file_name?: string | null
           file_url?: string | null
+          first_due_date?: string | null
           id?: string
+          installments_count?: number | null
+          negotiation_description?: string | null
+          negotiation_type?: string | null
           notes?: string | null
           parent_contract_id?: string | null
+          payment_method?: string | null
           payment_option?: string | null
           product_id?: string | null
+          receivables_generated?: boolean | null
+          receivables_generated_at?: string | null
           start_date?: string
           status?: string
           status_changed_at?: string | null
