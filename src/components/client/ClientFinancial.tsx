@@ -24,11 +24,17 @@ import {
   Send,
   Camera,
   Paperclip,
-  Shield
+  Shield,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Building2,
+  Link2
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Subscription {
   id: string;
@@ -41,6 +47,26 @@ interface Subscription {
   next_billing_date: string | null;
   end_date: string | null;
   notes: string | null;
+}
+
+interface FinancialEntry {
+  id: string;
+  entry_type: "receivable" | "payable";
+  description: string;
+  amount: number;
+  currency: string;
+  due_date: string;
+  payment_date: string | null;
+  status: string;
+  category?: { name: string; color: string } | null;
+  supplier?: { name: string; document: string | null } | null;
+  linked_via: "direct" | "cnpj";
+}
+
+interface ClientData {
+  cnpj: string | null;
+  company_name: string | null;
+  companies: any[] | null;
 }
 
 interface ClientFinancialProps {
@@ -64,8 +90,17 @@ const billingPeriodLabels = {
   one_time: "Único",
 };
 
+const entryStatusConfig: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pendente", className: "bg-amber-500/10 text-amber-600" },
+  paid: { label: "Pago", className: "bg-emerald-500/10 text-emerald-600" },
+  overdue: { label: "Vencido", className: "bg-red-500/10 text-red-600" },
+  cancelled: { label: "Cancelado", className: "bg-slate-500/10 text-slate-600" },
+};
+
 export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [financialEntries, setFinancialEntries] = useState<FinancialEntry[]>([]);
+  const [clientData, setClientData] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -83,6 +118,24 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const fetchClientData = async (): Promise<ClientData | null> => {
+    const { data } = await supabase
+      .from("clients")
+      .select("cnpj, company_name, companies")
+      .eq("id", clientId)
+      .single();
+    if (data) {
+      const normalized: ClientData = {
+        cnpj: data.cnpj,
+        company_name: data.company_name,
+        companies: Array.isArray(data.companies) ? data.companies : [],
+      };
+      setClientData(normalized);
+      return normalized;
+    }
+    return null;
+  };
+
   const fetchSubscriptions = async () => {
     try {
       const { data, error } = await supabase
@@ -95,9 +148,86 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
       setSubscriptions(data || []);
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const fetchFinancialEntries = async (client: ClientData | null) => {
+    try {
+      // Get all CNPJs associated with this client
+      const cnpjs: string[] = [];
+      if (client?.cnpj) cnpjs.push(client.cnpj.replace(/\D/g, ""));
+      if (client?.companies && Array.isArray(client.companies)) {
+        client.companies.forEach((c: any) => {
+          if (c.cnpj) cnpjs.push(c.cnpj.replace(/\D/g, ""));
+        });
+      }
+
+      // 1. Fetch entries directly linked to this client
+      const { data: directEntries } = await supabase
+        .from("financial_entries")
+        .select(`
+          id, entry_type, description, amount, currency, due_date, payment_date, status,
+          category:category_id(name, color),
+          supplier:supplier_id(name, document)
+        `)
+        .eq("client_id", clientId)
+        .order("due_date", { ascending: false })
+        .limit(50);
+
+      const entries: FinancialEntry[] = (directEntries || []).map((e: any) => ({
+        ...e,
+        linked_via: "direct" as const,
+      }));
+
+      // 2. If client has CNPJs, find suppliers with matching CNPJs and get their entries
+      if (cnpjs.length > 0) {
+        // Find suppliers with matching documents
+        const { data: matchingSuppliers } = await supabase
+          .from("suppliers")
+          .select("id, document")
+          .in("document", cnpjs.map(c => c.replace(/\D/g, "")));
+
+        if (matchingSuppliers && matchingSuppliers.length > 0) {
+          const supplierIds = matchingSuppliers.map(s => s.id);
+
+          // Get entries linked to these suppliers (excluding already fetched direct ones)
+          const directEntryIds = entries.map(e => e.id);
+          const { data: supplierEntries } = await supabase
+            .from("financial_entries")
+            .select(`
+              id, entry_type, description, amount, currency, due_date, payment_date, status,
+              category:category_id(name, color),
+              supplier:supplier_id(name, document)
+            `)
+            .in("supplier_id", supplierIds)
+            .order("due_date", { ascending: false })
+            .limit(50);
+
+          // Add supplier entries that aren't already in the list
+          (supplierEntries || []).forEach((e: any) => {
+            if (!directEntryIds.includes(e.id)) {
+              entries.push({ ...e, linked_via: "cnpj" as const });
+            }
+          });
+        }
+      }
+
+      // Sort by due_date descending
+      entries.sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime());
+      setFinancialEntries(entries);
+    } catch (error) {
+      console.error("Error fetching financial entries:", error);
+    }
+  };
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    const client = await fetchClientData();
+    await Promise.all([
+      fetchSubscriptions(),
+      fetchFinancialEntries(client),
+    ]);
+    setLoading(false);
   };
 
   const fetchCurrentUser = async () => {
@@ -109,7 +239,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   };
 
   useEffect(() => {
-    fetchSubscriptions();
+    fetchAllData();
     fetchCurrentUser();
 
     const channel = supabase
@@ -128,8 +258,25 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
       )
       .subscribe();
 
+    const entriesChannel = supabase
+      .channel(`financial-entries-${clientId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'financial_entries',
+          filter: `client_id=eq.${clientId}`,
+        },
+        () => {
+          fetchFinancialEntries(clientData);
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(entriesChannel);
     };
   }, [clientId]);
 
@@ -333,129 +480,240 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
         </Button>
       </div>
 
-
-      {subscriptions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Nenhum dado financeiro</p>
-          <p className="text-sm mt-1">
-            Adicione manualmente ou sincronize com a Omie
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {subscriptions.map((sub) => {
-            const statusConfig = paymentStatusConfig[sub.payment_status];
-            const StatusIcon = statusConfig.icon;
-            const isEditing = editingNoteId === sub.id;
-            const isDeleting = deletingId === sub.id;
-
-            return (
-              <div key={sub.id} className="p-4 rounded-lg border border-border bg-card/50">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-semibold">{sub.product_name}</h4>
-                      <Badge variant="outline" className={statusConfig.className}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {statusConfig.label}
-                      </Badge>
-                      <Badge variant="secondary">
-                        {billingPeriodLabels[sub.billing_period]}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-3.5 w-3.5" />
-                        {formatCurrency(sub.amount, sub.currency)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        Início: {format(new Date(sub.start_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
-                      {sub.next_billing_date && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          Venc: {format(new Date(sub.next_billing_date), "dd/MM/yyyy", { locale: ptBR })}
-                        </span>
-                      )}
-                    </div>
-
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={noteText}
-                          onChange={(e) => setNoteText(e.target.value)}
-                          placeholder="Adicione uma nota sobre este item financeiro..."
-                          className="min-h-[80px] text-sm"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleSaveNote(sub.id)}
-                            disabled={savingNote}
-                          >
-                            {savingNote ? (
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            ) : (
-                              <Check className="h-3 w-3 mr-1" />
-                            )}
-                            Salvar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={handleCancelEdit}
-                            disabled={savingNote}
-                          >
-                            <X className="h-3 w-3 mr-1" />
-                            Cancelar
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-2">
-                        {sub.notes ? (
-                          <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded flex-1">
-                            {sub.notes}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground/50 italic flex-1">
-                            Sem notas
-                          </p>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 shrink-0"
-                          onClick={() => handleEditNote(sub)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(sub.id)}
-                          disabled={isDeleting}
-                        >
-                          {isDeleting ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+      {/* Company info if available */}
+      {clientData && (clientData.company_name || clientData.cnpj) && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
+          <Building2 className="h-4 w-4" />
+          <span>
+            Vinculado a: <span className="font-medium text-foreground">{clientData.company_name || "Empresa"}</span>
+            {clientData.cnpj && <span className="ml-2 text-xs">({clientData.cnpj})</span>}
+          </span>
         </div>
       )}
+
+      <Tabs defaultValue="entries" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="entries" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Lançamentos
+            {financialEntries.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{financialEntries.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Assinaturas
+            {subscriptions.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{subscriptions.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Financial Entries Tab */}
+        <TabsContent value="entries" className="mt-4">
+          {financialEntries.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>Nenhum lançamento financeiro</p>
+              <p className="text-sm mt-1">
+                Lançamentos vinculados ao cliente ou CNPJ aparecerão aqui
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {financialEntries.map((entry) => {
+                const isReceivable = entry.entry_type === "receivable";
+                const statusConf = entryStatusConfig[entry.status] || entryStatusConfig.pending;
+
+                return (
+                  <div key={entry.id} className="p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${isReceivable ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
+                          {isReceivable ? (
+                            <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <ArrowUpRight className="h-4 w-4 text-red-600" />
+                          )}
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{entry.description}</span>
+                            {entry.linked_via === "cnpj" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                                      <Link2 className="h-3 w-3" />
+                                      CNPJ
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Vinculado via CNPJ da empresa</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{format(new Date(entry.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                            {entry.category && (
+                              <Badge 
+                                variant="outline" 
+                                className="text-[10px] h-4"
+                                style={{ borderColor: entry.category.color, color: entry.category.color }}
+                              >
+                                {entry.category.name}
+                              </Badge>
+                            )}
+                            {entry.supplier && (
+                              <span className="text-muted-foreground/70">{entry.supplier.name}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className={`font-semibold ${isReceivable ? "text-emerald-600" : "text-red-600"}`}>
+                          {isReceivable ? "+" : "-"} {formatCurrency(entry.amount, entry.currency)}
+                        </p>
+                        <Badge variant="outline" className={`text-[10px] ${statusConf.className}`}>
+                          {statusConf.label}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Subscriptions Tab */}
+        <TabsContent value="subscriptions" className="mt-4">
+          {subscriptions.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>Nenhuma assinatura</p>
+              <p className="text-sm mt-1">
+                Adicione manualmente ou sincronize com a Omie
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {subscriptions.map((sub) => {
+                const statusConfig = paymentStatusConfig[sub.payment_status];
+                const StatusIcon = statusConfig.icon;
+                const isEditing = editingNoteId === sub.id;
+                const isDeleting = deletingId === sub.id;
+
+                return (
+                  <div key={sub.id} className="p-4 rounded-lg border border-border bg-card/50">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold">{sub.product_name}</h4>
+                          <Badge variant="outline" className={statusConfig.className}>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {statusConfig.label}
+                          </Badge>
+                          <Badge variant="secondary">
+                            {billingPeriodLabels[sub.billing_period]}
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3.5 w-3.5" />
+                            {formatCurrency(sub.amount, sub.currency)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Início: {format(new Date(sub.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                          {sub.next_billing_date && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              Venc: {format(new Date(sub.next_billing_date), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                          )}
+                        </div>
+
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={noteText}
+                              onChange={(e) => setNoteText(e.target.value)}
+                              placeholder="Adicione uma nota sobre este item financeiro..."
+                              className="min-h-[80px] text-sm"
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveNote(sub.id)}
+                                disabled={savingNote}
+                              >
+                                {savingNote ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Check className="h-3 w-3 mr-1" />
+                                )}
+                                Salvar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelEdit}
+                                disabled={savingNote}
+                              >
+                                <X className="h-3 w-3 mr-1" />
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-2">
+                            {sub.notes ? (
+                              <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded flex-1">
+                                {sub.notes}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground/50 italic flex-1">
+                                Sem notas
+                              </p>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() => handleEditNote(sub)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(sub.id)}
+                              disabled={isDeleting}
+                            >
+                              {isDeleting ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Quick Comment Input - Bottom position */}
       {currentUser && (
