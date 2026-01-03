@@ -155,6 +155,7 @@ export default function Contracts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
   
   // New contract dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -764,10 +765,11 @@ export default function Contracts() {
       
       const matchesStatus = statusFilter === "all" || contract.status === statusFilter;
       const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
+      const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
       
-      return matchesSearch && matchesStatus && matchesType;
+      return matchesSearch && matchesStatus && matchesType && matchesProduct;
     });
-  }, [contracts, searchTerm, statusFilter, typeFilter]);
+  }, [contracts, searchTerm, statusFilter, typeFilter, productFilter]);
 
   const stats = useMemo(() => {
     const activeContracts = contracts.filter(c => c.status === "active");
@@ -1003,6 +1005,17 @@ export default function Contracts() {
                 <SelectItem value="all">Todos os tipos</SelectItem>
                 {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={productFilter} onValueChange={setProductFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os produtos</SelectItem>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
