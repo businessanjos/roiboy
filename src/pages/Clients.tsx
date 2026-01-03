@@ -1347,20 +1347,21 @@ export default function Clients() {
                       </span>
                     </div>
 
-                    <ScrollArea className="h-72 border rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-10 sticky left-0 bg-background">Status</TableHead>
-                            <TableHead className="min-w-[150px]">Nome</TableHead>
-                            <TableHead className="min-w-[130px]">Telefone</TableHead>
-                            <TableHead className="min-w-[150px]">Email</TableHead>
-                            <TableHead className="min-w-[100px]">Empresa</TableHead>
-                            <TableHead className="min-w-[100px]">Cidade/UF</TableHead>
-                            <TableHead className="min-w-[80px]">Tags</TableHead>
-                            <TableHead className="min-w-[150px]">Erro</TableHead>
-                          </TableRow>
-                        </TableHeader>
+                    <ScrollArea className="h-72 border rounded-lg overflow-x-auto">
+                      <div className="min-w-[900px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[50px] sticky left-0 bg-background z-10">Status</TableHead>
+                              <TableHead className="w-[160px]">Nome</TableHead>
+                              <TableHead className="w-[140px]">Telefone</TableHead>
+                              <TableHead className="w-[180px]">Email</TableHead>
+                              <TableHead className="w-[120px]">Empresa</TableHead>
+                              <TableHead className="w-[110px]">Cidade/UF</TableHead>
+                              <TableHead className="w-[80px]">Tags</TableHead>
+                              <TableHead className="w-[160px]">Erro</TableHead>
+                            </TableRow>
+                          </TableHeader>
                         <TableBody>
                           {csvData.map((row, index) => (
                             <TableRow key={index} className={!row.valid ? "bg-destructive/5" : ""}>
@@ -1397,8 +1398,9 @@ export default function Clients() {
                               <TableCell className="text-xs text-destructive">{row.error || "-"}</TableCell>
                             </TableRow>
                           ))}
-                        </TableBody>
-                      </Table>
+                          </TableBody>
+                        </Table>
+                      </div>
                     </ScrollArea>
                   </>
                 )}
