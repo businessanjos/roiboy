@@ -1832,22 +1832,28 @@ export default function Contracts() {
                     <span className="ml-2 text-muted-foreground">Carregando dados do cliente...</span>
                   </div>
                 ) : (selectedClient || isCreatingNewClient) ? (
-                  <ScrollArea className="h-[calc(60vh-120px)]">
-                    {isCreatingNewClient && (
-                      <div className="mb-4 p-3 border rounded-lg bg-primary/5 border-primary/20">
-                        <p className="text-sm font-medium text-primary">
-                          ✨ Criando novo cliente
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Preencha os dados cadastrais do novo cliente
-                        </p>
-                      </div>
-                    )}
-                    <ClientInfoForm
-                      data={clientFormData}
-                      onChange={setClientFormData}
-                      teamUsers={teamUsers}
-                    />
+                  <ScrollArea className="h-[calc(60vh-100px)]">
+                    <div className="space-y-4 pr-2">
+                      {isCreatingNewClient && (
+                        <div className="flex items-center gap-3 p-3 border rounded-lg bg-primary/5 border-primary/20">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Plus className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-primary">Novo cliente</p>
+                            <p className="text-xs text-muted-foreground">
+                              Será criado junto com o contrato
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      <ClientInfoForm
+                        data={clientFormData}
+                        onChange={setClientFormData}
+                        teamUsers={teamUsers}
+                        compact
+                      />
+                    </div>
                   </ScrollArea>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">

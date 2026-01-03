@@ -105,6 +105,8 @@ interface ClientInfoFormProps {
   errors?: Record<string, string>;
   showBasicFields?: boolean;
   teamUsers?: { id: string; name: string; email: string }[];
+  /** compact: simplifies layout for embedded use (e.g., in dialogs) */
+  compact?: boolean;
 }
 
 const BRAZILIAN_STATES = [
@@ -303,7 +305,7 @@ function BirthDateField({ value, onChange }: { value: string; onChange: (value: 
   );
 }
 
-export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true, teamUsers = [] }: ClientInfoFormProps) {
+export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true, teamUsers = [], compact = false }: ClientInfoFormProps) {
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -574,17 +576,20 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
       {/* Tabs for Person/Company/Financial */}
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-9">
-          <TabsTrigger value="personal" className="text-sm gap-1.5">
-            <User className="h-3.5 w-3.5" />
+        <TabsList className={cn(
+          "grid w-full grid-cols-3",
+          compact ? "h-8 text-xs" : "h-9"
+        )}>
+          <TabsTrigger value="personal" className={cn("gap-1.5", compact ? "text-xs" : "text-sm")}>
+            <User className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             Pessoa Física
           </TabsTrigger>
-          <TabsTrigger value="company" className="text-sm gap-1.5">
-            <Building2 className="h-3.5 w-3.5" />
+          <TabsTrigger value="company" className={cn("gap-1.5", compact ? "text-xs" : "text-sm")}>
+            <Building2 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             Pessoa Jurídica
           </TabsTrigger>
-          <TabsTrigger value="financial" className="text-sm gap-1.5">
-            <Landmark className="h-3.5 w-3.5" />
+          <TabsTrigger value="financial" className={cn("gap-1.5", compact ? "text-xs" : "text-sm")}>
+            <Landmark className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             Financeiro
           </TabsTrigger>
         </TabsList>
