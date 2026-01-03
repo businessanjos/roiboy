@@ -282,7 +282,10 @@ export function TeamManager() {
   const handleEditUser = async () => {
     if (!selectedUser) return;
 
+    setIsSubmitting(true);
+
     try {
+      // Update user profile
       const { error } = await supabase
         .from("users")
         .update({ 
@@ -295,7 +298,28 @@ export function TeamManager() {
 
       if (error) throw error;
 
-      toast.success("Membro atualizado com sucesso");
+      // If password was provided, update it via edge function
+      if (formPassword && formPassword.length >= 6 && selectedUser.auth_user_id) {
+        const response = await supabase.functions.invoke("update-team-user-password", {
+          body: {
+            user_id: selectedUser.id,
+            new_password: formPassword,
+          },
+        });
+
+        if (response.error) {
+          throw new Error(response.error.message || "Erro ao atualizar senha");
+        }
+
+        if (response.data?.error) {
+          throw new Error(response.data.error);
+        }
+
+        toast.success("Membro e senha atualizados com sucesso!");
+      } else {
+        toast.success("Membro atualizado com sucesso");
+      }
+
       setIsEditDialogOpen(false);
       setSelectedUser(null);
       resetMemberForm();
@@ -303,6 +327,8 @@ export function TeamManager() {
     } catch (error: any) {
       console.error("Error updating user:", error);
       toast.error(error.message || "Erro ao atualizar membro");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1146,6 +1172,33 @@ export function TeamManager() {
                 className="bg-card"
               />
             </div>
+            
+            {/* Password section */}
+            <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-dashed">
+              <div className="flex items-center gap-2 mb-2">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <Label className="font-medium">Alterar Senha</Label>
+              </div>
+              {selectedUser?.auth_user_id ? (
+                <>
+                  <PasswordInput
+                    id="edit-password"
+                    value={formPassword}
+                    onChange={(e) => setFormPassword(e.target.value)}
+                    placeholder="Nova senha (deixe em branco para manter)"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Deixe em branco para manter a senha atual
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Este usuário ainda não tem acesso de login. 
+                  Delete e recrie com senha para ativar.
+                </p>
+              )}
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="edit-role">Função</Label>
               <Select value={formRoleId} onValueChange={setFormRoleId}>
@@ -1185,10 +1238,19 @@ export function TeamManager() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button onClick={handleEditUser}>Salvar</Button>
+            <Button onClick={handleEditUser} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
