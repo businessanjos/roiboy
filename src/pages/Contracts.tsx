@@ -1183,16 +1183,18 @@ export default function Contracts() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-0.5">
                           <span className="text-sm">
                             {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
                             {contract.end_date && (
-                              <span className="text-muted-foreground">
-                                {" → "}
-                                {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
-                              </span>
+                              <span className="text-muted-foreground"> →</span>
                             )}
                           </span>
+                          {contract.end_date && (
+                            <span className="text-sm">
+                              {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                          )}
                           {contract.status === "active" && getExpiryBadge(contract.end_date)}
                         </div>
                       </TableCell>
