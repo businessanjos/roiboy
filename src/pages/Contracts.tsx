@@ -213,6 +213,7 @@ export default function Contracts() {
   // Client registration data
   const [clientFormData, setClientFormData] = useState<ClientFormData>(getEmptyClientFormData());
   const [loadingClientData, setLoadingClientData] = useState(false);
+  const [isCreatingNewClient, setIsCreatingNewClient] = useState(false);
   
   // Financial data
   const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; bank_name: string }[]>([]);
@@ -789,6 +790,7 @@ export default function Contracts() {
     });
     setInstallmentsDetail([]);
     setClientFormData(getEmptyClientFormData());
+    setIsCreatingNewClient(false);
     setFormTab("contrato");
   };
 
@@ -822,10 +824,19 @@ export default function Contracts() {
   };
 
   const handleSaveContract = async () => {
-    if (!selectedClient) {
-      toast.error("Selecione um cliente");
-      return;
+    // Validate based on mode
+    if (isCreatingNewClient) {
+      if (!clientFormData.full_name.trim() || !clientFormData.phone_e164.trim()) {
+        toast.error("Preencha o nome e telefone do cliente");
+        return;
+      }
+    } else {
+      if (!selectedClient) {
+        toast.error("Selecione um cliente");
+        return;
+      }
     }
+    
     if (!formData.start_date || !formData.value) {
       toast.error("Preencha a data de início e o valor");
       return;
@@ -844,70 +855,133 @@ export default function Contracts() {
 
       if (!userProfile) throw new Error("Perfil não encontrado");
 
+      let clientId = selectedClient?.id;
+
+      // If creating new client, insert first
+      if (isCreatingNewClient) {
+        const newClientData = {
+          account_id: userProfile.account_id,
+          full_name: clientFormData.full_name,
+          phone_e164: clientFormData.phone_e164,
+          status: "active" as const,
+          emails: clientFormData.emails.length > 0 ? clientFormData.emails : null,
+          additional_phones: clientFormData.additional_phones.length > 0 ? clientFormData.additional_phones : null,
+          cpf: clientFormData.cpf || null,
+          rg: clientFormData.rg || null,
+          cnpj: clientFormData.cnpj || null,
+          birth_date: clientFormData.birth_date || null,
+          company_name: clientFormData.company_name || null,
+          notes: clientFormData.notes || null,
+          instagram: clientFormData.instagram || null,
+          instagrams: clientFormData.instagrams.length > 0 ? clientFormData.instagrams : null,
+          bio: clientFormData.bio || null,
+          street: clientFormData.street || null,
+          street_number: clientFormData.street_number || null,
+          complement: clientFormData.complement || null,
+          neighborhood: clientFormData.neighborhood || null,
+          city: clientFormData.city || null,
+          state: clientFormData.state || null,
+          zip_code: clientFormData.zip_code || null,
+          business_street: clientFormData.business_street || null,
+          business_street_number: clientFormData.business_street_number || null,
+          business_complement: clientFormData.business_complement || null,
+          business_neighborhood: clientFormData.business_neighborhood || null,
+          business_city: clientFormData.business_city || null,
+          business_state: clientFormData.business_state || null,
+          business_zip_code: clientFormData.business_zip_code || null,
+          business_segment: clientFormData.business_segment || null,
+          business_niche: clientFormData.business_niche || null,
+          companies: clientFormData.companies.length > 0 ? clientFormData.companies : null,
+          is_mls: clientFormData.is_mls,
+          mls_level: clientFormData.mls_level || null,
+          responsible_user_id: clientFormData.responsible_user_id || null,
+          pix_key_type: clientFormData.pix_key_type || null,
+          pix_key: clientFormData.pix_key || null,
+          additional_pix_keys: clientFormData.additional_pix_keys.length > 0 ? clientFormData.additional_pix_keys : null,
+          bank_code: clientFormData.bank_code || null,
+          bank_name: clientFormData.bank_name || null,
+          bank_agency: clientFormData.bank_agency || null,
+          bank_account: clientFormData.bank_account || null,
+          bank_account_type: clientFormData.bank_account_type || null,
+          additional_bank_accounts: clientFormData.additional_bank_accounts.length > 0 ? clientFormData.additional_bank_accounts : null,
+        };
+
+        const { data: newClient, error: createClientError } = await supabase
+          .from("clients")
+          .insert(newClientData as any)
+          .select("id")
+          .single();
+
+        if (createClientError) throw createClientError;
+        clientId = newClient.id;
+        
+        // Refresh clients list
+        fetchClients();
+      } else if (selectedClient) {
+        // Update existing client data
+        const clientUpdateData = {
+          full_name: clientFormData.full_name,
+          phone_e164: clientFormData.phone_e164,
+          emails: clientFormData.emails.length > 0 ? clientFormData.emails : null,
+          additional_phones: clientFormData.additional_phones.length > 0 ? clientFormData.additional_phones : null,
+          cpf: clientFormData.cpf || null,
+          rg: clientFormData.rg || null,
+          cnpj: clientFormData.cnpj || null,
+          birth_date: clientFormData.birth_date || null,
+          company_name: clientFormData.company_name || null,
+          notes: clientFormData.notes || null,
+          instagram: clientFormData.instagram || null,
+          instagrams: clientFormData.instagrams.length > 0 ? clientFormData.instagrams : null,
+          bio: clientFormData.bio || null,
+          street: clientFormData.street || null,
+          street_number: clientFormData.street_number || null,
+          complement: clientFormData.complement || null,
+          neighborhood: clientFormData.neighborhood || null,
+          city: clientFormData.city || null,
+          state: clientFormData.state || null,
+          zip_code: clientFormData.zip_code || null,
+          business_street: clientFormData.business_street || null,
+          business_street_number: clientFormData.business_street_number || null,
+          business_complement: clientFormData.business_complement || null,
+          business_neighborhood: clientFormData.business_neighborhood || null,
+          business_city: clientFormData.business_city || null,
+          business_state: clientFormData.business_state || null,
+          business_zip_code: clientFormData.business_zip_code || null,
+          business_segment: clientFormData.business_segment || null,
+          business_niche: clientFormData.business_niche || null,
+          companies: clientFormData.companies.length > 0 ? clientFormData.companies : null,
+          is_mls: clientFormData.is_mls,
+          mls_level: clientFormData.mls_level || null,
+          responsible_user_id: clientFormData.responsible_user_id || null,
+          pix_key_type: clientFormData.pix_key_type || null,
+          pix_key: clientFormData.pix_key || null,
+          additional_pix_keys: clientFormData.additional_pix_keys.length > 0 ? clientFormData.additional_pix_keys : null,
+          bank_code: clientFormData.bank_code || null,
+          bank_name: clientFormData.bank_name || null,
+          bank_agency: clientFormData.bank_agency || null,
+          bank_account: clientFormData.bank_account || null,
+          bank_account_type: clientFormData.bank_account_type || null,
+          additional_bank_accounts: clientFormData.additional_bank_accounts.length > 0 ? clientFormData.additional_bank_accounts : null,
+        };
+
+        const { error: clientError } = await supabase
+          .from("clients")
+          .update(clientUpdateData as any)
+          .eq("id", selectedClient.id);
+
+        if (clientError) {
+          console.error("Error updating client:", clientError);
+        }
+      }
+
       // Determine status based on start_date
       const startDate = new Date(formData.start_date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const isFutureStart = startDate > today;
 
-      // Update client data first
-      const clientUpdateData = {
-        full_name: clientFormData.full_name,
-        phone_e164: clientFormData.phone_e164,
-        emails: clientFormData.emails.length > 0 ? clientFormData.emails : null,
-        additional_phones: clientFormData.additional_phones.length > 0 ? clientFormData.additional_phones : null,
-        cpf: clientFormData.cpf || null,
-        rg: clientFormData.rg || null,
-        cnpj: clientFormData.cnpj || null,
-        birth_date: clientFormData.birth_date || null,
-        company_name: clientFormData.company_name || null,
-        notes: clientFormData.notes || null,
-        instagram: clientFormData.instagram || null,
-        instagrams: clientFormData.instagrams.length > 0 ? clientFormData.instagrams : null,
-        bio: clientFormData.bio || null,
-        street: clientFormData.street || null,
-        street_number: clientFormData.street_number || null,
-        complement: clientFormData.complement || null,
-        neighborhood: clientFormData.neighborhood || null,
-        city: clientFormData.city || null,
-        state: clientFormData.state || null,
-        zip_code: clientFormData.zip_code || null,
-        business_street: clientFormData.business_street || null,
-        business_street_number: clientFormData.business_street_number || null,
-        business_complement: clientFormData.business_complement || null,
-        business_neighborhood: clientFormData.business_neighborhood || null,
-        business_city: clientFormData.business_city || null,
-        business_state: clientFormData.business_state || null,
-        business_zip_code: clientFormData.business_zip_code || null,
-        business_segment: clientFormData.business_segment || null,
-        business_niche: clientFormData.business_niche || null,
-        companies: clientFormData.companies.length > 0 ? clientFormData.companies : null,
-        is_mls: clientFormData.is_mls,
-        mls_level: clientFormData.mls_level || null,
-        responsible_user_id: clientFormData.responsible_user_id || null,
-        pix_key_type: clientFormData.pix_key_type || null,
-        pix_key: clientFormData.pix_key || null,
-        additional_pix_keys: clientFormData.additional_pix_keys.length > 0 ? clientFormData.additional_pix_keys : null,
-        bank_code: clientFormData.bank_code || null,
-        bank_name: clientFormData.bank_name || null,
-        bank_agency: clientFormData.bank_agency || null,
-        bank_account: clientFormData.bank_account || null,
-        bank_account_type: clientFormData.bank_account_type || null,
-        additional_bank_accounts: clientFormData.additional_bank_accounts.length > 0 ? clientFormData.additional_bank_accounts : null,
-      };
-
-      const { error: clientError } = await supabase
-        .from("clients")
-        .update(clientUpdateData as any)
-        .eq("id", selectedClient.id);
-
-      if (clientError) {
-        console.error("Error updating client:", clientError);
-        // Continue with contract creation even if client update fails
-      }
-
       const contractData = {
-        client_id: selectedClient.id,
+        client_id: clientId,
         account_id: userProfile.account_id,
         start_date: formData.start_date,
         end_date: formData.end_date || null,
@@ -931,7 +1005,7 @@ export default function Contracts() {
 
       if (error) throw error;
       
-      toast.success("Contrato criado com sucesso");
+      toast.success(isCreatingNewClient ? "Cliente e contrato criados com sucesso" : "Contrato criado com sucesso");
       setDialogOpen(false);
       fetchContracts();
     } catch (error) {
@@ -1516,7 +1590,7 @@ export default function Contracts() {
                 <FileText className="h-3.5 w-3.5 mr-1.5" />
                 Contrato
               </TabsTrigger>
-              <TabsTrigger value="cliente" className="text-xs" disabled={!selectedClient}>
+              <TabsTrigger value="cliente" className="text-xs" disabled={!selectedClient && !isCreatingNewClient}>
                 <Users className="h-3.5 w-3.5 mr-1.5" />
                 Cliente
               </TabsTrigger>
@@ -1533,73 +1607,135 @@ export default function Contracts() {
             <div className="flex-1 overflow-y-auto mt-4 pr-1">
               {/* Contract Tab */}
               <TabsContent value="contrato" className="mt-0 space-y-4">
-                {/* Client Selection */}
-                <div className="space-y-2">
-                  <Label>Cliente *</Label>
-                  <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={clientPopoverOpen}
-                        className="w-full justify-between"
-                      >
-                        {selectedClient ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                              {selectedClient.avatar_url ? (
-                                <img src={selectedClient.avatar_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <Users className="h-3 w-3 text-muted-foreground" />
-                              )}
+                {/* Client Selection Mode */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Cliente *</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => {
+                        if (isCreatingNewClient) {
+                          setIsCreatingNewClient(false);
+                          setClientFormData(getEmptyClientFormData());
+                        } else {
+                          setIsCreatingNewClient(true);
+                          setSelectedClient(null);
+                          setClientFormData(getEmptyClientFormData());
+                          setFormTab("cliente");
+                        }
+                      }}
+                    >
+                      {isCreatingNewClient ? (
+                        <>
+                          <Search className="h-3.5 w-3.5 mr-1" />
+                          Selecionar existente
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-3.5 w-3.5 mr-1" />
+                          Criar novo cliente
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {isCreatingNewClient ? (
+                    <div className="p-3 border rounded-lg bg-muted/30 space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        <span>Novo cliente será criado junto com o contrato</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Nome *</Label>
+                          <Input
+                            placeholder="Nome completo"
+                            value={clientFormData.full_name}
+                            onChange={(e) => setClientFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Telefone *</Label>
+                          <Input
+                            placeholder="+5511999999999"
+                            value={clientFormData.phone_e164}
+                            onChange={(e) => setClientFormData(prev => ({ ...prev, phone_e164: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Complete os dados na aba "Cliente" para preencher mais informações
+                      </p>
+                    </div>
+                  ) : (
+                    <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={clientPopoverOpen}
+                          className="w-full justify-between"
+                        >
+                          {selectedClient ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                {selectedClient.avatar_url ? (
+                                  <img src={selectedClient.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Users className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </div>
+                              <span className="truncate">{selectedClient.full_name}</span>
                             </div>
-                            <span className="truncate">{selectedClient.full_name}</span>
-                          </div>
-                        ) : (
-                          "Selecione um cliente..."
-                        )}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Buscar cliente..." />
-                        <CommandList>
-                          <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                          <CommandGroup className="max-h-64 overflow-auto">
-                            {clients.map((client) => (
-                              <CommandItem
-                                key={client.id}
-                                value={client.full_name}
-                                onSelect={() => {
-                                  setSelectedClient(client);
-                                  setClientPopoverOpen(false);
-                                  fetchClientData(client.id);
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                                    {client.avatar_url ? (
-                                      <img src={client.avatar_url} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                      <Users className="h-3 w-3 text-muted-foreground" />
-                                    )}
+                          ) : (
+                            "Selecione um cliente..."
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar cliente..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                            <CommandGroup className="max-h-64 overflow-auto">
+                              {clients.map((client) => (
+                                <CommandItem
+                                  key={client.id}
+                                  value={client.full_name}
+                                  onSelect={() => {
+                                    setSelectedClient(client);
+                                    setClientPopoverOpen(false);
+                                    fetchClientData(client.id);
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                      {client.avatar_url ? (
+                                        <img src={client.avatar_url} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <Users className="h-3 w-3 text-muted-foreground" />
+                                      )}
+                                    </div>
+                                    <span>{client.full_name}</span>
                                   </div>
-                                  <span>{client.full_name}</span>
-                                </div>
-                                <Check
-                                  className={cn(
-                                    "ml-auto h-4 w-4",
-                                    selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
 
                 {/* Dates */}
@@ -1695,8 +1831,18 @@ export default function Contracts() {
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     <span className="ml-2 text-muted-foreground">Carregando dados do cliente...</span>
                   </div>
-                ) : selectedClient ? (
+                ) : (selectedClient || isCreatingNewClient) ? (
                   <ScrollArea className="h-[calc(60vh-120px)]">
+                    {isCreatingNewClient && (
+                      <div className="mb-4 p-3 border rounded-lg bg-primary/5 border-primary/20">
+                        <p className="text-sm font-medium text-primary">
+                          ✨ Criando novo cliente
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Preencha os dados cadastrais do novo cliente
+                        </p>
+                      </div>
+                    )}
                     <ClientInfoForm
                       data={clientFormData}
                       onChange={setClientFormData}
