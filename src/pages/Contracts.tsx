@@ -911,7 +911,7 @@ export default function Contracts() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-4 text-center">
             <div className="p-2 rounded-lg bg-primary/10 w-fit mx-auto mb-2">
