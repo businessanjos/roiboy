@@ -84,6 +84,7 @@ import { BankReconciliation } from "@/components/financial/BankReconciliation";
 import { CommissionsManager } from "@/components/financial/CommissionsManager";
 import { DueDateAlerts } from "@/components/financial/DueDateAlerts";
 import { AgingReport } from "@/components/financial/AgingReport";
+import { PayableMethodSelector, PayableMethod } from "@/components/financial/PayableMethodSelector";
 
 interface FinancialEntry {
   id: string;
@@ -173,6 +174,7 @@ export default function FinancialEntries() {
   const [isCommissionsOpen, setIsCommissionsOpen] = useState(false);
   const [isDueDateAlertsOpen, setIsDueDateAlertsOpen] = useState(false);
   const [isAgingReportOpen, setIsAgingReportOpen] = useState(false);
+  const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -556,7 +558,18 @@ export default function FinancialEntries() {
               Aging
             </Button>
           </div>
-          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="h-8 px-3 text-xs font-medium">
+          <Button 
+            onClick={() => { 
+              resetForm(); 
+              if (activeTab === "payable") {
+                setIsMethodSelectorOpen(true);
+              } else {
+                setIsDialogOpen(true);
+              }
+            }} 
+            size="sm" 
+            className="h-8 px-3 text-xs font-medium"
+          >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Novo Lançamento
           </Button>
@@ -1079,6 +1092,23 @@ export default function FinancialEntries() {
       <AgingReport
         open={isAgingReportOpen}
         onOpenChange={setIsAgingReportOpen}
+      />
+
+      {/* Payable Method Selector */}
+      <PayableMethodSelector
+        open={isMethodSelectorOpen}
+        onOpenChange={setIsMethodSelectorOpen}
+        onSelect={(method) => {
+          if (method === "manual") {
+            setIsDialogOpen(true);
+          } else if (method === "nfe") {
+            // TODO: Implementar importação NF-e
+            toast({ title: "Em breve", description: "Importação de NF-e será implementada em breve." });
+          } else if (method === "barcode") {
+            // TODO: Implementar leitura código de barras
+            toast({ title: "Em breve", description: "Leitura de código de barras será implementada em breve." });
+          }
+        }}
       />
     </div>
   );
