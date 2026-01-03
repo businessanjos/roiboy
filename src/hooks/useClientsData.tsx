@@ -329,20 +329,15 @@ export function useClientsPageData(options?: { page?: number; pageSize?: number;
   const fieldValuesQuery = useFieldValues(clientIds);
   const pendingFormSendsQuery = usePendingFormSends(clientIds);
 
-  // Filter clients based on role
+  // Filter clients to show only those with active or pending contracts
+  // All users in Operations section only see clients with contracts
   const filteredClients = useMemo(() => {
-    if (!isOperationRole || roleLoading) {
-      // Managers/Admins see all clients
-      return clientsData;
-    }
-
-    // Operation roles only see clients with active or pending contracts
     const enrichments = enrichmentsQuery.data || {};
     return clientsData.filter((client) => {
       const contract = enrichments[client.id]?.contract;
       return contract?.status === "active" || contract?.status === "pending";
     });
-  }, [clientsData, isOperationRole, roleLoading, enrichmentsQuery.data]);
+  }, [clientsData, enrichmentsQuery.data]);
 
   const isLoading = 
     clientsQuery.isLoading || 
