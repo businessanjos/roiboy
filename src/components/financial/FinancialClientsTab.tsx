@@ -270,7 +270,8 @@ export function FinancialClientsTab() {
       }
 
       const dataLines = lines.slice(1);
-      let imported = 0;
+      let created = 0;
+      let updated = 0;
       let errors = 0;
 
       for (const line of dataLines) {
@@ -279,15 +280,17 @@ export function FinancialClientsTab() {
 
         const document = cols[1] || "";
         const isCompany = document.includes("/");
+        const email = cols[13] || "";
+        const phone = cols[12] || "";
 
-        const clientData = {
-          account_id: accountId,
+        // Prepare update data (without account_id for updates)
+        const updateData = {
           full_name: cols[3],
           company_name: cols[4] || null,
-          cpf: !isCompany ? document : null,
-          cnpj: isCompany ? document : null,
-          phone_e164: cols[12] || "+5500000000000",
-          emails: cols[13] ? [cols[13]] : [],
+          cpf: !isCompany && document ? document : null,
+          cnpj: isCompany && document ? document : null,
+          phone_e164: phone || "+5500000000000",
+          emails: email ? [email] : [],
           street: cols[5] || null,
           street_number: cols[6] || null,
           neighborhood: cols[7] || null,
@@ -297,20 +300,77 @@ export function FinancialClientsTab() {
           zip_code: cols[11] || null,
         };
 
-        const { error } = await supabase.from("clients").insert(clientData);
-        if (error) {
-          console.error("Import error:", error);
+        try {
+          // Try to find existing client by CPF/CNPJ, email, or phone
+          let existingClient = null;
+
+          // Search by document (CPF or CNPJ)
+          if (document) {
+            const { data: byDoc } = await supabase
+              .from("clients")
+              .select("id, status")
+              .eq("account_id", accountId)
+              .or(`cpf.eq.${document},cnpj.eq.${document}`)
+              .maybeSingle();
+            if (byDoc) existingClient = byDoc;
+          }
+
+          // If not found, search by email
+          if (!existingClient && email) {
+            const { data: byEmail } = await supabase
+              .from("clients")
+              .select("id, status")
+              .eq("account_id", accountId)
+              .contains("emails", [email])
+              .maybeSingle();
+            if (byEmail) existingClient = byEmail;
+          }
+
+          // If not found, search by phone
+          if (!existingClient && phone) {
+            const { data: byPhone } = await supabase
+              .from("clients")
+              .select("id, status")
+              .eq("account_id", accountId)
+              .eq("phone_e164", phone)
+              .maybeSingle();
+            if (byPhone) existingClient = byPhone;
+          }
+
+          if (existingClient && existingClient.status === "active") {
+            // Update existing active client
+            const { error } = await supabase
+              .from("clients")
+              .update(updateData)
+              .eq("id", existingClient.id);
+            if (error) throw error;
+            updated++;
+          } else {
+            // Insert new client
+            const { error } = await supabase.from("clients").insert({
+              account_id: accountId,
+              ...updateData,
+            });
+            if (error) throw error;
+            created++;
+          }
+        } catch (err) {
+          console.error("Import error for line:", cols[3], err);
           errors++;
-        } else {
-          imported++;
         }
       }
 
       queryClient.invalidateQueries({ queryKey: ["financial-clients"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      
+      const messages = [];
+      if (created > 0) messages.push(`${created} criado(s)`);
+      if (updated > 0) messages.push(`${updated} atualizado(s)`);
+      if (errors > 0) messages.push(`${errors} erro(s)`);
+      
       toast({
         title: `Importação concluída`,
-        description: `${imported} importado(s)${errors > 0 ? `, ${errors} erro(s)` : ""}`,
+        description: messages.join(", "),
       });
     } catch (err) {
       console.error("Import error:", err);
