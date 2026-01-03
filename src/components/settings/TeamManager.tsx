@@ -135,7 +135,9 @@ export function TeamManager() {
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<TeamUser | null>(null);
+  const [userToDelete, setUserToDelete] = useState<TeamUser | null>(null);
   
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<TeamRole | null>(null);
@@ -345,10 +347,47 @@ export function TeamManager() {
     setSelectedUser(user);
     setFormName(user.name);
     setFormEmail(user.email);
+    setFormPassword("");
     setFormRoleId(user.team_role_id || "");
     setFormIsAlsoAdmin(user.is_also_admin || false);
     setFormAvatarUrl(user.avatar_url);
     setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await supabase.functions.invoke("delete-team-user", {
+        body: { user_id: userToDelete.id },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Erro ao excluir usuário");
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success("Usuário excluído com sucesso!");
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      toast.error(error.message || "Erro ao excluir usuário");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openDeleteDialog = (user: TeamUser, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -683,17 +722,27 @@ export function TeamManager() {
                           </Badge>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditMemberDialog(user);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditMemberDialog(user);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => openDeleteDialog(user, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -741,17 +790,27 @@ export function TeamManager() {
                           Admin
                         </Badge>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditMemberDialog(user);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditMemberDialog(user);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => openDeleteDialog(user, e)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1377,6 +1436,45 @@ export function TeamManager() {
               {selectedRole ? "Salvar" : "Criar"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Excluir Membro</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir <strong>{userToDelete?.name}</strong>? 
+              Esta ação não pode ser desfeita e o usuário perderá acesso ao sistema.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => { setIsDeleteDialogOpen(false); setUserToDelete(null); }}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteUser}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
