@@ -218,7 +218,7 @@ export function ManualPayableDialog({
         onOpenChange(value);
       }}
     >
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-primary">
             Nova Conta a Pagar
@@ -337,42 +337,42 @@ export function ManualPayableDialog({
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full justify-start h-auto flex-wrap gap-1 bg-transparent p-0 border-b rounded-none">
+              <TabsList className="w-full justify-start h-auto bg-transparent p-0 border-b rounded-none">
                 <TabsTrigger
                   value="detalhes"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  className="text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3"
                 >
                   Detalhes
                 </TabsTrigger>
                 <TabsTrigger
                   value="impostos"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  className="text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3"
                 >
-                  Impostos Retidos
+                  Impostos
                 </TabsTrigger>
                 <TabsTrigger
                   value="departamentos"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  className="text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3"
                 >
-                  Departamentos
+                  Depto.
                 </TabsTrigger>
                 <TabsTrigger
                   value="repeticao"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  className="text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3"
                 >
                   Repetição
                 </TabsTrigger>
                 <TabsTrigger
                   value="pagamentos"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  className="text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3"
                 >
-                  Pagamentos
+                  Pagtos
                 </TabsTrigger>
                 <TabsTrigger
                   value="diversos"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  className="text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3"
                 >
-                  Diversos
+                  Outros
                 </TabsTrigger>
               </TabsList>
 
