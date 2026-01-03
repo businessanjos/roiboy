@@ -90,6 +90,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
 import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
+import { ContractImportPreview, ImportRowWithDuplicate, DuplicateInfo } from "@/components/contracts/ContractImportPreview";
 import { BarChart3 } from "lucide-react";
 
 interface Contract {
@@ -245,6 +246,12 @@ export default function Contracts() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import preview state
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importPreviewRows, setImportPreviewRows] = useState<ImportRowWithDuplicate[]>([]);
+  const [importUserProfile, setImportUserProfile] = useState<{ account_id: string } | null>(null);
+  const [importTeamUsers, setImportTeamUsers] = useState<{ id: string; name: string }[] | null>(null);
 
   // Fetch client data when selected
   const fetchClientData = async (clientId: string) => {
@@ -529,7 +536,7 @@ export default function Contracts() {
     return "active";
   };
 
-  // Import contracts from CSV
+  // Parse CSV and show preview with duplicate detection
   const handleImportContracts = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -547,14 +554,23 @@ export default function Contracts() {
 
       if (!userProfile) throw new Error("Perfil não encontrado");
 
+      setImportUserProfile(userProfile);
+
       // Fetch team users to map responsible by name
       const { data: teamUsers } = await supabase
         .from("users")
         .select("id, name")
         .eq("account_id", userProfile.account_id);
+      
+      setImportTeamUsers(teamUsers);
+
+      // Fetch all existing clients for duplicate detection
+      const { data: existingClients } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164, cpf, cnpj")
+        .eq("account_id", userProfile.account_id);
 
       const text = await file.text();
-      // Handle multi-line fields by joining lines that are part of quoted content
       const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
       const allLines = normalizedText.split("\n");
       
@@ -584,6 +600,7 @@ export default function Contracts() {
       
       if (!lines.length) {
         toast.error("Arquivo vazio");
+        setImporting(false);
         return;
       }
 
@@ -597,11 +614,8 @@ export default function Contracts() {
           .replace(/[\u0300-\u036f]/g, "")
           .replace(/\s+/g, "_")
       );
-      
-      let created = 0;
-      let updated = 0;
-      let contractsCreated = 0;
-      let errors = 0;
+
+      const previewRows: ImportRowWithDuplicate[] = [];
 
       for (let i = 1; i < lines.length; i++) {
         try {
@@ -611,7 +625,6 @@ export default function Contracts() {
             row[header] = values[idx] || "";
           });
 
-          // Support both formats: standard template and Eternum format
           const nome = row.nome || row.nome_completo || "";
           const telefone = row.telefone || "";
           const documento = row["cpf/cnpj"] || "";
@@ -619,28 +632,26 @@ export default function Contracts() {
           const cnpjRaw = row.cnpj || "";
           const email = row["e-mail"] || row.email || "";
           const produto = row.produto || "";
-          const cidade = row.cidade || "";
-          const estado = row.estado || "";
           const dataInicio = row.data_de_inicio || row.data_inicio || "";
           const dataVencimento = row.data_de_vencimento || row.data_fim || "";
           const statusContrato = row.contrato_status || row.status || "Ativo";
           const observacao = row.observacao || row.observacoes || "";
-          const anja = row.anja || "";
-          const engajamento = row.engajamento || "";
-          const renovacao = row.renovacao || "";
-          const clinicaRyka = row.clinica_ryka || "";
           const valorContrato = row.valor_contrato || "";
-          const idContratoExterno = row.id_contrato || "";
 
-          if (!nome || !telefone) {
-            console.log(`Linha ${i + 1} ignorada: nome ou telefone vazio`);
-            errors++;
-            continue;
+          // Check for errors
+          let hasError = false;
+          let errorMessage = "";
+          if (!nome) {
+            hasError = true;
+            errorMessage = "Nome vazio";
+          } else if (!telefone) {
+            hasError = true;
+            errorMessage = "Telefone vazio";
           }
 
-          const phone = normalizePhone(telefone.replace(/\n/g, "").trim());
+          const phone = telefone ? normalizePhone(telefone.replace(/\n/g, "").trim()) : "";
           
-          // Parse document - could be CPF or CNPJ
+          // Parse document
           let cpf: string | null = null;
           let cnpj: string | null = null;
           
@@ -659,53 +670,153 @@ export default function Contracts() {
           if (cpfRaw) cpf = normalizeDocument(cpfRaw);
           if (cnpjRaw) cnpj = normalizeDocument(cnpjRaw);
 
-          // Try to find existing client by CPF, CNPJ, or phone
-          let clientId: string | null = null;
+          // Detect duplicates
+          const duplicates: DuplicateInfo[] = [];
           
-          if (cpf && cpf.length >= 11) {
-            const { data: existingByCpf } = await supabase
-              .from("clients")
-              .select("id")
-              .eq("account_id", userProfile.account_id)
-              .eq("cpf", cpf)
-              .maybeSingle();
-            if (existingByCpf) clientId = existingByCpf.id;
+          if (existingClients) {
+            // Check by CPF
+            if (cpf && cpf.length >= 11) {
+              const matchByCpf = existingClients.find(c => c.cpf === cpf);
+              if (matchByCpf) {
+                duplicates.push({
+                  type: "cpf",
+                  existingClientId: matchByCpf.id,
+                  existingClientName: matchByCpf.full_name,
+                  matchValue: cpf,
+                });
+              }
+            }
+
+            // Check by CNPJ
+            if (cnpj && cnpj.length >= 14) {
+              const matchByCnpj = existingClients.find(c => c.cnpj === cnpj);
+              if (matchByCnpj && !duplicates.find(d => d.existingClientId === matchByCnpj.id)) {
+                duplicates.push({
+                  type: "cnpj",
+                  existingClientId: matchByCnpj.id,
+                  existingClientName: matchByCnpj.full_name,
+                  matchValue: cnpj,
+                });
+              }
+            }
+
+            // Check by phone
+            if (phone) {
+              const matchByPhone = existingClients.find(c => c.phone_e164 === phone);
+              if (matchByPhone && !duplicates.find(d => d.existingClientId === matchByPhone.id)) {
+                duplicates.push({
+                  type: "phone",
+                  existingClientId: matchByPhone.id,
+                  existingClientName: matchByPhone.full_name,
+                  matchValue: phone,
+                });
+              }
+            }
           }
 
-          if (!clientId && cnpj && cnpj.length >= 14) {
-            const { data: existingByCnpj } = await supabase
-              .from("clients")
-              .select("id")
-              .eq("account_id", userProfile.account_id)
-              .eq("cnpj", cnpj)
-              .maybeSingle();
-            if (existingByCnpj) clientId = existingByCnpj.id;
-          }
+          previewRows.push({
+            lineNumber: i + 1,
+            nome: nome.replace(/\n/g, " ").trim(),
+            telefone: telefone.replace(/\n/g, "").trim(),
+            cpf,
+            cnpj,
+            email: email || null,
+            produto: produto || null,
+            valorContrato: valorContrato ? parseFloat(valorContrato) : 0,
+            dataInicio: parseBrazilianDate(dataInicio) || null,
+            dataFim: parseBrazilianDate(dataVencimento) || null,
+            status: statusContrato,
+            observacao: observacao || null,
+            rawData: row,
+            duplicates,
+            selected: !hasError,
+            hasError,
+            errorMessage,
+          });
+        } catch (rowError) {
+          console.error(`Erro analisando linha ${i + 1}:`, rowError);
+          previewRows.push({
+            lineNumber: i + 1,
+            nome: "",
+            telefone: "",
+            cpf: null,
+            cnpj: null,
+            email: null,
+            produto: null,
+            valorContrato: 0,
+            dataInicio: null,
+            dataFim: null,
+            status: "Ativo",
+            observacao: null,
+            rawData: {},
+            duplicates: [],
+            selected: false,
+            hasError: true,
+            errorMessage: "Erro ao processar linha",
+          });
+        }
+      }
 
-          if (!clientId) {
-            const { data: existingByPhone } = await supabase
-              .from("clients")
-              .select("id")
-              .eq("account_id", userProfile.account_id)
-              .eq("phone_e164", phone)
-              .maybeSingle();
-            if (existingByPhone) clientId = existingByPhone.id;
-          }
+      setImportPreviewRows(previewRows);
+      setImportPreviewOpen(true);
+    } catch (error) {
+      console.error("Error parsing CSV:", error);
+      toast.error("Erro ao processar arquivo CSV");
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  };
 
-          // Find responsible user by name
-          let responsibleUserId: string | null = null;
-          if (anja && teamUsers) {
-            const user = teamUsers.find(
-              (u) => u.name?.toLowerCase().includes(anja.toLowerCase())
-            );
-            if (user) responsibleUserId = user.id;
-          }
+  // Confirm and execute import after preview
+  const handleConfirmImport = async (selectedRows: ImportRowWithDuplicate[], createNewClients: boolean) => {
+    if (!importUserProfile) return;
 
-          // Create new client if not found
-          if (!clientId) {
+    setImporting(true);
+    try {
+      // Fetch existing clients for linking
+      const { data: existingClients } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164, cpf, cnpj")
+        .eq("account_id", importUserProfile.account_id);
+
+      let created = 0;
+      let linked = 0;
+      let contractsCreated = 0;
+      let errors = 0;
+
+      for (const row of selectedRows) {
+        try {
+          const phone = normalizePhone(row.telefone);
+          let clientId: string | null = null;
+
+          // Check for existing client
+          if (row.duplicates.length > 0) {
+            // Use the first duplicate match
+            clientId = row.duplicates[0].existingClientId;
+            linked++;
+          } else if (createNewClients) {
+            // Create new client
+            const rawData = row.rawData;
+            const email = row.email;
+            const cidade = rawData.cidade || "";
+            const estado = rawData.estado || "";
+            const anja = rawData.anja || "";
+            const engajamento = rawData.engajamento || "";
+            const renovacao = rawData.renovacao || "";
+            const clinicaRyka = rawData.clinica_ryka || "";
+            const idContratoExterno = rawData.id_contrato || "";
+
+            let responsibleUserId: string | null = null;
+            if (anja && importTeamUsers) {
+              const user = importTeamUsers.find(
+                (u) => u.name?.toLowerCase().includes(anja.toLowerCase())
+              );
+              if (user) responsibleUserId = user.id;
+            }
+
             const emails = email ? [{ email: email.trim(), label: "principal" }] : [];
             
-            // Build notes with extra info
             const notesArr: string[] = [];
             if (engajamento) notesArr.push(`Engajamento: ${engajamento}`);
             if (renovacao) notesArr.push(`Renovação: ${renovacao}`);
@@ -713,11 +824,11 @@ export default function Contracts() {
             if (idContratoExterno) notesArr.push(`ID Contrato Externo: ${idContratoExterno}`);
             
             const clientData = {
-              account_id: userProfile.account_id,
-              full_name: nome.replace(/\n/g, " ").trim(),
+              account_id: importUserProfile.account_id,
+              full_name: row.nome,
               phone_e164: phone,
-              cpf: cpf && cpf.length === 11 ? cpf : null,
-              cnpj: cnpj && cnpj.length >= 14 ? cnpj : null,
+              cpf: row.cpf && row.cpf.length === 11 ? row.cpf : null,
+              cnpj: row.cnpj && row.cnpj.length >= 14 ? row.cnpj : null,
               emails: emails,
               city: cidade || null,
               state: estado || null,
@@ -733,46 +844,49 @@ export default function Contracts() {
               .single();
 
             if (clientError) {
-              console.error(`Erro criando cliente ${nome}:`, clientError);
+              console.error(`Erro criando cliente ${row.nome}:`, clientError);
               errors++;
               continue;
             }
             clientId = newClient.id;
             created++;
           } else {
-            updated++;
+            // Skip if not creating new clients and no duplicate found
+            errors++;
+            continue;
           }
 
           // Find product by name
           let productId: string | null = null;
-          if (produto) {
+          if (row.produto) {
             const product = products.find(
-              (p) => p.name.toLowerCase() === produto.toLowerCase().trim()
+              (p) => p.name.toLowerCase() === row.produto?.toLowerCase().trim()
             );
             if (product) productId = product.id;
           }
 
           // Build contract notes
+          const rawData = row.rawData;
           const contractNotesArr: string[] = [];
-          if (observacao) contractNotesArr.push(observacao.replace(/\n/g, " "));
-          if (engajamento) contractNotesArr.push(`Engajamento: ${engajamento}`);
-          if (renovacao) contractNotesArr.push(`Renovação: ${renovacao}`);
-          if (clinicaRyka === "Sim") contractNotesArr.push("Clínica Ryka");
-          if (idContratoExterno) contractNotesArr.push(`ID Externo: ${idContratoExterno}`);
+          if (row.observacao) contractNotesArr.push(row.observacao.replace(/\n/g, " "));
+          if (rawData.engajamento) contractNotesArr.push(`Engajamento: ${rawData.engajamento}`);
+          if (rawData.renovacao) contractNotesArr.push(`Renovação: ${rawData.renovacao}`);
+          if (rawData.clinica_ryka === "Sim") contractNotesArr.push("Clínica Ryka");
+          if (rawData.id_contrato) contractNotesArr.push(`ID Externo: ${rawData.id_contrato}`);
 
           // Create contract
           const contractData = {
-            account_id: userProfile.account_id,
+            account_id: importUserProfile.account_id,
             client_id: clientId,
             product_id: productId,
-            value: valorContrato ? parseFloat(valorContrato) : 0,
-            start_date: parseBrazilianDate(dataInicio) || format(new Date(), "yyyy-MM-dd"),
-            end_date: parseBrazilianDate(dataVencimento) || null,
+            value: row.valorContrato,
+            start_date: row.dataInicio || format(new Date(), "yyyy-MM-dd"),
+            end_date: row.dataFim || null,
             payment_option: null,
             notes: contractNotesArr.join(" | ") || "Importado via CSV",
-            status: mapContractStatus(statusContrato),
-            status_reason: statusContrato.toLowerCase() === "suspenso" || statusContrato.toLowerCase() === "congelado" 
-              ? observacao || "Importado com status pausado" 
+            status: mapContractStatus(row.status),
+            status_reason: row.status.toLowerCase() === "suspenso" || row.status.toLowerCase() === "congelado" 
+              ? row.observacao || "Importado com status pausado" 
               : null,
             contract_type: "compra",
           };
@@ -782,13 +896,13 @@ export default function Contracts() {
             .insert(contractData);
 
           if (contractError) {
-            console.error(`Erro criando contrato para ${nome}:`, contractError);
+            console.error(`Erro criando contrato para ${row.nome}:`, contractError);
             errors++;
           } else {
             contractsCreated++;
           }
         } catch (rowError) {
-          console.error(`Erro processando linha ${i + 1}:`, rowError);
+          console.error(`Erro processando linha ${row.lineNumber}:`, rowError);
           errors++;
         }
       }
@@ -798,17 +912,18 @@ export default function Contracts() {
 
       const message = [];
       if (created > 0) message.push(`${created} clientes criados`);
-      if (updated > 0) message.push(`${updated} clientes já existiam`);
+      if (linked > 0) message.push(`${linked} vinculados a existentes`);
       if (contractsCreated > 0) message.push(`${contractsCreated} contratos criados`);
       if (errors > 0) message.push(`${errors} erros`);
       
       toast.success(`Importação concluída: ${message.join(", ")}`);
+      setImportPreviewOpen(false);
+      setImportPreviewRows([]);
     } catch (error) {
       console.error("Error importing:", error);
       toast.error("Erro ao importar contratos");
     } finally {
       setImporting(false);
-      e.target.value = "";
     }
   };
 
@@ -2308,6 +2423,16 @@ export default function Contracts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Preview Dialog */}
+      <ContractImportPreview
+        open={importPreviewOpen}
+        onOpenChange={setImportPreviewOpen}
+        rows={importPreviewRows}
+        onConfirmImport={handleConfirmImport}
+        importing={importing}
+        products={products}
+      />
     </div>
   );
 }
