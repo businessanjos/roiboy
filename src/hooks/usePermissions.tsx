@@ -77,6 +77,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           PERMISSIONS.FORMS_VIEW,
           PERMISSIONS.PRODUCTS_VIEW,
           PERMISSIONS.TEAM_VIEW,
+          PERMISSIONS.SETTINGS_VIEW, // Allow access to settings, reminders, whatsapp groups, etc.
+          PERMISSIONS.ROYZAPP_ACCESS,
         ];
         setPermissions(defaultPermissions);
         setIsAdmin(false);
