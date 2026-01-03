@@ -36,6 +36,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,6 +63,8 @@ import {
   FileUp,
   ChevronsUpDown,
   RefreshCw,
+  ListChecks,
+  ClipboardList,
 } from "lucide-react";
 import { useZapSign } from "@/hooks/useZapSign";
 import { useNavigate } from "react-router-dom";
@@ -88,6 +91,13 @@ interface Contract {
   contract_type: string;
   created_at: string;
   updated_at: string;
+  negotiation_type: string | null;
+  negotiation_description: string | null;
+  payment_method: string | null;
+  installments_count: number | null;
+  first_due_date: string | null;
+  receivables_generated: boolean | null;
+  receivables_generated_at: string | null;
   client?: {
     id: string;
     full_name: string;
@@ -159,6 +169,7 @@ export default function Contracts() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("fila");
   
   // New contract dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -769,8 +780,20 @@ export default function Contracts() {
     }
   };
 
+  // Separate contracts by reconciliation status
+  const reconciledContracts = useMemo(() => {
+    return contracts.filter(c => c.receivables_generated === true);
+  }, [contracts]);
+
+  const queueContracts = useMemo(() => {
+    return contracts.filter(c => !c.receivables_generated);
+  }, [contracts]);
+
+  // Get current contracts based on active tab
+  const currentContracts = activeTab === "conciliados" ? reconciledContracts : queueContracts;
+
   const filteredContracts = useMemo(() => {
-    return contracts.filter((contract) => {
+    return currentContracts.filter((contract) => {
       const matchesSearch = 
         contract.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -782,7 +805,7 @@ export default function Contracts() {
       
       return matchesSearch && matchesStatus && matchesType && matchesProduct;
     });
-  }, [contracts, searchTerm, statusFilter, typeFilter, productFilter]);
+  }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter]);
 
   const stats = useMemo(() => {
     const activeContracts = contracts.filter(c => c.status === "active");
@@ -1025,57 +1048,98 @@ export default function Contracts() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por cliente, produto ou notas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="active">Ativos</SelectItem>
-                <SelectItem value="suspended">Suspensos</SelectItem>
-                <SelectItem value="paused">Pausados</SelectItem>
-                <SelectItem value="cancelled">Cancelados</SelectItem>
-                <SelectItem value="ended">Encerrados</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={productFilter} onValueChange={setProductFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Produto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os produtos</SelectItem>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs for Reconciliation Status */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="fila" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Fila de Conciliação
+            {queueContracts.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                {queueContracts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="conciliados" className="flex items-center gap-2">
+            <ListChecks className="h-4 w-4" />
+            Conciliados
+            {reconciledContracts.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                {reconciledContracts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="space-y-4">
+          {/* Queue Status Info */}
+          {activeTab === "fila" && (
+            <Card className="border-amber-200 bg-amber-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Contratos aguardando conciliação</p>
+                    <p className="text-sm text-amber-700">
+                      Estes contratos ainda não tiveram os recebíveis gerados. Acesse o contrato e configure a negociação para gerar o fluxo financeiro.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por cliente, produto ou notas..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full md:w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Ativos</SelectItem>
+                    <SelectItem value="suspended">Suspensos</SelectItem>
+                    <SelectItem value="paused">Pausados</SelectItem>
+                    <SelectItem value="cancelled">Cancelados</SelectItem>
+                    <SelectItem value="ended">Encerrados</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={productFilter} onValueChange={setProductFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="Produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os produtos</SelectItem>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
       {/* Contracts Table */}
       <Card>
@@ -1202,6 +1266,8 @@ export default function Contracts() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* New Contract Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
