@@ -58,6 +58,8 @@ import {
   Loader2,
   Upload,
   Check,
+  Download,
+  FileUp,
   ChevronsUpDown,
   RefreshCw,
 } from "lucide-react";
@@ -144,8 +146,10 @@ export default function Contracts() {
   const { syncDocumentStatus, getLocalDocuments, loading: zapSignLoading } = useZapSign();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -173,6 +177,7 @@ export default function Contracts() {
   useEffect(() => {
     fetchContracts();
     fetchClients();
+    fetchProducts();
   }, []);
 
   const fetchContracts = async () => {
@@ -200,13 +205,265 @@ export default function Contracts() {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, full_name, avatar_url")
+        .select("id, full_name, avatar_url, cpf, cnpj, phone_e164")
         .order("full_name");
 
       if (error) throw error;
       setClients(data || []);
     } catch (error) {
       console.error("Error fetching clients:", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+
+  // Normalize phone to E.164 format
+  const normalizePhone = (phone: string): string => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("55") && digits.length >= 12) {
+      return `+${digits}`;
+    }
+    if (digits.length >= 10 && digits.length <= 11) {
+      return `+55${digits}`;
+    }
+    return `+${digits}`;
+  };
+
+  // Normalize CPF/CNPJ (remove formatting)
+  const normalizeDocument = (doc: string): string => {
+    return doc.replace(/\D/g, "");
+  };
+
+  // Download import template
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "nome_completo",
+      "telefone",
+      "cpf",
+      "cnpj",
+      "email",
+      "produto",
+      "valor_contrato",
+      "data_inicio",
+      "data_fim",
+      "forma_pagamento",
+      "observacoes",
+    ];
+    
+    const exampleRows = [
+      [
+        "João Silva",
+        "(11) 99999-9999",
+        "123.456.789-00",
+        "",
+        "joao@email.com",
+        "Makers Club",
+        "84000",
+        "2025-01-01",
+        "2026-01-01",
+        "pix",
+        "Cliente migrado",
+      ],
+      [
+        "Maria Santos",
+        "(21) 98888-8888",
+        "",
+        "12.345.678/0001-90",
+        "maria@empresa.com",
+        "Eternum Club",
+        "156000",
+        "2025-02-01",
+        "2026-02-01",
+        "boleto",
+        "",
+      ],
+    ];
+
+    const csvContent = [
+      headers.join(";"),
+      ...exampleRows.map((row) => row.join(";")),
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "template_importacao_contratos.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Template baixado!");
+  };
+
+  // Import contracts from CSV
+  const handleImportContracts = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      const { data: userProfile } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", userData.user.id)
+        .single();
+
+      if (!userProfile) throw new Error("Perfil não encontrado");
+
+      const text = await file.text();
+      const lines = text.split("\n").filter((line) => line.trim());
+      const headers = lines[0].split(";").map((h) => h.trim().toLowerCase());
+      
+      let created = 0;
+      let updated = 0;
+      let errors = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(";").map((v) => v.trim().replace(/^"|"$/g, ""));
+          const row: Record<string, string> = {};
+          headers.forEach((header, idx) => {
+            row[header] = values[idx] || "";
+          });
+
+          if (!row.nome_completo || !row.telefone) {
+            errors++;
+            continue;
+          }
+
+          const phone = normalizePhone(row.telefone);
+          const cpf = row.cpf ? normalizeDocument(row.cpf) : null;
+          const cnpj = row.cnpj ? normalizeDocument(row.cnpj) : null;
+
+          // Try to find existing client by CPF, CNPJ, or phone
+          let clientId: string | null = null;
+          
+          if (cpf) {
+            const { data: existingByCpf } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("account_id", userProfile.account_id)
+              .eq("cpf", cpf)
+              .maybeSingle();
+            if (existingByCpf) clientId = existingByCpf.id;
+          }
+
+          if (!clientId && cnpj) {
+            const { data: existingByCnpj } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("account_id", userProfile.account_id)
+              .eq("cnpj", cnpj)
+              .maybeSingle();
+            if (existingByCnpj) clientId = existingByCnpj.id;
+          }
+
+          if (!clientId) {
+            const { data: existingByPhone } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("account_id", userProfile.account_id)
+              .eq("phone_e164", phone)
+              .maybeSingle();
+            if (existingByPhone) clientId = existingByPhone.id;
+          }
+
+          // Create new client if not found
+          if (!clientId) {
+            const emails = row.email ? [{ email: row.email, label: "principal" }] : [];
+            const clientData = {
+              account_id: userProfile.account_id,
+              full_name: row.nome_completo,
+              phone_e164: phone,
+              cpf: cpf,
+              cnpj: cnpj,
+              emails: emails,
+              status: "active" as const,
+            };
+
+            const { data: newClient, error: clientError } = await supabase
+              .from("clients")
+              .insert(clientData)
+              .select("id")
+              .single();
+
+            if (clientError) {
+              console.error("Error creating client:", clientError);
+              errors++;
+              continue;
+            }
+            clientId = newClient.id;
+            created++;
+          } else {
+            updated++;
+          }
+
+          // Find product by name
+          let productId: string | null = null;
+          if (row.produto) {
+            const product = products.find(
+              (p) => p.name.toLowerCase() === row.produto.toLowerCase()
+            );
+            if (product) productId = product.id;
+          }
+
+          // Create contract
+          const contractData = {
+            account_id: userProfile.account_id,
+            client_id: clientId,
+            product_id: productId,
+            value: parseFloat(row.valor_contrato) || 0,
+            start_date: row.data_inicio || format(new Date(), "yyyy-MM-dd"),
+            end_date: row.data_fim || null,
+            payment_option: row.forma_pagamento || null,
+            notes: row.observacoes || "Importado via CSV",
+            status: "active",
+            contract_type: "compra",
+          };
+
+          const { error: contractError } = await supabase
+            .from("client_contracts")
+            .insert(contractData);
+
+          if (contractError) {
+            console.error("Error creating contract:", contractError);
+            errors++;
+          }
+        } catch (rowError) {
+          console.error("Error processing row:", rowError);
+          errors++;
+        }
+      }
+
+      await fetchContracts();
+      await fetchClients();
+
+      const message = [];
+      if (created > 0) message.push(`${created} clientes criados`);
+      if (updated > 0) message.push(`${updated} clientes existentes atualizados`);
+      if (errors > 0) message.push(`${errors} erros`);
+      
+      toast.success(`Importação concluída: ${message.join(", ")}`);
+    } catch (error) {
+      console.error("Error importing:", error);
+      toast.error("Erro ao importar contratos");
+    } finally {
+      setImporting(false);
+      e.target.value = "";
     }
   };
 
@@ -423,9 +680,40 @@ export default function Contracts() {
             Gerencie todos os contratos dos seus clientes
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline" 
+            size="sm"
+            onClick={handleDownloadTemplate}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Template
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            disabled={importing}
+            asChild
+          >
+            <label className="cursor-pointer">
+              {importing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileUp className="h-4 w-4 mr-2" />
+              )}
+              Importar CSV
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleImportContracts}
+                className="hidden"
+                disabled={importing}
+              />
+            </label>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
             onClick={handleSyncZapSign}
             disabled={syncing}
           >
@@ -434,9 +722,9 @@ export default function Contracts() {
             ) : (
               <RefreshCw className="h-4 w-4 mr-2" />
             )}
-            Sincronizar ZapSign
+            ZapSign
           </Button>
-          <Button onClick={openNewContractDialog}>
+          <Button size="sm" onClick={openNewContractDialog}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Contrato
           </Button>
