@@ -184,19 +184,35 @@ export default function Contracts() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [formData, setFormData] = useState({
+    // Contract tab
     start_date: format(new Date(), "yyyy-MM-dd"),
     end_date: "",
     value: "",
     contract_type: "compra",
     product_id: "",
+    notes: "",
+    // Payment tab
     payment_type: "",
     installments: "",
     custom_installments: "",
     payment_method: "",
     first_due_date: "",
-    notes: "",
+    // Financial tab
+    bank_account_id: "",
+    category_id: "",
+    cost_center_id: "",
+    seller_id: "",
+    generate_receivables: true,
+    receivable_description: "",
   });
   const [installmentsDetail, setInstallmentsDetail] = useState<InstallmentDetail[]>([]);
+  const [formTab, setFormTab] = useState<string>("contrato");
+  
+  // Financial data
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; bank_name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [costCenters, setCostCenters] = useState<{ id: string; name: string }[]>([]);
+  const [teamUsers, setTeamUsers] = useState<{ id: string; name: string }[]>([]);
 
   // Contract detail sheet state
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
@@ -206,7 +222,26 @@ export default function Contracts() {
     fetchContracts();
     fetchClients();
     fetchProducts();
+    fetchFinancialData();
   }, []);
+
+  const fetchFinancialData = async () => {
+    try {
+      const [bankAccountsRes, categoriesRes, costCentersRes, usersRes] = await Promise.all([
+        supabase.from("bank_accounts").select("id, name, bank_name").eq("is_active", true).order("name"),
+        supabase.from("financial_categories").select("id, name, type").eq("is_active", true).order("name"),
+        supabase.from("cost_centers").select("id, name").eq("is_active", true).order("name"),
+        supabase.from("users").select("id, name").order("name"),
+      ]);
+
+      if (bankAccountsRes.data) setBankAccounts(bankAccountsRes.data);
+      if (categoriesRes.data) setCategories(categoriesRes.data);
+      if (costCentersRes.data) setCostCenters(costCentersRes.data);
+      if (usersRes.data) setTeamUsers(usersRes.data);
+    } catch (error) {
+      console.error("Error fetching financial data:", error);
+    }
+  };
 
   const fetchContracts = async () => {
     try {
@@ -666,14 +701,21 @@ export default function Contracts() {
       value: "",
       contract_type: "compra",
       product_id: "",
+      notes: "",
       payment_type: "",
       installments: "",
       custom_installments: "",
       payment_method: "",
       first_due_date: "",
-      notes: "",
+      bank_account_id: "",
+      category_id: "",
+      cost_center_id: "",
+      seller_id: "",
+      generate_receivables: true,
+      receivable_description: "",
     });
     setInstallmentsDetail([]);
+    setFormTab("contrato");
   };
 
   const openNewContractDialog = () => {
@@ -1303,10 +1345,7 @@ export default function Contracts() {
 
       {/* New Contract Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className={cn(
-          "max-w-md",
-          formData.payment_type === "personalizado" && getInstallmentsCount() > 0 && "max-w-2xl"
-        )}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -1314,189 +1353,197 @@ export default function Contracts() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-            {/* Client Selection */}
-            <div className="space-y-2">
-              <Label>Cliente *</Label>
-              <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={clientPopoverOpen}
-                    className="w-full justify-between"
-                  >
-                    {selectedClient ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                          {selectedClient.avatar_url ? (
-                            <img src={selectedClient.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <Users className="h-3 w-3 text-muted-foreground" />
-                          )}
-                        </div>
-                        <span className="truncate">{selectedClient.full_name}</span>
-                      </div>
-                    ) : (
-                      "Selecione um cliente..."
-                    )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Buscar cliente..." />
-                    <CommandList>
-                      <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                      <CommandGroup className="max-h-64 overflow-auto">
-                        {clients.map((client) => (
-                          <CommandItem
-                            key={client.id}
-                            value={client.full_name}
-                            onSelect={() => {
-                              setSelectedClient(client);
-                              setClientPopoverOpen(false);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                                {client.avatar_url ? (
-                                  <img src={client.avatar_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <Users className="h-3 w-3 text-muted-foreground" />
-                                )}
-                              </div>
-                              <span>{client.full_name}</span>
-                            </div>
-                            <Check
-                              className={cn(
-                                "ml-auto h-4 w-4",
-                                selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+          <Tabs value={formTab} onValueChange={setFormTab} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="contrato" className="text-xs">
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                Contrato
+              </TabsTrigger>
+              <TabsTrigger value="pagamento" className="text-xs">
+                <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                Pagamento
+              </TabsTrigger>
+              <TabsTrigger value="financeiro" className="text-xs">
+                <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
+                Financeiro
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start_date">Data de Início *</Label>
-                <Input
-                  id="start_date"
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, start_date: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_date">Data de Término</Label>
-                <Input
-                  id="end_date"
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, end_date: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* Contract Type */}
-            <div className="space-y-2">
-              <Label>Tipo de Contrato *</Label>
-              <Select
-                value={formData.contract_type}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, contract_type: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Product Selection */}
-            <div className="space-y-2">
-              <Label>Produto</Label>
-              <Select
-                value={formData.product_id}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, product_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um produto (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Value and Payment */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="value">Valor (R$) *</Label>
-                <Input
-                  id="value"
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={formData.value}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, value: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de Pagamento</Label>
-                <Select
-                  value={formData.payment_type}
-                  onValueChange={(value) => setFormData((prev) => ({
-                    ...prev,
-                    payment_type: value,
-                    installments: value === "a_vista" ? "" : prev.installments
-                  }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_TYPES.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Installments (if parcelado or personalizado) */}
-            {(formData.payment_type === "parcelado" || formData.payment_type === "personalizado") && (
-              <div className="grid grid-cols-2 gap-4">
+            <div className="flex-1 overflow-y-auto mt-4 pr-1">
+              {/* Contract Tab */}
+              <TabsContent value="contrato" className="mt-0 space-y-4">
+                {/* Client Selection */}
                 <div className="space-y-2">
-                  <Label>Número de Parcelas</Label>
+                  <Label>Cliente *</Label>
+                  <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={clientPopoverOpen}
+                        className="w-full justify-between"
+                      >
+                        {selectedClient ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                              {selectedClient.avatar_url ? (
+                                <img src={selectedClient.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Users className="h-3 w-3 text-muted-foreground" />
+                              )}
+                            </div>
+                            <span className="truncate">{selectedClient.full_name}</span>
+                          </div>
+                        ) : (
+                          "Selecione um cliente..."
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar cliente..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-auto">
+                            {clients.map((client) => (
+                              <CommandItem
+                                key={client.id}
+                                value={client.full_name}
+                                onSelect={() => {
+                                  setSelectedClient(client);
+                                  setClientPopoverOpen(false);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                    {client.avatar_url ? (
+                                      <img src={client.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <Users className="h-3 w-3 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                  <span>{client.full_name}</span>
+                                </div>
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_date">Data de Início *</Label>
+                    <Input
+                      id="start_date"
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, start_date: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_date">Data de Término</Label>
+                    <Input
+                      id="end_date"
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, end_date: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Contract Type & Product */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Contrato *</Label>
+                    <Select
+                      value={formData.contract_type}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, contract_type: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Produto</Label>
+                    <Select
+                      value={formData.product_id}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, product_id: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione (opcional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Value */}
+                <div className="space-y-2">
+                  <Label htmlFor="value">Valor Total do Contrato (R$) *</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={formData.value}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, value: e.target.value }))}
+                  />
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Anotações sobre o contrato..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Payment Tab */}
+              <TabsContent value="pagamento" className="mt-0 space-y-4">
+                {/* Payment Type */}
+                <div className="space-y-2">
+                  <Label>Tipo de Pagamento *</Label>
                   <Select
-                    value={formData.installments}
-                    onValueChange={(value) => {
-                      setFormData((prev) => ({ ...prev, installments: value }));
-                      setInstallmentsDetail([]);
-                    }}
+                    value={formData.payment_type}
+                    onValueChange={(value) => setFormData((prev) => ({
+                      ...prev,
+                      payment_type: value,
+                      installments: value === "a_vista" ? "" : prev.installments
+                    }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {INSTALLMENT_OPTIONS.map((option) => (
+                      {PAYMENT_TYPES.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -1504,23 +1551,63 @@ export default function Contracts() {
                     </SelectContent>
                   </Select>
                 </div>
-                {formData.installments === "custom" && (
-                  <div className="space-y-2">
-                    <Label>Qtd. Parcelas</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="60"
-                      placeholder="Ex: 8"
-                      value={formData.custom_installments}
-                      onChange={(e) => {
-                        setFormData((prev) => ({ ...prev, custom_installments: e.target.value }));
-                        setInstallmentsDetail([]);
-                      }}
-                    />
+
+                {/* Installments (if parcelado or personalizado) */}
+                {(formData.payment_type === "parcelado" || formData.payment_type === "personalizado") && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Número de Parcelas</Label>
+                      <Select
+                        value={formData.installments}
+                        onValueChange={(value) => {
+                          setFormData((prev) => ({ ...prev, installments: value }));
+                          setInstallmentsDetail([]);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INSTALLMENT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {formData.installments === "custom" ? (
+                      <div className="space-y-2">
+                        <Label>Qtd. Parcelas</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="60"
+                          placeholder="Ex: 8"
+                          value={formData.custom_installments}
+                          onChange={(e) => {
+                            setFormData((prev) => ({ ...prev, custom_installments: e.target.value }));
+                            setInstallmentsDetail([]);
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>1º Vencimento</Label>
+                        <Input
+                          type="date"
+                          value={formData.first_due_date}
+                          onChange={(e) => {
+                            setFormData((prev) => ({ ...prev, first_due_date: e.target.value }));
+                            setInstallmentsDetail([]);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
-                {formData.installments !== "custom" && (
+
+                {formData.installments === "custom" && (formData.payment_type === "parcelado" || formData.payment_type === "personalizado") && (
                   <div className="space-y-2">
                     <Label>1º Vencimento</Label>
                     <Input
@@ -1533,99 +1620,208 @@ export default function Contracts() {
                     />
                   </div>
                 )}
-              </div>
-            )}
 
-            {formData.installments === "custom" && formData.payment_type === "personalizado" && (
-              <div className="space-y-2">
-                <Label>1º Vencimento</Label>
-                <Input
-                  type="date"
-                  value={formData.first_due_date}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, first_due_date: e.target.value }));
-                    setInstallmentsDetail([]);
-                  }}
-                />
-              </div>
-            )}
+                {/* Payment Method (for non-personalized) */}
+                {formData.payment_type && formData.payment_type !== "personalizado" && (
+                  <div className="space-y-2">
+                    <Label>Forma de Pagamento</Label>
+                    <Select
+                      value={formData.payment_method}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_method: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_METHODS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-            {/* Personalized Installments Editor */}
-            {formData.payment_type === "personalizado" && getInstallmentsCount() > 0 && formData.first_due_date && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    <Settings2 className="h-4 w-4" />
-                    Configurar Parcelas
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    {getInstallmentsCount()} parcelas
-                  </span>
-                </div>
-                <InstallmentsEditor
-                  totalValue={parseFloat(formData.value) || 0}
-                  installmentsCount={getInstallmentsCount()}
-                  firstDueDate={formData.first_due_date}
-                  value={installmentsDetail}
-                  onChange={setInstallmentsDetail}
-                />
-              </div>
-            )}
+                {/* Personalized Installments Editor */}
+                {formData.payment_type === "personalizado" && getInstallmentsCount() > 0 && formData.first_due_date && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        <Settings2 className="h-4 w-4" />
+                        Configurar Parcelas
+                      </Label>
+                      <span className="text-xs text-muted-foreground">
+                        {getInstallmentsCount()} parcelas
+                      </span>
+                    </div>
+                    <InstallmentsEditor
+                      totalValue={parseFloat(formData.value) || 0}
+                      installmentsCount={getInstallmentsCount()}
+                      firstDueDate={formData.first_due_date}
+                      value={installmentsDetail}
+                      onChange={setInstallmentsDetail}
+                    />
+                  </div>
+                )}
+              </TabsContent>
 
-            {/* Payment Method (for non-personalized) */}
-            {formData.payment_type && formData.payment_type !== "personalizado" && (
-              <div className="space-y-2">
-                <Label>Forma de Pagamento</Label>
-                <Select
-                  value={formData.payment_method}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_method: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+              {/* Financial Tab */}
+              <TabsContent value="financeiro" className="mt-0 space-y-4">
+                <Card className="border-dashed">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Switch
+                          id="generate_receivables"
+                          checked={formData.generate_receivables}
+                          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, generate_receivables: checked }))}
+                        />
+                        <Label htmlFor="generate_receivables" className="text-sm font-medium cursor-pointer">
+                          Gerar lançamentos a receber automaticamente
+                        </Label>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Ao ativar, o financeiro receberá os lançamentos prontos para cobrança
+                    </p>
+                  </CardContent>
+                </Card>
 
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Observações</Label>
-              <Textarea
-                id="notes"
-                placeholder="Anotações sobre o contrato..."
-                value={formData.notes}
-                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                rows={3}
-              />
+                {formData.generate_receivables && (
+                  <>
+                    {/* Bank Account & Category */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Conta Bancária</Label>
+                        <Select
+                          value={formData.bank_account_id}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, bank_account_id: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} ({account.bank_name})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Categoria</Label>
+                        <Select
+                          value={formData.category_id}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, category_id: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories
+                              .filter(c => c.type === "income")
+                              .map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Cost Center & Seller */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Centro de Custo</Label>
+                        <Select
+                          value={formData.cost_center_id}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, cost_center_id: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {costCenters.map((cc) => (
+                              <SelectItem key={cc.id} value={cc.id}>
+                                {cc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Vendedor/Responsável</Label>
+                        <Select
+                          value={formData.seller_id}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, seller_id: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {teamUsers.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Receivable Description */}
+                    <div className="space-y-2">
+                      <Label htmlFor="receivable_description">Descrição dos Lançamentos</Label>
+                      <Input
+                        id="receivable_description"
+                        placeholder={`Ex: Parcela {n}/{total} - ${selectedClient?.full_name || "Cliente"}`}
+                        value={formData.receivable_description}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, receivable_description: e.target.value }))}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Use {"{n}"} para número da parcela e {"{total}"} para total de parcelas
+                      </p>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveContract} disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Contrato
-                  </>
+            <div className="flex justify-between items-center pt-4 border-t mt-4">
+              <div className="text-xs text-muted-foreground">
+                {formData.value && (
+                  <span>
+                    Total: <strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(parseFloat(formData.value) || 0)}</strong>
+                    {getInstallmentsCount() > 1 && (
+                      <> em <strong>{getInstallmentsCount()}x</strong></>
+                    )}
+                  </span>
                 )}
-              </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveContract} disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Contrato
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
