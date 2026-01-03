@@ -4539,51 +4539,153 @@ export type Database = {
       leads: {
         Row: {
           account_id: string
+          additional_bank_accounts: Json | null
+          additional_phones: Json | null
+          additional_pix_keys: Json | null
+          bank_account: string | null
+          bank_account_type: string | null
+          bank_agency: string | null
+          bank_code: string | null
+          bank_name: string | null
+          birth_date: string | null
+          business_city: string | null
+          business_complement: string | null
+          business_neighborhood: string | null
+          business_niche: string | null
+          business_segment: string | null
+          business_state: string | null
+          business_street: string | null
+          business_street_number: string | null
+          business_zip_code: string | null
+          city: string | null
+          cnpj: string | null
+          company_name: string | null
+          complement: string | null
           converted_at: string | null
           converted_to_client_id: string | null
+          cpf: string | null
           created_at: string
           email: string | null
+          emails: Json | null
           full_name: string
           id: string
+          instagram: string | null
+          instagrams: Json | null
+          neighborhood: string | null
           notes: string | null
           phone: string | null
+          pix_key: string | null
+          pix_key_type: string | null
           responsible_user_id: string | null
+          rg: string | null
           source: string | null
+          state: string | null
           status: string
+          street: string | null
+          street_number: string | null
           tags: Json | null
           updated_at: string
+          zip_code: string | null
         }
         Insert: {
           account_id: string
+          additional_bank_accounts?: Json | null
+          additional_phones?: Json | null
+          additional_pix_keys?: Json | null
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          birth_date?: string | null
+          business_city?: string | null
+          business_complement?: string | null
+          business_neighborhood?: string | null
+          business_niche?: string | null
+          business_segment?: string | null
+          business_state?: string | null
+          business_street?: string | null
+          business_street_number?: string | null
+          business_zip_code?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          complement?: string | null
           converted_at?: string | null
           converted_to_client_id?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          emails?: Json | null
           full_name: string
           id?: string
+          instagram?: string | null
+          instagrams?: Json | null
+          neighborhood?: string | null
           notes?: string | null
           phone?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           responsible_user_id?: string | null
+          rg?: string | null
           source?: string | null
+          state?: string | null
           status?: string
+          street?: string | null
+          street_number?: string | null
           tags?: Json | null
           updated_at?: string
+          zip_code?: string | null
         }
         Update: {
           account_id?: string
+          additional_bank_accounts?: Json | null
+          additional_phones?: Json | null
+          additional_pix_keys?: Json | null
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          birth_date?: string | null
+          business_city?: string | null
+          business_complement?: string | null
+          business_neighborhood?: string | null
+          business_niche?: string | null
+          business_segment?: string | null
+          business_state?: string | null
+          business_street?: string | null
+          business_street_number?: string | null
+          business_zip_code?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          complement?: string | null
           converted_at?: string | null
           converted_to_client_id?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          emails?: Json | null
           full_name?: string
           id?: string
+          instagram?: string | null
+          instagrams?: Json | null
+          neighborhood?: string | null
           notes?: string | null
           phone?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           responsible_user_id?: string | null
+          rg?: string | null
           source?: string | null
+          state?: string | null
           status?: string
+          street?: string | null
+          street_number?: string | null
           tags?: Json | null
           updated_at?: string
+          zip_code?: string | null
         }
         Relationships: [
           {
@@ -7455,6 +7557,7 @@ export type Database = {
       cleanup_ai_analysis_queue: { Args: never; Returns: undefined }
       cleanup_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
+      convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
       generate_checkin_code: { Args: never; Returns: string }
       generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
