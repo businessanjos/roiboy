@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit2, Trash2, Users, Building2, Download, Upload, FileSpreadsheet, Link2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, Building2, Download, Upload, FileSpreadsheet, Link2, FileCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +86,7 @@ export function FinancialClientsTab() {
   const [formData, setFormData] = useState(initialFormData);
   const [searchTerm, setSearchTerm] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [showActiveContractsOnly, setShowActiveContractsOnly] = useState(false);
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["financial-clients", accountId],
@@ -102,14 +103,39 @@ export function FinancialClientsTab() {
     enabled: !!accountId,
   });
 
-  const filteredClients = clients.filter(
-    (c) =>
+  // Fetch contracts to check which clients have active contracts
+  const { data: activeContracts = [] } = useQuery({
+    queryKey: ["client-contracts-active", accountId],
+    queryFn: async () => {
+      if (!accountId) return [];
+      const { data, error } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("account_id", accountId)
+        .in("status", ["active", "pending"]);
+      if (error) throw error;
+      return data.map(c => c.client_id);
+    },
+    enabled: !!accountId,
+  });
+
+  const clientsWithActiveContract = new Set(activeContracts);
+
+  const filteredClients = clients.filter((c) => {
+    // First apply active contract filter if enabled
+    if (showActiveContractsOnly && !clientsWithActiveContract.has(c.id)) {
+      return false;
+    }
+    
+    // Then apply search filter
+    return (
       c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.cpf?.includes(searchTerm) ||
       c.cnpj?.includes(searchTerm) ||
       (c.emails as string[] | null)?.some((e) => e.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+    );
+  });
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -561,11 +587,28 @@ export function FinancialClientsTab() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Input
-            placeholder="Buscar cliente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Buscar cliente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+            <Button
+              variant={showActiveContractsOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowActiveContractsOnly(!showActiveContractsOnly)}
+              className="shrink-0"
+            >
+              <FileCheck className="h-4 w-4 mr-2" />
+              Contrato Ativo
+              {showActiveContractsOnly && (
+                <Badge variant="secondary" className="ml-2">
+                  {clientsWithActiveContract.size}
+                </Badge>
+              )}
+            </Button>
+          </div>
 
           {isLoading ? (
             <div className="space-y-2">
