@@ -179,9 +179,16 @@ export function TeamManager() {
     }
 
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
       const { data: currentUser } = await supabase
         .from("users")
         .select("account_id")
+        .eq("auth_user_id", authUser.id)
         .single();
 
       if (!currentUser) {
