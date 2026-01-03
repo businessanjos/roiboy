@@ -651,11 +651,15 @@ export type Database = {
           agency_zip_code: string | null
           bank_code: string | null
           bank_name: string
+          card_brand: string | null
+          card_last_digits: string | null
+          closing_day: number | null
           color: string
           created_at: string
           credit_limit: number | null
           currency: string
           current_balance: number
+          due_day: number | null
           exclude_from_reports: boolean | null
           id: string
           initial_balance: number
@@ -686,11 +690,15 @@ export type Database = {
           agency_zip_code?: string | null
           bank_code?: string | null
           bank_name: string
+          card_brand?: string | null
+          card_last_digits?: string | null
+          closing_day?: number | null
           color?: string
           created_at?: string
           credit_limit?: number | null
           currency?: string
           current_balance?: number
+          due_day?: number | null
           exclude_from_reports?: boolean | null
           id?: string
           initial_balance?: number
@@ -721,11 +729,15 @@ export type Database = {
           agency_zip_code?: string | null
           bank_code?: string | null
           bank_name?: string
+          card_brand?: string | null
+          card_last_digits?: string | null
+          closing_day?: number | null
           color?: string
           created_at?: string
           credit_limit?: number | null
           currency?: string
           current_balance?: number
+          due_day?: number | null
           exclude_from_reports?: boolean | null
           id?: string
           initial_balance?: number
