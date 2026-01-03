@@ -306,6 +306,46 @@ export default function Contracts() {
     toast.success("Template baixado!");
   };
 
+  // Parse CSV with proper handling of quoted fields
+  const parseCSVLine = (line: string, delimiter: string = ","): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === delimiter && !inQuotes) {
+        result.push(current.trim().replace(/^"|"$/g, ""));
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim().replace(/^"|"$/g, ""));
+    return result;
+  };
+
+  // Parse Brazilian date format (dd/mm/yyyy) to ISO format
+  const parseBrazilianDate = (dateStr: string): string | null => {
+    if (!dateStr) return null;
+    const parts = dateStr.split("/");
+    if (parts.length !== 3) return null;
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  };
+
+  // Map contract status from Portuguese to system status
+  const mapContractStatus = (status: string): string => {
+    const statusLower = status.toLowerCase().trim();
+    if (statusLower === "ativo") return "active";
+    if (statusLower === "suspenso" || statusLower === "congelado") return "paused";
+    if (statusLower === "cancelado") return "cancelled";
+    if (statusLower === "encerrado") return "ended";
+    return "active";
+  };
+
   // Import contracts from CSV
   const handleImportContracts = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -324,35 +364,122 @@ export default function Contracts() {
 
       if (!userProfile) throw new Error("Perfil não encontrado");
 
+      // Fetch team users to map responsible by name
+      const { data: teamUsers } = await supabase
+        .from("users")
+        .select("id, name")
+        .eq("account_id", userProfile.account_id);
+
       const text = await file.text();
-      const lines = text.split("\n").filter((line) => line.trim());
-      const headers = lines[0].split(";").map((h) => h.trim().toLowerCase());
+      // Handle multi-line fields by joining lines that are part of quoted content
+      const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      const allLines = normalizedText.split("\n");
+      
+      // Reconstruct lines handling multi-line quoted fields
+      const lines: string[] = [];
+      let currentLine = "";
+      let openQuotes = false;
+      
+      for (const line of allLines) {
+        const quoteCount = (line.match(/"/g) || []).length;
+        if (openQuotes) {
+          currentLine += "\n" + line;
+          if (quoteCount % 2 === 1) {
+            openQuotes = false;
+            lines.push(currentLine);
+            currentLine = "";
+          }
+        } else {
+          if (quoteCount % 2 === 1) {
+            openQuotes = true;
+            currentLine = line;
+          } else {
+            if (line.trim()) lines.push(line);
+          }
+        }
+      }
+      
+      if (!lines.length) {
+        toast.error("Arquivo vazio");
+        return;
+      }
+
+      // Detect delimiter (comma or semicolon)
+      const firstLine = lines[0];
+      const delimiter = firstLine.includes(";") && !firstLine.includes(",") ? ";" : ",";
+      
+      const headers = parseCSVLine(lines[0], delimiter).map((h) => 
+        h.toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, "_")
+      );
       
       let created = 0;
       let updated = 0;
+      let contractsCreated = 0;
       let errors = 0;
 
       for (let i = 1; i < lines.length; i++) {
         try {
-          const values = lines[i].split(";").map((v) => v.trim().replace(/^"|"$/g, ""));
+          const values = parseCSVLine(lines[i], delimiter);
           const row: Record<string, string> = {};
           headers.forEach((header, idx) => {
             row[header] = values[idx] || "";
           });
 
-          if (!row.nome_completo || !row.telefone) {
+          // Support both formats: standard template and Eternum format
+          const nome = row.nome || row.nome_completo || "";
+          const telefone = row.telefone || "";
+          const documento = row["cpf/cnpj"] || "";
+          const cpfRaw = row.cpf || "";
+          const cnpjRaw = row.cnpj || "";
+          const email = row["e-mail"] || row.email || "";
+          const produto = row.produto || "";
+          const cidade = row.cidade || "";
+          const estado = row.estado || "";
+          const dataInicio = row.data_de_inicio || row.data_inicio || "";
+          const dataVencimento = row.data_de_vencimento || row.data_fim || "";
+          const statusContrato = row.contrato_status || row.status || "Ativo";
+          const observacao = row.observacao || row.observacoes || "";
+          const anja = row.anja || "";
+          const engajamento = row.engajamento || "";
+          const renovacao = row.renovacao || "";
+          const clinicaRyka = row.clinica_ryka || "";
+          const valorContrato = row.valor_contrato || "";
+          const idContratoExterno = row.id_contrato || "";
+
+          if (!nome || !telefone) {
+            console.log(`Linha ${i + 1} ignorada: nome ou telefone vazio`);
             errors++;
             continue;
           }
 
-          const phone = normalizePhone(row.telefone);
-          const cpf = row.cpf ? normalizeDocument(row.cpf) : null;
-          const cnpj = row.cnpj ? normalizeDocument(row.cnpj) : null;
+          const phone = normalizePhone(telefone.replace(/\n/g, "").trim());
+          
+          // Parse document - could be CPF or CNPJ
+          let cpf: string | null = null;
+          let cnpj: string | null = null;
+          
+          if (documento) {
+            const docNormalized = normalizeDocument(documento);
+            if (docNormalized.length === 11) {
+              cpf = docNormalized;
+            } else if (docNormalized.length >= 14) {
+              cnpj = docNormalized;
+            } else if (docNormalized.length > 11) {
+              cnpj = docNormalized;
+            } else {
+              cpf = docNormalized;
+            }
+          }
+          if (cpfRaw) cpf = normalizeDocument(cpfRaw);
+          if (cnpjRaw) cnpj = normalizeDocument(cnpjRaw);
 
           // Try to find existing client by CPF, CNPJ, or phone
           let clientId: string | null = null;
           
-          if (cpf) {
+          if (cpf && cpf.length >= 11) {
             const { data: existingByCpf } = await supabase
               .from("clients")
               .select("id")
@@ -362,7 +489,7 @@ export default function Contracts() {
             if (existingByCpf) clientId = existingByCpf.id;
           }
 
-          if (!clientId && cnpj) {
+          if (!clientId && cnpj && cnpj.length >= 14) {
             const { data: existingByCnpj } = await supabase
               .from("clients")
               .select("id")
@@ -382,16 +509,37 @@ export default function Contracts() {
             if (existingByPhone) clientId = existingByPhone.id;
           }
 
+          // Find responsible user by name
+          let responsibleUserId: string | null = null;
+          if (anja && teamUsers) {
+            const user = teamUsers.find(
+              (u) => u.name?.toLowerCase().includes(anja.toLowerCase())
+            );
+            if (user) responsibleUserId = user.id;
+          }
+
           // Create new client if not found
           if (!clientId) {
-            const emails = row.email ? [{ email: row.email, label: "principal" }] : [];
+            const emails = email ? [{ email: email.trim(), label: "principal" }] : [];
+            
+            // Build notes with extra info
+            const notesArr: string[] = [];
+            if (engajamento) notesArr.push(`Engajamento: ${engajamento}`);
+            if (renovacao) notesArr.push(`Renovação: ${renovacao}`);
+            if (clinicaRyka) notesArr.push(`Clínica Ryka: ${clinicaRyka}`);
+            if (idContratoExterno) notesArr.push(`ID Contrato Externo: ${idContratoExterno}`);
+            
             const clientData = {
               account_id: userProfile.account_id,
-              full_name: row.nome_completo,
+              full_name: nome.replace(/\n/g, " ").trim(),
               phone_e164: phone,
-              cpf: cpf,
-              cnpj: cnpj,
+              cpf: cpf && cpf.length === 11 ? cpf : null,
+              cnpj: cnpj && cnpj.length >= 14 ? cnpj : null,
               emails: emails,
+              city: cidade || null,
+              state: estado || null,
+              responsible_user_id: responsibleUserId,
+              notes: notesArr.length > 0 ? notesArr.join(" | ") : null,
               status: "active" as const,
             };
 
@@ -402,7 +550,7 @@ export default function Contracts() {
               .single();
 
             if (clientError) {
-              console.error("Error creating client:", clientError);
+              console.error(`Erro criando cliente ${nome}:`, clientError);
               errors++;
               continue;
             }
@@ -414,24 +562,35 @@ export default function Contracts() {
 
           // Find product by name
           let productId: string | null = null;
-          if (row.produto) {
+          if (produto) {
             const product = products.find(
-              (p) => p.name.toLowerCase() === row.produto.toLowerCase()
+              (p) => p.name.toLowerCase() === produto.toLowerCase().trim()
             );
             if (product) productId = product.id;
           }
+
+          // Build contract notes
+          const contractNotesArr: string[] = [];
+          if (observacao) contractNotesArr.push(observacao.replace(/\n/g, " "));
+          if (engajamento) contractNotesArr.push(`Engajamento: ${engajamento}`);
+          if (renovacao) contractNotesArr.push(`Renovação: ${renovacao}`);
+          if (clinicaRyka === "Sim") contractNotesArr.push("Clínica Ryka");
+          if (idContratoExterno) contractNotesArr.push(`ID Externo: ${idContratoExterno}`);
 
           // Create contract
           const contractData = {
             account_id: userProfile.account_id,
             client_id: clientId,
             product_id: productId,
-            value: parseFloat(row.valor_contrato) || 0,
-            start_date: row.data_inicio || format(new Date(), "yyyy-MM-dd"),
-            end_date: row.data_fim || null,
-            payment_option: row.forma_pagamento || null,
-            notes: row.observacoes || "Importado via CSV",
-            status: "active",
+            value: valorContrato ? parseFloat(valorContrato) : 0,
+            start_date: parseBrazilianDate(dataInicio) || format(new Date(), "yyyy-MM-dd"),
+            end_date: parseBrazilianDate(dataVencimento) || null,
+            payment_option: null,
+            notes: contractNotesArr.join(" | ") || "Importado via CSV",
+            status: mapContractStatus(statusContrato),
+            status_reason: statusContrato.toLowerCase() === "suspenso" || statusContrato.toLowerCase() === "congelado" 
+              ? observacao || "Importado com status pausado" 
+              : null,
             contract_type: "compra",
           };
 
@@ -440,11 +599,13 @@ export default function Contracts() {
             .insert(contractData);
 
           if (contractError) {
-            console.error("Error creating contract:", contractError);
+            console.error(`Erro criando contrato para ${nome}:`, contractError);
             errors++;
+          } else {
+            contractsCreated++;
           }
         } catch (rowError) {
-          console.error("Error processing row:", rowError);
+          console.error(`Erro processando linha ${i + 1}:`, rowError);
           errors++;
         }
       }
@@ -454,7 +615,8 @@ export default function Contracts() {
 
       const message = [];
       if (created > 0) message.push(`${created} clientes criados`);
-      if (updated > 0) message.push(`${updated} clientes existentes atualizados`);
+      if (updated > 0) message.push(`${updated} clientes já existiam`);
+      if (contractsCreated > 0) message.push(`${contractsCreated} contratos criados`);
       if (errors > 0) message.push(`${errors} erros`);
       
       toast.success(`Importação concluída: ${message.join(", ")}`);
