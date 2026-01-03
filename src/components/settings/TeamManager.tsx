@@ -28,8 +28,49 @@ import { toast } from "sonner";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock
 } from "lucide-react";
+
+// Password input component with toggle visibility
+function PasswordInput({ 
+  id, 
+  value, 
+  onChange, 
+  placeholder 
+}: { 
+  id: string; 
+  value: string; 
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; 
+  placeholder?: string;
+}) {
+  const [showPassword, setShowPassword] = useState(false);
+  
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={showPassword ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="bg-card pr-10"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+        onClick={() => setShowPassword(!showPassword)}
+      >
+        {showPassword ? (
+          <EyeOff className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <Eye className="h-4 w-4 text-muted-foreground" />
+        )}
+      </Button>
+    </div>
+  );
+}
 
 interface TeamRole {
   id: string;
@@ -101,10 +142,12 @@ export function TeamManager() {
   
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
+  const [formPassword, setFormPassword] = useState("");
   const [formRoleId, setFormRoleId] = useState<string>("");
   const [formIsAlsoAdmin, setFormIsAlsoAdmin] = useState(false);
   const [formAvatarUrl, setFormAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [roleFormName, setRoleFormName] = useState("");
@@ -173,47 +216,66 @@ export function TeamManager() {
   };
 
   const handleAddUser = async () => {
-    if (!formName || !formEmail) {
+    if (!formName || !formEmail || !formPassword) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
+    if (formPassword.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         toast.error("Usuário não autenticado");
+        setIsSubmitting(false);
         return;
       }
 
       const { data: currentUser } = await supabase
         .from("users")
         .select("account_id")
-        .eq("auth_user_id", authUser.id)
+        .eq("auth_user_id", session.user.id)
         .single();
 
       if (!currentUser) {
         toast.error("Erro ao obter conta do usuário");
+        setIsSubmitting(false);
         return;
       }
 
-      const { error } = await supabase.from("users").insert({
-        name: formName,
-        email: formEmail,
-        role: "mentor",
-        account_id: currentUser.account_id,
-        team_role_id: formRoleId || null,
-        is_also_admin: formIsAlsoAdmin,
+      const response = await supabase.functions.invoke("create-team-user", {
+        body: {
+          name: formName,
+          email: formEmail,
+          password: formPassword,
+          account_id: currentUser.account_id,
+          team_role_id: formRoleId || null,
+          is_also_admin: formIsAlsoAdmin,
+        },
       });
 
-      if (error) throw error;
+      if (response.error) {
+        throw new Error(response.error.message || "Erro ao criar usuário");
+      }
 
-      toast.success("Membro adicionado com sucesso");
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success("Membro adicionado com sucesso! Ele já pode fazer login.");
       setIsAddDialogOpen(false);
       resetMemberForm();
       fetchData();
     } catch (error: any) {
       console.error("Error adding user:", error);
       toast.error(error.message || "Erro ao adicionar membro");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -247,6 +309,7 @@ export function TeamManager() {
   const resetMemberForm = () => {
     setFormName("");
     setFormEmail("");
+    setFormPassword("");
     setFormRoleId("");
     setFormIsAlsoAdmin(false);
     setFormAvatarUrl(null);
@@ -956,6 +1019,18 @@ export function TeamManager() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="password">Senha *</Label>
+              <PasswordInput
+                id="password"
+                value={formPassword}
+                onChange={(e) => setFormPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+              <p className="text-xs text-muted-foreground">
+                O usuário usará esta senha para fazer login
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="role">Função</Label>
               <Select value={formRoleId} onValueChange={setFormRoleId}>
                 <SelectTrigger className="bg-card">
@@ -994,10 +1069,19 @@ export function TeamManager() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button onClick={handleAddUser}>Adicionar</Button>
+            <Button onClick={handleAddUser} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                "Adicionar"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
