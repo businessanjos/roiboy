@@ -81,6 +81,7 @@ const FinancialDRFPage = lazy(() => import("./pages/financial/FinancialDRFPage")
 const FinancialBoletosPage = lazy(() => import("./pages/financial/FinancialBoletosPage"));
 const FinancialNotasFiscaisPage = lazy(() => import("./pages/financial/FinancialNotasFiscaisPage"));
 const FinancialBalanceSheetPage = lazy(() => import("./pages/financial/FinancialBalanceSheetPage"));
+const FinancialInvoicesPage = lazy(() => import("./pages/financial/FinancialInvoicesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -154,6 +155,7 @@ const App = () => (
                               <Route path="profitability" element={<FinancialProfitabilityPage />} />
                               <Route path="dre" element={<FinancialDREPage />} />
                               <Route path="drf" element={<FinancialDRFPage />} />
+                              <Route path="invoices" element={<FinancialInvoicesPage />} />
                               <Route path="boletos" element={<FinancialBoletosPage />} />
                               <Route path="notas-fiscais" element={<FinancialNotasFiscaisPage />} />
                               <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />

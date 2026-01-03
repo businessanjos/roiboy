@@ -16,6 +16,7 @@ import {
   Receipt,
   ChevronDown,
   Settings2,
+  CreditCard,
 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -36,6 +37,7 @@ const mainNavItems: NavItem[] = [
   { title: "Fluxo de Caixa", href: "/financial/cash-flow", icon: TrendingUp },
   { title: "Lançamentos", href: "/financial/entries", icon: Receipt },
   { title: "Contas Bancárias", href: "/financial/bank-accounts", icon: Building2 },
+  { title: "Faturas", href: "/financial/invoices", icon: CreditCard },
   { title: "Boletos", href: "/financial/boletos", icon: FileText },
   { title: "Notas Fiscais", href: "/financial/notas-fiscais", icon: Receipt },
 ];
