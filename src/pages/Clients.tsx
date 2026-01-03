@@ -37,6 +37,8 @@ import { cn } from "@/lib/utils";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 import { ContractDialog } from "@/components/client/ContractDialog";
 import { ProductDialog } from "@/components/client/ProductDialog";
+import { DuplicateAlert } from "@/components/client/DuplicateAlert";
+import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -312,6 +314,10 @@ export default function Clients() {
   // Product dialog state (for quick add from clients list)
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [productClientData, setProductClientData] = useState<{ id: string; name: string; productIds: string[] } | null>(null);
+
+  // Duplicate detection
+  const { duplicates, checkDuplicates, clearDuplicates, loading: checkingDuplicates } = useDuplicateDetection();
+  const [dismissedDuplicates, setDismissedDuplicates] = useState(false);
 
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
@@ -1386,6 +1392,8 @@ export default function Clients() {
               setNewClientAvatar(null);
               setNewClientAvatarPreview(null);
               setNewClientFieldValues({});
+              clearDuplicates();
+              setDismissedDuplicates(false);
             }
           }}>
             <DialogTrigger asChild>
@@ -1512,9 +1520,38 @@ export default function Clients() {
                           />
                         </div>
 
+                  {/* Duplicate Alert */}
+                  {duplicates.length > 0 && !dismissedDuplicates && (
+                    <div className="pb-3">
+                      <DuplicateAlert 
+                        duplicates={duplicates}
+                        onDismiss={() => setDismissedDuplicates(true)}
+                        onSelectClient={(clientId) => {
+                          setDialogOpen(false);
+                          window.location.href = `/clients/${clientId}`;
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <ClientInfoForm 
                     data={newClientData} 
-                    onChange={setNewClientData}
+                    onChange={(data) => {
+                      setNewClientData(data);
+                      // Check for duplicates when key fields change
+                      const phoneDigits = data.phone_e164?.replace(/\D/g, '') || '';
+                      const cpfDigits = data.cpf?.replace(/\D/g, '') || '';
+                      const cnpjDigits = data.cnpj?.replace(/\D/g, '') || '';
+                      if (phoneDigits.length >= 10 || cpfDigits.length === 11 || cnpjDigits.length === 14 || data.emails.length > 0) {
+                        checkDuplicates({
+                          phone: data.phone_e164,
+                          cpf: data.cpf,
+                          cnpj: data.cnpj,
+                          emails: data.emails,
+                        });
+                        setDismissedDuplicates(false);
+                      }
+                    }}
                     errors={formErrors}
                     showBasicFields={true}
                     teamUsers={teamUsers}
