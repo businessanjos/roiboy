@@ -1417,9 +1417,77 @@ export default function Contracts() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Filters - visible on all tabs */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por cliente, produto ou notas..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="suspended">Suspensos</SelectItem>
+                  <SelectItem value="paused">Pausados</SelectItem>
+                  <SelectItem value="cancelled">Cancelados</SelectItem>
+                  <SelectItem value="ended">Encerrados</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={productFilter} onValueChange={setProductFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os produtos</SelectItem>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortOrder(sortOrder === "az" ? "recent" : "az")}
+                title={sortOrder === "az" ? "Ordenar por recentes" : "Ordenar A-Z"}
+                className={cn(
+                  "shrink-0",
+                  sortOrder === "az" && "bg-primary/10 border-primary text-primary"
+                )}
+              >
+                {sortOrder === "az" ? (
+                  <ArrowDownAZ className="h-4 w-4" />
+                ) : (
+                  <History className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
-          <ContractsDashboard contracts={contracts} />
+          <ContractsDashboard contracts={filteredContracts} />
         )}
 
         {activeTab !== "dashboard" && (
@@ -1440,74 +1508,6 @@ export default function Contracts() {
               </CardContent>
             </Card>
           )}
-
-          {/* Filters */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por cliente, produto ou notas..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="active">Ativos</SelectItem>
-                    <SelectItem value="suspended">Suspensos</SelectItem>
-                    <SelectItem value="paused">Pausados</SelectItem>
-                    <SelectItem value="cancelled">Cancelados</SelectItem>
-                    <SelectItem value="ended">Encerrados</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os tipos</SelectItem>
-                    {Object.entries(CONTRACT_TYPES).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={productFilter} onValueChange={setProductFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="Produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os produtos</SelectItem>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setSortOrder(sortOrder === "az" ? "recent" : "az")}
-                  title={sortOrder === "az" ? "Ordenar por recentes" : "Ordenar A-Z"}
-                  className={cn(
-                    "shrink-0",
-                    sortOrder === "az" && "bg-primary/10 border-primary text-primary"
-                  )}
-                >
-                  {sortOrder === "az" ? (
-                    <ArrowDownAZ className="h-4 w-4" />
-                  ) : (
-                    <History className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
       {/* Contracts Table */}
       <Card>
