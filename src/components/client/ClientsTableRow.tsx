@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
-import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   getInitials, 
@@ -140,19 +140,35 @@ export const ClientsTableRow = memo(function ClientsTableRow({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span>Ativo</span>
-                    {contractData.end_date && (
-                      <span className="text-[10px] opacity-75">
-                        até {format(new Date(contractData.end_date), "dd/MM/yy", { locale: ptBR })}
-                      </span>
-                    )}
-                  </div>
+                  {(() => {
+                    const status = contractData.status || 'active';
+                    const statusConfig: Record<string, { label: string; labelTooltip: string; icon: typeof CheckCircle2; bgClass: string; textClass: string }> = {
+                      active: { label: "Ativo", labelTooltip: "Contrato Ativo", icon: CheckCircle2, bgClass: "bg-green-100 dark:bg-green-900/30", textClass: "text-green-700 dark:text-green-400" },
+                      pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-blue-100 dark:bg-blue-900/30", textClass: "text-blue-700 dark:text-blue-400" },
+                      paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-amber-100 dark:bg-amber-900/30", textClass: "text-amber-700 dark:text-amber-400" },
+                      cancelled: { label: "Cancelado", labelTooltip: "Contrato Cancelado", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
+                      ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-slate-100 dark:bg-slate-900/30", textClass: "text-slate-700 dark:text-slate-400" },
+                    };
+                    const config = statusConfig[status] || statusConfig.active;
+                    const StatusIcon = config.icon;
+                    return (
+                      <div className={cn("inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium", config.bgClass, config.textClass)}>
+                        <StatusIcon className="h-3 w-3" />
+                        <span>{config.label}</span>
+                        {contractData.end_date && (
+                          <span className="text-[10px] opacity-75">
+                            até {format(new Date(contractData.end_date), "dd/MM/yy", { locale: ptBR })}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-xs">
-                    <p className="font-medium text-green-600 dark:text-green-400">Contrato Ativo</p>
+                    <p className={cn("font-medium", contractData.status === 'pending' ? "text-blue-600 dark:text-blue-400" : contractData.status === 'paused' ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400")}>
+                      {contractData.status === 'pending' ? "Contrato Pendente (em assinatura)" : contractData.status === 'paused' ? "Contrato Pausado" : contractData.status === 'cancelled' ? "Contrato Cancelado" : contractData.status === 'ended' ? "Contrato Encerrado" : "Contrato Ativo"}
+                    </p>
                     {contractData.start_date && (
                       <p>Início: {format(new Date(contractData.start_date), "dd/MM/yyyy", { locale: ptBR })}</p>
                     )}

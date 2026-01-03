@@ -158,6 +158,7 @@ export function ClientsFilters({
                   <SelectItem value="urgent">Expira em 30 dias</SelectItem>
                   <SelectItem value="warning">Expira em 60 dias</SelectItem>
                   <SelectItem value="ok">Vigente</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="none">Sem contrato</SelectItem>
                 </SelectContent>
               </Select>
@@ -221,7 +222,7 @@ export function ClientsFilters({
               )}
               {filterContract !== "all" && (
                 <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-                  Contrato: {filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : "Sem contrato"}
+                  Contrato: {filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : filterContract === "pending" ? "Pendente" : "Sem contrato"}
                   <button onClick={() => setFilterContract("all")} className="hover:text-destructive">
                     <X className="h-3 w-3" />
                   </button>

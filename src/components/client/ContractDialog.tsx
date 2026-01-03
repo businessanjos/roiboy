@@ -53,6 +53,14 @@ const CONTRACT_TYPES = [
   { value: "distrato", label: "Distrato" },
 ];
 
+const CONTRACT_STATUSES = [
+  { value: "active", label: "Ativo" },
+  { value: "pending", label: "Pendente (em assinatura)" },
+  { value: "paused", label: "Pausado" },
+  { value: "cancelled", label: "Cancelado" },
+  { value: "ended", label: "Encerrado" },
+];
+
 interface Contract {
   id: string;
   client_id: string;
@@ -98,6 +106,7 @@ export function ContractDialog({
     end_date: "",
     value: "",
     contract_type: "compra",
+    status: "active",
     payment_type: "",
     installments: "",
     payment_method: "",
@@ -140,6 +149,7 @@ export function ContractDialog({
       end_date: "",
       value: "",
       contract_type: "compra",
+      status: "active",
       payment_type: "",
       installments: "",
       payment_method: "",
@@ -163,6 +173,7 @@ export function ContractDialog({
       end_date: contract.end_date || "",
       value: contract.value.toString(),
       contract_type: contract.contract_type || "compra",
+      status: contract.status || "active",
       payment_type: parsed.type,
       installments: parsed.installments,
       payment_method: parsed.method,
@@ -276,6 +287,7 @@ export function ContractDialog({
         end_date: formData.end_date || null,
         value: parseFloat(formData.value) || 0,
         contract_type: formData.contract_type,
+        status: formData.status,
         payment_option: buildPaymentOption(),
         notes: formData.notes || null,
         file_url: fileUrl || null,
@@ -314,6 +326,7 @@ export function ContractDialog({
   const getStatusLabel = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
       active: { label: "Ativo", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+      pending: { label: "Pendente", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
       cancelled: { label: "Cancelado", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
       ended: { label: "Encerrado", className: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400" },
       paused: { label: "Pausado", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
@@ -443,6 +456,25 @@ export function ContractDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {CONTRACT_TYPES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status do Contrato</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTRACT_STATUSES.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
