@@ -8,21 +8,26 @@ import { cn } from "@/lib/utils";
 
 export default function Sectors() {
   const navigate = useNavigate();
-  const { currentUser } = useCurrentUser();
+  const { currentUser, loading: userLoading } = useCurrentUser();
   const { setCurrentSector } = useSector();
-  const [accountName, setAccountName] = useState("Sua Empresa");
+  const [accountName, setAccountName] = useState<string | null>(null);
 
   useEffect(() => {
-    if (currentUser?.account_id) {
-      supabase
+    const fetchAccountName = async () => {
+      if (!currentUser?.account_id) return;
+      
+      const { data, error } = await supabase
         .from("accounts")
         .select("name")
         .eq("id", currentUser.account_id)
-        .single()
-        .then(({ data }) => {
-          if (data?.name) setAccountName(data.name);
-        });
-    }
+        .single();
+      
+      if (data?.name) {
+        setAccountName(data.name);
+      }
+    };
+    
+    fetchAccountName();
   }, [currentUser?.account_id]);
 
   const handleSectorClick = (sectorId: SectorId, defaultRoute: string, comingSoon?: boolean) => {
@@ -42,7 +47,9 @@ export default function Sectors() {
         <div className="text-center mb-16">
           <h1 className="text-3xl md:text-4xl font-light text-foreground mb-2 tracking-tight">
             Bem-vindo à{" "}
-            <span className="text-primary font-medium">{accountName}</span>
+            <span className="text-primary font-medium">
+              {accountName || (userLoading ? "..." : "Sua Empresa")}
+            </span>
           </h1>
           <p className="text-muted-foreground">
             Gerencie sua empresa através das áreas fundamentais do negócio
