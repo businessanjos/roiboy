@@ -49,6 +49,29 @@ interface Subscription {
   notes: string | null;
 }
 
+interface StripeSubscription {
+  id: string;
+  status: string;
+  customer_email: string;
+  customer_name: string | null;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  canceled_at: string | null;
+  created: string;
+  items: {
+    id: string;
+    price_id: string;
+    product_name: string;
+    product_description: string | null;
+    unit_amount: number;
+    currency: string;
+    interval: string | null;
+    interval_count: number;
+    quantity: number;
+  }[];
+}
+
 interface FinancialEntry {
   id: string;
   entry_type: "receivable" | "payable";
@@ -67,6 +90,7 @@ interface ClientData {
   cnpj: string | null;
   company_name: string | null;
   companies: any[] | null;
+  emails: any[] | null;
 }
 
 interface ClientFinancialProps {
@@ -99,6 +123,8 @@ const entryStatusConfig: Record<string, { label: string; className: string }> = 
 
 export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [stripeSubscriptions, setStripeSubscriptions] = useState<StripeSubscription[]>([]);
+  const [loadingStripe, setLoadingStripe] = useState(false);
   const [financialEntries, setFinancialEntries] = useState<FinancialEntry[]>([]);
   const [clientData, setClientData] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,7 +147,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const fetchClientData = async (): Promise<ClientData | null> => {
     const { data } = await supabase
       .from("clients")
-      .select("cnpj, company_name, companies")
+      .select("cnpj, company_name, companies, emails")
       .eq("id", clientId)
       .single();
     if (data) {
@@ -129,6 +155,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
         cnpj: data.cnpj,
         company_name: data.company_name,
         companies: Array.isArray(data.companies) ? data.companies : [],
+        emails: Array.isArray(data.emails) ? data.emails : [],
       };
       setClientData(normalized);
       return normalized;
@@ -220,12 +247,39 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     }
   };
 
+  const fetchStripeSubscriptions = async (client: ClientData | null) => {
+    if (!client?.emails || client.emails.length === 0) {
+      setStripeSubscriptions([]);
+      return;
+    }
+    
+    setLoadingStripe(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-customer-subscriptions', {
+        body: { emails: client.emails },
+      });
+      
+      if (error) {
+        console.error('Error fetching Stripe subscriptions:', error);
+        setStripeSubscriptions([]);
+      } else {
+        setStripeSubscriptions(data?.subscriptions || []);
+      }
+    } catch (err) {
+      console.error('Error calling Stripe function:', err);
+      setStripeSubscriptions([]);
+    } finally {
+      setLoadingStripe(false);
+    }
+  };
+
   const fetchAllData = async () => {
     setLoading(true);
     const client = await fetchClientData();
     await Promise.all([
       fetchSubscriptions(),
       fetchFinancialEntries(client),
+      fetchStripeSubscriptions(client),
     ]);
     setLoading(false);
   };
@@ -503,8 +557,8 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
           <TabsTrigger value="subscriptions" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Assinaturas
-            {subscriptions.length > 0 && (
-              <Badge variant="secondary" className="ml-1">{subscriptions.length}</Badge>
+            {(subscriptions.length + stripeSubscriptions.length) > 0 && (
+              <Badge variant="secondary" className="ml-1">{subscriptions.length + stripeSubscriptions.length}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
@@ -589,127 +643,227 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
         </TabsContent>
 
         {/* Subscriptions Tab */}
-        <TabsContent value="subscriptions" className="mt-4">
-          {subscriptions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Nenhuma assinatura</p>
-              <p className="text-sm mt-1">
-                Adicione manualmente ou sincronize com a Omie
-              </p>
+        <TabsContent value="subscriptions" className="mt-4 space-y-6">
+          {/* Stripe Subscriptions Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <svg className="h-4 w-4" viewBox="0 0 32 32" fill="none">
+                  <path d="M13.976 13.176c0-1.056.87-1.464 2.304-1.464 2.064 0 4.656.624 6.72 1.728V7.68a17.888 17.888 0 00-6.72-1.248c-5.472 0-9.12 2.856-9.12 7.632 0 7.44 10.248 6.264 10.248 9.48 0 1.248-1.08 1.656-2.592 1.656-2.256 0-5.136-.936-7.416-2.184v5.808a18.86 18.86 0 007.416 1.584c5.568 0 9.408-2.76 9.408-7.608-.024-8.016-10.248-6.624-10.248-9.624z" fill="#635BFF"/>
+                </svg>
+                Stripe
+                {loadingStripe && <Loader2 className="h-3 w-3 animate-spin" />}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {subscriptions.map((sub) => {
-                const statusConfig = paymentStatusConfig[sub.payment_status];
-                const StatusIcon = statusConfig.icon;
-                const isEditing = editingNoteId === sub.id;
-                const isDeleting = deletingId === sub.id;
-
-                return (
-                  <div key={sub.id} className="p-4 rounded-lg border border-border bg-card/50">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-semibold">{sub.product_name}</h4>
-                          <Badge variant="outline" className={statusConfig.className}>
-                            <StatusIcon className="h-3 w-3 mr-1" />
-                            {statusConfig.label}
-                          </Badge>
-                          <Badge variant="secondary">
-                            {billingPeriodLabels[sub.billing_period]}
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-3.5 w-3.5" />
-                            {formatCurrency(sub.amount, sub.currency)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            Início: {format(new Date(sub.start_date), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
-                          {sub.next_billing_date && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3.5 w-3.5" />
-                              Venc: {format(new Date(sub.next_billing_date), "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                          )}
-                        </div>
-
-                        {isEditing ? (
-                          <div className="space-y-2">
-                            <Textarea
-                              value={noteText}
-                              onChange={(e) => setNoteText(e.target.value)}
-                              placeholder="Adicione uma nota sobre este item financeiro..."
-                              className="min-h-[80px] text-sm"
-                              autoFocus
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleSaveNote(sub.id)}
-                                disabled={savingNote}
-                              >
-                                {savingNote ? (
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                ) : (
-                                  <Check className="h-3 w-3 mr-1" />
+            
+            {stripeSubscriptions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg">
+                <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhuma assinatura no Stripe</p>
+                {clientData?.emails && clientData.emails.length === 0 && (
+                  <p className="text-xs mt-1">Cadastre um e-mail para buscar assinaturas</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {stripeSubscriptions.map((stripeSub) => {
+                  const stripeStatusConfig: Record<string, { label: string; className: string }> = {
+                    active: { label: "Ativo", className: "bg-emerald-500/10 text-emerald-600" },
+                    trialing: { label: "Trial", className: "bg-blue-500/10 text-blue-600" },
+                    past_due: { label: "Atrasado", className: "bg-red-500/10 text-red-600" },
+                    canceled: { label: "Cancelado", className: "bg-slate-500/10 text-slate-600" },
+                    unpaid: { label: "Não pago", className: "bg-red-500/10 text-red-600" },
+                    incomplete: { label: "Incompleto", className: "bg-amber-500/10 text-amber-600" },
+                    incomplete_expired: { label: "Expirado", className: "bg-slate-500/10 text-slate-600" },
+                    paused: { label: "Pausado", className: "bg-amber-500/10 text-amber-600" },
+                  };
+                  const statusConf = stripeStatusConfig[stripeSub.status] || { label: stripeSub.status, className: "bg-slate-500/10 text-slate-600" };
+                  
+                  return (
+                    <div key={stripeSub.id} className="p-4 rounded-lg border border-border bg-card/50">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          {stripeSub.items.map((item, idx) => (
+                            <div key={item.id} className={idx > 0 ? "pt-2 border-t" : ""}>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-semibold">{item.product_name}</h4>
+                                {idx === 0 && (
+                                  <>
+                                    <Badge variant="outline" className={statusConf.className}>
+                                      {statusConf.label}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px] gap-1 bg-[#635BFF]/10 text-[#635BFF] border-[#635BFF]/30">
+                                      <svg className="h-3 w-3" viewBox="0 0 32 32" fill="none">
+                                        <path d="M13.976 13.176c0-1.056.87-1.464 2.304-1.464 2.064 0 4.656.624 6.72 1.728V7.68a17.888 17.888 0 00-6.72-1.248c-5.472 0-9.12 2.856-9.12 7.632 0 7.44 10.248 6.264 10.248 9.48 0 1.248-1.08 1.656-2.592 1.656-2.256 0-5.136-.936-7.416-2.184v5.808a18.86 18.86 0 007.416 1.584c5.568 0 9.408-2.76 9.408-7.608-.024-8.016-10.248-6.624-10.248-9.624z" fill="currentColor"/>
+                                      </svg>
+                                      Stripe
+                                    </Badge>
+                                  </>
                                 )}
-                                Salvar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={handleCancelEdit}
-                                disabled={savingNote}
-                              >
-                                <X className="h-3 w-3 mr-1" />
-                                Cancelar
-                              </Button>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap mt-1">
+                                <span className="flex items-center gap-1">
+                                  <DollarSign className="h-3.5 w-3.5" />
+                                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: item.currency.toUpperCase() }).format(item.unit_amount / 100)}
+                                  {item.interval && <span className="text-xs">/{item.interval === 'month' ? 'mês' : item.interval === 'year' ? 'ano' : item.interval}</span>}
+                                </span>
+                                {item.quantity > 1 && (
+                                  <span className="text-xs">x{item.quantity}</span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-start gap-2">
-                            {sub.notes ? (
-                              <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded flex-1">
-                                {sub.notes}
-                              </p>
-                            ) : (
-                              <p className="text-sm text-muted-foreground/50 italic flex-1">
-                                Sem notas
-                              </p>
+                          ))}
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap pt-2 border-t">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Período: {format(new Date(stripeSub.current_period_start), "dd/MM/yy", { locale: ptBR })} - {format(new Date(stripeSub.current_period_end), "dd/MM/yy", { locale: ptBR })}
+                            </span>
+                            {stripeSub.customer_email && (
+                              <span className="text-muted-foreground/70">{stripeSub.customer_email}</span>
                             )}
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 shrink-0"
-                              onClick={() => handleEditNote(sub)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(sub.id)}
-                              disabled={isDeleting}
-                            >
-                              {isDeleting ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
+                            {stripeSub.cancel_at_period_end && (
+                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600">
+                                Cancela no fim do período
+                              </Badge>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          
+          {/* Internal Subscriptions Section */}
+          {subscriptions.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Package className="h-4 w-4" />
+                Omie / Manual
+              </div>
+              
+              <div className="space-y-3">
+                {subscriptions.map((sub) => {
+                  const statusConfig = paymentStatusConfig[sub.payment_status];
+                  const StatusIcon = statusConfig.icon;
+                  const isEditing = editingNoteId === sub.id;
+                  const isDeleting = deletingId === sub.id;
+
+                  return (
+                    <div key={sub.id} className="p-4 rounded-lg border border-border bg-card/50">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold">{sub.product_name}</h4>
+                            <Badge variant="outline" className={statusConfig.className}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {statusConfig.label}
+                            </Badge>
+                            <Badge variant="secondary">
+                              {billingPeriodLabels[sub.billing_period]}
+                            </Badge>
+                          </div>
+
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="h-3.5 w-3.5" />
+                              {formatCurrency(sub.amount, sub.currency)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Início: {format(new Date(sub.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                            {sub.next_billing_date && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                Venc: {format(new Date(sub.next_billing_date), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            )}
+                          </div>
+
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={noteText}
+                                onChange={(e) => setNoteText(e.target.value)}
+                                placeholder="Adicione uma nota sobre este item financeiro..."
+                                className="min-h-[80px] text-sm"
+                                autoFocus
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveNote(sub.id)}
+                                  disabled={savingNote}
+                                >
+                                  {savingNote ? (
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Check className="h-3 w-3 mr-1" />
+                                  )}
+                                  Salvar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={handleCancelEdit}
+                                  disabled={savingNote}
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-2">
+                              {sub.notes ? (
+                                <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded flex-1">
+                                  {sub.notes}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground/50 italic flex-1">
+                                  Sem notas
+                                </p>
+                              )}
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => handleEditNote(sub)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                                onClick={() => handleDelete(sub.id)}
+                                disabled={isDeleting}
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Empty state when no subscriptions from either source */}
+          {subscriptions.length === 0 && stripeSubscriptions.length === 0 && !loadingStripe && (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">Nenhuma assinatura encontrada</p>
             </div>
           )}
         </TabsContent>
