@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MoreHorizontal, Building2, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Edit2, Trash2, MoreHorizontal, Building2, Check, ChevronsUpDown, MapPin, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,8 +53,10 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { brazilianBanks, findBankByName } from "@/data/brazilian-banks";
+import { format, parseISO } from "date-fns";
 
 interface BankAccount {
   id: string;
@@ -62,26 +64,59 @@ interface BankAccount {
   bank_name: string;
   bank_code: string | null;
   agency: string | null;
+  agency_digit: string | null;
   account_number: string | null;
+  account_digit: string | null;
   account_type: string;
   initial_balance: number;
   current_balance: number;
   is_active: boolean;
   color: string;
   notes: string | null;
+  // New fields
+  initial_balance_date: string | null;
+  credit_limit: number | null;
+  linked_account_id: string | null;
+  exclude_from_reports: boolean;
+  manager_name: string | null;
+  manager_email: string | null;
+  manager_phone: string | null;
+  agency_street: string | null;
+  agency_number: string | null;
+  agency_neighborhood: string | null;
+  agency_complement: string | null;
+  agency_city: string | null;
+  agency_state: string | null;
+  agency_zip_code: string | null;
 }
 
-const accountTypes = {
+// Expanded account types based on reference UI
+const accountTypes: Record<string, string> = {
   checking: "Conta Corrente",
-  savings: "Poupança",
+  savings: "Conta Poupança",
   investment: "Investimentos",
-  cash: "Caixa",
-  other: "Outro",
+  cash: "Caixa/Caixinha",
+  credit_card: "Cartão de Crédito",
+  payment: "Conta de Pagamento",
+  loan: "Conta Empréstimo",
+  guaranteed: "Conta Garantida",
+  application: "Conta Aplicação",
+  advance: "Adiantamento",
+  card_admin: "Administradora de Cartões",
+  virtual_wallet: "Carteira Virtual",
+  installment: "Crediário/Carnê",
+  mutual: "Mútuo",
 };
 
 const defaultColors = [
   "#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
   "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+];
+
+const brazilianStates = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
 export default function FinancialBankAccountsPage() {
@@ -93,17 +128,37 @@ export default function FinancialBankAccountsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
   const [bankPopoverOpen, setBankPopoverOpen] = useState(false);
+  const [linkedAccountPopoverOpen, setLinkedAccountPopoverOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
+
   const [formData, setFormData] = useState({
     name: "",
     bank_name: "",
     bank_code: "",
     agency: "",
+    agency_digit: "",
     account_number: "",
+    account_digit: "",
     account_type: "checking",
     initial_balance: "",
+    initial_balance_date: "",
+    credit_limit: "",
+    linked_account_id: "",
     is_active: true,
+    exclude_from_reports: false,
     color: defaultColors[0],
     notes: "",
+    // Agency info
+    manager_name: "",
+    manager_email: "",
+    manager_phone: "",
+    agency_street: "",
+    agency_number: "",
+    agency_neighborhood: "",
+    agency_complement: "",
+    agency_city: "",
+    agency_state: "",
+    agency_zip_code: "",
   });
 
   const { data: bankAccounts = [], isLoading } = useQuery({
@@ -129,12 +184,29 @@ export default function FinancialBankAccountsPage() {
         bank_name: data.bank_name,
         bank_code: data.bank_code || null,
         agency: data.agency || null,
+        agency_digit: data.agency_digit || null,
         account_number: data.account_number || null,
+        account_digit: data.account_digit || null,
         account_type: data.account_type,
         initial_balance: parseFloat(data.initial_balance.replace(",", ".")) || 0,
+        initial_balance_date: data.initial_balance_date || null,
+        credit_limit: parseFloat(data.credit_limit.replace(",", ".")) || 0,
+        linked_account_id: data.linked_account_id || null,
         is_active: data.is_active,
+        exclude_from_reports: data.exclude_from_reports,
         color: data.color,
         notes: data.notes || null,
+        // Agency info
+        manager_name: data.manager_name || null,
+        manager_email: data.manager_email || null,
+        manager_phone: data.manager_phone || null,
+        agency_street: data.agency_street || null,
+        agency_number: data.agency_number || null,
+        agency_neighborhood: data.agency_neighborhood || null,
+        agency_complement: data.agency_complement || null,
+        agency_city: data.agency_city || null,
+        agency_state: data.agency_state || null,
+        agency_zip_code: data.agency_zip_code || null,
       };
 
       if (editingAccount) {
@@ -181,14 +253,31 @@ export default function FinancialBankAccountsPage() {
       bank_name: "",
       bank_code: "",
       agency: "",
+      agency_digit: "",
       account_number: "",
+      account_digit: "",
       account_type: "checking",
       initial_balance: "",
+      initial_balance_date: "",
+      credit_limit: "",
+      linked_account_id: "",
       is_active: true,
+      exclude_from_reports: false,
       color: defaultColors[Math.floor(Math.random() * defaultColors.length)],
       notes: "",
+      manager_name: "",
+      manager_email: "",
+      manager_phone: "",
+      agency_street: "",
+      agency_number: "",
+      agency_neighborhood: "",
+      agency_complement: "",
+      agency_city: "",
+      agency_state: "",
+      agency_zip_code: "",
     });
     setEditingAccount(null);
+    setActiveTab("basic");
   };
 
   const handleEdit = (account: BankAccount) => {
@@ -198,13 +287,30 @@ export default function FinancialBankAccountsPage() {
       bank_name: account.bank_name,
       bank_code: account.bank_code || "",
       agency: account.agency || "",
+      agency_digit: account.agency_digit || "",
       account_number: account.account_number || "",
+      account_digit: account.account_digit || "",
       account_type: account.account_type,
       initial_balance: account.initial_balance.toString(),
+      initial_balance_date: account.initial_balance_date || "",
+      credit_limit: account.credit_limit?.toString() || "",
+      linked_account_id: account.linked_account_id || "",
       is_active: account.is_active,
+      exclude_from_reports: account.exclude_from_reports || false,
       color: account.color,
       notes: account.notes || "",
+      manager_name: account.manager_name || "",
+      manager_email: account.manager_email || "",
+      manager_phone: account.manager_phone || "",
+      agency_street: account.agency_street || "",
+      agency_number: account.agency_number || "",
+      agency_neighborhood: account.agency_neighborhood || "",
+      agency_complement: account.agency_complement || "",
+      agency_city: account.agency_city || "",
+      agency_state: account.agency_state || "",
+      agency_zip_code: account.agency_zip_code || "",
     });
+    setActiveTab("basic");
     setIsDialogOpen(true);
   };
 
@@ -212,7 +318,31 @@ export default function FinancialBankAccountsPage() {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
+  const fetchCepData = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, "");
+    if (cleanCep.length !== 8) return;
+    
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          agency_street: data.logradouro || prev.agency_street,
+          agency_neighborhood: data.bairro || prev.agency_neighborhood,
+          agency_city: data.localidade || prev.agency_city,
+          agency_state: data.uf || prev.agency_state,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching CEP:", error);
+    }
+  };
+
   const totalBalance = bankAccounts.filter(a => a.is_active).reduce((acc, a) => acc + a.current_balance, 0);
+
+  // Get other accounts for linked account selector (excluding current account being edited)
+  const availableLinkedAccounts = bankAccounts.filter(a => a.id !== editingAccount?.id);
 
   return (
     <div className="p-6 space-y-6">
@@ -294,7 +424,7 @@ export default function FinancialBankAccountsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {accountTypes[account.account_type as keyof typeof accountTypes] || account.account_type}
+                        {accountTypes[account.account_type] || account.account_type}
                       </Badge>
                     </TableCell>
                     <TableCell className={`text-right font-medium ${account.current_balance >= 0 ? "text-green-600" : "text-red-600"}`}>
@@ -340,7 +470,7 @@ export default function FinancialBankAccountsPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingAccount ? "Editar Conta" : "Nova Conta Bancária"}</DialogTitle>
           </DialogHeader>
@@ -351,18 +481,23 @@ export default function FinancialBankAccountsPage() {
             }}
             className="space-y-4"
           >
+            {/* Basic Info Header */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nome da Conta *</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Conta Principal"
-                  required
-                />
+                <Label>Tipo de Conta *</Label>
+                <Select value={formData.account_type} onValueChange={(v) => setFormData({ ...formData, account_type: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(accountTypes).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label>Banco *</Label>
+                <Label>Instituição *</Label>
                 <Popover open={bankPopoverOpen} onOpenChange={setBankPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -424,88 +559,301 @@ export default function FinancialBankAccountsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Nome da Conta *</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ex: Conta Principal"
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Agência</Label>
-                <Input
-                  value={formData.agency}
-                  onChange={(e) => setFormData({ ...formData, agency: e.target.value })}
-                  placeholder="0001"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Conta</Label>
-                <Input
-                  value={formData.account_number}
-                  onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-                  placeholder="12345-6"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Tipo de Conta</Label>
-                <Select value={formData.account_type} onValueChange={(v) => setFormData({ ...formData, account_type: v })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(accountTypes).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Saldo Inicial</Label>
-                <Input
-                  value={formData.initial_balance}
-                  onChange={(e) => setFormData({ ...formData, initial_balance: e.target.value })}
-                  placeholder="0,00"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Cor</Label>
-              <div className="flex gap-2 flex-wrap">
-                {defaultColors.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${formData.color === color ? "border-primary scale-110" : "border-transparent"}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setFormData({ ...formData, color })}
+                <div className="flex gap-1">
+                  <Input
+                    value={formData.agency}
+                    onChange={(e) => setFormData({ ...formData, agency: e.target.value })}
+                    placeholder="0001"
+                    className="flex-1"
                   />
-                ))}
+                  <Input
+                    value={formData.agency_digit}
+                    onChange={(e) => setFormData({ ...formData, agency_digit: e.target.value })}
+                    placeholder="0"
+                    className="w-14"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Conta (com dígito)</Label>
+                <div className="flex gap-1">
+                  <Input
+                    value={formData.account_number}
+                    onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                    placeholder="12345"
+                    className="flex-1"
+                  />
+                  <Input
+                    value={formData.account_digit}
+                    onChange={(e) => setFormData({ ...formData, account_digit: e.target.value })}
+                    placeholder="6"
+                    className="w-14"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Observações sobre a conta..."
-                rows={2}
-              />
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="basic">Outras Informações</TabsTrigger>
+                <TabsTrigger value="agency">Sobre a Agência</TabsTrigger>
+              </TabsList>
 
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={formData.is_active}
-                onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
-              />
-              <Label>Conta ativa</Label>
-            </div>
+              <TabsContent value="basic" className="space-y-4 mt-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Saldo Inicial</Label>
+                    <Input
+                      value={formData.initial_balance}
+                      onChange={(e) => setFormData({ ...formData, initial_balance: e.target.value })}
+                      placeholder="0,00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data Saldo Inicial</Label>
+                    <Input
+                      type="date"
+                      value={formData.initial_balance_date}
+                      onChange={(e) => setFormData({ ...formData, initial_balance_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Limite de Crédito</Label>
+                    <Input
+                      value={formData.credit_limit}
+                      onChange={(e) => setFormData({ ...formData, credit_limit: e.target.value })}
+                      placeholder="0,00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Conta Vinculada</Label>
+                    <Popover open={linkedAccountPopoverOpen} onOpenChange={setLinkedAccountPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal text-sm"
+                        >
+                          {formData.linked_account_id
+                            ? availableLinkedAccounts.find(a => a.id === formData.linked_account_id)?.name || "Selecione..."
+                            : "Selecione..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[250px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar conta..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value=""
+                                onSelect={() => {
+                                  setFormData({ ...formData, linked_account_id: "" });
+                                  setLinkedAccountPopoverOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", !formData.linked_account_id ? "opacity-100" : "opacity-0")} />
+                                Nenhuma
+                              </CommandItem>
+                              {availableLinkedAccounts.map((account) => (
+                                <CommandItem
+                                  key={account.id}
+                                  value={account.name}
+                                  onSelect={() => {
+                                    setFormData({ ...formData, linked_account_id: account.id });
+                                    setLinkedAccountPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formData.linked_account_id === account.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {account.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 py-2">
+                  <Switch
+                    id="exclude-reports"
+                    checked={formData.exclude_from_reports}
+                    onCheckedChange={(checked) => setFormData({ ...formData, exclude_from_reports: checked })}
+                  />
+                  <Label htmlFor="exclude-reports" className="text-sm">
+                    Não considerar esta conta no "Resumo", no "Fluxo de Caixa" e no "Orçamento de Caixa"
+                  </Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Cor</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {defaultColors.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={cn(
+                          "w-8 h-8 rounded-full border-2 transition-all",
+                          formData.color === color ? "border-foreground scale-110" : "border-transparent"
+                        )}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setFormData({ ...formData, color })}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                  <Label htmlFor="active">Conta ativa</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Observação</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Observações sobre esta conta..."
+                    rows={3}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="agency" className="space-y-4 mt-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Gerente da Conta</Label>
+                    <Input
+                      value={formData.manager_name}
+                      onChange={(e) => setFormData({ ...formData, manager_name: e.target.value })}
+                      placeholder="Nome do gerente"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>E-mail</Label>
+                    <Input
+                      type="email"
+                      value={formData.manager_email}
+                      onChange={(e) => setFormData({ ...formData, manager_email: e.target.value })}
+                      placeholder="email@banco.com"
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <Label>Telefone</Label>
+                    <Input
+                      value={formData.manager_phone}
+                      onChange={(e) => setFormData({ ...formData, manager_phone: e.target.value })}
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-3 space-y-2">
+                    <Label>Endereço</Label>
+                    <Input
+                      value={formData.agency_street}
+                      onChange={(e) => setFormData({ ...formData, agency_street: e.target.value })}
+                      placeholder="Rua, Avenida..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Número</Label>
+                    <Input
+                      value={formData.agency_number}
+                      onChange={(e) => setFormData({ ...formData, agency_number: e.target.value })}
+                      placeholder="123"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Bairro</Label>
+                    <Input
+                      value={formData.agency_neighborhood}
+                      onChange={(e) => setFormData({ ...formData, agency_neighborhood: e.target.value })}
+                      placeholder="Bairro"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Complemento</Label>
+                    <Input
+                      value={formData.agency_complement}
+                      onChange={(e) => setFormData({ ...formData, agency_complement: e.target.value })}
+                      placeholder="Sala, Andar..."
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Estado</Label>
+                    <Select 
+                      value={formData.agency_state} 
+                      onValueChange={(v) => setFormData({ ...formData, agency_state: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {brazilianStates.map((state) => (
+                          <SelectItem key={state} value={state}>{state}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cidade</Label>
+                    <Input
+                      value={formData.agency_city}
+                      onChange={(e) => setFormData({ ...formData, agency_city: e.target.value })}
+                      placeholder="Cidade"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CEP</Label>
+                    <Input
+                      value={formData.agency_zip_code}
+                      onChange={(e) => setFormData({ ...formData, agency_zip_code: e.target.value })}
+                      onBlur={(e) => fetchCepData(e.target.value)}
+                      placeholder="00000-000"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? "Salvando..." : editingAccount ? "Atualizar" : "Criar"}
+                {saveMutation.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
           </form>
