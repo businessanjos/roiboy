@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import { Save, Search, Plus, User } from "lucide-react";
-import { format } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { Save, Search, Plus, User, Calendar, DollarSign, Building2, FileText, Repeat } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -518,8 +519,8 @@ export function ManualPayableDialog({
             </Tabs>
           </div>
 
-          {/* Sidebar com botão salvar */}
-          <div className="w-24 shrink-0 border-l pl-4">
+          {/* Sidebar com resumo da cobrança */}
+          <div className="w-64 shrink-0 border-l pl-4 space-y-4">
             <Button
               onClick={handleSave}
               disabled={isLoading}
@@ -529,6 +530,105 @@ export function ManualPayableDialog({
               <Save className="h-4 w-4 mr-2" />
               Salvar
             </Button>
+
+            {/* Resumo */}
+            <div className="border-t pt-4 space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground">Resumo</h4>
+              
+              {/* Fornecedor */}
+              <div className="flex items-start gap-2">
+                <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">Fornecedor</p>
+                  <p className="text-sm font-medium truncate">
+                    {formData.supplier_name || <span className="text-muted-foreground italic">Não informado</span>}
+                  </p>
+                </div>
+              </div>
+
+              {/* Valor */}
+              <div className="flex items-start gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Valor</p>
+                  <p className="text-sm font-medium">
+                    {formData.amount ? 
+                      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(formData.amount) || 0) : 
+                      <span className="text-muted-foreground italic">R$ 0,00</span>
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Vencimento */}
+              <div className="flex items-start gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Vencimento</p>
+                  <p className="text-sm font-medium">
+                    {formData.due_date ? 
+                      format(parseISO(formData.due_date), "dd/MM/yyyy") : 
+                      <span className="text-muted-foreground italic">Não informado</span>
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Categoria */}
+              {formData.category_id && (
+                <div className="flex items-start gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">Categoria</p>
+                    <p className="text-sm font-medium truncate">
+                      {categories.find((c: any) => c.id === formData.category_id)?.name || '-'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Conta Bancária */}
+              {formData.bank_account_id && (
+                <div className="flex items-start gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">Conta</p>
+                    <p className="text-sm font-medium truncate">
+                      {bankAccounts.find((b: any) => b.id === formData.bank_account_id)?.name || '-'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Recorrência */}
+              {formData.is_recurring && (
+                <div className="flex items-start gap-2">
+                  <Repeat className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">Recorrência</p>
+                    <p className="text-sm font-medium capitalize">
+                      {formData.recurrence_type === 'weekly' && 'Semanal'}
+                      {formData.recurrence_type === 'biweekly' && 'Quinzenal'}
+                      {formData.recurrence_type === 'monthly' && 'Mensal'}
+                      {formData.recurrence_type === 'quarterly' && 'Trimestral'}
+                      {formData.recurrence_type === 'semiannual' && 'Semestral'}
+                      {formData.recurrence_type === 'annual' && 'Anual'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Documento */}
+              {formData.document_number && (
+                <div className="flex items-start gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">Documento</p>
+                    <p className="text-sm font-medium truncate">{formData.document_number}</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
