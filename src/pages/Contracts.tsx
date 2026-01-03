@@ -1449,6 +1449,33 @@ export default function Contracts() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {activeTab === "fila" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const { error } = await supabase
+                                    .from("client_contracts")
+                                    .update({ 
+                                      receivables_generated: true,
+                                      receivables_generated_at: new Date().toISOString()
+                                    })
+                                    .eq("id", contract.id);
+                                  if (error) throw error;
+                                  toast.success("Contrato marcado como conciliado");
+                                  fetchContracts();
+                                } catch (error) {
+                                  console.error("Error:", error);
+                                  toast.error("Erro ao atualizar contrato");
+                                }
+                              }}
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Conciliar
+                            </Button>
+                          )}
                           <Button
                             variant="default"
                             size="sm"
