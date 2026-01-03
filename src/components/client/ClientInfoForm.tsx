@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, X, Mail, Phone, Building2, User, MapPin, Calendar, FileText, AlertCircle, Award, Check, Loader2, ChevronsUpDown, Home, Instagram, FileUser, Landmark, QrCode } from "lucide-react";
+import { CompaniesManager, CompanyData } from "./CompaniesManager";
 import { cn } from "@/lib/utils";
 import { 
   validateCPF, 
@@ -77,6 +78,8 @@ export interface ClientFormData {
   // Business info
   business_segment: string;
   business_niche: string;
+  // Additional companies
+  companies: CompanyData[];
   // Contract
   contract_start_date: string;
   contract_end_date: string;
@@ -1160,7 +1163,16 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
 
           <div className="h-px bg-border/50" />
 
-          {/* Contract Dates */}
+          {/* Additional Companies */}
+          <div className="space-y-3">
+            <CompaniesManager
+              companies={data.companies || []}
+              onChange={(companies) => updateField("companies", companies)}
+              label="Empresas Adicionais (Outros CNPJs)"
+            />
+          </div>
+
+          <div className="h-px bg-border/50" />
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
               <Calendar className="h-3.5 w-3.5" />
@@ -1498,6 +1510,7 @@ export const getEmptyClientFormData = (): ClientFormData => ({
   business_zip_code: "",
   business_segment: "",
   business_niche: "",
+  companies: [],
   contract_start_date: "",
   contract_end_date: "",
   is_mls: false,

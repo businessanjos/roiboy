@@ -436,6 +436,7 @@ export default function ClientDetail() {
       bank_account: (client as any).bank_account || "",
       bank_account_type: (client as any).bank_account_type || "checking",
       additional_bank_accounts: ((client as any).additional_bank_accounts as any[]) || [],
+      companies: ((client as any).companies as any[]) || [],
     });
     setEditInfoDialogOpen(true);
   };
@@ -495,6 +496,7 @@ export default function ClientDetail() {
           is_mls: editFormData.is_mls,
           mls_level: editFormData.is_mls ? (editFormData.mls_level || null) : null,
           responsible_user_id: editFormData.responsible_user_id || null,
+          companies: JSON.parse(JSON.stringify(editFormData.companies || [])),
         })
         .eq("id", id);
 
@@ -532,7 +534,8 @@ export default function ClientDetail() {
         is_mls: editFormData.is_mls,
         mls_level: editFormData.mls_level,
         responsible_user_id: editFormData.responsible_user_id,
-      });
+        companies: editFormData.companies,
+      } as any);
 
       toast.success("Informações atualizadas!");
       setEditInfoDialogOpen(false);
