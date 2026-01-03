@@ -912,143 +912,103 @@ export default function Contracts() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-3">
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/10">
-                <FileText className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.total}</p>
-                <p className="text-[10px] text-muted-foreground">Total</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-primary/10 w-fit mx-auto mb-2">
+              <FileText className="h-5 w-5 text-primary" />
             </div>
+            <p className="text-2xl font-bold">{stats.total}</p>
+            <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-green-500/10">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.active}</p>
-                <p className="text-[10px] text-muted-foreground">Ativos</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
+            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+            <p className="text-xs text-muted-foreground">Ativos</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-blue-500/10">
-                <Clock className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.pending}</p>
-                <p className="text-[10px] text-muted-foreground">Pendentes</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-blue-500/10 w-fit mx-auto mb-2">
+              <Clock className="h-5 w-5 text-blue-600" />
             </div>
+            <p className="text-2xl font-bold text-blue-600">{stats.pending}</p>
+            <p className="text-xs text-muted-foreground">Pendentes</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-orange-500/10">
-                <Ban className="h-4 w-4 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.suspended}</p>
-                <p className="text-[10px] text-muted-foreground">Suspensos</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-orange-500/10 w-fit mx-auto mb-2">
+              <Ban className="h-5 w-5 text-orange-600" />
             </div>
+            <p className="text-2xl font-bold text-orange-600">{stats.suspended}</p>
+            <p className="text-xs text-muted-foreground">Suspensos</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-amber-500/10">
-                <PauseCircle className="h-4 w-4 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.paused}</p>
-                <p className="text-[10px] text-muted-foreground">Pausados</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-amber-500/10 w-fit mx-auto mb-2">
+              <PauseCircle className="h-5 w-5 text-amber-600" />
             </div>
+            <p className="text-2xl font-bold text-amber-600">{stats.paused}</p>
+            <p className="text-xs text-muted-foreground">Pausados</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-red-500/10">
-                <XCircle className="h-4 w-4 text-red-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.cancelled}</p>
-                <p className="text-[10px] text-muted-foreground">Cancelados</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-red-500/10 w-fit mx-auto mb-2">
+              <XCircle className="h-5 w-5 text-red-600" />
             </div>
+            <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+            <p className="text-xs text-muted-foreground">Cancelados</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-slate-500/10">
-                <Ban className="h-4 w-4 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.ended}</p>
-                <p className="text-[10px] text-muted-foreground">Encerrados</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-slate-500/10 w-fit mx-auto mb-2">
+              <Ban className="h-5 w-5 text-slate-600" />
             </div>
+            <p className="text-2xl font-bold text-slate-600">{stats.ended}</p>
+            <p className="text-xs text-muted-foreground">Encerrados</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-emerald-500/10">
-                <TrendingUp className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">{formatCurrency(stats.totalValue)}</p>
-                <p className="text-[10px] text-muted-foreground">Valor Total</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-emerald-500/10 w-fit mx-auto mb-2">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
             </div>
+            <p className="text-lg font-bold text-emerald-600">{formatCurrency(stats.totalValue)}</p>
+            <p className="text-xs text-muted-foreground">Valor Total</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-amber-500/10">
-                <Clock className="h-4 w-4 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.expiringSoon}</p>
-                <p className="text-[10px] text-muted-foreground">Vencendo</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-amber-500/10 w-fit mx-auto mb-2">
+              <Clock className="h-5 w-5 text-amber-600" />
             </div>
+            <p className="text-2xl font-bold text-amber-600">{stats.expiringSoon}</p>
+            <p className="text-xs text-muted-foreground">Vencendo</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-red-500/10">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{stats.expired}</p>
-                <p className="text-[10px] text-muted-foreground">Vencidos</p>
-              </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-red-500/10 w-fit mx-auto mb-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
             </div>
+            <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
+            <p className="text-xs text-muted-foreground">Vencidos</p>
           </CardContent>
         </Card>
       </div>
