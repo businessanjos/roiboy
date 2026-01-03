@@ -70,6 +70,8 @@ import {
   ClipboardList,
   Settings2,
   Trash2,
+  ArrowDownAZ,
+  History,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -191,6 +193,7 @@ export default function Contracts() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"az" | "recent">("recent");
   const [activeTab, setActiveTab] = useState<string>("fila");
   
   // New contract dialog state
@@ -1113,7 +1116,7 @@ export default function Contracts() {
   const currentContracts = activeTab === "conciliados" ? reconciledContracts : queueContracts;
 
   const filteredContracts = useMemo(() => {
-    return currentContracts.filter((contract) => {
+    const filtered = currentContracts.filter((contract) => {
       const matchesSearch = 
         contract.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1125,7 +1128,19 @@ export default function Contracts() {
       
       return matchesSearch && matchesStatus && matchesType && matchesProduct;
     });
-  }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter]);
+
+    // Apply sorting
+    return filtered.sort((a, b) => {
+      if (sortOrder === "az") {
+        const nameA = a.client?.full_name?.toLowerCase() || "";
+        const nameB = b.client?.full_name?.toLowerCase() || "";
+        return nameA.localeCompare(nameB, "pt-BR");
+      } else {
+        // Recent first (by created_at)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
 
   // Check if any filter is active
   const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
@@ -1474,6 +1489,22 @@ export default function Contracts() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setSortOrder(sortOrder === "az" ? "recent" : "az")}
+                  title={sortOrder === "az" ? "Ordenar por recentes" : "Ordenar A-Z"}
+                  className={cn(
+                    "shrink-0",
+                    sortOrder === "az" && "bg-primary/10 border-primary text-primary"
+                  )}
+                >
+                  {sortOrder === "az" ? (
+                    <ArrowDownAZ className="h-4 w-4" />
+                  ) : (
+                    <History className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
