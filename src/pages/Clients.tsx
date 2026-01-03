@@ -377,7 +377,8 @@ export default function Clients() {
           product_id,
           products (
             id,
-            name
+            name,
+            color
           )
         )
       `)
@@ -2130,7 +2131,14 @@ export default function Clients() {
                                   <TooltipTrigger asChild>
                                     <div className="flex flex-wrap justify-center gap-1">
                                       {client.client_products.slice(0, 2).map((cp: any) => (
-                                        <Badge key={cp.product_id} variant="secondary" className="text-xs">
+                                        <Badge 
+                                          key={cp.product_id} 
+                                          className="text-xs text-white"
+                                          style={{ 
+                                            backgroundColor: cp.products?.color || '#6b7280',
+                                            borderColor: cp.products?.color || '#6b7280'
+                                          }}
+                                        >
                                           {cp.products?.name || "Produto"}
                                         </Badge>
                                       ))}
@@ -2142,9 +2150,15 @@ export default function Clients() {
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <div className="text-xs">
+                                    <div className="text-xs space-y-1">
                                       {client.client_products.map((cp: any) => (
-                                        <p key={cp.product_id}>{cp.products?.name}</p>
+                                        <div key={cp.product_id} className="flex items-center gap-2">
+                                          <div 
+                                            className="w-2 h-2 rounded-full" 
+                                            style={{ backgroundColor: cp.products?.color || '#6b7280' }}
+                                          />
+                                          <span>{cp.products?.name}</span>
+                                        </div>
                                       ))}
                                       <p className="mt-1 text-primary">Clique para editar</p>
                                     </div>
@@ -2448,7 +2462,7 @@ export default function Clients() {
       ) : viewMode === "cards" ? (
         <div className="grid gap-3">
           {filtered.map((client) => {
-            const clientProducts = client.client_products?.map((cp: any) => cp.products?.name).filter(Boolean) || [];
+            const clientProductsData = client.client_products || [];
             
             return (
               <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
@@ -2539,12 +2553,19 @@ export default function Clients() {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">{client.phone_e164}</p>
-                        {clientProducts.length > 0 && (
+                        {clientProductsData.length > 0 && (
                           <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                            {clientProducts.map((productName: string, idx: number) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
+                            {clientProductsData.map((cp: any, idx: number) => (
+                              <Badge 
+                                key={idx} 
+                                className="text-xs text-white"
+                                style={{ 
+                                  backgroundColor: cp.products?.color || '#6b7280',
+                                  borderColor: cp.products?.color || '#6b7280'
+                                }}
+                              >
                                 <Package className="h-3 w-3 mr-1" />
-                                {productName}
+                                {cp.products?.name}
                               </Badge>
                             ))}
                           </div>
