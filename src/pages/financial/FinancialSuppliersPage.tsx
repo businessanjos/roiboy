@@ -106,6 +106,22 @@ export default function FinancialSuppliersPage() {
     enabled: !!accountId,
   });
 
+  // Count clients for the tab badge
+  const { data: clientsCount = 0 } = useQuery({
+    queryKey: ["clients-count", accountId],
+    queryFn: async () => {
+      if (!accountId) return 0;
+      const { count, error } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true })
+        .eq("account_id", accountId)
+        .neq("status", "churned");
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!accountId,
+  });
+
   const filteredSuppliers = suppliers.filter(
     (s) =>
       s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -486,10 +502,16 @@ export default function FinancialSuppliersPage() {
           <TabsTrigger value="suppliers" className="flex items-center gap-2">
             <Truck className="h-4 w-4" />
             Fornecedores
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              {suppliers.length}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="clients" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Clientes
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              {clientsCount}
+            </Badge>
           </TabsTrigger>
         </TabsList>
 
