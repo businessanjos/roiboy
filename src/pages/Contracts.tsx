@@ -1125,13 +1125,19 @@ export default function Contracts() {
     });
   }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter]);
 
+  // Check if any filter is active
+  const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
+
   const stats = useMemo(() => {
-    const activeContracts = contracts.filter(c => c.status === "active");
-    const pendingContracts = contracts.filter(c => c.status === "pending");
-    const suspendedContracts = contracts.filter(c => c.status === "suspended");
-    const pausedContracts = contracts.filter(c => c.status === "paused");
-    const cancelledContracts = contracts.filter(c => c.status === "cancelled");
-    const endedContracts = contracts.filter(c => c.status === "ended");
+    // Use filtered contracts when filters are active, otherwise use current tab contracts
+    const baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
+    
+    const activeContracts = baseContracts.filter(c => c.status === "active");
+    const pendingContracts = baseContracts.filter(c => c.status === "pending");
+    const suspendedContracts = baseContracts.filter(c => c.status === "suspended");
+    const pausedContracts = baseContracts.filter(c => c.status === "paused");
+    const cancelledContracts = baseContracts.filter(c => c.status === "cancelled");
+    const endedContracts = baseContracts.filter(c => c.status === "ended");
     
     const totalValue = activeContracts.reduce((sum, c) => sum + (c.value || 0), 0);
     const expiringSoon = activeContracts.filter(c => {
@@ -1145,7 +1151,7 @@ export default function Contracts() {
     });
 
     return {
-      total: contracts.length,
+      total: baseContracts.length,
       active: activeContracts.length,
       pending: pendingContracts.length,
       suspended: suspendedContracts.length,
@@ -1156,7 +1162,7 @@ export default function Contracts() {
       expiringSoon: expiringSoon.length,
       expired: expired.length,
     };
-  }, [contracts]);
+  }, [filteredContracts, currentContracts, hasActiveFilters]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
