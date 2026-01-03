@@ -2077,8 +2077,8 @@ export default function Clients() {
             <Table className="min-w-max">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="font-medium sticky left-0 bg-muted z-20 w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
-                    <TableHead className="font-medium text-center w-[100px]">Produto</TableHead>
+                    <TableHead className="font-medium sticky left-0 bg-muted z-20 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
+                    <TableHead className="font-medium text-center w-[160px]">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
                     <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
@@ -2111,7 +2111,7 @@ export default function Clients() {
                     filtered.map((client) => (
                       <TableRow key={client.id} className="hover:bg-muted/30 group">
                         <TableCell className="sticky left-0 bg-background group-hover:bg-muted/30 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                          <div className="w-[180px] flex items-center gap-2">
+                          <div className="w-[220px] flex items-center gap-2">
                             {/* Client avatar */}
                             <Avatar className="h-9 w-9 flex-shrink-0">
                               {client.avatar_url ? (
@@ -2145,14 +2145,17 @@ export default function Clients() {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="flex flex-wrap justify-center gap-1">
+                                    <div className="flex flex-col gap-1 items-center">
                                       {client.client_products.slice(0, 2).map((cp: any) => (
                                         <Badge 
                                           key={cp.product_id} 
-                                          className="text-xs text-white"
+                                          className="text-xs font-medium whitespace-nowrap shadow-sm"
                                           style={{ 
                                             backgroundColor: cp.products?.color || '#6b7280',
-                                            borderColor: cp.products?.color || '#6b7280'
+                                            borderColor: cp.products?.color || '#6b7280',
+                                            color: '#fff',
+                                            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                            boxShadow: `0 0 8px ${cp.products?.color || '#6b7280'}50`
                                           }}
                                         >
                                           {cp.products?.name || "Produto"}
