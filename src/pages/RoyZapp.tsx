@@ -1578,7 +1578,42 @@ export default function RoyZapp() {
     }
   };
 
-  const saveNewLead = async (data: { full_name: string; phone: string; email?: string; source?: string; notes?: string }) => {
+  const saveNewLead = async (data: {
+    full_name: string;
+    phone: string;
+    email?: string;
+    source?: string;
+    notes?: string;
+    cpf?: string;
+    rg?: string;
+    birth_date?: string;
+    cnpj?: string;
+    company_name?: string;
+    business_segment?: string;
+    business_niche?: string;
+    street?: string;
+    street_number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    business_street?: string;
+    business_street_number?: string;
+    business_complement?: string;
+    business_neighborhood?: string;
+    business_city?: string;
+    business_state?: string;
+    business_zip_code?: string;
+    bank_code?: string;
+    bank_name?: string;
+    bank_agency?: string;
+    bank_account?: string;
+    bank_account_type?: string;
+    pix_key?: string;
+    pix_key_type?: string;
+    instagram?: string;
+  }) => {
     if (!currentUser?.account_id || !selectedConversation?.zapp_conversation) return;
     if (!data.full_name.trim()) {
       toast.error("Nome é obrigatório");
@@ -1587,7 +1622,7 @@ export default function RoyZapp() {
 
     setSavingNewLead(true);
     try {
-      // Create the lead
+      // Create the lead with all fields
       const { data: newLead, error: leadError } = await supabase
         .from("leads")
         .insert({
@@ -1599,6 +1634,41 @@ export default function RoyZapp() {
           notes: data.notes?.trim() || null,
           status: "new",
           responsible_user_id: currentUser.id,
+          // Dados pessoais
+          cpf: data.cpf?.trim() || null,
+          rg: data.rg?.trim() || null,
+          birth_date: data.birth_date || null,
+          // Dados empresa
+          cnpj: data.cnpj?.trim() || null,
+          company_name: data.company_name?.trim() || null,
+          business_segment: data.business_segment?.trim() || null,
+          business_niche: data.business_niche?.trim() || null,
+          // Endereço residencial
+          street: data.street?.trim() || null,
+          street_number: data.street_number?.trim() || null,
+          complement: data.complement?.trim() || null,
+          neighborhood: data.neighborhood?.trim() || null,
+          city: data.city?.trim() || null,
+          state: data.state || null,
+          zip_code: data.zip_code?.trim() || null,
+          // Endereço comercial
+          business_street: data.business_street?.trim() || null,
+          business_street_number: data.business_street_number?.trim() || null,
+          business_complement: data.business_complement?.trim() || null,
+          business_neighborhood: data.business_neighborhood?.trim() || null,
+          business_city: data.business_city?.trim() || null,
+          business_state: data.business_state || null,
+          business_zip_code: data.business_zip_code?.trim() || null,
+          // Dados bancários
+          bank_code: data.bank_code?.trim() || null,
+          bank_name: data.bank_name?.trim() || null,
+          bank_agency: data.bank_agency?.trim() || null,
+          bank_account: data.bank_account?.trim() || null,
+          bank_account_type: data.bank_account_type || "checking",
+          pix_key: data.pix_key?.trim() || null,
+          pix_key_type: data.pix_key_type || null,
+          instagram: data.instagram?.trim() || null,
+          emails: data.email ? [data.email.trim()] : [],
         })
         .select("id")
         .single();
