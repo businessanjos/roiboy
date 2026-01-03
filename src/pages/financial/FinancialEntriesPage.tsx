@@ -69,6 +69,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCardInvoiceImport } from "@/components/financial/CreditCardInvoiceImport";
 import { GoogleSheetsIntegration } from "@/components/financial/GoogleSheetsIntegration";
 import { EntryTemplatesManager } from "@/components/financial/EntryTemplatesManager";
+import { PayableMethodSelector, PayableMethod } from "@/components/financial/PayableMethodSelector";
+import { NfeImportDialog } from "@/components/financial/NfeImportDialog";
+import { BarcodeImportDialog } from "@/components/financial/BarcodeImportDialog";
+import { ManualPayableDialog, PayableFormData } from "@/components/financial/ManualPayableDialog";
 import {
   DropdownMenu as ImportDropdown,
   DropdownMenuContent as ImportDropdownContent,
@@ -156,6 +160,10 @@ export default function FinancialEntriesPage() {
   const [payingEntry, setPayingEntry] = useState<FinancialEntry | null>(null);
   const [isCreditCardImportOpen, setIsCreditCardImportOpen] = useState(false);
   const [isGoogleSheetsOpen, setIsGoogleSheetsOpen] = useState(false);
+  const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
+  const [isNfeDialogOpen, setIsNfeDialogOpen] = useState(false);
+  const [isBarcodeDialogOpen, setIsBarcodeDialogOpen] = useState(false);
+  const [isManualPayableOpen, setIsManualPayableOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -463,7 +471,14 @@ export default function FinancialEntriesPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm">
+          <Button onClick={() => { 
+            resetForm(); 
+            if (activeTab === "payable") {
+              setIsMethodSelectorOpen(true);
+            } else {
+              setIsDialogOpen(true);
+            }
+          }} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Novo Lançamento
           </Button>
@@ -959,6 +974,77 @@ export default function FinancialEntriesPage() {
       <GoogleSheetsIntegration 
         open={isGoogleSheetsOpen} 
         onOpenChange={setIsGoogleSheetsOpen} 
+      />
+
+      {/* Payable Method Selector */}
+      <PayableMethodSelector
+        open={isMethodSelectorOpen}
+        onOpenChange={setIsMethodSelectorOpen}
+        onSelect={(method: PayableMethod) => {
+          if (method === "manual") {
+            setIsManualPayableOpen(true);
+          } else if (method === "nfe") {
+            setIsNfeDialogOpen(true);
+          } else if (method === "barcode") {
+            setIsBarcodeDialogOpen(true);
+          }
+        }}
+      />
+
+      {/* NFe Import Dialog */}
+      <NfeImportDialog
+        open={isNfeDialogOpen}
+        onOpenChange={setIsNfeDialogOpen}
+        onImport={async (data) => {
+          console.log("NFe data:", data);
+          toast({ title: "Em desenvolvimento", description: "Importação de NF-e em breve." });
+          setIsNfeDialogOpen(false);
+        }}
+      />
+
+      {/* Barcode Import Dialog */}
+      <BarcodeImportDialog
+        open={isBarcodeDialogOpen}
+        onOpenChange={setIsBarcodeDialogOpen}
+        onContinue={async (data) => {
+          console.log("Barcode data:", data);
+          toast({ title: "Em desenvolvimento", description: "Importação de código de barras em breve." });
+          setIsBarcodeDialogOpen(false);
+        }}
+      />
+
+      {/* Manual Payable Dialog */}
+      <ManualPayableDialog
+        open={isManualPayableOpen}
+        onOpenChange={setIsManualPayableOpen}
+        onSave={async (data: PayableFormData) => {
+          if (!accountId) return;
+          
+          const { error } = await supabase.from("financial_entries").insert({
+            account_id: accountId,
+            entry_type: "payable",
+            description: data.supplier_name,
+            amount: parseFloat(data.amount) || 0,
+            due_date: data.due_date,
+            category_id: data.category_id || null,
+            bank_account_id: data.bank_account_id || null,
+            is_recurring: data.is_recurring,
+            recurrence_type: data.is_recurring ? data.recurrence_type : null,
+            recurrence_end_date: data.is_recurring && data.recurrence_end_date ? data.recurrence_end_date : null,
+            document_number: data.document_number || null,
+            notes: data.notes || null,
+            status: "pending",
+            currency: "BRL",
+          });
+
+          if (error) {
+            toast({ title: "Erro ao criar lançamento", description: error.message, variant: "destructive" });
+          } else {
+            toast({ title: "Lançamento criado com sucesso!" });
+            queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+            setIsManualPayableOpen(false);
+          }
+        }}
       />
     </div>
   );
