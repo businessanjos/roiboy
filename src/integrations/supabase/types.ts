@@ -3649,18 +3649,24 @@ export type Database = {
           document_number: string | null
           due_date: string
           entry_type: string
+          expected_date: string | null
           id: string
           installment_group_id: string | null
           installment_number: number | null
           is_conciliated: boolean
           is_recurring: boolean
+          issue_date: string | null
           notes: string | null
           omie_id: string | null
           omie_sync_at: string | null
           parent_entry_id: string | null
           payment_date: string | null
+          payment_forecast_date: string | null
+          project_id: string | null
           recurrence_end_date: string | null
           recurrence_type: string | null
+          registration_date: string | null
+          seller_id: string | null
           status: string
           supplier_id: string | null
           total_installments: number | null
@@ -3685,18 +3691,24 @@ export type Database = {
           document_number?: string | null
           due_date: string
           entry_type?: string
+          expected_date?: string | null
           id?: string
           installment_group_id?: string | null
           installment_number?: number | null
           is_conciliated?: boolean
           is_recurring?: boolean
+          issue_date?: string | null
           notes?: string | null
           omie_id?: string | null
           omie_sync_at?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
+          payment_forecast_date?: string | null
+          project_id?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
+          registration_date?: string | null
+          seller_id?: string | null
           status?: string
           supplier_id?: string | null
           total_installments?: number | null
@@ -3721,18 +3733,24 @@ export type Database = {
           document_number?: string | null
           due_date?: string
           entry_type?: string
+          expected_date?: string | null
           id?: string
           installment_group_id?: string | null
           installment_number?: number | null
           is_conciliated?: boolean
           is_recurring?: boolean
+          issue_date?: string | null
           notes?: string | null
           omie_id?: string | null
           omie_sync_at?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
+          payment_forecast_date?: string | null
+          project_id?: string | null
           recurrence_end_date?: string | null
           recurrence_type?: string | null
+          registration_date?: string | null
+          seller_id?: string | null
           status?: string
           supplier_id?: string | null
           total_installments?: number | null
@@ -3800,6 +3818,13 @@ export type Database = {
             columns: ["parent_entry_id"]
             isOneToOne: false
             referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {

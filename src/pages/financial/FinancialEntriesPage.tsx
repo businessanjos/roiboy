@@ -164,8 +164,11 @@ export default function FinancialEntriesPage() {
   const [isGoogleSheetsOpen, setIsGoogleSheetsOpen] = useState(false);
   const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
   const [isReceivableMethodSelectorOpen, setIsReceivableMethodSelectorOpen] = useState(false);
-  const [isNfeDialogOpen, setIsNfeDialogOpen] = useState(false);
-  const [isBarcodeDialogOpen, setIsBarcodeDialogOpen] = useState(false);
+  // Separated NFe/Barcode states per entry type
+  const [isNfePayableOpen, setIsNfePayableOpen] = useState(false);
+  const [isNfeReceivableOpen, setIsNfeReceivableOpen] = useState(false);
+  const [isBarcodePayableOpen, setIsBarcodePayableOpen] = useState(false);
+  const [isBarcodeReceivableOpen, setIsBarcodeReceivableOpen] = useState(false);
   const [isManualPayableOpen, setIsManualPayableOpen] = useState(false);
   const [isManualReceivableOpen, setIsManualReceivableOpen] = useState(false);
 
@@ -988,32 +991,69 @@ export default function FinancialEntriesPage() {
           if (method === "manual") {
             setIsManualPayableOpen(true);
           } else if (method === "nfe") {
-            setIsNfeDialogOpen(true);
+            setIsNfePayableOpen(true);
           } else if (method === "barcode") {
-            setIsBarcodeDialogOpen(true);
+            setIsBarcodePayableOpen(true);
           }
         }}
       />
 
-      {/* NFe Import Dialog */}
-      <NfeImportDialog
-        open={isNfeDialogOpen}
-        onOpenChange={setIsNfeDialogOpen}
-        onImport={async (data) => {
-          console.log("NFe data:", data);
-          toast({ title: "Em desenvolvimento", description: "Importação de NF-e em breve." });
-          setIsNfeDialogOpen(false);
+      {/* Receivable Method Selector */}
+      <ReceivableMethodSelector
+        open={isReceivableMethodSelectorOpen}
+        onOpenChange={setIsReceivableMethodSelectorOpen}
+        onSelect={(method: ReceivableMethod) => {
+          if (method === "manual") {
+            setIsManualReceivableOpen(true);
+          } else if (method === "nfe") {
+            setIsNfeReceivableOpen(true);
+          } else if (method === "barcode") {
+            setIsBarcodeReceivableOpen(true);
+          }
         }}
       />
 
-      {/* Barcode Import Dialog */}
+      {/* NFe Import Dialog - Payable */}
+      <NfeImportDialog
+        open={isNfePayableOpen}
+        onOpenChange={setIsNfePayableOpen}
+        onImport={async (data) => {
+          console.log("NFe Payable data:", data);
+          toast({ title: "Em desenvolvimento", description: "Importação de NF-e para contas a pagar em breve." });
+          setIsNfePayableOpen(false);
+        }}
+      />
+
+      {/* NFe Import Dialog - Receivable */}
+      <NfeImportDialog
+        open={isNfeReceivableOpen}
+        onOpenChange={setIsNfeReceivableOpen}
+        onImport={async (data) => {
+          console.log("NFe Receivable data:", data);
+          toast({ title: "Em desenvolvimento", description: "Importação de NF-e para contas a receber em breve." });
+          setIsNfeReceivableOpen(false);
+        }}
+      />
+
+      {/* Barcode Import Dialog - Payable */}
       <BarcodeImportDialog
-        open={isBarcodeDialogOpen}
-        onOpenChange={setIsBarcodeDialogOpen}
+        open={isBarcodePayableOpen}
+        onOpenChange={setIsBarcodePayableOpen}
         onContinue={async (data) => {
-          console.log("Barcode data:", data);
-          toast({ title: "Em desenvolvimento", description: "Importação de código de barras em breve." });
-          setIsBarcodeDialogOpen(false);
+          console.log("Barcode Payable data:", data);
+          toast({ title: "Em desenvolvimento", description: "Importação de código de barras para contas a pagar em breve." });
+          setIsBarcodePayableOpen(false);
+        }}
+      />
+
+      {/* Barcode Import Dialog - Receivable */}
+      <BarcodeImportDialog
+        open={isBarcodeReceivableOpen}
+        onOpenChange={setIsBarcodeReceivableOpen}
+        onContinue={async (data) => {
+          console.log("Barcode Receivable data:", data);
+          toast({ title: "Em desenvolvimento", description: "Importação de código de barras para contas a receber em breve." });
+          setIsBarcodeReceivableOpen(false);
         }}
       />
 
@@ -1028,7 +1068,7 @@ export default function FinancialEntriesPage() {
             account_id: accountId,
             entry_type: "payable",
             description: data.supplier_name,
-            amount: parseFloat(data.amount) || 0,
+            amount: parseFloat(data.amount.replace(",", ".")) || 0,
             due_date: data.due_date,
             category_id: data.category_id || null,
             bank_account_id: data.bank_account_id || null,
@@ -1039,6 +1079,10 @@ export default function FinancialEntriesPage() {
             notes: data.notes || null,
             status: "pending",
             currency: "BRL",
+            // New fields mapped
+            issue_date: data.issue_date || null,
+            registration_date: data.registration_date || null,
+            payment_forecast_date: data.payment_forecast_date || null,
           });
 
           if (error) {
@@ -1047,21 +1091,6 @@ export default function FinancialEntriesPage() {
             toast({ title: "Lançamento criado com sucesso!" });
             queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
             setIsManualPayableOpen(false);
-          }
-        }}
-      />
-
-      {/* Receivable Method Selector */}
-      <ReceivableMethodSelector
-        open={isReceivableMethodSelectorOpen}
-        onOpenChange={setIsReceivableMethodSelectorOpen}
-        onSelect={(method: ReceivableMethod) => {
-          if (method === "manual") {
-            setIsManualReceivableOpen(true);
-          } else if (method === "nfe") {
-            setIsNfeDialogOpen(true);
-          } else if (method === "barcode") {
-            setIsBarcodeDialogOpen(true);
           }
         }}
       />
@@ -1077,7 +1106,7 @@ export default function FinancialEntriesPage() {
             account_id: accountId,
             entry_type: "receivable",
             description: data.client_name || "Receita",
-            amount: parseFloat(data.amount) || 0,
+            amount: parseFloat(data.amount.replace(",", ".")) || 0,
             due_date: data.due_date,
             category_id: data.category_id || null,
             bank_account_id: data.bank_account_id || null,
@@ -1089,6 +1118,11 @@ export default function FinancialEntriesPage() {
             notes: data.notes || null,
             status: "pending",
             currency: "BRL",
+            // New fields mapped
+            issue_date: data.issue_date || null,
+            expected_date: data.expected_date || null,
+            seller_id: data.seller_id || null,
+            project_id: data.project_id || null,
           });
 
           if (error) {
