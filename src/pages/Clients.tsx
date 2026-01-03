@@ -264,6 +264,7 @@ export default function Clients() {
   const [filterVNPS, setFilterVNPS] = useState<string>("all");
   const [filterContract, setFilterContract] = useState<string>("all");
   const [filterResponsible, setFilterResponsible] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"recent" | "alphabetical">("recent");
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -1140,6 +1141,12 @@ export default function Clients() {
     }
 
     return true;
+  }).sort((a, b) => {
+    if (sortOrder === "alphabetical") {
+      return a.full_name.localeCompare(b.full_name, 'pt-BR');
+    }
+    // Default: recent first (by created_at)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
@@ -1873,6 +1880,15 @@ export default function Clients() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as "recent" | "alphabetical")}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Ordenar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="alphabetical">A-Z (Nome)</SelectItem>
+            </SelectContent>
+          </Select>
           <Button 
             variant={showFilters ? "secondary" : "outline"} 
             size="icon"

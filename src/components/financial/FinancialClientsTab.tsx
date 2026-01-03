@@ -87,6 +87,7 @@ export function FinancialClientsTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [showActiveContractsOnly, setShowActiveContractsOnly] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"recent" | "alphabetical">("alphabetical");
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["financial-clients", accountId],
@@ -135,6 +136,12 @@ export function FinancialClientsTab() {
       c.cnpj?.includes(searchTerm) ||
       (c.emails as string[] | null)?.some((e) => e.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+  }).sort((a, b) => {
+    if (sortOrder === "alphabetical") {
+      return a.full_name.localeCompare(b.full_name, 'pt-BR');
+    }
+    // recent - assume clients are returned sorted by created_at or use full_name as fallback
+    return 0;
   });
 
   const saveMutation = useMutation({
@@ -594,6 +601,15 @@ export function FinancialClientsTab() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
             />
+            <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as "recent" | "alphabetical")}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Ordenar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alphabetical">A-Z (Nome)</SelectItem>
+                <SelectItem value="recent">Padrão</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               variant={showActiveContractsOnly ? "default" : "outline"}
               size="sm"
