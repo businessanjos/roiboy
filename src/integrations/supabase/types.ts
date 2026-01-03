@@ -1653,6 +1653,7 @@ export type Database = {
           business_zip_code: string | null
           city: string | null
           cnpj: string | null
+          companies: Json | null
           company_name: string | null
           complement: string | null
           contract_end_date: string | null
@@ -1706,6 +1707,7 @@ export type Database = {
           business_zip_code?: string | null
           city?: string | null
           cnpj?: string | null
+          companies?: Json | null
           company_name?: string | null
           complement?: string | null
           contract_end_date?: string | null
@@ -1759,6 +1761,7 @@ export type Database = {
           business_zip_code?: string | null
           city?: string | null
           cnpj?: string | null
+          companies?: Json | null
           company_name?: string | null
           complement?: string | null
           contract_end_date?: string | null
@@ -4559,6 +4562,7 @@ export type Database = {
           business_zip_code: string | null
           city: string | null
           cnpj: string | null
+          companies: Json | null
           company_name: string | null
           complement: string | null
           converted_at: string | null
@@ -4609,6 +4613,7 @@ export type Database = {
           business_zip_code?: string | null
           city?: string | null
           cnpj?: string | null
+          companies?: Json | null
           company_name?: string | null
           complement?: string | null
           converted_at?: string | null
@@ -4659,6 +4664,7 @@ export type Database = {
           business_zip_code?: string | null
           city?: string | null
           cnpj?: string | null
+          companies?: Json | null
           company_name?: string | null
           complement?: string | null
           converted_at?: string | null
