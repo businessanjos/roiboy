@@ -281,6 +281,7 @@ export default function Clients() {
   // Bulk Omie Sync state
   const [bulkSyncing, setBulkSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
+  const [syncingProducts, setSyncingProducts] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Custom fields state
@@ -1079,6 +1080,78 @@ export default function Clients() {
     fetchClients();
   };
 
+  // Sync products from contracts to client_products
+  const syncProductsFromContracts = async () => {
+    if (!accountId) return;
+    
+    setSyncingProducts(true);
+    try {
+      // Get all active/pending contracts with products
+      const { data: contracts, error: contractsError } = await supabase
+        .from("client_contracts")
+        .select("client_id, product_id")
+        .eq("account_id", accountId)
+        .in("status", ["active", "pending"])
+        .not("product_id", "is", null);
+
+      if (contractsError) throw contractsError;
+
+      if (!contracts || contracts.length === 0) {
+        toast.info("Nenhum contrato com produto encontrado");
+        setSyncingProducts(false);
+        return;
+      }
+
+      // Get existing client_products
+      const { data: existingProducts, error: existingError } = await supabase
+        .from("client_products")
+        .select("client_id, product_id")
+        .eq("account_id", accountId);
+
+      if (existingError) throw existingError;
+
+      // Create a set of existing combinations
+      const existingSet = new Set(
+        (existingProducts || []).map(ep => `${ep.client_id}-${ep.product_id}`)
+      );
+
+      // Filter contracts to only those not already in client_products
+      const toInsert = contracts
+        .filter(c => c.product_id && !existingSet.has(`${c.client_id}-${c.product_id}`))
+        .map(c => ({
+          account_id: accountId,
+          client_id: c.client_id,
+          product_id: c.product_id!
+        }));
+
+      // Remove duplicates (same client-product combo might appear in multiple contracts)
+      const uniqueToInsert = Array.from(
+        new Map(toInsert.map(item => [`${item.client_id}-${item.product_id}`, item])).values()
+      );
+
+      if (uniqueToInsert.length === 0) {
+        toast.success("Produtos já estão sincronizados!");
+        setSyncingProducts(false);
+        return;
+      }
+
+      // Insert new client_products
+      const { error: insertError } = await supabase
+        .from("client_products")
+        .insert(uniqueToInsert);
+
+      if (insertError) throw insertError;
+
+      toast.success(`${uniqueToInsert.length} produto(s) vinculado(s) aos clientes!`);
+      fetchClients();
+    } catch (error) {
+      console.error("Error syncing products:", error);
+      toast.error("Erro ao sincronizar produtos");
+    } finally {
+      setSyncingProducts(false);
+    }
+  };
+
   const validCount = csvData.filter(r => r.valid).length;
   const invalidCount = csvData.filter(r => !r.valid).length;
 
@@ -1288,6 +1361,28 @@ export default function Clients() {
             </DialogContent>
           </Dialog>
 
+          {/* Sync Products from Contracts */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={syncProductsFromContracts}
+                  disabled={syncingProducts}
+                >
+                  {syncingProducts ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Sincronizar produtos dos contratos</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* Import CSV Dialog */}
           <Dialog open={importDialogOpen} onOpenChange={(open) => {
