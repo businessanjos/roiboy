@@ -163,6 +163,20 @@ interface AllProduct {
   is_active: boolean;
 }
 
+const getCategoryLabel = (category: string) => {
+  const labels: Record<string, string> = {
+    revenue: "Receita",
+    cost: "Custo",
+    time: "Tempo",
+    process: "Processo",
+    clarity: "Clareza",
+    confidence: "Confiança",
+    tranquility: "Tranquilidade",
+    status_direction: "Direção",
+  };
+  return labels[category] || category;
+};
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -560,7 +574,17 @@ export default function ClientDetail() {
         .eq("id", id)
         .single();
 
-      if (clientError) throw clientError;
+      if (clientError) {
+        console.error("Client fetch error:", clientError);
+        throw clientError;
+      }
+      
+      if (!clientData) {
+        console.error("Client not found for ID:", id);
+        setLoading(false);
+        return;
+      }
+      
       setAccountId(clientData.account_id);
       setClient({
         ...clientData,
@@ -1128,19 +1152,6 @@ export default function ClientDetail() {
     };
   }, [id]);
 
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      revenue: "Receita",
-      cost: "Custo",
-      time: "Tempo",
-      process: "Processo",
-      clarity: "Clareza",
-      confidence: "Confiança",
-      tranquility: "Tranquilidade",
-      status_direction: "Direção",
-    };
-    return labels[category] || category;
-  };
 
   const handleRoiScreenshotSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
