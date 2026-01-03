@@ -328,6 +328,36 @@ export default function Clients() {
       setAccountId(currentUser.account_id);
     }
 
+    const accId = currentUser?.account_id;
+    if (!accId) {
+      setLoading(false);
+      return;
+    }
+
+    // First, get all client IDs that have active or pending contracts
+    const { data: activeContractsData, error: contractsError } = await supabase
+      .from("client_contracts")
+      .select("client_id")
+      .eq("account_id", accId)
+      .in("status", ["active", "pending"]);
+
+    if (contractsError) {
+      console.error("Error fetching contracts:", contractsError);
+      setLoading(false);
+      return;
+    }
+
+    // Get unique client IDs with active/pending contracts
+    const clientIdsWithContracts = [...new Set((activeContractsData || []).map(c => c.client_id))];
+
+    if (clientIdsWithContracts.length === 0) {
+      // No clients with active contracts
+      setClients([]);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch only clients that have active/pending contracts
     const { data, error } = await supabase
       .from("clients")
       .select(`
@@ -340,6 +370,7 @@ export default function Clients() {
           )
         )
       `)
+      .in("id", clientIdsWithContracts)
       .order("created_at", { ascending: false });
 
     if (!error) {
@@ -386,18 +417,23 @@ export default function Clients() {
         });
         setScoreMap(scoresGrouped);
 
-        // Fetch active contracts for each client
+        // Fetch contracts for each client (including pending now)
         const { data: contractsData } = await supabase
           .from("client_contracts")
           .select("client_id, status, start_date, end_date")
           .in("client_id", clientIds)
-          .eq("status", "active")
+          .in("status", ["active", "pending"])
           .order("end_date", { ascending: false });
 
-        // Group by client_id and take the first (latest end_date)
+        // Group by client_id - prioritize active over pending
         const contractsGrouped: Record<string, { status: string; start_date: string | null; end_date: string | null }> = {};
+        const statusPriority: Record<string, number> = { active: 2, pending: 1 };
         (contractsData || []).forEach((c: any) => {
-          if (!contractsGrouped[c.client_id]) {
+          const existing = contractsGrouped[c.client_id];
+          const newPriority = statusPriority[c.status] ?? 0;
+          const existingPriority = existing ? (statusPriority[existing.status] ?? 0) : -1;
+          
+          if (!existing || newPriority > existingPriority) {
             contractsGrouped[c.client_id] = {
               status: c.status,
               start_date: c.start_date,
