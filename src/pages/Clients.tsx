@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { useSector } from "@/contexts/SectorContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,6 +248,7 @@ export default function Clients() {
   const { currentUser } = useCurrentUser();
   const { canCreate, isNearLimit, data: planData } = usePlanLimits();
   const { logAudit } = useAuditLog();
+  const { currentSector } = useSector();
   const [clients, setClients] = useState<any[]>([]);
   const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
   const [scoreMap, setScoreMap] = useState<Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }>>({});
@@ -334,12 +336,20 @@ export default function Clients() {
       return;
     }
 
-    // First, get all client IDs that have active or pending contracts
+    // Determine which contract statuses to include based on sector
+    // Financeiro: include active, pending, paused (all except cancelled/ended)
+    // Operações: only active and pending
+    const isFinancialSector = currentSector?.id === "financeiro";
+    const contractStatuses = isFinancialSector 
+      ? ["active", "pending", "paused"] 
+      : ["active", "pending"];
+
+    // First, get all client IDs that have contracts with allowed statuses
     const { data: activeContractsData, error: contractsError } = await supabase
       .from("client_contracts")
       .select("client_id")
       .eq("account_id", accId)
-      .in("status", ["active", "pending"]);
+      .in("status", contractStatuses);
 
     if (contractsError) {
       console.error("Error fetching contracts:", contractsError);
@@ -347,11 +357,11 @@ export default function Clients() {
       return;
     }
 
-    // Get unique client IDs with active/pending contracts
+    // Get unique client IDs with matching contracts
     const clientIdsWithContracts = [...new Set((activeContractsData || []).map(c => c.client_id))];
 
     if (clientIdsWithContracts.length === 0) {
-      // No clients with active contracts
+      // No clients with matching contracts
       setClients([]);
       setLoading(false);
       return;
@@ -417,17 +427,17 @@ export default function Clients() {
         });
         setScoreMap(scoresGrouped);
 
-        // Fetch contracts for each client (including pending now)
+        // Fetch contracts for each client (using same status filter as main query)
         const { data: contractsData } = await supabase
           .from("client_contracts")
           .select("client_id, status, start_date, end_date")
           .in("client_id", clientIds)
-          .in("status", ["active", "pending"])
+          .in("status", contractStatuses)
           .order("end_date", { ascending: false });
 
-        // Group by client_id - prioritize active over pending
+        // Group by client_id - prioritize active over pending over paused
         const contractsGrouped: Record<string, { status: string; start_date: string | null; end_date: string | null }> = {};
-        const statusPriority: Record<string, number> = { active: 2, pending: 1 };
+        const statusPriority: Record<string, number> = { active: 3, pending: 2, paused: 1 };
         (contractsData || []).forEach((c: any) => {
           const existing = contractsGrouped[c.client_id];
           const newPriority = statusPriority[c.status] ?? 0;
@@ -629,7 +639,7 @@ export default function Clients() {
     fetchProducts();
     fetchCustomFields();
     fetchTeamUsers();
-  }, []);
+  }, [currentSector?.id]);
 
   // Fetch client stages when account is available
   useEffect(() => {
