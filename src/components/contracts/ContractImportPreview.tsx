@@ -171,7 +171,7 @@ export function ContractImportPreview({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col gap-3 p-6">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
@@ -293,9 +293,9 @@ export function ContractImportPreview({
         </div>
 
         {/* Table with proper scrolling */}
-        <div className="flex-1 min-h-0 overflow-hidden border rounded-lg">
-          <div className="h-full overflow-auto">
-            <Table>
+        <div className="flex-1 overflow-hidden border rounded-lg" style={{ minHeight: 0 }}>
+          <div className="h-full overflow-y-auto overflow-x-auto">
+            <Table className="relative">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead className="w-10"></TableHead>
