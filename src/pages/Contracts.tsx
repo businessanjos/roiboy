@@ -90,7 +90,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
 import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
-import { BarChart3 } from "lucide-react";
+import { ContractReconciliation } from "@/components/contracts/ContractReconciliation";
+import { BarChart3, FileSpreadsheet } from "lucide-react";
 
 interface Contract {
   id: string;
@@ -1391,11 +1392,10 @@ export default function Contracts() {
 
       {/* Tabs for Reconciliation Status */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="fila" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
-            <span className="hidden sm:inline">Fila de Conciliação</span>
-            <span className="sm:hidden">Fila</span>
+            <span className="hidden sm:inline">Fila</span>
             {queueContracts.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
                 {queueContracts.length}
@@ -1404,12 +1404,17 @@ export default function Contracts() {
           </TabsTrigger>
           <TabsTrigger value="conciliados" className="flex items-center gap-2">
             <ListChecks className="h-4 w-4" />
-            Conciliados
+            <span className="hidden sm:inline">Conciliados</span>
             {reconciledContracts.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
                 {reconciledContracts.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="reconciliar" className="flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            <span className="hidden sm:inline">Reconciliar CSV</span>
+            <span className="sm:hidden">CSV</span>
           </TabsTrigger>
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -1490,7 +1495,12 @@ export default function Contracts() {
           <ContractsDashboard contracts={filteredContracts} />
         )}
 
-        {activeTab !== "dashboard" && (
+        {/* CSV Reconciliation Tab */}
+        {activeTab === "reconciliar" && (
+          <ContractReconciliation contracts={contracts} />
+        )}
+
+        {activeTab !== "dashboard" && activeTab !== "reconciliar" && (
           <TabsContent value={activeTab} className="space-y-4">
             {/* Queue Status Info */}
             {activeTab === "fila" && (
