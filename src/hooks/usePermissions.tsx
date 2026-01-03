@@ -109,10 +109,16 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   useEffect(() => {
-    if (!userLoading) {
+    // Wait for user loading to complete AND currentUser to be available
+    if (!userLoading && currentUser) {
       fetchPermissions();
+    } else if (!userLoading && !currentUser) {
+      // User is not logged in
+      setPermissions([]);
+      setIsAdmin(false);
+      setLoading(false);
     }
-  }, [fetchPermissions, userLoading]);
+  }, [fetchPermissions, userLoading, currentUser]);
 
   const hasPermission = useCallback(
     (permission: Permission | Permission[]): boolean => {
