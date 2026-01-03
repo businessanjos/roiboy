@@ -26,13 +26,30 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const { data } = await supabase
+      // First get the current auth user
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        setCurrentUser(null);
+        setLoading(false);
+        return;
+      }
+      
+      // Then fetch the user profile using auth_user_id
+      const { data, error } = await supabase
         .from("users")
         .select("id, name, email, role, avatar_url, account_id, auth_user_id")
+        .eq("auth_user_id", authUser.id)
         .maybeSingle();
+      
+      if (error) {
+        console.error("Error fetching user profile:", error);
+      }
       
       if (data) {
         setCurrentUser(data as CurrentUser);
+      } else {
+        setCurrentUser(null);
       }
     } catch (error) {
       console.error("Error fetching current user:", error);
