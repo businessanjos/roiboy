@@ -96,6 +96,7 @@ interface Contract {
   product?: {
     id: string;
     name: string;
+    color: string | null;
   } | null;
 }
 
@@ -190,7 +191,7 @@ export default function Contracts() {
         .select(`
           *,
           client:clients(id, full_name, avatar_url),
-          product:products(id, name)
+          product:products(id, name, color)
         `)
         .order("created_at", { ascending: false });
 
@@ -1155,7 +1156,18 @@ export default function Contracts() {
                           <div>
                             <p className="font-medium text-sm hover:underline">{contract.client?.full_name || "Cliente"}</p>
                             {contract.product && (
-                              <p className="text-xs text-muted-foreground">{contract.product.name}</p>
+                              <Badge 
+                                className="text-xs font-medium whitespace-nowrap shadow-sm mt-1"
+                                style={{ 
+                                  backgroundColor: contract.product.color || '#6b7280',
+                                  borderColor: contract.product.color || '#6b7280',
+                                  color: '#fff',
+                                  textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                  boxShadow: `0 0 8px ${contract.product.color || '#6b7280'}50`
+                                }}
+                              >
+                                {contract.product.name}
+                              </Badge>
                             )}
                           </div>
                         </div>
