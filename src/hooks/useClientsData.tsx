@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
+import { useOperationRole } from "./useOperationRole";
 
 interface Client {
   id: string;
@@ -316,6 +317,7 @@ export function useClientsPageData(options?: { page?: number; pageSize?: number;
   const customFieldsQuery = useCustomFields();
   const productsQuery = useProducts();
   const teamUsersQuery = useTeamUsers();
+  const { isOperationRole, loading: roleLoading } = useOperationRole();
 
   const clientsData = clientsQuery.data?.clients || [];
   const clientIds = useMemo(() => 
@@ -327,10 +329,26 @@ export function useClientsPageData(options?: { page?: number; pageSize?: number;
   const fieldValuesQuery = useFieldValues(clientIds);
   const pendingFormSendsQuery = usePendingFormSends(clientIds);
 
+  // Filter clients based on role
+  const filteredClients = useMemo(() => {
+    if (!isOperationRole || roleLoading) {
+      // Managers/Admins see all clients
+      return clientsData;
+    }
+
+    // Operation roles only see clients with active or pending contracts
+    const enrichments = enrichmentsQuery.data || {};
+    return clientsData.filter((client) => {
+      const contract = enrichments[client.id]?.contract;
+      return contract?.status === "active" || contract?.status === "pending";
+    });
+  }, [clientsData, isOperationRole, roleLoading, enrichmentsQuery.data]);
+
   const isLoading = 
     clientsQuery.isLoading || 
     customFieldsQuery.isLoading || 
-    productsQuery.isLoading;
+    productsQuery.isLoading ||
+    roleLoading;
 
   const refetchAll = () => {
     clientsQuery.refetch();
@@ -340,8 +358,9 @@ export function useClientsPageData(options?: { page?: number; pageSize?: number;
   };
 
   return {
-    clients: clientsData,
-    totalCount: clientsQuery.data?.totalCount ?? 0,
+    clients: filteredClients,
+    allClients: clientsData, // Original unfiltered list for managers who need it
+    totalCount: isOperationRole ? filteredClients.length : (clientsQuery.data?.totalCount ?? 0),
     page: clientsQuery.data?.page ?? 1,
     pageSize: clientsQuery.data?.pageSize ?? 500,
     totalPages: clientsQuery.data?.totalPages ?? 1,
@@ -352,6 +371,7 @@ export function useClientsPageData(options?: { page?: number; pageSize?: number;
     teamUsers: teamUsersQuery.data || [],
     pendingFormSends: pendingFormSendsQuery.data || {},
     isLoading,
+    isOperationRole, // Expose for UI indication if needed
     refetchAll,
   };
 }
