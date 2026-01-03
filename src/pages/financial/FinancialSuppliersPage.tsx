@@ -22,10 +22,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Edit2, Trash2, Truck, Building2, Download, Upload, FileSpreadsheet } from "lucide-react";
+import { Plus, Edit2, Trash2, Truck, Building2, Download, Upload, FileSpreadsheet, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 
 interface Supplier {
   id: string;
@@ -474,20 +475,36 @@ export default function FinancialSuppliersPage() {
     resetForm();
   };
 
+  const navigate = useNavigate();
+
   return (
     <div className="p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              <div>
-                <CardTitle>Fornecedores</CardTitle>
-                <CardDescription>
-                  Cadastre e gerencie seus fornecedores para vincular às despesas
-                </CardDescription>
-              </div>
-            </div>
+      {/* Main Tabs for Suppliers and Clients */}
+      <Tabs defaultValue="suppliers" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="suppliers" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            Fornecedores
+          </TabsTrigger>
+          <TabsTrigger value="clients" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Clientes
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="suppliers" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  <div>
+                    <CardTitle>Fornecedores</CardTitle>
+                    <CardDescription>
+                      Cadastre e gerencie seus fornecedores para vincular às despesas
+                    </CardDescription>
+                  </div>
+                </div>
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
@@ -606,8 +623,39 @@ export default function FinancialSuppliersPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
 
+        <TabsContent value="clients" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  <div>
+                    <CardTitle>Clientes</CardTitle>
+                    <CardDescription>
+                      Visualize e gerencie seus clientes cadastrados
+                    </CardDescription>
+                  </div>
+                </div>
+                <Button onClick={() => navigate("/clients")}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Gerenciar Clientes
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-center py-8">
+                Para gerenciar clientes completos, acesse a página de{" "}
+                <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/clients")}>
+                  Clientes
+                </Button>
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
