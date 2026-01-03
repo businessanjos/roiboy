@@ -135,23 +135,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     checkSuperAdmin();
   }, [user]);
 
-  // Debug: log permission state
-  useEffect(() => {
-    console.log("[Sidebar] Permission state:", { 
-      isAdmin, 
-      isSuperAdmin, 
-      permissionsLoading, 
-      currentSector: currentSector?.id,
-      currentUserRole: currentUser?.role 
-    });
-  }, [isAdmin, isSuperAdmin, permissionsLoading, currentSector, currentUser]);
-
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
     // During loading OR for admins, show all items to avoid empty sidebar
     const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin";
-    
-    console.log("[Sidebar] Filtering items:", { showAllItems, itemCount: currentSector?.navItems?.length || navItems.length });
     
     // Super admins have access to everything - show sector items + admin items
     if (isSuperAdmin) {
