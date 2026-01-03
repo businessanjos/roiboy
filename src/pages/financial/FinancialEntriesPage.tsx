@@ -70,9 +70,11 @@ import { CreditCardInvoiceImport } from "@/components/financial/CreditCardInvoic
 import { GoogleSheetsIntegration } from "@/components/financial/GoogleSheetsIntegration";
 import { EntryTemplatesManager } from "@/components/financial/EntryTemplatesManager";
 import { PayableMethodSelector, PayableMethod } from "@/components/financial/PayableMethodSelector";
+import { ReceivableMethodSelector, ReceivableMethod } from "@/components/financial/ReceivableMethodSelector";
 import { NfeImportDialog } from "@/components/financial/NfeImportDialog";
 import { BarcodeImportDialog } from "@/components/financial/BarcodeImportDialog";
 import { ManualPayableDialog, PayableFormData } from "@/components/financial/ManualPayableDialog";
+import { ManualReceivableDialog, ReceivableFormData } from "@/components/financial/ManualReceivableDialog";
 import {
   DropdownMenu as ImportDropdown,
   DropdownMenuContent as ImportDropdownContent,
@@ -161,9 +163,11 @@ export default function FinancialEntriesPage() {
   const [isCreditCardImportOpen, setIsCreditCardImportOpen] = useState(false);
   const [isGoogleSheetsOpen, setIsGoogleSheetsOpen] = useState(false);
   const [isMethodSelectorOpen, setIsMethodSelectorOpen] = useState(false);
+  const [isReceivableMethodSelectorOpen, setIsReceivableMethodSelectorOpen] = useState(false);
   const [isNfeDialogOpen, setIsNfeDialogOpen] = useState(false);
   const [isBarcodeDialogOpen, setIsBarcodeDialogOpen] = useState(false);
   const [isManualPayableOpen, setIsManualPayableOpen] = useState(false);
+  const [isManualReceivableOpen, setIsManualReceivableOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -476,7 +480,7 @@ export default function FinancialEntriesPage() {
             if (activeTab === "payable") {
               setIsMethodSelectorOpen(true);
             } else {
-              setIsDialogOpen(true);
+              setIsReceivableMethodSelectorOpen(true);
             }
           }} size="sm">
             <Plus className="h-4 w-4 mr-2" />
@@ -1043,6 +1047,56 @@ export default function FinancialEntriesPage() {
             toast({ title: "Lançamento criado com sucesso!" });
             queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
             setIsManualPayableOpen(false);
+          }
+        }}
+      />
+
+      {/* Receivable Method Selector */}
+      <ReceivableMethodSelector
+        open={isReceivableMethodSelectorOpen}
+        onOpenChange={setIsReceivableMethodSelectorOpen}
+        onSelect={(method: ReceivableMethod) => {
+          if (method === "manual") {
+            setIsManualReceivableOpen(true);
+          } else if (method === "nfe") {
+            setIsNfeDialogOpen(true);
+          } else if (method === "barcode") {
+            setIsBarcodeDialogOpen(true);
+          }
+        }}
+      />
+
+      {/* Manual Receivable Dialog */}
+      <ManualReceivableDialog
+        open={isManualReceivableOpen}
+        onOpenChange={setIsManualReceivableOpen}
+        onSave={async (data: ReceivableFormData) => {
+          if (!accountId) return;
+          
+          const { error } = await supabase.from("financial_entries").insert({
+            account_id: accountId,
+            entry_type: "receivable",
+            description: data.client_name || "Receita",
+            amount: parseFloat(data.amount) || 0,
+            due_date: data.due_date,
+            category_id: data.category_id || null,
+            bank_account_id: data.bank_account_id || null,
+            client_id: data.client_id || null,
+            is_recurring: data.is_recurring,
+            recurrence_type: data.is_recurring ? data.recurrence_type : null,
+            recurrence_end_date: data.is_recurring && data.recurrence_end_date ? data.recurrence_end_date : null,
+            document_number: data.document_number || null,
+            notes: data.notes || null,
+            status: "pending",
+            currency: "BRL",
+          });
+
+          if (error) {
+            toast({ title: "Erro ao criar lançamento", description: error.message, variant: "destructive" });
+          } else {
+            toast({ title: "Lançamento criado com sucesso!" });
+            queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+            setIsManualReceivableOpen(false);
           }
         }}
       />
