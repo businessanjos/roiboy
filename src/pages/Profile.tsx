@@ -109,9 +109,16 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setLoading(false);
+        return;
+      }
+
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
+        .eq("auth_user_id", authUser.id)
         .maybeSingle();
 
       if (userError) throw userError;
