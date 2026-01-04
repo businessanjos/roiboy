@@ -81,15 +81,30 @@ export function useProducts() {
 }
 
 // Fetch all clients with scores in a single optimized query
+// Only fetches clients with active or pending contracts (for Operations dashboard)
 export function useClientsWithScores() {
   return useQuery({
     queryKey: ["dashboard-clients-optimized"],
     queryFn: async () => {
-      // Fetch all clients
+      // First, fetch client IDs that have active or pending contracts
+      const { data: contractsData, error: contractsError } = await supabase
+        .from("client_contracts")
+        .select("client_id, status")
+        .in("status", ["active", "pending"]);
+
+      if (contractsError) throw contractsError;
+      
+      // Get unique client IDs with active/pending contracts
+      const clientIdsWithContracts = [...new Set((contractsData || []).map(c => c.client_id))];
+      
+      if (clientIdsWithContracts.length === 0) return [];
+
+      // Fetch only clients that have active/pending contracts
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select("id, full_name, phone_e164, status")
-        .order("created_at", { ascending: false });
+        .in("id", clientIdsWithContracts)
+        .order("full_name", { ascending: true });
 
       if (clientsError) throw clientsError;
       if (!clientsData || clientsData.length === 0) return [];
@@ -105,8 +120,8 @@ export function useClientsWithScores() {
         risksRes,
         recsRes
       ] = await Promise.all([
-        supabase.from("client_products").select("client_id, product_id"),
-        supabase.from("client_contracts").select("client_id").eq("status", "active"),
+        supabase.from("client_products").select("client_id, product_id").in("client_id", clientIds),
+        supabase.from("client_contracts").select("client_id").eq("status", "active").in("client_id", clientIds),
         supabase.from("score_snapshots")
           .select("client_id, roizometer, escore, quadrant, trend, computed_at")
           .in("client_id", clientIds)
