@@ -689,7 +689,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 ring-1 ring-blue-500/30 shadow-lg shadow-blue-500/20">
                   <TrendingUp className="h-4 w-4 text-blue-500" />
                 </div>
-                <CardTitle className="text-base font-semibold">Tendência de Ativos</CardTitle>
+                <CardTitle className="text-base font-semibold">Tendência Anual</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="relative">
@@ -700,6 +700,14 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       <linearGradient id="colorAtivos" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                      </linearGradient>
+                      <linearGradient id="colorCancelados" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02}/>
+                      </linearGradient>
+                      <linearGradient id="colorEncerrados" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#64748b" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#64748b" stopOpacity={0.02}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
@@ -724,11 +732,45 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       stroke="#3b82f6" 
                       strokeWidth={3}
                       fill="url(#colorAtivos)"
-                      dot={{ fill: "#3b82f6", strokeWidth: 2, stroke: "#fff", r: 5 }}
-                      activeDot={{ r: 8, strokeWidth: 3, stroke: "#fff", fill: "#3b82f6" }}
+                      dot={{ fill: "#3b82f6", strokeWidth: 2, stroke: "#fff", r: 4 }}
+                      activeDot={{ r: 7, strokeWidth: 3, stroke: "#fff", fill: "#3b82f6" }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="cancelados" 
+                      name="Cancelados" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      fill="url(#colorCancelados)"
+                      dot={{ fill: "#ef4444", strokeWidth: 2, stroke: "#fff", r: 3 }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff", fill: "#ef4444" }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="encerrados" 
+                      name="Encerrados" 
+                      stroke="#64748b" 
+                      strokeWidth={2}
+                      fill="url(#colorEncerrados)"
+                      dot={{ fill: "#64748b", strokeWidth: 2, stroke: "#fff", r: 3 }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff", fill: "#64748b" }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-4 mt-4">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
+                  <span className="text-xs font-medium text-blue-600">Ativos</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-lg shadow-rose-500/50" />
+                  <span className="text-xs font-medium text-rose-600">Cancelados</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-lg shadow-slate-500/50" />
+                  <span className="text-xs font-medium text-slate-600">Encerrados</span>
+                </div>
               </div>
             </CardContent>
           </Card>
