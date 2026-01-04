@@ -61,6 +61,7 @@ interface Contract {
   status: string;
   status_reason: string | null;
   status_changed_at: string | null;
+  cancelled_at: string | null;
   contract_type: string;
   created_at: string;
   updated_at: string;
@@ -473,6 +474,19 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
               )}
             </div>
           </div>
+
+          {/* Cancelled At - only show for cancelled/dismissed/dropout_7d/ended statuses */}
+          {["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status) && contract.cancelled_at && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1 text-destructive">
+                <XCircle className="h-3 w-3" />
+                Data do Cancelamento
+              </Label>
+              <p className="text-sm font-medium text-destructive">
+                {format(new Date(contract.cancelled_at), "dd/MM/yyyy", { locale: ptBR })}
+              </p>
+            </div>
+          )}
 
           {/* Value */}
           <div className="space-y-2">
