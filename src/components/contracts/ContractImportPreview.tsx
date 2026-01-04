@@ -6,9 +6,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, Check, Upload, Users, FileText, Phone, CreditCard, Building2, Loader2, UserPlus, Filter, CircleCheck, CircleX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const CONTRACT_STATUS_OPTIONS = [
+  { value: "keep", label: "Manter do CSV" },
+  { value: "active", label: "Ativo" },
+  { value: "pending", label: "Pendente" },
+  { value: "scheduled", label: "A Iniciar" },
+  { value: "suspended", label: "Suspenso" },
+  { value: "paused", label: "Pausado" },
+  { value: "cancelled", label: "Cancelado" },
+  { value: "ended", label: "Encerrado" },
+  { value: "dismissed", label: "Demitida" },
+  { value: "dropout_7d", label: "Desistência 7D" },
+];
 
 export interface ImportRow {
   lineNumber: number;
@@ -45,7 +59,7 @@ interface ContractImportPreviewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rows: ImportRowWithDuplicate[];
-  onConfirmImport: (selectedRows: ImportRowWithDuplicate[], createNewClients: boolean) => void;
+  onConfirmImport: (selectedRows: ImportRowWithDuplicate[], createNewClients: boolean, overrideStatus: string | null) => void;
   importing: boolean;
   products: { id: string; name: string }[];
 }
@@ -65,6 +79,7 @@ export function ContractImportPreview({
   const [showOnlyErrors, setShowOnlyErrors] = useState(false);
   const [showOnlyNew, setShowOnlyNew] = useState(false);
   const [createNewClients, setCreateNewClients] = useState(true);
+  const [overrideStatus, setOverrideStatus] = useState<string>("keep");
 
   // Reset selection when rows change
   useEffect(() => {
@@ -131,7 +146,7 @@ export function ContractImportPreview({
     const rowsToImport = rows
       .filter(r => selectedRows.has(r.lineNumber))
       .map(r => ({ ...r, selected: true }));
-    onConfirmImport(rowsToImport, createNewClients);
+    onConfirmImport(rowsToImport, createNewClients, overrideStatus === "keep" ? null : overrideStatus);
   };
 
   const getDuplicateIcon = (type: "phone" | "cpf" | "cnpj") => {
@@ -281,18 +296,33 @@ export function ContractImportPreview({
               Limpar
             </Button>
           </div>
-          {stats.newCount > 0 && (
+          <div className="flex items-center gap-4">
+            {stats.newCount > 0 && (
+              <div className="flex items-center gap-2">
+                <Switch 
+                  checked={createNewClients} 
+                  onCheckedChange={setCreateNewClients}
+                  id="create-new"
+                />
+                <Label htmlFor="create-new" className="text-sm cursor-pointer">
+                  Criar clientes novos ({stats.newCount})
+                </Label>
+              </div>
+            )}
             <div className="flex items-center gap-2">
-              <Switch 
-                checked={createNewClients} 
-                onCheckedChange={setCreateNewClients}
-                id="create-new"
-              />
-              <Label htmlFor="create-new" className="text-sm cursor-pointer">
-                Criar clientes novos ({stats.newCount})
-              </Label>
+              <Label className="text-sm whitespace-nowrap">Status:</Label>
+              <Select value={overrideStatus} onValueChange={setOverrideStatus}>
+                <SelectTrigger className="w-40 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTRACT_STATUS_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Table with proper scrolling */}
