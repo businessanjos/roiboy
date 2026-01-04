@@ -109,6 +109,7 @@ interface Contract {
   status: string;
   status_reason: string | null;
   status_changed_at: string | null;
+  cancelled_at: string | null;
   contract_type: string;
   created_at: string;
   updated_at: string;
