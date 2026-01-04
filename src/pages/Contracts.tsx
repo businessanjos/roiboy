@@ -1322,12 +1322,15 @@ export default function Contracts() {
       baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
     }
     
+    const scheduledContracts = baseContracts.filter(c => c.status === "scheduled");
     const activeContracts = baseContracts.filter(c => c.status === "active");
     const pendingContracts = baseContracts.filter(c => c.status === "pending");
     const suspendedContracts = baseContracts.filter(c => c.status === "suspended");
     const pausedContracts = baseContracts.filter(c => c.status === "paused");
     const cancelledContracts = baseContracts.filter(c => c.status === "cancelled");
     const endedContracts = baseContracts.filter(c => c.status === "ended");
+    const dismissedContracts = baseContracts.filter(c => c.status === "dismissed");
+    const dropout7dContracts = baseContracts.filter(c => c.status === "dropout_7d");
     
     const totalValue = activeContracts.reduce((sum, c) => sum + (c.value || 0), 0);
     const expiringSoon = activeContracts.filter(c => {
@@ -1342,12 +1345,15 @@ export default function Contracts() {
 
     return {
       total: baseContracts.length,
+      scheduled: scheduledContracts.length,
       active: activeContracts.length,
       pending: pendingContracts.length,
       suspended: suspendedContracts.length,
       paused: pausedContracts.length,
       cancelled: cancelledContracts.length,
       ended: endedContracts.length,
+      dismissed: dismissedContracts.length,
+      dropout_7d: dropout7dContracts.length,
       totalValue,
       expiringSoon: expiringSoon.length,
       expired: expired.length,
@@ -1460,7 +1466,7 @@ export default function Contracts() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-4 text-center">
             <div className="p-2 rounded-lg bg-primary/10 w-fit mx-auto mb-2">
@@ -1488,6 +1494,16 @@ export default function Contracts() {
             </div>
             <p className="text-2xl font-bold text-blue-600">{stats.pending}</p>
             <p className="text-xs text-muted-foreground">Pendentes</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-indigo-500/10 w-fit mx-auto mb-2">
+              <Clock className="h-5 w-5 text-indigo-600" />
+            </div>
+            <p className="text-2xl font-bold text-indigo-600">{stats.scheduled}</p>
+            <p className="text-xs text-muted-foreground">A Iniciar</p>
           </CardContent>
         </Card>
 
@@ -1528,6 +1544,26 @@ export default function Contracts() {
             </div>
             <p className="text-2xl font-bold text-slate-600">{stats.ended}</p>
             <p className="text-xs text-muted-foreground">Encerrados</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-rose-500/10 w-fit mx-auto mb-2">
+              <XCircle className="h-5 w-5 text-rose-600" />
+            </div>
+            <p className="text-2xl font-bold text-rose-600">{stats.dismissed}</p>
+            <p className="text-xs text-muted-foreground">Demitidas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4 text-center">
+            <div className="p-2 rounded-lg bg-pink-500/10 w-fit mx-auto mb-2">
+              <XCircle className="h-5 w-5 text-pink-600" />
+            </div>
+            <p className="text-2xl font-bold text-pink-600">{stats.dropout_7d}</p>
+            <p className="text-xs text-muted-foreground">Desistência 7D</p>
           </CardContent>
         </Card>
 
