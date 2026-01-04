@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Check, Upload, Users, FileText, Phone, CreditCard, Building2, Loader2, UserPlus, Filter } from "lucide-react";
+import { AlertTriangle, Check, Upload, Users, FileText, Phone, CreditCard, Building2, Loader2, UserPlus, Filter, CircleCheck, CircleX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -31,6 +31,7 @@ export interface DuplicateInfo {
   existingClientId: string;
   existingClientName: string;
   matchValue: string;
+  hasActiveContract?: boolean;
 }
 
 export interface ImportRowWithDuplicate extends ImportRow {
@@ -387,6 +388,24 @@ export function ContractImportPreview({
                                         <Icon className="h-3 w-3" />
                                         <span>{getDuplicateLabel(dup.type)}:</span>
                                         <span className="font-medium">{dup.existingClientName}</span>
+                                        {dup.hasActiveContract !== undefined && (
+                                          <span className={cn(
+                                            "flex items-center gap-1 text-xs",
+                                            dup.hasActiveContract ? "text-green-600" : "text-muted-foreground"
+                                          )}>
+                                            {dup.hasActiveContract ? (
+                                              <>
+                                                <CircleCheck className="h-3 w-3" />
+                                                C/ contrato
+                                              </>
+                                            ) : (
+                                              <>
+                                                <CircleX className="h-3 w-3" />
+                                                S/ contrato
+                                              </>
+                                            )}
+                                          </span>
+                                        )}
                                       </div>
                                     );
                                   })}

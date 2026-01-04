@@ -570,6 +570,15 @@ export default function Contracts() {
         .select("id, full_name, phone_e164, cpf, cnpj")
         .eq("account_id", userProfile.account_id);
 
+      // Fetch clients with active contracts
+      const { data: clientsWithContracts } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("account_id", userProfile.account_id)
+        .in("status", ["active", "pending"]);
+      
+      const clientIdsWithContracts = new Set(clientsWithContracts?.map(c => c.client_id) || []);
+
       const text = await file.text();
       const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
       const allLines = normalizedText.split("\n");
@@ -683,6 +692,7 @@ export default function Contracts() {
                   existingClientId: matchByCpf.id,
                   existingClientName: matchByCpf.full_name,
                   matchValue: cpf,
+                  hasActiveContract: clientIdsWithContracts.has(matchByCpf.id),
                 });
               }
             }
@@ -696,6 +706,7 @@ export default function Contracts() {
                   existingClientId: matchByCnpj.id,
                   existingClientName: matchByCnpj.full_name,
                   matchValue: cnpj,
+                  hasActiveContract: clientIdsWithContracts.has(matchByCnpj.id),
                 });
               }
             }
@@ -709,6 +720,7 @@ export default function Contracts() {
                   existingClientId: matchByPhone.id,
                   existingClientName: matchByPhone.full_name,
                   matchValue: phone,
+                  hasActiveContract: clientIdsWithContracts.has(matchByPhone.id),
                 });
               }
             }
