@@ -112,10 +112,10 @@ const pulseKeyframes = {
 };
 
 export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
-  // Monthly evolution data (last 6 months) - uses start_date for contract initiation
+  // Monthly evolution data (last 12 months) - uses start_date for contract initiation
   const monthlyData = useMemo(() => {
     const months = [];
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 11; i >= 0; i--) {
       const date = subMonths(new Date(), i);
       const monthStart = startOfMonth(date);
       const monthEnd = endOfMonth(date);
