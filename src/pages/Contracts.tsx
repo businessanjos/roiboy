@@ -800,7 +800,7 @@ export default function Contracts() {
   };
 
   // Confirm and execute import after preview
-  const handleConfirmImport = async (selectedRows: ImportRowWithDuplicate[], createNewClients: boolean) => {
+  const handleConfirmImport = async (selectedRows: ImportRowWithDuplicate[], createNewClients: boolean, overrideStatus: string | null) => {
     if (!importUserProfile) return;
 
     setImporting(true);
@@ -915,7 +915,7 @@ export default function Contracts() {
             end_date: row.dataFim || null,
             payment_option: null,
             notes: contractNotesArr.join(" | ") || "Importado via CSV",
-            status: mapContractStatus(row.status),
+            status: overrideStatus || mapContractStatus(row.status),
             status_reason: row.status.toLowerCase() === "suspenso" || row.status.toLowerCase() === "congelado" 
               ? row.observacao || "Importado com status pausado" 
               : null,
