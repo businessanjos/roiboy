@@ -139,6 +139,8 @@ const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof Check
   paused: { label: "Pausado", icon: PauseCircle, className: "border-amber-500 text-amber-600 bg-amber-50" },
   cancelled: { label: "Cancelado", icon: XCircle, className: "border-red-500 text-red-600 bg-red-50" },
   ended: { label: "Encerrado", icon: Ban, className: "border-slate-500 text-slate-600 bg-slate-50" },
+  dismissed: { label: "Demitida", icon: XCircle, className: "border-rose-500 text-rose-600 bg-rose-50" },
+  dropout_7d: { label: "Desistência 7D", icon: XCircle, className: "border-pink-500 text-pink-600 bg-pink-50" },
 };
 
 const CONTRACT_TYPES: Record<string, string> = {
@@ -643,9 +645,26 @@ export default function Contracts() {
           const produto = row.produto || "";
           const dataInicio = row.data_de_inicio || row.data_inicio || "";
           const dataVencimento = row.data_de_vencimento || row.data_fim || "";
-          const statusContrato = row.contrato_status || row.status || "Ativo";
+          const statusContratoRaw = row.contrato_status || row.status || "Ativo";
           const observacao = row.observacao || row.observacoes || "";
           const valorContrato = row.valor_contrato || "";
+
+          // Map status from CSV to internal status
+          const mapStatusToInternal = (status: string): string => {
+            const normalized = status.toLowerCase().trim();
+            if (normalized === "ativo" || normalized === "active") return "active";
+            if (normalized === "cancelado" || normalized === "cancelled") return "cancelled";
+            if (normalized === "encerrado" || normalized === "ended") return "ended";
+            if (normalized === "inativo" || normalized === "inativos" || normalized === "inactive") return "ended";
+            if (normalized === "suspenso" || normalized === "suspended") return "suspended";
+            if (normalized === "pausado" || normalized === "paused") return "paused";
+            if (normalized === "pendente" || normalized === "pending") return "pending";
+            if (normalized === "demitida" || normalized === "demitidas" || normalized === "dismissed") return "dismissed";
+            if (normalized === "desistência 7d" || normalized === "desistencia 7d" || normalized === "dropout_7d") return "dropout_7d";
+            if (normalized === "a iniciar" || normalized === "scheduled") return "scheduled";
+            return "active"; // Default
+          };
+          const statusContrato = mapStatusToInternal(statusContratoRaw);
 
           // Check for errors
           let hasError = false;
