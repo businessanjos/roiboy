@@ -98,7 +98,7 @@ const itemVariants = {
 };
 
 export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
-  // Monthly evolution data (last 6 months)
+  // Monthly evolution data (last 6 months) - uses start_date for contract initiation
   const monthlyData = useMemo(() => {
     const months = [];
     for (let i = 5; i >= 0; i--) {
@@ -107,19 +107,19 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
       const monthEnd = endOfMonth(date);
       
       const newContracts = contracts.filter(c => {
-        const created = parseISO(c.created_at);
-        return isWithinInterval(created, { start: monthStart, end: monthEnd });
+        const startDate = parseISO(c.start_date);
+        return isWithinInterval(startDate, { start: monthStart, end: monthEnd });
       });
       
       const cancelledContracts = contracts.filter(c => {
         if (c.status !== "cancelled" && c.status !== "ended") return false;
-        const created = parseISO(c.created_at);
-        return isWithinInterval(created, { start: monthStart, end: monthEnd });
+        const startDate = parseISO(c.start_date);
+        return isWithinInterval(startDate, { start: monthStart, end: monthEnd });
       });
       
       const activeAtEnd = contracts.filter(c => {
-        const created = parseISO(c.created_at);
-        return created <= monthEnd && c.status === "active";
+        const startDate = parseISO(c.start_date);
+        return startDate <= monthEnd && c.status === "active";
       });
       
       months.push({
