@@ -1283,8 +1283,13 @@ export default function Contracts() {
   const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
 
   const stats = useMemo(() => {
-    // Use filtered contracts when filters are active, otherwise use current tab contracts
-    const baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
+    // Use dashboard contracts when on dashboard tab, otherwise filtered/current contracts
+    let baseContracts;
+    if (activeTab === "dashboard") {
+      baseContracts = dashboardContracts;
+    } else {
+      baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
+    }
     
     const activeContracts = baseContracts.filter(c => c.status === "active");
     const pendingContracts = baseContracts.filter(c => c.status === "pending");
@@ -1316,7 +1321,7 @@ export default function Contracts() {
       expiringSoon: expiringSoon.length,
       expired: expired.length,
     };
-  }, [filteredContracts, currentContracts, hasActiveFilters]);
+  }, [filteredContracts, currentContracts, dashboardContracts, hasActiveFilters, activeTab]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
