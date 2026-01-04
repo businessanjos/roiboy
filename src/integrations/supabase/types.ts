@@ -7712,6 +7712,7 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_current_user_id: { Args: never; Returns: string }
       get_dre_report: {
         Args: { p_account_id: string; p_end_date: string; p_start_date: string }
         Returns: {
@@ -7802,6 +7803,10 @@ export type Database = {
       }
       is_account_locked: { Args: { p_email: string }; Returns: boolean }
       is_account_owner: { Args: { _user_id?: string }; Returns: boolean }
+      is_chat_participant: {
+        Args: { p_chat_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_new_device: {
         Args: { p_device_fingerprint: string; p_user_id: string }
         Returns: boolean
