@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
@@ -9,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { 
   Plus, 
   TrendingUp, 
@@ -20,6 +23,7 @@ import {
 } from "lucide-react";
 
 export default function SalesPipeline() {
+  const navigate = useNavigate();
   const {
     stages,
     deals,
@@ -88,9 +92,47 @@ export default function SalesPipeline() {
   };
 
   const handleMarkAsWon = async (dealId: string) => {
-    await markAsWon(dealId);
-    setIsDetailOpen(false);
-    setSelectedDeal(null);
+    // Find the deal to get client/lead info
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) {
+      toast.error("Negociação não encontrada");
+      return;
+    }
+
+    try {
+      let clientId = deal.client_id;
+      
+      // If deal has lead_id but no client_id, convert lead to client first
+      if (deal.lead_id && !deal.client_id) {
+        const { data: convertedClient, error: convertError } = await supabase
+          .rpc('convert_lead_to_client', { p_lead_id: deal.lead_id });
+        
+        if (convertError) {
+          console.error("Error converting lead:", convertError);
+          toast.error("Erro ao converter lead para cliente");
+          return;
+        }
+        
+        clientId = convertedClient;
+        toast.success("Lead convertido para cliente!");
+      }
+
+      // Mark deal as won
+      await markAsWon(dealId);
+      
+      setIsDetailOpen(false);
+      setSelectedDeal(null);
+      
+      // Navigate to contracts page with query params to open new contract dialog
+      if (clientId) {
+        navigate(`/contracts?newContract=true&clientId=${clientId}&dealId=${dealId}&value=${deal.value || 0}`);
+      } else {
+        toast.success("Negociação marcada como ganha!");
+      }
+    } catch (error) {
+      console.error("Error marking deal as won:", error);
+      toast.error("Erro ao processar ganho");
+    }
   };
 
   const handleMarkAsLost = async (dealId: string, reason?: string) => {

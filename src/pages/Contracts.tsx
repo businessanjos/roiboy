@@ -84,7 +84,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useZapSign } from "@/hooks/useZapSign";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
@@ -186,6 +186,7 @@ interface Client {
 
 export default function Contracts() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { syncDocumentStatus, getLocalDocuments, loading: zapSignLoading } = useZapSign();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -329,6 +330,28 @@ export default function Contracts() {
     fetchProducts();
     fetchFinancialData();
   }, []);
+
+  // Handle query params for opening new contract dialog from pipeline
+  useEffect(() => {
+    const newContract = searchParams.get('newContract');
+    const clientId = searchParams.get('clientId');
+    const dealValue = searchParams.get('value');
+    
+    if (newContract === 'true' && clientId && clients.length > 0) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        resetForm();
+        setSelectedClient(client);
+        if (dealValue) {
+          setFormData(prev => ({ ...prev, value: dealValue }));
+        }
+        setDialogOpen(true);
+        
+        // Clean up URL params
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, clients]);
 
   const fetchFinancialData = async () => {
     try {
