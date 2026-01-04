@@ -64,6 +64,8 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "#ef4444",
   ended: "#64748b",
   scheduled: "#6366f1",
+  dismissed: "#e11d48",
+  dropout_7d: "#ec4899",
 };
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
@@ -148,7 +150,9 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
             status === "paused" ? "Pausados" :
             status === "cancelled" ? "Cancelados" :
             status === "ended" ? "Encerrados" :
-            status === "scheduled" ? "A Iniciar" : status,
+            status === "scheduled" ? "A Iniciar" :
+            status === "dismissed" ? "Demitidas" :
+            status === "dropout_7d" ? "Desistência 7D" : status,
       value: count,
       color: STATUS_COLORS[status] || "#94a3b8",
     }));
