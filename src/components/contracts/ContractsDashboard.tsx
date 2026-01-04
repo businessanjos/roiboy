@@ -87,21 +87,28 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 24, scale: 0.96 },
   visible: {
     opacity: 1,
     y: 0,
+    scale: 1,
     transition: {
-      duration: 0.4,
+      duration: 0.5,
       ease: [0.25, 0.1, 0.25, 1] as const,
     },
   },
+};
+
+const pulseKeyframes = {
+  "0%, 100%": { opacity: 0.4 },
+  "50%": { opacity: 0.8 },
 };
 
 export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
@@ -318,73 +325,81 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
     >
       {/* Hero KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div variants={itemVariants}>
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent shadow-lg shadow-emerald-500/5">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <motion.div variants={itemVariants} whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+          <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-xl shadow-emerald-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             <CardContent className="p-5 relative">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-emerald-500/15 ring-1 ring-emerald-500/20">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/20">
                   <CheckCircle className="h-5 w-5 text-emerald-500" />
                 </div>
-                <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-xs">
+                <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-xs font-semibold backdrop-blur-sm">
                   +{kpis.newThisMonth} novos
                 </Badge>
               </div>
-              <p className="text-3xl font-bold tracking-tight">{kpis.totalActive}</p>
-              <p className="text-sm text-muted-foreground mt-1">Contratos Ativos</p>
+              <p className="text-4xl font-bold tracking-tight bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">{kpis.totalActive}</p>
+              <p className="text-sm text-muted-foreground mt-1 font-medium">Contratos Ativos</p>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent shadow-lg shadow-blue-500/5">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <motion.div variants={itemVariants} whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+          <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent shadow-xl shadow-blue-500/10 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             <CardContent className="p-5 relative">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-blue-500/15 ring-1 ring-blue-500/20">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 ring-1 ring-blue-500/30 shadow-lg shadow-blue-500/20">
                   <DollarSign className="h-5 w-5 text-blue-500" />
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Ticket médio</p>
-                  <p className="text-xs font-semibold text-blue-600">{formatCurrency(kpis.averageTicket)}</p>
+                <div className="text-right backdrop-blur-sm bg-background/30 rounded-lg px-2 py-1">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Ticket médio</p>
+                  <p className="text-xs font-bold text-blue-600">{formatCurrency(kpis.averageTicket)}</p>
                 </div>
               </div>
-              <p className="text-2xl font-bold tracking-tight">{formatCurrency(kpis.totalValue)}</p>
-              <p className="text-sm text-muted-foreground mt-1">Faturamento Total</p>
+              <p className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">{formatCurrency(kpis.totalValue)}</p>
+              <p className="text-sm text-muted-foreground mt-1 font-medium">Faturamento Total</p>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent shadow-lg shadow-violet-500/5">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <motion.div variants={itemVariants} whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+          <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-violet-500/15 via-violet-500/5 to-transparent shadow-xl shadow-violet-500/10 hover:shadow-2xl hover:shadow-violet-500/20 transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-violet-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-violet-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             <CardContent className="p-5 relative">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-violet-500/15 ring-1 ring-violet-500/20">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 ring-1 ring-violet-500/30 shadow-lg shadow-violet-500/20">
                   <Shield className="h-5 w-5 text-violet-500" />
                 </div>
                 {renderTrend(kpis.growthRate)}
               </div>
-              <p className="text-3xl font-bold tracking-tight">{kpis.retentionRate.toFixed(1)}%</p>
-              <p className="text-sm text-muted-foreground mt-1">Taxa de Retenção</p>
+              <p className="text-4xl font-bold tracking-tight bg-gradient-to-r from-violet-600 to-violet-500 bg-clip-text text-transparent">{kpis.retentionRate.toFixed(1)}%</p>
+              <p className="text-sm text-muted-foreground mt-1 font-medium">Taxa de Retenção</p>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent shadow-lg shadow-rose-500/5">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <motion.div variants={itemVariants} whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+          <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-rose-500/15 via-rose-500/5 to-transparent shadow-xl shadow-rose-500/10 hover:shadow-2xl hover:shadow-rose-500/20 transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             <CardContent className="p-5 relative">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-rose-500/15 ring-1 ring-rose-500/20">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-rose-500/20 to-rose-600/10 ring-1 ring-rose-500/30 shadow-lg shadow-rose-500/20">
                   <XCircle className="h-5 w-5 text-rose-500" />
                 </div>
-                <Badge variant="outline" className="border-rose-500/30 text-rose-600 text-xs">
+                <Badge variant="outline" className="border-rose-500/40 text-rose-600 text-xs font-semibold backdrop-blur-sm bg-rose-500/5">
                   {kpis.churnRate.toFixed(1)}% taxa
                 </Badge>
               </div>
-              <p className="text-3xl font-bold tracking-tight text-rose-600">{kpis.churnThisMonth}</p>
-              <p className="text-sm text-muted-foreground mt-1">Churn este mês</p>
+              <p className="text-4xl font-bold tracking-tight text-rose-600">{kpis.churnThisMonth}</p>
+              <p className="text-sm text-muted-foreground mt-1 font-medium">Churn este mês</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -392,19 +407,24 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
 
       {/* Funnel - Lifecycle Flow */}
       <motion.div variants={itemVariants}>
-        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20">
-                <Filter className="h-4 w-4 text-violet-500" />
+        <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-violet-500/5 backdrop-blur-sm">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-violet-500/10 via-indigo-500/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-emerald-500/10 via-blue-500/5 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          <CardHeader className="pb-3 relative">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 ring-1 ring-violet-500/30 shadow-lg shadow-violet-500/20">
+                <Filter className="h-5 w-5 text-violet-500" />
               </div>
-              <CardTitle className="text-base font-semibold">Funil do Processo</CardTitle>
-              <Badge variant="outline" className="ml-auto text-xs">
-                Taxa de Eficiência: {funnelData.activeRate.toFixed(1)}%
+              <div>
+                <CardTitle className="text-lg font-semibold">Funil do Processo</CardTitle>
+                <p className="text-xs text-muted-foreground">Jornada completa dos contratos</p>
+              </div>
+              <Badge className="ml-auto bg-gradient-to-r from-violet-500/20 to-indigo-500/20 text-violet-600 border-violet-500/30 text-xs font-semibold px-3 py-1">
+                ✨ Eficiência: {funnelData.activeRate.toFixed(1)}%
               </Badge>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="space-y-3">
               {/* Total Entries */}
               <div className="relative">
@@ -561,19 +581,31 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-border/50">
-              <div className="text-center p-3 rounded-xl bg-emerald-500/5">
-                <p className="text-2xl font-bold text-emerald-600">{funnelData.inProgressRate.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground">Em Andamento</p>
-              </div>
-              <div className="text-center p-3 rounded-xl bg-slate-500/5">
-                <p className="text-2xl font-bold text-slate-600">{funnelData.completedRate.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground">Finalizados</p>
-              </div>
-              <div className="text-center p-3 rounded-xl bg-rose-500/5">
-                <p className="text-2xl font-bold text-rose-600">{funnelData.churnRate.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground">Taxa de Churn</p>
-              </div>
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-5 border-t border-border/30">
+              <motion.div 
+                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-300"
+                whileHover={{ scale: 1.03 }}
+              >
+                <div className="absolute inset-0 bg-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">{funnelData.inProgressRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">Em Andamento</p>
+              </motion.div>
+              <motion.div 
+                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border border-slate-500/20 hover:border-slate-500/40 transition-all duration-300"
+                whileHover={{ scale: 1.03 }}
+              >
+                <div className="absolute inset-0 bg-slate-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <p className="text-3xl font-bold bg-gradient-to-r from-slate-600 to-slate-500 bg-clip-text text-transparent">{funnelData.completedRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">Finalizados</p>
+              </motion.div>
+              <motion.div 
+                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent border border-rose-500/20 hover:border-rose-500/40 transition-all duration-300"
+                whileHover={{ scale: 1.03 }}
+              >
+                <div className="absolute inset-0 bg-rose-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <p className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-rose-500 bg-clip-text text-transparent">{funnelData.churnRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">Taxa de Churn</p>
+              </motion.div>
             </div>
           </CardContent>
         </Card>
@@ -582,20 +614,35 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-            <CardHeader className="pb-2">
+          <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-primary/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-primary/10">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/30 shadow-lg shadow-primary/20">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
                 <CardTitle className="text-base font-semibold">Evolução Mensal</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <div className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                    <defs>
+                      <linearGradient id="barNovos" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity={1}/>
+                        <stop offset="100%" stopColor="#16a34a" stopOpacity={0.8}/>
+                      </linearGradient>
+                      <linearGradient id="barCancelados" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity={1}/>
+                        <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8}/>
+                      </linearGradient>
+                      <linearGradient id="barEncerrados" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#64748b" stopOpacity={1}/>
+                        <stop offset="100%" stopColor="#475569" stopOpacity={0.8}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
                     <XAxis 
                       dataKey="month" 
                       className="text-xs" 
@@ -610,24 +657,24 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       tick={{ fill: 'hsl(var(--muted-foreground))' }}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="novos" name="Novos" fill="#22c55e" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="cancelados" name="Cancelados" fill="#ef4444" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="encerrados" name="Encerrados" fill="#64748b" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="novos" name="Novos" fill="url(#barNovos)" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="cancelados" name="Cancelados" fill="url(#barCancelados)" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="encerrados" name="Encerrados" fill="url(#barEncerrados)" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
               <div className="flex items-center justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="text-xs text-muted-foreground">Novos</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50" />
+                  <span className="text-xs font-medium text-emerald-600">Novos</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-rose-500" />
-                  <span className="text-xs text-muted-foreground">Cancelados</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-lg shadow-rose-500/50" />
+                  <span className="text-xs font-medium text-rose-600">Cancelados</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-slate-500" />
-                  <span className="text-xs text-muted-foreground">Encerrados</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-lg shadow-slate-500/50" />
+                  <span className="text-xs font-medium text-slate-600">Encerrados</span>
                 </div>
               </div>
             </CardContent>
@@ -635,26 +682,27 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-            <CardHeader className="pb-2">
+          <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-blue-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-500/10">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 ring-1 ring-blue-500/30 shadow-lg shadow-blue-500/20">
                   <TrendingUp className="h-4 w-4 text-blue-500" />
                 </div>
                 <CardTitle className="text-base font-semibold">Tendência de Ativos</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <div className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorAtivos" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
                     <XAxis 
                       dataKey="month" 
                       className="text-xs" 
@@ -674,10 +722,10 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       dataKey="ativos" 
                       name="Ativos" 
                       stroke="#3b82f6" 
-                      strokeWidth={2.5}
+                      strokeWidth={3}
                       fill="url(#colorAtivos)"
-                      dot={{ fill: "#3b82f6", strokeWidth: 0, r: 4 }}
-                      activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
+                      dot={{ fill: "#3b82f6", strokeWidth: 2, stroke: "#fff", r: 5 }}
+                      activeDot={{ r: 8, strokeWidth: 3, stroke: "#fff", fill: "#3b82f6" }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -690,31 +738,41 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-            <CardHeader className="pb-2">
+          <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-violet-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-violet-500/10">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/10 ring-1 ring-violet-500/30 shadow-lg shadow-violet-500/20">
                   <Target className="h-4 w-4 text-violet-500" />
                 </div>
                 <CardTitle className="text-base font-semibold">Por Status</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <div className="h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
+                    <defs>
+                      {statusDistribution.map((entry, index) => (
+                        <linearGradient key={`grad-${index}`} id={`pieGrad-${index}`} x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor={entry.color} stopOpacity={1}/>
+                          <stop offset="100%" stopColor={entry.color} stopOpacity={0.7}/>
+                        </linearGradient>
+                      ))}
+                    </defs>
                     <Pie
                       data={statusDistribution}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={3}
+                      innerRadius={50}
+                      outerRadius={78}
+                      paddingAngle={4}
                       dataKey="value"
-                      strokeWidth={0}
+                      strokeWidth={2}
+                      stroke="hsl(var(--background))"
                     >
                       {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={`url(#pieGrad-${index})`} />
                       ))}
                     </Pie>
                     <Tooltip 
@@ -722,9 +780,9 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                         if (!active || !payload?.[0]) return null;
                         const data = payload[0].payload;
                         return (
-                          <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2 shadow-xl">
-                            <p className="text-sm font-medium">{data.name}</p>
-                            <p className="text-lg font-bold">{data.value}</p>
+                          <div className="bg-background/95 backdrop-blur-md border border-border/30 rounded-xl px-4 py-3 shadow-2xl">
+                            <p className="text-sm font-semibold">{data.name}</p>
+                            <p className="text-2xl font-bold" style={{ color: data.color }}>{data.value}</p>
                           </div>
                         );
                       }}
@@ -734,14 +792,22 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               </div>
               <div className="flex flex-wrap gap-2 justify-center mt-3">
                 {statusDistribution.map((entry) => (
-                  <div key={entry.name} className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+                  <motion.div 
+                    key={entry.name} 
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all hover:scale-105"
+                    style={{ 
+                      backgroundColor: `${entry.color}10`,
+                      borderColor: `${entry.color}30`
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                  >
                     <div 
-                      className="w-2 h-2 rounded-full" 
-                      style={{ backgroundColor: entry.color }}
+                      className="w-2.5 h-2.5 rounded-full shadow-sm" 
+                      style={{ backgroundColor: entry.color, boxShadow: `0 0 8px ${entry.color}60` }}
                     />
                     <span className="text-xs font-medium">{entry.name}</span>
-                    <span className="text-xs text-muted-foreground">({entry.value})</span>
-                  </div>
+                    <span className="text-xs font-bold" style={{ color: entry.color }}>({entry.value})</span>
+                  </motion.div>
                 ))}
               </div>
             </CardContent>
@@ -749,46 +815,56 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-            <CardHeader className="pb-2">
+          <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-amber-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/10">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/10 ring-1 ring-amber-500/30 shadow-lg shadow-amber-500/20">
                   <Zap className="h-4 w-4 text-amber-500" />
                 </div>
                 <CardTitle className="text-base font-semibold">Por Tipo</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="relative">
+              <div className="space-y-4">
                 {typeDistribution.map((type, index) => {
-                  const percentage = (type.value / contracts.length) * 100;
+                  const percentage = contracts.length > 0 ? (type.value / contracts.length) * 100 : 0;
                   const colors = [
-                    "from-blue-500 to-blue-600",
-                    "from-emerald-500 to-emerald-600",
-                    "from-amber-500 to-amber-600",
-                    "from-violet-500 to-violet-600",
-                    "from-rose-500 to-rose-600",
-                    "from-slate-500 to-slate-600",
+                    { from: "#3b82f6", to: "#2563eb" },
+                    { from: "#22c55e", to: "#16a34a" },
+                    { from: "#f59e0b", to: "#d97706" },
+                    { from: "#8b5cf6", to: "#7c3aed" },
+                    { from: "#ef4444", to: "#dc2626" },
+                    { from: "#64748b", to: "#475569" },
                   ];
                   const color = colors[index % colors.length];
                   
                   return (
-                    <div key={type.name} className="group">
-                      <div className="flex justify-between text-sm mb-1.5">
-                        <span className="font-medium">{type.name}</span>
-                        <span className="text-muted-foreground group-hover:text-foreground transition-colors">
-                          {type.value} <span className="text-xs">({percentage.toFixed(0)}%)</span>
+                    <motion.div 
+                      key={type.name} 
+                      className="group/item"
+                      whileHover={{ x: 4 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="font-semibold">{type.name}</span>
+                        <span className="font-bold" style={{ color: color.from }}>
+                          {type.value} <span className="text-xs text-muted-foreground font-medium">({percentage.toFixed(0)}%)</span>
                         </span>
                       </div>
-                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                      <div className="h-3 bg-muted/30 rounded-full overflow-hidden shadow-inner">
                         <motion.div 
-                          className={`h-full rounded-full bg-gradient-to-r ${color}`}
+                          className="h-full rounded-full shadow-lg"
+                          style={{ 
+                            background: `linear-gradient(90deg, ${color.from}, ${color.to})`,
+                            boxShadow: `0 2px 8px ${color.from}40`
+                          }}
                           initial={{ width: 0 }}
                           animate={{ width: `${percentage}%` }}
                           transition={{ duration: 0.8, ease: "easeOut", delay: index * 0.1 }}
                         />
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -797,41 +873,56 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-            <CardHeader className="pb-2">
+          <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-emerald-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-emerald-500/10">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/20">
                   <DollarSign className="h-4 w-4 text-emerald-500" />
                 </div>
                 <CardTitle className="text-base font-semibold">Por Produto</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+            <CardContent className="relative">
+              <div className="space-y-4 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
                 {productDistribution.slice(0, 6).map((product, index) => {
-                  const percentage = (product.count / contracts.length) * 100;
+                  const percentage = contracts.length > 0 ? (product.count / contracts.length) * 100 : 0;
                   
                   return (
-                    <div key={product.name} className="group">
-                      <div className="flex justify-between text-sm mb-1.5">
-                        <span className="font-medium truncate flex-1 mr-2">{product.name}</span>
-                        <div className="text-right shrink-0">
-                          <span className="text-xs text-muted-foreground">{product.count}×</span>
-                          <span className="text-xs font-semibold ml-1.5" style={{ color: product.color }}>
+                    <motion.div 
+                      key={product.name} 
+                      className="group/item"
+                      whileHover={{ x: 4 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="font-semibold truncate flex-1 mr-2">{product.name}</span>
+                        <div className="text-right shrink-0 flex items-center gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs font-bold px-2"
+                            style={{ borderColor: `${product.color}50`, color: product.color }}
+                          >
+                            {product.count}×
+                          </Badge>
+                          <span className="text-xs font-bold" style={{ color: product.color }}>
                             {formatCurrency(product.value)}
                           </span>
                         </div>
                       </div>
-                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                      <div className="h-3 bg-muted/30 rounded-full overflow-hidden shadow-inner">
                         <motion.div 
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: product.color }}
+                          className="h-full rounded-full shadow-lg"
+                          style={{ 
+                            background: `linear-gradient(90deg, ${product.color}, ${product.color}cc)`,
+                            boxShadow: `0 2px 8px ${product.color}40`
+                          }}
                           initial={{ width: 0 }}
                           animate={{ width: `${percentage}%` }}
                           transition={{ duration: 0.8, ease: "easeOut", delay: index * 0.1 }}
                         />
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -842,26 +933,36 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
 
       {/* Revenue Chart */}
       <motion.div variants={itemVariants}>
-        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-2">
+        <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-emerald-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-emerald-500/10 via-teal-500/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-emerald-500/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 opacity-30" />
+          <CardHeader className="pb-2 relative">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-emerald-500/10">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/20">
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
               </div>
               <CardTitle className="text-base font-semibold">Valor de Novos Contratos</CardTitle>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="h-[180px]">
+          <CardContent className="relative">
+            <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorValor" x1="0" y1="0" x2="1" y2="0">
                       <stop offset="0%" stopColor="#22c55e"/>
-                      <stop offset="100%" stopColor="#10b981"/>
+                      <stop offset="50%" stopColor="#10b981"/>
+                      <stop offset="100%" stopColor="#14b8a6"/>
                     </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
                   <XAxis 
                     dataKey="month" 
                     className="text-xs" 
@@ -881,9 +982,9 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       if (!active || !payload?.[0]) return null;
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-xl px-4 py-3 shadow-xl">
+                        <div className="bg-background/95 backdrop-blur-md border border-emerald-500/30 rounded-xl px-4 py-3 shadow-2xl shadow-emerald-500/20">
                           <p className="text-sm font-medium mb-1">{data?.fullMonth || label}</p>
-                          <p className="text-lg font-bold text-emerald-500">{formatCurrency(payload[0].value as number)}</p>
+                          <p className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">{formatCurrency(payload[0].value as number)}</p>
                         </div>
                       );
                     }}
@@ -893,9 +994,10 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                     dataKey="valorNovos" 
                     name="Valor" 
                     stroke="url(#colorValor)" 
-                    strokeWidth={3}
-                    dot={{ fill: "#22c55e", strokeWidth: 2, stroke: "#fff", r: 5 }}
-                    activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff" }}
+                    strokeWidth={4}
+                    filter="url(#glow)"
+                    dot={{ fill: "#22c55e", strokeWidth: 3, stroke: "#fff", r: 6 }}
+                    activeDot={{ r: 10, strokeWidth: 4, stroke: "#fff", fill: "#22c55e" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
