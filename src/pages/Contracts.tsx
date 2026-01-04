@@ -1646,11 +1646,15 @@ export default function Contracts() {
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="active">Ativos</SelectItem>
-                  <SelectItem value="expired">Vencidos</SelectItem>
+                  <SelectItem value="pending">Pendentes</SelectItem>
+                  <SelectItem value="scheduled">A Iniciar</SelectItem>
                   <SelectItem value="suspended">Suspensos</SelectItem>
                   <SelectItem value="paused">Pausados</SelectItem>
                   <SelectItem value="cancelled">Cancelados</SelectItem>
                   <SelectItem value="ended">Encerrados</SelectItem>
+                  <SelectItem value="dismissed">Demitidas</SelectItem>
+                  <SelectItem value="dropout_7d">Desistência 7D</SelectItem>
+                  <SelectItem value="expired">Vencidos</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
