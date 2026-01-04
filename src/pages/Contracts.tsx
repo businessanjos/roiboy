@@ -1237,7 +1237,9 @@ export default function Contracts() {
         contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contract.notes?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = statusFilter === "all" || contract.status === statusFilter;
+      const isExpired = contract.end_date && isPast(new Date(contract.end_date)) && contract.status === "active";
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
       const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
       const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
       
@@ -1265,7 +1267,9 @@ export default function Contracts() {
         contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contract.notes?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = statusFilter === "all" || contract.status === statusFilter;
+      const isExpired = contract.end_date && isPast(new Date(contract.end_date)) && contract.status === "active";
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
       const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
       const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
       
@@ -1570,6 +1574,7 @@ export default function Contracts() {
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="expired">Vencidos</SelectItem>
                   <SelectItem value="suspended">Suspensos</SelectItem>
                   <SelectItem value="paused">Pausados</SelectItem>
                   <SelectItem value="cancelled">Cancelados</SelectItem>
