@@ -170,6 +170,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
   const [formData, setFormData] = useState({
     start_date: "",
     end_date: "",
+    cancelled_at: "",
     value: "",
     contract_type: "compra",
     product_id: "",
@@ -190,6 +191,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
       setFormData({
         start_date: contract.start_date,
         end_date: contract.end_date || "",
+        cancelled_at: contract.cancelled_at || "",
         value: String(contract.value || 0),
         contract_type: contract.contract_type,
         product_id: contract.product?.id || "",
@@ -231,6 +233,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
       const updateData = {
         start_date: formData.start_date,
         end_date: formData.end_date || null,
+        cancelled_at: formData.cancelled_at || null,
         value: parseFloat(formData.value) || 0,
         contract_type: formData.contract_type,
         product_id: formData.product_id || null,
@@ -264,6 +267,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
       setFormData({
         start_date: contract.start_date,
         end_date: contract.end_date || "",
+        cancelled_at: contract.cancelled_at || "",
         value: String(contract.value || 0),
         contract_type: contract.contract_type,
         product_id: contract.product?.id || "",
@@ -476,15 +480,26 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
           </div>
 
           {/* Cancelled At - only show for cancelled/dismissed/dropout_7d/ended statuses */}
-          {["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status) && contract.cancelled_at && (
+          {["cancelled", "dismissed", "dropout_7d", "ended"].includes(isEditing ? formData.status : contract.status) && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1 text-destructive">
                 <XCircle className="h-3 w-3" />
                 Data do Cancelamento
               </Label>
-              <p className="text-sm font-medium text-destructive">
-                {format(new Date(contract.cancelled_at), "dd/MM/yyyy", { locale: ptBR })}
-              </p>
+              {isEditing ? (
+                <Input
+                  type="date"
+                  value={formData.cancelled_at?.split('T')[0] || ""}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, cancelled_at: e.target.value }))}
+                  className="border-destructive/50"
+                />
+              ) : (
+                <p className="text-sm font-medium text-destructive">
+                  {contract.cancelled_at
+                    ? format(new Date(contract.cancelled_at), "dd/MM/yyyy", { locale: ptBR })
+                    : "—"}
+                </p>
+              )}
             </div>
           )}
 
