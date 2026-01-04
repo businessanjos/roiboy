@@ -21,6 +21,7 @@ import {
   PauseCircle,
   Ban,
   UserX,
+  Route,
 } from "lucide-react";
 import {
   BarChart,
@@ -38,7 +39,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Contract {
@@ -242,6 +243,56 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
       churnRate,
       inProgressRate,
     };
+  }, [contracts]);
+
+  // Customer Journey - Churn by contract month (1st, 2nd, 3rd... month)
+  const customerJourneyData = useMemo(() => {
+    const journeyData: { month: number; label: string; churned: number; total: number; rate: number }[] = [];
+    
+    // Get contracts that churned (cancelled, dismissed, dropout_7d, ended)
+    const churnedContracts = contracts.filter(c => 
+      ['cancelled', 'dismissed', 'dropout_7d', 'ended'].includes(c.status) && 
+      c.end_date
+    );
+    
+    // Calculate the month of churn for each contract
+    for (let month = 1; month <= 12; month++) {
+      let churnedInMonth = 0;
+      let totalAtMonth = 0;
+      
+      churnedContracts.forEach(contract => {
+        if (!contract.end_date) return;
+        
+        const startDate = parseISO(contract.start_date);
+        const endDate = parseISO(contract.end_date);
+        const monthsActive = differenceInMonths(endDate, startDate) + 1;
+        
+        if (monthsActive === month) {
+          churnedInMonth++;
+        }
+      });
+      
+      // Total contracts that reached this month
+      contracts.forEach(contract => {
+        const startDate = parseISO(contract.start_date);
+        const endDate = contract.end_date ? parseISO(contract.end_date) : new Date();
+        const monthsActive = differenceInMonths(endDate, startDate) + 1;
+        
+        if (monthsActive >= month) {
+          totalAtMonth++;
+        }
+      });
+      
+      journeyData.push({
+        month,
+        label: `${month}º`,
+        churned: churnedInMonth,
+        total: totalAtMonth,
+        rate: totalAtMonth > 0 ? (churnedInMonth / totalAtMonth) * 100 : 0,
+      });
+    }
+    
+    return journeyData;
   }, [contracts]);
 
   // KPIs
@@ -606,6 +657,169 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 <p className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-rose-500 bg-clip-text text-transparent">{funnelData.churnRate.toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground font-medium mt-1">Taxa de Churn</p>
               </motion.div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Customer Journey - Retention Analysis */}
+      <motion.div variants={itemVariants}>
+        <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-rose-500/5 backdrop-blur-sm">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-rose-500/10 via-orange-500/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-amber-500/10 via-rose-500/5 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          <CardHeader className="pb-3 relative">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 ring-1 ring-rose-500/30 shadow-lg shadow-rose-500/20">
+                <Route className="h-5 w-5 text-rose-500" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold">Jornada de Retenção</CardTitle>
+                <p className="text-xs text-muted-foreground">Tendência de desistência por mês de contrato</p>
+              </div>
+              {(() => {
+                const peakMonth = customerJourneyData.reduce((max, current) => 
+                  current.churned > max.churned ? current : max
+                , customerJourneyData[0]);
+                return peakMonth && peakMonth.churned > 0 ? (
+                  <Badge className="ml-auto bg-gradient-to-r from-rose-500/20 to-orange-500/20 text-rose-600 border-rose-500/30 text-xs font-semibold px-3 py-1">
+                    ⚠️ Pico: {peakMonth.label} mês ({peakMonth.churned} saídas)
+                  </Badge>
+                ) : null;
+              })()}
+            </div>
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={customerJourneyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="journeyGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f43f5e" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#fb923c" stopOpacity={0.8}/>
+                    </linearGradient>
+                    <linearGradient id="journeyRateGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#a855f7" stopOpacity={0.8}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                  <XAxis 
+                    dataKey="label" 
+                    className="text-xs" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    className="text-xs" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    className="text-xs" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={(value) => `${value.toFixed(0)}%`}
+                  />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.[0]) return null;
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-background/95 backdrop-blur-md border border-rose-500/30 rounded-xl px-4 py-3 shadow-2xl shadow-rose-500/20">
+                          <p className="text-sm font-semibold mb-2">{label} mês de contrato</p>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                              <span className="text-xs text-muted-foreground">Desistências:</span>
+                              <span className="text-sm font-bold text-rose-600">{data.churned}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
+                              <span className="text-xs text-muted-foreground">Taxa:</span>
+                              <span className="text-sm font-bold text-violet-600">{data.rate.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar 
+                    yAxisId="left"
+                    dataKey="churned" 
+                    name="Desistências" 
+                    fill="url(#journeyGrad)" 
+                    radius={[8, 8, 0, 0]} 
+                  />
+                  <Line 
+                    yAxisId="right"
+                    type="monotone" 
+                    dataKey="rate" 
+                    name="Taxa %" 
+                    stroke="#8b5cf6" 
+                    strokeWidth={3}
+                    dot={{ fill: "#8b5cf6", strokeWidth: 2, stroke: "#fff", r: 4 }}
+                    activeDot={{ r: 7, strokeWidth: 3, stroke: "#fff", fill: "#8b5cf6" }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center justify-center gap-6 mt-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10">
+                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-rose-500 to-orange-400 shadow-lg shadow-rose-500/50" />
+                <span className="text-xs font-medium text-rose-600">Desistências</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10">
+                <div className="w-2.5 h-2.5 rounded-full bg-violet-500 shadow-lg shadow-violet-500/50" />
+                <span className="text-xs font-medium text-violet-600">Taxa de Saída (%)</span>
+              </div>
+            </div>
+            
+            {/* Insights */}
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-5 border-t border-border/30">
+              {(() => {
+                const firstQuarter = customerJourneyData.slice(0, 3).reduce((sum, m) => sum + m.churned, 0);
+                const secondQuarter = customerJourneyData.slice(3, 6).reduce((sum, m) => sum + m.churned, 0);
+                const secondHalf = customerJourneyData.slice(6, 12).reduce((sum, m) => sum + m.churned, 0);
+                const total = firstQuarter + secondQuarter + secondHalf;
+                
+                return (
+                  <>
+                    <motion.div 
+                      className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent border border-rose-500/20 hover:border-rose-500/40 transition-all duration-300"
+                      whileHover={{ scale: 1.03 }}
+                    >
+                      <div className="absolute inset-0 bg-rose-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-rose-500 bg-clip-text text-transparent">{firstQuarter}</p>
+                      <p className="text-xs text-muted-foreground font-medium mt-1">1º-3º mês</p>
+                      <p className="text-[10px] text-rose-500 mt-0.5">{total > 0 ? ((firstQuarter / total) * 100).toFixed(0) : 0}% do churn</p>
+                    </motion.div>
+                    <motion.div 
+                      className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 hover:border-amber-500/40 transition-all duration-300"
+                      whileHover={{ scale: 1.03 }}
+                    >
+                      <div className="absolute inset-0 bg-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">{secondQuarter}</p>
+                      <p className="text-xs text-muted-foreground font-medium mt-1">4º-6º mês</p>
+                      <p className="text-[10px] text-amber-500 mt-0.5">{total > 0 ? ((secondQuarter / total) * 100).toFixed(0) : 0}% do churn</p>
+                    </motion.div>
+                    <motion.div 
+                      className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-300"
+                      whileHover={{ scale: 1.03 }}
+                    >
+                      <div className="absolute inset-0 bg-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">{secondHalf}</p>
+                      <p className="text-xs text-muted-foreground font-medium mt-1">7º-12º mês</p>
+                      <p className="text-[10px] text-emerald-500 mt-0.5">{total > 0 ? ((secondHalf / total) * 100).toFixed(0) : 0}% do churn</p>
+                    </motion.div>
+                  </>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>
