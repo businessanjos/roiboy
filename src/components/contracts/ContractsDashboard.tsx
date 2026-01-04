@@ -16,6 +16,11 @@ import {
   Target,
   Zap,
   Shield,
+  Filter,
+  Clock,
+  PauseCircle,
+  Ban,
+  UserX,
 } from "lucide-react";
 import {
   BarChart,
@@ -193,6 +198,45 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
     }));
   }, [contracts]);
 
+  // Funnel data - lifecycle flow
+  const funnelData = useMemo(() => {
+    const total = contracts.length;
+    const scheduled = contracts.filter(c => c.status === "scheduled").length;
+    const pending = contracts.filter(c => c.status === "pending").length;
+    const active = contracts.filter(c => c.status === "active").length;
+    const paused = contracts.filter(c => c.status === "paused").length;
+    const suspended = contracts.filter(c => c.status === "suspended").length;
+    const ended = contracts.filter(c => c.status === "ended").length;
+    const cancelled = contracts.filter(c => c.status === "cancelled").length;
+    const dismissed = contracts.filter(c => c.status === "dismissed").length;
+    const dropout7d = contracts.filter(c => c.status === "dropout_7d").length;
+    
+    // Calculate rates
+    const activeRate = total > 0 ? (active / total) * 100 : 0;
+    const completedRate = total > 0 ? (ended / total) * 100 : 0;
+    const churnTotal = cancelled + dismissed + dropout7d;
+    const churnRate = total > 0 ? (churnTotal / total) * 100 : 0;
+    const inProgressRate = total > 0 ? ((active + pending + scheduled + paused + suspended) / total) * 100 : 0;
+    
+    return {
+      total,
+      scheduled,
+      pending,
+      active,
+      paused,
+      suspended,
+      ended,
+      cancelled,
+      dismissed,
+      dropout7d,
+      churnTotal,
+      activeRate,
+      completedRate,
+      churnRate,
+      inProgressRate,
+    };
+  }, [contracts]);
+
   // KPIs
   const kpis = useMemo(() => {
     const activeContracts = contracts.filter(c => c.status === "active");
@@ -345,6 +389,195 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
           </Card>
         </motion.div>
       </div>
+
+      {/* Funnel - Lifecycle Flow */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20">
+                <Filter className="h-4 w-4 text-violet-500" />
+              </div>
+              <CardTitle className="text-base font-semibold">Funil do Processo</CardTitle>
+              <Badge variant="outline" className="ml-auto text-xs">
+                Taxa de Eficiência: {funnelData.activeRate.toFixed(1)}%
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {/* Total Entries */}
+              <div className="relative">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                    <Target className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Total de Contratos</span>
+                      <span className="text-lg font-bold">{funnelData.total}</span>
+                    </div>
+                    <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80"
+                        initial={{ width: 0 }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground w-12 text-right">100%</span>
+                </div>
+              </div>
+
+              {/* Active (In Progress) */}
+              <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Ativos</span>
+                      <span className="text-lg font-bold text-emerald-600">{funnelData.active}</span>
+                    </div>
+                    <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${funnelData.activeRate}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-emerald-600 font-medium w-12 text-right">{funnelData.activeRate.toFixed(1)}%</span>
+                </div>
+              </div>
+
+              {/* Pending + Scheduled */}
+              <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
+                    <Clock className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Pendentes + A Iniciar</span>
+                      <span className="text-lg font-bold text-blue-600">{funnelData.pending + funnelData.scheduled}</span>
+                    </div>
+                    <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${funnelData.total > 0 ? ((funnelData.pending + funnelData.scheduled) / funnelData.total) * 100 : 0}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-blue-600 font-medium w-12 text-right">
+                    {funnelData.total > 0 ? (((funnelData.pending + funnelData.scheduled) / funnelData.total) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Paused + Suspended */}
+              <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
+                    <PauseCircle className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Pausados + Suspensos</span>
+                      <span className="text-lg font-bold text-amber-600">{funnelData.paused + funnelData.suspended}</span>
+                    </div>
+                    <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${funnelData.total > 0 ? ((funnelData.paused + funnelData.suspended) / funnelData.total) * 100 : 0}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-amber-600 font-medium w-12 text-right">
+                    {funnelData.total > 0 ? (((funnelData.paused + funnelData.suspended) / funnelData.total) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Ended (Completed) */}
+              <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-slate-500/10 shrink-0">
+                    <Ban className="h-4 w-4 text-slate-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Encerrados</span>
+                      <span className="text-lg font-bold text-slate-600">{funnelData.ended}</span>
+                    </div>
+                    <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full bg-gradient-to-r from-slate-500 to-slate-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${funnelData.completedRate}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.4 }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-600 font-medium w-12 text-right">{funnelData.completedRate.toFixed(1)}%</span>
+                </div>
+              </div>
+
+              {/* Churn (Cancelled + Dismissed + Dropout) */}
+              <div className="relative pl-6 border-l-2 border-dashed border-rose-500/30 ml-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-rose-500/10 shrink-0">
+                    <UserX className="h-4 w-4 text-rose-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">Churn Total</span>
+                        <span className="text-xs text-muted-foreground">
+                          (Cancel: {funnelData.cancelled} | Demitidas: {funnelData.dismissed} | 7D: {funnelData.dropout7d})
+                        </span>
+                      </div>
+                      <span className="text-lg font-bold text-rose-600">{funnelData.churnTotal}</span>
+                    </div>
+                    <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${funnelData.churnRate}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-rose-600 font-medium w-12 text-right">{funnelData.churnRate.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-border/50">
+              <div className="text-center p-3 rounded-xl bg-emerald-500/5">
+                <p className="text-2xl font-bold text-emerald-600">{funnelData.inProgressRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">Em Andamento</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-slate-500/5">
+                <p className="text-2xl font-bold text-slate-600">{funnelData.completedRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">Finalizados</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-rose-500/5">
+                <p className="text-2xl font-bold text-rose-600">{funnelData.churnRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">Taxa de Churn</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
