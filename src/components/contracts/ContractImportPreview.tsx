@@ -281,16 +281,18 @@ export function ContractImportPreview({
               Limpar
             </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <Switch 
-              checked={createNewClients} 
-              onCheckedChange={setCreateNewClients}
-              id="create-new"
-            />
-            <Label htmlFor="create-new" className="text-sm cursor-pointer">
-              Criar clientes novos
-            </Label>
-          </div>
+          {stats.newCount > 0 && (
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={createNewClients} 
+                onCheckedChange={setCreateNewClients}
+                id="create-new"
+              />
+              <Label htmlFor="create-new" className="text-sm cursor-pointer">
+                Criar clientes novos ({stats.newCount})
+              </Label>
+            </div>
+          )}
         </div>
 
         {/* Table with proper scrolling */}
