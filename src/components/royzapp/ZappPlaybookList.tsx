@@ -18,6 +18,8 @@ import {
   Trash2,
   Search,
   Loader2,
+  Link2,
+  LayoutTemplate,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +43,8 @@ const contentTypeIcons: Record<PlaybookContentType, React.ReactNode> = {
   document: <File className="h-4 w-4" />,
   sticker: <Sticker className="h-4 w-4" />,
   list: <List className="h-4 w-4" />,
+  link: <Link2 className="h-4 w-4" />,
+  template: <LayoutTemplate className="h-4 w-4" />,
 };
 
 const contentTypeColors: Record<PlaybookContentType, string> = {
@@ -51,6 +55,8 @@ const contentTypeColors: Record<PlaybookContentType, string> = {
   document: "text-orange-400",
   sticker: "text-yellow-400",
   list: "text-cyan-400",
+  link: "text-indigo-400",
+  template: "text-pink-400",
 };
 
 interface ZappPlaybookListProps {

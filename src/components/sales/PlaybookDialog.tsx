@@ -52,6 +52,8 @@ import {
   Send,
   MoreVertical,
   Loader2,
+  Link2,
+  LayoutTemplate,
 } from 'lucide-react';
 import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder } from '@/hooks/usePlaybook';
 import { PlaybookItemForm } from './PlaybookItemForm';
@@ -73,6 +75,8 @@ const contentTypeIcons: Record<PlaybookContentType, React.ReactNode> = {
   document: <File className="h-4 w-4" />,
   sticker: <Sticker className="h-4 w-4" />,
   list: <List className="h-4 w-4" />,
+  link: <Link2 className="h-4 w-4" />,
+  template: <LayoutTemplate className="h-4 w-4" />,
 };
 
 const contentTypeLabels: Record<PlaybookContentType, string> = {
@@ -83,6 +87,8 @@ const contentTypeLabels: Record<PlaybookContentType, string> = {
   document: 'Documento',
   sticker: 'Sticker',
   list: 'Lista',
+  link: 'Link',
+  template: 'Template',
 };
 
 const contentTypeColors: Record<PlaybookContentType, string> = {
@@ -93,6 +99,8 @@ const contentTypeColors: Record<PlaybookContentType, string> = {
   document: 'bg-orange-500/10 text-orange-500',
   sticker: 'bg-yellow-500/10 text-yellow-500',
   list: 'bg-cyan-500/10 text-cyan-500',
+  link: 'bg-indigo-500/10 text-indigo-500',
+  template: 'bg-pink-500/10 text-pink-500',
 };
 
 export function PlaybookDialog({

@@ -5398,6 +5398,9 @@ export type Database = {
           id: string
           is_favorite: boolean | null
           last_used_at: string | null
+          link_description: string | null
+          link_title: string | null
+          link_url: string | null
           list_items: Json | null
           media_duration: number | null
           media_filename: string | null
@@ -5406,6 +5409,10 @@ export type Database = {
           name: string
           position: number | null
           sector_id: string | null
+          template_body: string | null
+          template_buttons: Json | null
+          template_footer: string | null
+          template_header: string | null
           text_content: string | null
           updated_at: string
           usage_count: number | null
@@ -5419,6 +5426,9 @@ export type Database = {
           id?: string
           is_favorite?: boolean | null
           last_used_at?: string | null
+          link_description?: string | null
+          link_title?: string | null
+          link_url?: string | null
           list_items?: Json | null
           media_duration?: number | null
           media_filename?: string | null
@@ -5427,6 +5437,10 @@ export type Database = {
           name: string
           position?: number | null
           sector_id?: string | null
+          template_body?: string | null
+          template_buttons?: Json | null
+          template_footer?: string | null
+          template_header?: string | null
           text_content?: string | null
           updated_at?: string
           usage_count?: number | null
@@ -5440,6 +5454,9 @@ export type Database = {
           id?: string
           is_favorite?: boolean | null
           last_used_at?: string | null
+          link_description?: string | null
+          link_title?: string | null
+          link_url?: string | null
           list_items?: Json | null
           media_duration?: number | null
           media_filename?: string | null
@@ -5448,6 +5465,10 @@ export type Database = {
           name?: string
           position?: number | null
           sector_id?: string | null
+          template_body?: string | null
+          template_buttons?: Json | null
+          template_footer?: string | null
+          template_header?: string | null
           text_content?: string | null
           updated_at?: string
           usage_count?: number | null

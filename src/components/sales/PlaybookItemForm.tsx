@@ -33,8 +33,13 @@ import {
   Trash2,
   Play,
   Pause,
+  Link2,
+  LayoutTemplate,
+  Phone,
+  ExternalLink,
+  MessageSquareReply,
 } from 'lucide-react';
-import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder, CreatePlaybookItemInput } from '@/hooks/usePlaybook';
+import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder, CreatePlaybookItemInput, TemplateButton } from '@/hooks/usePlaybook';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -55,6 +60,8 @@ const contentTypeOptions: { value: PlaybookContentType; label: string; icon: Rea
   { value: 'document', label: 'Documento', icon: <File className="h-4 w-4" /> },
   { value: 'sticker', label: 'Sticker', icon: <Sticker className="h-4 w-4" /> },
   { value: 'list', label: 'Lista', icon: <List className="h-4 w-4" /> },
+  { value: 'link', label: 'Link', icon: <Link2 className="h-4 w-4" /> },
+  { value: 'template', label: 'Template', icon: <LayoutTemplate className="h-4 w-4" /> },
 ];
 
 interface ListItem {
@@ -82,6 +89,15 @@ export function PlaybookItemForm({
   const [existingMediaUrl, setExistingMediaUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  // Link fields
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkDescription, setLinkDescription] = useState('');
+  // Template fields
+  const [templateHeader, setTemplateHeader] = useState('');
+  const [templateBody, setTemplateBody] = useState('');
+  const [templateFooter, setTemplateFooter] = useState('');
+  const [templateButtons, setTemplateButtons] = useState<TemplateButton[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -98,6 +114,15 @@ export function PlaybookItemForm({
         setExistingMediaUrl(editingItem.media_url);
         setMediaFile(null);
         setMediaPreview(null);
+        // Link fields
+        setLinkUrl(editingItem.link_url || '');
+        setLinkTitle(editingItem.link_title || '');
+        setLinkDescription(editingItem.link_description || '');
+        // Template fields
+        setTemplateHeader(editingItem.template_header || '');
+        setTemplateBody(editingItem.template_body || '');
+        setTemplateFooter(editingItem.template_footer || '');
+        setTemplateButtons(editingItem.template_buttons || []);
       } else {
         setName('');
         setContentType('text');
@@ -107,6 +132,15 @@ export function PlaybookItemForm({
         setMediaFile(null);
         setMediaPreview(null);
         setExistingMediaUrl(null);
+        // Link fields
+        setLinkUrl('');
+        setLinkTitle('');
+        setLinkDescription('');
+        // Template fields
+        setTemplateHeader('');
+        setTemplateBody('');
+        setTemplateFooter('');
+        setTemplateButtons([]);
       }
     }
   }, [open, editingItem]);
@@ -210,6 +244,16 @@ export function PlaybookItemForm({
       }
     }
 
+    if (contentType === 'link' && !linkUrl.trim()) {
+      toast.error('URL é obrigatória');
+      return;
+    }
+
+    if (contentType === 'template' && !templateBody.trim()) {
+      toast.error('Corpo da mensagem é obrigatório');
+      return;
+    }
+
     try {
       setIsUploading(true);
       console.log('[Playbook Form] Starting submit...', { contentType, hasMediaFile: !!mediaFile, hasExistingUrl: !!existingMediaUrl });
@@ -240,6 +284,15 @@ export function PlaybookItemForm({
         media_filename: mediaFile?.name || editingItem?.media_filename,
         media_size: mediaFile?.size || editingItem?.media_size,
         list_items: contentType === 'list' ? listItems.filter(item => item.title.trim()) : null,
+        // Link fields
+        link_url: contentType === 'link' ? linkUrl : null,
+        link_title: contentType === 'link' ? linkTitle : null,
+        link_description: contentType === 'link' ? linkDescription : null,
+        // Template fields
+        template_header: contentType === 'template' ? templateHeader : null,
+        template_body: contentType === 'template' ? templateBody : null,
+        template_footer: contentType === 'template' ? templateFooter : null,
+        template_buttons: contentType === 'template' ? templateButtons : null,
       };
 
       console.log('[Playbook Form] Saving item:', input);
@@ -292,6 +345,26 @@ export function PlaybookItemForm({
     }
   };
 
+  // Template button management
+  const addTemplateButton = (type: 'quick_reply' | 'url' | 'phone') => {
+    if (templateButtons.length >= 3) {
+      toast.error('Máximo de 3 botões permitidos');
+      return;
+    }
+    const newButton: TemplateButton = { type, text: '', value: '' };
+    setTemplateButtons([...templateButtons, newButton]);
+  };
+
+  const removeTemplateButton = (index: number) => {
+    setTemplateButtons(templateButtons.filter((_, i) => i !== index));
+  };
+
+  const updateTemplateButton = (index: number, field: 'text' | 'value', value: string) => {
+    const updated = [...templateButtons];
+    updated[index] = { ...updated[index], [field]: value };
+    setTemplateButtons(updated);
+  };
+
   const getAcceptedFileTypes = () => {
     switch (contentType) {
       case 'audio':
@@ -334,7 +407,7 @@ export function PlaybookItemForm({
             {/* Content Type */}
             <div className="space-y-2">
               <Label>Tipo de Conteúdo *</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {contentTypeOptions.map(option => (
                   <Button
                     key={option.value}
@@ -436,6 +509,177 @@ export function PlaybookItemForm({
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Link fields */}
+            {contentType === 'link' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="linkUrl">URL *</Label>
+                  <Input
+                    id="linkUrl"
+                    type="url"
+                    placeholder="https://exemplo.com"
+                    value={linkUrl}
+                    onChange={e => setLinkUrl(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="linkTitle">Título (opcional)</Label>
+                  <Input
+                    id="linkTitle"
+                    placeholder="Título do link"
+                    value={linkTitle}
+                    onChange={e => setLinkTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="linkDescription">Descrição (opcional)</Label>
+                  <Input
+                    id="linkDescription"
+                    placeholder="Descrição breve do link"
+                    value={linkDescription}
+                    onChange={e => setLinkDescription(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Template fields */}
+            {contentType === 'template' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="templateHeader">Cabeçalho (opcional)</Label>
+                  <Input
+                    id="templateHeader"
+                    placeholder="Cabeçalho do template"
+                    value={templateHeader}
+                    onChange={e => setTemplateHeader(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Texto que aparece no topo da mensagem
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Corpo da Mensagem *</Label>
+                  <WhatsAppFormattingToolbar
+                    value={templateBody}
+                    onChange={setTemplateBody}
+                    placeholder="Corpo da mensagem com suporte a variáveis..."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Variáveis: {'{{nome_cliente}}'}, {'{{nome_empresa}}'}, {'{{valor_deal}}'}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="templateFooter">Rodapé (opcional)</Label>
+                  <Input
+                    id="templateFooter"
+                    placeholder="Rodapé do template"
+                    value={templateFooter}
+                    onChange={e => setTemplateFooter(e.target.value)}
+                  />
+                </div>
+
+                {/* Template Buttons */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Botões de Ação (máx. 3)</Label>
+                    {templateButtons.length < 3 && (
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addTemplateButton('quick_reply')}
+                          title="Resposta rápida"
+                        >
+                          <MessageSquareReply className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addTemplateButton('url')}
+                          title="Link"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addTemplateButton('phone')}
+                          title="Telefone"
+                        >
+                          <Phone className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {templateButtons.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-3 border border-dashed rounded-lg">
+                      Clique nos ícones acima para adicionar botões
+                    </p>
+                  )}
+
+                  {templateButtons.map((button, index) => (
+                    <div
+                      key={index}
+                      className="flex gap-2 items-start p-3 rounded-lg border bg-muted/30"
+                    >
+                      <div className="flex-shrink-0 pt-2">
+                        {button.type === 'quick_reply' && (
+                          <MessageSquareReply className="h-4 w-4 text-blue-500" />
+                        )}
+                        {button.type === 'url' && (
+                          <ExternalLink className="h-4 w-4 text-green-500" />
+                        )}
+                        {button.type === 'phone' && (
+                          <Phone className="h-4 w-4 text-purple-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          placeholder="Texto do botão"
+                          value={button.text}
+                          onChange={e => updateTemplateButton(index, 'text', e.target.value)}
+                        />
+                        {button.type === 'url' && (
+                          <Input
+                            placeholder="URL (https://...)"
+                            value={button.value || ''}
+                            onChange={e => updateTemplateButton(index, 'value', e.target.value)}
+                          />
+                        )}
+                        {button.type === 'phone' && (
+                          <Input
+                            placeholder="Número de telefone (+5511...)"
+                            value={button.value || ''}
+                            onChange={e => updateTemplateButton(index, 'value', e.target.value)}
+                          />
+                        )}
+                        {button.type === 'quick_reply' && (
+                          <p className="text-xs text-muted-foreground">
+                            O texto será enviado como resposta
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => removeTemplateButton(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
