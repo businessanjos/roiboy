@@ -81,7 +81,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           const unreadCount = dept ? (unreadByDept[dept.id] || 0) : 0;
           
           const config = integration?.config as any;
-          const connected = integration?.status === "connected" && config?.instance_name;
+          // Considerar conectado se status === "connected" OU se tem instance_name
+          const connected = integration?.status === "connected" || !!config?.instance_name;
           
           return {
             sectorId,
