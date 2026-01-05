@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { MessageSquare, Users, Building2, Tags, Users2, Settings, BookOpen } from "lucide-react";
+import { MessageSquare, Users, Building2, Tags, Users2, Settings, BookOpen, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,8 +10,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ZappSidebarNavProps {
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook") => void;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing") => void;
   filterGroups: boolean;
   setFilterGroups: (groups: boolean) => void;
   onlineAgents: number;
@@ -128,6 +128,23 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">Playbook</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "rounded-full h-10 w-10",
+              activeView === "marketing" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
+            )}
+            onClick={() => setActiveView("marketing")}
+          >
+            <Megaphone className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Marketing</TooltipContent>
       </Tooltip>
 
       <Tooltip>
