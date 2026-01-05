@@ -108,11 +108,11 @@ export function UserSectorAccessManager() {
   };
 
   const getPendingChange = (userId: string, sectorId: string): Partial<UserSectorAccess> | undefined => {
-    return pendingChanges.get(`${userId}-${sectorId}`);
+    return pendingChanges.get(`${userId}::${sectorId}`);
   };
 
   const updatePendingChange = (userId: string, sectorId: string, changes: Partial<UserSectorAccess>) => {
-    const key = `${userId}-${sectorId}`;
+    const key = `${userId}::${sectorId}`;
     const existing = pendingChanges.get(key) || {};
     const newChanges = new Map(pendingChanges);
     newChanges.set(key, { ...existing, ...changes });
@@ -205,7 +205,7 @@ export function UserSectorAccessManager() {
     
     try {
       for (const [key, changes] of pendingChanges.entries()) {
-        const [userId, sectorId] = key.split("-");
+        const [userId, sectorId] = key.split("::");
         const existing = getUserAccess(userId, sectorId);
 
         if (existing) {
