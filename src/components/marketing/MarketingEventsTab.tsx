@@ -150,6 +150,7 @@ export default function MarketingEventsTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEventType, setFilterEventType] = useState<string>("all");
   const [filterModality, setFilterModality] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
 
   // Form state
@@ -185,9 +186,9 @@ export default function MarketingEventsTab() {
     staleTime: 300000,
   });
 
-  // Fetch marketing events
+  // Fetch all events (marketing and operation)
   const { data: events = [], isLoading: loading } = useQuery({
-    queryKey: ["marketing-events-list"],
+    queryKey: ["all-events-list"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
@@ -198,7 +199,7 @@ export default function MarketingEventsTab() {
             products (id, name)
           )
         `)
-        .eq("category", "marketing")
+        .in("category", ["marketing", "operation"])
         .order("scheduled_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data as EventWithProducts[]) || [];
@@ -420,20 +421,24 @@ export default function MarketingEventsTab() {
       
       const matchesType = filterEventType === "all" || event.event_type === filterEventType;
       const matchesModality = filterModality === "all" || event.modality === filterModality;
+      const matchesCategory = filterCategory === "all" || event.category === filterCategory;
       const matchesModalityTab = modalityTab === "all" || event.modality === modalityTab;
       
-      return matchesSearch && matchesType && matchesModality && matchesModalityTab;
+      return matchesSearch && matchesType && matchesModality && matchesCategory && matchesModalityTab;
     });
-  }, [events, searchTerm, filterEventType, filterModality, modalityTab]);
+  }, [events, searchTerm, filterEventType, filterModality, filterCategory, modalityTab]);
 
   const presencialCount = events.filter(e => e.modality === "presencial").length;
   const onlineCount = events.filter(e => e.modality === "online").length;
+  const marketingCount = events.filter(e => e.category === "marketing").length;
+  const operationCount = events.filter(e => e.category === "operation").length;
 
-  const hasActiveFilters = filterEventType !== "all" || filterModality !== "all";
+  const hasActiveFilters = filterEventType !== "all" || filterModality !== "all" || filterCategory !== "all";
 
   const clearFilters = () => {
     setFilterEventType("all");
     setFilterModality("all");
+    setFilterCategory("all");
   };
 
   const getTypeInfo = (type: string) => {
@@ -484,7 +489,17 @@ export default function MarketingEventsTab() {
       </Tabs>
 
       {/* Filters */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Área" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as áreas</SelectItem>
+            <SelectItem value="marketing">Marketing ({marketingCount})</SelectItem>
+            <SelectItem value="operation">Operação ({operationCount})</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={filterEventType} onValueChange={setFilterEventType}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Tipo" />
@@ -510,6 +525,7 @@ export default function MarketingEventsTab() {
             <TableHeader>
               <TableRow>
                 <TableHead>Evento</TableHead>
+                <TableHead>Área</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Modalidade</TableHead>
@@ -519,9 +535,9 @@ export default function MarketingEventsTab() {
             <TableBody>
               {filteredEvents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>Nenhum evento de marketing encontrado</p>
+                    <p>Nenhum evento encontrado</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -544,6 +560,17 @@ export default function MarketingEventsTab() {
                             )}
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={event.category === "marketing" ? "default" : "secondary"}
+                          className={event.category === "marketing" 
+                            ? "bg-orange-500 hover:bg-orange-600 text-white" 
+                            : "bg-blue-500 hover:bg-blue-600 text-white"
+                          }
+                        >
+                          {event.category === "marketing" ? "MARKETING" : "OPERAÇÃO"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge 
