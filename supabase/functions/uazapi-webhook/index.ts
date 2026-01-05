@@ -238,11 +238,45 @@ serve(async (req) => {
       }
     }
     
-    // Method 2: Find by provider type (for now, get first UAZAPI integration)
-    if (!integration) {
+    // Method 2: Find by instance_token from payload (more reliable)
+    const payloadToken = (payload as Record<string, unknown>).token as string | undefined;
+    if (!integration && payloadToken) {
       const { data: found } = await supabase
         .from("integrations")
-        .select("account_id, config")
+        .select("account_id, config, sector_id")
+        .eq("type", "whatsapp")
+        .filter("config->>instance_token", "eq", payloadToken)
+        .maybeSingle();
+      
+      if (found) {
+        integration = found;
+        console.log(`Found integration by instance_token: ${payloadToken?.slice(0, 8)}...`);
+      }
+    }
+    
+    // Method 3: Find by phone number if available in payload
+    const instanceOwner = (payload as Record<string, unknown>).instanceOwner as string | undefined;
+    if (!integration && instanceOwner) {
+      const phoneClean = String(instanceOwner).replace(/\D/g, "");
+      const { data: found } = await supabase
+        .from("integrations")
+        .select("account_id, config, sector_id")
+        .eq("type", "whatsapp")
+        .filter("config->>phone_number", "eq", phoneClean)
+        .maybeSingle();
+      
+      if (found) {
+        integration = found;
+        console.log(`Found integration by phone_number: ${phoneClean}`);
+      }
+    }
+    
+    // Method 4: Fallback - get by provider but log warning
+    if (!integration) {
+      console.warn("FALLBACK: Could not find specific integration, using provider=uazapi");
+      const { data: found } = await supabase
+        .from("integrations")
+        .select("account_id, config, sector_id")
         .eq("type", "whatsapp")
         .filter("config->>provider", "eq", "uazapi")
         .limit(1)
@@ -250,7 +284,7 @@ serve(async (req) => {
       
       if (found) {
         integration = found;
-        console.log("Found integration by provider=uazapi");
+        console.log("Found integration by provider=uazapi (fallback)");
       }
     }
 
