@@ -106,6 +106,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     activity_type_id: "",
   });
 
+  // Separate effect for fetching data
   useEffect(() => {
     if (open) {
       fetchUsers();
@@ -114,51 +115,57 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         fetchDeals();
         fetchLeads();
       }
-      
-      if (task) {
-        // Extract time from due_date if it exists and has time component
-        let dueDate = "";
-        let dueTime = "";
-        if (task.due_date) {
-          const dateObj = new Date(task.due_date);
-          dueDate = task.due_date.split("T")[0];
-          const hours = dateObj.getUTCHours().toString().padStart(2, "0");
-          const minutes = dateObj.getUTCMinutes().toString().padStart(2, "0");
-          if (hours !== "00" || minutes !== "00") {
-            dueTime = `${hours}:${minutes}`;
-          }
-        }
-        setFormData({
-          title: task.title,
-          description: task.description || "",
-          custom_status_id: task.custom_status_id || "",
-          priority: task.priority,
-          due_date: dueDate,
-          due_time: dueTime,
-          client_id: task.client_id || "",
-          deal_id: task.deal_id || "",
-          lead_id: task.lead_id || "",
-          assigned_to: task.assigned_to || "",
-          activity_type_id: task.activity_type_id || "",
-        });
-      } else {
-        const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
-        setFormData({
-          title: "",
-          description: "",
-          custom_status_id: defaultStatusId,
-          priority: "medium",
-          due_date: "",
-          due_time: "",
-          client_id: clientId || "",
-          deal_id: dealId || "",
-          lead_id: leadId || "",
-          assigned_to: "",
-          activity_type_id: "",
-        });
-      }
     }
-  }, [open, task, clientId, dealId, leadId, initialStatus, customStatuses]);
+  }, [open, hasVendasAccess]);
+
+  // Separate effect for initializing form data - only when dialog opens or task changes
+  useEffect(() => {
+    if (!open) return;
+    
+    if (task) {
+      // Extract time from due_date if it exists and has time component
+      let dueDate = "";
+      let dueTime = "";
+      if (task.due_date) {
+        const dateObj = new Date(task.due_date);
+        dueDate = task.due_date.split("T")[0];
+        const hours = dateObj.getUTCHours().toString().padStart(2, "0");
+        const minutes = dateObj.getUTCMinutes().toString().padStart(2, "0");
+        if (hours !== "00" || minutes !== "00") {
+          dueTime = `${hours}:${minutes}`;
+        }
+      }
+      setFormData({
+        title: task.title,
+        description: task.description || "",
+        custom_status_id: task.custom_status_id || "",
+        priority: task.priority,
+        due_date: dueDate,
+        due_time: dueTime,
+        client_id: task.client_id || "",
+        deal_id: task.deal_id || "",
+        lead_id: task.lead_id || "",
+        assigned_to: task.assigned_to || "",
+        activity_type_id: task.activity_type_id || "",
+      });
+    } else {
+      const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
+      setFormData({
+        title: "",
+        description: "",
+        custom_status_id: defaultStatusId,
+        priority: "medium",
+        due_date: "",
+        due_time: "",
+        client_id: clientId || "",
+        deal_id: dealId || "",
+        lead_id: leadId || "",
+        assigned_to: "",
+        activity_type_id: "",
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, task?.id, clientId, dealId, leadId, initialStatus]);
 
   const fetchUsers = async () => {
     const { data } = await supabase
