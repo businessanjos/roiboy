@@ -88,6 +88,13 @@ interface Attendance {
   };
 }
 
+interface DealStage {
+  id: string;
+  name: string;
+  color: string;
+  display_order: number;
+}
+
 interface Event {
   id: string;
   title: string;
@@ -106,6 +113,7 @@ interface Event {
   color: string | null;
   goals: string | null;
   notes: string | null;
+  target_deal_stages: string[] | null;
   created_at: string;
 }
 
@@ -159,10 +167,24 @@ export default function MarketingEventsTab() {
   const [notes, setNotes] = useState("");
   const [isDateTbd, setIsDateTbd] = useState(false);
   const [tbdMonth, setTbdMonth] = useState<string>("");
+  const [targetDealStages, setTargetDealStages] = useState<string[]>([]);
   
   // Multi-day schedule state
   const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
 
+  // Fetch deal stages for the commercial dropdown
+  const { data: dealStages = [] } = useQuery({
+    queryKey: ["deal-stages-for-events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deal_stages")
+        .select("id, name, color, display_order")
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return (data as DealStage[]) || [];
+    },
+    staleTime: 300000,
+  });
   // Fetch account ID
   const { data: accountId } = useQuery({
     queryKey: ["user-account-id", user?.id],
@@ -241,6 +263,7 @@ export default function MarketingEventsTab() {
     setNotes("");
     setIsDateTbd(false);
     setTbdMonth("");
+    setTargetDealStages([]);
     setDaySchedules({});
     setEditingEvent(null);
   };
@@ -286,6 +309,7 @@ export default function MarketingEventsTab() {
     setColor(event.color || "#f97316");
     setGoals(event.goals || "");
     setNotes(event.notes || "");
+    setTargetDealStages(Array.isArray(event.target_deal_stages) ? event.target_deal_stages : []);
     setDaySchedules({});
     setDialogOpen(true);
   };
@@ -343,6 +367,7 @@ export default function MarketingEventsTab() {
       color: color,
       goals: goals.trim() || null,
       notes: isDateTbd ? `[A DEFINIR - ${tbdMonth}] ${notes.trim() || ''}`.trim() : (notes.trim() || null),
+      target_deal_stages: targetDealStages.length > 0 ? targetDealStages : null,
       account_id: accountId,
     };
 
@@ -542,6 +567,7 @@ export default function MarketingEventsTab() {
                 <TableHead>Área</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Modalidade</TableHead>
+                <TableHead>Comercial</TableHead>
                 <TableHead>Produtos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -549,7 +575,7 @@ export default function MarketingEventsTab() {
             <TableBody>
               {filteredEvents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>Nenhum evento encontrado</p>
                   </TableCell>
@@ -649,6 +675,32 @@ export default function MarketingEventsTab() {
                         {(event.modality === "presencial" || event.modality === "hibrido") && event.address && (
                           <p className="text-xs text-muted-foreground mt-1">{event.address}</p>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const stages = Array.isArray(event.target_deal_stages) ? event.target_deal_stages : [];
+                          if (stages.length === 0) {
+                            return <span className="text-xs text-muted-foreground">—</span>;
+                          }
+                          const stageNames = stages
+                            .map(stageId => dealStages.find(s => s.id === stageId))
+                            .filter(Boolean)
+                            .map(s => s!.name);
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {stageNames.slice(0, 2).map((name, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
+                                  {name}
+                                </Badge>
+                              ))}
+                              {stageNames.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{stageNames.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         {event.event_products && event.event_products.length > 0 ? (
@@ -896,6 +948,45 @@ export default function MarketingEventsTab() {
                 placeholder="Objetivos do evento..."
                 rows={2}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Comercial - Etapas do Pipeline</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Selecione quais leads podem ser convidados para este evento
+              </p>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                {dealStages.map((stage) => (
+                  <div key={stage.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`stage-${stage.id}`}
+                      checked={targetDealStages.includes(stage.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setTargetDealStages(prev => [...prev, stage.id]);
+                        } else {
+                          setTargetDealStages(prev => prev.filter(id => id !== stage.id));
+                        }
+                      }}
+                    />
+                    <Label 
+                      htmlFor={`stage-${stage.id}`} 
+                      className="text-sm font-normal cursor-pointer flex items-center gap-2"
+                    >
+                      <span 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      {stage.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {targetDealStages.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {targetDealStages.length} etapa(s) selecionada(s)
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

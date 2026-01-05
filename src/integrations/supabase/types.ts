@@ -3443,6 +3443,7 @@ export type Database = {
           scheduled_at: string | null
           start_time: string | null
           status: string | null
+          target_deal_stages: Json | null
           title: string
           updated_at: string
         }
@@ -3473,6 +3474,7 @@ export type Database = {
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
+          target_deal_stages?: Json | null
           title: string
           updated_at?: string
         }
@@ -3503,6 +3505,7 @@ export type Database = {
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
+          target_deal_stages?: Json | null
           title?: string
           updated_at?: string
         }
