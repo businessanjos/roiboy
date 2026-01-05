@@ -993,7 +993,43 @@ serve(async (req) => {
               }
             }
           } else {
-            console.log(`Message from ${phone} saved to Zapp only (not a registered client)`);
+            // Not a registered client - check if there's a lead with this phone
+            const normalizedPhoneForLead = phone.replace(/^\+/, ''); // Remove leading + for phone field
+            const { data: existingLead } = await supabase
+              .from("leads")
+              .select("id, avatar_url")
+              .eq("account_id", accountId)
+              .or(`phone.eq.${normalizedPhoneForLead},phone.eq.${phone}`)
+              .maybeSingle();
+
+            if (existingLead) {
+              console.log(`Found existing lead: ${existingLead.id}`);
+              
+              // Auto-update lead avatar from WhatsApp profile picture if available
+              const profilePicUrl = chat.image || chat.imagePreview;
+              if (profilePicUrl && !existingLead.avatar_url) {
+                const { error: avatarError } = await supabase
+                  .from("leads")
+                  .update({ avatar_url: profilePicUrl })
+                  .eq("id", existingLead.id);
+                
+                if (avatarError) {
+                  console.log("Error updating lead avatar:", avatarError.message);
+                } else {
+                  console.log(`Updated lead ${existingLead.id} avatar from WhatsApp profile picture`);
+                }
+              }
+              
+              // Also update zapp_conversation to link to lead_id
+              if (zappConversationId) {
+                await supabase
+                  .from("zapp_conversations")
+                  .update({ lead_id: existingLead.id })
+                  .eq("id", zappConversationId);
+              }
+            } else {
+              console.log(`Message from ${phone} saved to Zapp only (not a registered client or lead)`);
+            }
           }
         } else if (direction === "outbound") {
           console.log(`Outbound message saved to Zapp`);

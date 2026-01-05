@@ -4755,6 +4755,7 @@ export type Database = {
           additional_bank_accounts: Json | null
           additional_phones: Json | null
           additional_pix_keys: Json | null
+          avatar_url: string | null
           bank_account: string | null
           bank_account_type: string | null
           bank_agency: string | null
@@ -4806,6 +4807,7 @@ export type Database = {
           additional_bank_accounts?: Json | null
           additional_phones?: Json | null
           additional_pix_keys?: Json | null
+          avatar_url?: string | null
           bank_account?: string | null
           bank_account_type?: string | null
           bank_agency?: string | null
@@ -4857,6 +4859,7 @@ export type Database = {
           additional_bank_accounts?: Json | null
           additional_phones?: Json | null
           additional_pix_keys?: Json | null
+          avatar_url?: string | null
           bank_account?: string | null
           bank_account_type?: string | null
           bank_agency?: string | null
