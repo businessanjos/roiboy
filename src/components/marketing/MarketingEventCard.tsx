@@ -21,7 +21,7 @@ interface MarketingEventCardProps {
 }
 
 export function MarketingEventCard({ event, onClick, compact = false }: MarketingEventCardProps) {
-  const config = eventTypeConfig[event.event_type];
+  const config = eventTypeConfig[event.event_type] || eventTypeConfig.other;
   const Icon = iconMap[config.icon] || Circle;
   const bgColor = event.color || config.defaultColor;
 
