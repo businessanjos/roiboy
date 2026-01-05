@@ -28,7 +28,9 @@ import {
   LayoutGrid,
   List,
   Tag,
+  BookOpen,
 } from "lucide-react";
+import { PlaybookDialog } from "@/components/sales/PlaybookDialog";
 
 export default function SalesPipeline() {
   const navigate = useNavigate();
@@ -61,6 +63,7 @@ export default function SalesPipeline() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewDealOpen, setIsNewDealOpen] = useState(false);
   const [isStagesManagerOpen, setIsStagesManagerOpen] = useState(false);
+  const [isPlaybookOpen, setIsPlaybookOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [selectedTag, setSelectedTag] = useState<string>('all');
@@ -218,6 +221,14 @@ export default function SalesPipeline() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPlaybookOpen(true)}
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              Playbook
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -380,6 +391,12 @@ export default function SalesPipeline() {
         onMarkAsWon={handleMarkAsWon}
         onMarkAsLost={handleMarkAsLost}
         onReopen={handleReopen}
+      />
+
+      {/* Playbook Dialog */}
+      <PlaybookDialog
+        open={isPlaybookOpen}
+        onOpenChange={setIsPlaybookOpen}
       />
 
       {/* Stages Manager */}
