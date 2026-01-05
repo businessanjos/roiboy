@@ -401,7 +401,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </div>
           )}
 
-          {hasVendasAccess && !leadId && (
+          {hasVendasAccess && (
             <div className="space-y-2">
               <Label>Lead (opcional)</Label>
               <Select
