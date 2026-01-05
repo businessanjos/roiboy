@@ -97,9 +97,21 @@ export function useZappData(options: UseZappDataOptions = {}) {
     }
   }, []);
 
+  // Ref to store current department ID for realtime validation
+  const currentDepartmentIdRef = useRef<string | null>(null);
+
   // Fetch assignments only (for realtime updates)
+  // CRITICAL: Always filter by department_id to ensure sector isolation
   const fetchAssignmentsOnly = useCallback(async () => {
     if (!currentUser?.account_id) return;
+    
+    // CRITICAL: Block if no sector selected - prevents data leakage
+    if (!sectorId) {
+      console.log("[ZappData] No sectorId - clearing assignments for security");
+      setAssignments([]);
+      currentDepartmentIdRef.current = null;
+      return;
+    }
     
     const now = Date.now();
     if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL_MS) {
@@ -108,6 +120,32 @@ export function useZappData(options: UseZappDataOptions = {}) {
     lastFetchTimeRef.current = now;
     
     try {
+      // First, get the department for this sector
+      const { data: dept, error: deptError } = await supabase
+        .from("zapp_departments")
+        .select("id")
+        .eq("account_id", currentUser.account_id)
+        .eq("sector_id", sectorId)
+        .maybeSingle();
+      
+      if (deptError) {
+        console.error("[ZappData] Error fetching department:", deptError);
+        setAssignments([]);
+        currentDepartmentIdRef.current = null;
+        return;
+      }
+      
+      if (!dept) {
+        console.log("[ZappData] No department found for sector:", sectorId);
+        setAssignments([]);
+        currentDepartmentIdRef.current = null;
+        return;
+      }
+      
+      // Store current department ID for realtime validation
+      currentDepartmentIdRef.current = dept.id;
+      
+      // CRITICAL: Filter by department_id at the database level
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("zapp_conversation_assignments")
         .select(`
@@ -118,12 +156,14 @@ export function useZappData(options: UseZappDataOptions = {}) {
           zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
         `)
         .eq("account_id", currentUser.account_id)
+        .eq("department_id", dept.id) // CRITICAL: Filter by department
         .neq("status", "closed")
         .order("updated_at", { ascending: false })
         .limit(100);
 
       if (assignmentsError) throw assignmentsError;
       
+      console.log(`[ZappData] Fetched ${assignmentsData?.length || 0} assignments for department ${dept.id} (sector: ${sectorId})`);
       setAssignments(assignmentsData || []);
       
       // Update client products for new clients
@@ -157,7 +197,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
-  }, [currentUser?.account_id]);
+  }, [currentUser?.account_id, sectorId]);
 
   // Debounced fetch for realtime
   const debouncedFetchAssignments = useCallback(() => {
@@ -234,24 +274,60 @@ export function useZappData(options: UseZappDataOptions = {}) {
   };
 
   // Main data fetch
+  // CRITICAL: Filter assignments by department to ensure sector isolation
   const fetchData = useCallback(async () => {
     if (!currentUser?.account_id) return;
     setLoading(true);
 
     try {
+      // First fetch departments to find the one for this sector
+      const { data: depts, error: deptsError } = await supabase
+        .from("zapp_departments")
+        .select("*")
+        .eq("account_id", currentUser.account_id)
+        .order("display_order");
+      
+      if (deptsError) throw deptsError;
+      
+      // Find the department for the current sector
+      let targetDepartmentId: string | null = null;
+      if (sectorId) {
+        const sectorDept = (depts || []).find(d => d.sector_id === sectorId);
+        targetDepartmentId = sectorDept?.id || null;
+        currentDepartmentIdRef.current = targetDepartmentId;
+      }
+      
+      // Build assignments query - CRITICAL: filter by department if sector is selected
+      let assignmentsQuery = supabase
+        .from("zapp_conversation_assignments")
+        .select(`
+          *,
+          agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
+          department:zapp_departments(*),
+          conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
+          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
+        `)
+        .eq("account_id", currentUser.account_id)
+        .neq("status", "closed")
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      
+      // CRITICAL: If sector is selected, ONLY fetch that department's assignments
+      if (sectorId && targetDepartmentId) {
+        assignmentsQuery = assignmentsQuery.eq("department_id", targetDepartmentId);
+        console.log(`[ZappData] fetchData: Filtering by department ${targetDepartmentId} for sector ${sectorId}`);
+      } else if (sectorId && !targetDepartmentId) {
+        // Sector selected but no department exists yet - return empty
+        console.log(`[ZappData] fetchData: No department for sector ${sectorId} - will sync departments first`);
+      }
+
       const [
-        { data: depts, error: deptsError },
         { data: agentsData, error: agentsError },
         { data: usersData, error: usersError },
         { data: rolesData, error: rolesError },
         { data: assignmentsData, error: assignmentsError },
         { data: tagsData, error: tagsError },
       ] = await Promise.all([
-        supabase
-          .from("zapp_departments")
-          .select("*")
-          .eq("account_id", currentUser.account_id)
-          .order("display_order"),
         supabase
           .from("zapp_agents")
           .select(`
@@ -271,19 +347,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
           .select("id, name, color")
           .eq("account_id", currentUser.account_id)
           .order("display_order"),
-        supabase
-          .from("zapp_conversation_assignments")
-          .select(`
-            *,
-            agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
-            department:zapp_departments(*),
-            conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-            zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
-          `)
-          .eq("account_id", currentUser.account_id)
-          .neq("status", "closed")
-          .order("updated_at", { ascending: false })
-          .limit(100),
+        assignmentsQuery,
         supabase
           .from("zapp_tags")
           .select("*")
@@ -291,7 +355,6 @@ export function useZappData(options: UseZappDataOptions = {}) {
           .order("display_order"),
       ]);
 
-      if (deptsError) throw deptsError;
       if (agentsError) throw agentsError;
       if (usersError) throw usersError;
       if (rolesError) throw rolesError;
@@ -503,11 +566,11 @@ export function useZappData(options: UseZappDataOptions = {}) {
   // Keep ref updated
   fetchMessagesRef.current = fetchMessages;
 
-  // Initial data fetch
+  // Initial data fetch - re-fetch when sector changes
   useEffect(() => {
-    console.log("[ZappData] useEffect triggered, account_id:", currentUser?.account_id);
+    console.log("[ZappData] useEffect triggered, account_id:", currentUser?.account_id, "sectorId:", sectorId);
     if (currentUser?.account_id) {
-      console.log("[ZappData] Calling fetchData...");
+      console.log("[ZappData] Calling fetchData for sector:", sectorId);
       fetchData();
       checkWhatsAppStatus();
     }
@@ -517,7 +580,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
         clearInterval(agentHeartbeatRef.current);
       }
     };
-  }, [currentUser?.account_id, fetchData]);
+  }, [currentUser?.account_id, sectorId, fetchData, checkWhatsAppStatus]);
 
   // Realtime subscription for conversations and assignments
   useEffect(() => {
@@ -537,6 +600,11 @@ export function useZappData(options: UseZappDataOptions = {}) {
         },
         (payload) => {
           console.log("[ZappData] zapp_conversations change detected:", payload.eventType);
+          // CRITICAL: Only process if we have a sector selected
+          if (!sectorId) {
+            console.log("[ZappData] Ignoring realtime event - no sector selected");
+            return;
+          }
           // Fetch immediately for new conversations, debounce for updates
           if (payload.eventType === 'INSERT') {
             fetchAssignmentsOnly();
@@ -554,7 +622,23 @@ export function useZappData(options: UseZappDataOptions = {}) {
           filter: `account_id=eq.${currentUser.account_id}`
         },
         (payload) => {
-          console.log("[ZappData] zapp_conversation_assignments change detected:", payload.eventType);
+          console.log("[ZappData] zapp_conversation_assignments change detected:", payload.eventType, payload);
+          
+          // CRITICAL: Only process if we have a sector selected
+          if (!sectorId) {
+            console.log("[ZappData] Ignoring realtime event - no sector selected");
+            return;
+          }
+          
+          // CRITICAL: Validate that the event belongs to the current department
+          const payloadDeptId = (payload.new as any)?.department_id;
+          const currentDeptId = currentDepartmentIdRef.current;
+          
+          if (payloadDeptId && currentDeptId && payloadDeptId !== currentDeptId) {
+            console.log(`[ZappData] SECURITY: Ignoring realtime event for different department (${payloadDeptId} != ${currentDeptId})`);
+            return;
+          }
+          
           debouncedFetchAssignments();
         }
       )
@@ -567,7 +651,12 @@ export function useZappData(options: UseZappDataOptions = {}) {
           filter: `account_id=eq.${currentUser.account_id}`
         },
         (payload) => {
-          console.log("[ZappData] zapp_messages INSERT detected, refreshing conversation list");
+          console.log("[ZappData] zapp_messages INSERT detected");
+          // CRITICAL: Only process if we have a sector selected
+          if (!sectorId) {
+            console.log("[ZappData] Ignoring realtime event - no sector selected");
+            return;
+          }
           // When new message arrives, update the conversation list to show latest message preview
           debouncedFetchAssignments();
         }
@@ -585,23 +674,33 @@ export function useZappData(options: UseZappDataOptions = {}) {
     };
   }, [currentUser?.account_id, debouncedFetchAssignments, fetchAssignmentsOnly]);
 
-  // Filter assignments by sector if sectorId is provided
+  // CRITICAL: Extra security layer - filter assignments by sector
+  // Data should already be filtered at query level, but this is a safety check
   const filteredAssignments = useMemo(() => {
-    if (!sectorId) return assignments;
+    // CRITICAL: If no sector selected, return EMPTY array - never return all data
+    if (!sectorId) {
+      console.log("[ZappData] filteredAssignments: No sectorId - returning empty array for security");
+      return [];
+    }
     
     // Find the department that belongs to this sector
     const sectorDepartment = departments.find(d => d.sector_id === sectorId);
     
     if (!sectorDepartment) {
       // If no department for this sector, return empty
+      console.log("[ZappData] filteredAssignments: No department for sector - returning empty array");
       return [];
     }
     
-    // Filter assignments that belong to this department or have no department
-    return assignments.filter(a => 
-      a.department_id === sectorDepartment.id || 
-      (!a.department_id && a.department?.sector_id === sectorId)
-    );
+    // Double-check: Only return assignments that belong to this department
+    // This is a safety net in case data somehow got through without proper filtering
+    const filtered = assignments.filter(a => a.department_id === sectorDepartment.id);
+    
+    if (filtered.length !== assignments.length) {
+      console.warn(`[ZappData] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
+    }
+    
+    return filtered;
   }, [assignments, departments, sectorId]);
 
   return {
