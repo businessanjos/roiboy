@@ -93,7 +93,7 @@ interface Event {
   title: string;
   description: string | null;
   event_type: string;
-  modality: "online" | "presencial";
+  modality: "online" | "presencial" | "hibrido";
   address: string | null;
   scheduled_at: string | null;
   ends_at: string | null;
@@ -147,7 +147,7 @@ export default function MarketingEventsTab() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [eventType, setEventType] = useState<EventType>("campaign");
-  const [modality, setModality] = useState<"online" | "presencial">("online");
+  const [modality, setModality] = useState<"online" | "presencial" | "hibrido">("online");
   const [address, setAddress] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
@@ -600,14 +600,18 @@ export default function MarketingEventsTab() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={event.modality === "presencial" ? "default" : "secondary"}>
+                        <Badge variant={event.modality === "presencial" ? "default" : event.modality === "hibrido" ? "default" : "secondary"}
+                          className={event.modality === "hibrido" ? "bg-purple-500 hover:bg-purple-600" : ""}
+                        >
                           {event.modality === "presencial" ? (
                             <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
+                          ) : event.modality === "hibrido" ? (
+                            <><Users className="h-3 w-3 mr-1" /> Híbrido</>
                           ) : (
                             <><Monitor className="h-3 w-3 mr-1" /> Online</>
                           )}
                         </Badge>
-                        {event.modality === "presencial" && event.address && (
+                        {(event.modality === "presencial" || event.modality === "hibrido") && event.address && (
                           <p className="text-xs text-muted-foreground mt-1">{event.address}</p>
                         )}
                       </TableCell>
@@ -756,12 +760,13 @@ export default function MarketingEventsTab() {
                   <SelectContent>
                     <SelectItem value="online">Online</SelectItem>
                     <SelectItem value="presencial">Presencial</SelectItem>
+                    <SelectItem value="hibrido">Híbrido</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {modality === "presencial" && (
+            {(modality === "presencial" || modality === "hibrido") && (
               <div className="space-y-2">
                 <Label>Endereço</Label>
                 <Input
@@ -772,7 +777,7 @@ export default function MarketingEventsTab() {
               </div>
             )}
 
-            {modality === "online" && (
+            {(modality === "online" || modality === "hibrido") && (
               <div className="space-y-2">
                 <Label>Link da Reunião</Label>
                 <Input
