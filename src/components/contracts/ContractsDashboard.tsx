@@ -1228,45 +1228,52 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               </div>
             </div>
             
-            {/* Insights */}
-            <div className="grid grid-cols-3 gap-4 mt-6 pt-5 border-t border-border/30">
+            {/* Insights por Trimestre */}
+            <div className="grid grid-cols-4 gap-4 mt-6 pt-5 border-t border-border/30">
               {(() => {
-                const firstQuarter = customerJourneyData.slice(0, 3).reduce((sum, m) => sum + m.churned, 0);
-                const secondQuarter = customerJourneyData.slice(3, 6).reduce((sum, m) => sum + m.churned, 0);
-                const secondHalf = customerJourneyData.slice(6, 12).reduce((sum, m) => sum + m.churned, 0);
-                const total = firstQuarter + secondQuarter + secondHalf;
+                // Calculate total churn from the chart data to ensure consistency
+                const totalChurn = customerJourneyData.reduce((sum, m) => sum + m.churned, 0);
                 
-                return (
-                  <>
+                // Quarter 1: months 1-3
+                const q1 = customerJourneyData.slice(0, 3).reduce((sum, m) => sum + m.churned, 0);
+                // Quarter 2: months 4-6
+                const q2 = customerJourneyData.slice(3, 6).reduce((sum, m) => sum + m.churned, 0);
+                // Quarter 3: months 7-9
+                const q3 = customerJourneyData.slice(6, 9).reduce((sum, m) => sum + m.churned, 0);
+                // Quarter 4: months 10-12
+                const q4 = customerJourneyData.slice(9, 12).reduce((sum, m) => sum + m.churned, 0);
+                
+                const quarters = [
+                  { label: 'Q1', range: '1º-3º mês', value: q1, color: 'rose' },
+                  { label: 'Q2', range: '4º-6º mês', value: q2, color: 'amber' },
+                  { label: 'Q3', range: '7º-9º mês', value: q3, color: 'violet' },
+                  { label: 'Q4', range: '10º-12º mês', value: q4, color: 'emerald' },
+                ];
+                
+                const colorClasses: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
+                  rose: { bg: 'from-rose-500/10 via-rose-500/5', border: 'border-rose-500/20 hover:border-rose-500/40', text: 'text-rose-500', gradient: 'from-rose-600 to-rose-500' },
+                  amber: { bg: 'from-amber-500/10 via-amber-500/5', border: 'border-amber-500/20 hover:border-amber-500/40', text: 'text-amber-500', gradient: 'from-amber-600 to-amber-500' },
+                  violet: { bg: 'from-violet-500/10 via-violet-500/5', border: 'border-violet-500/20 hover:border-violet-500/40', text: 'text-violet-500', gradient: 'from-violet-600 to-violet-500' },
+                  emerald: { bg: 'from-emerald-500/10 via-emerald-500/5', border: 'border-emerald-500/20 hover:border-emerald-500/40', text: 'text-emerald-500', gradient: 'from-emerald-600 to-emerald-500' },
+                };
+                
+                return quarters.map((q) => {
+                  const classes = colorClasses[q.color];
+                  const percentage = totalChurn > 0 ? ((q.value / totalChurn) * 100).toFixed(0) : 0;
+                  
+                  return (
                     <motion.div 
-                      className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent border border-rose-500/20 hover:border-rose-500/40 transition-all duration-300"
+                      key={q.label}
+                      className={`group relative text-center p-4 rounded-2xl bg-gradient-to-br ${classes.bg} to-transparent border ${classes.border} transition-all duration-300`}
                       whileHover={{ scale: 1.03 }}
                     >
-                      <div className="absolute inset-0 bg-rose-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <p className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-rose-500 bg-clip-text text-transparent">{firstQuarter}</p>
-                      <p className="text-xs text-muted-foreground font-medium mt-1">1º-3º mês</p>
-                      <p className="text-[10px] text-rose-500 mt-0.5">{total > 0 ? ((firstQuarter / total) * 100).toFixed(0) : 0}% do churn</p>
+                      <div className={`absolute inset-0 bg-${q.color}-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+                      <p className={`text-3xl font-bold bg-gradient-to-r ${classes.gradient} bg-clip-text text-transparent`}>{q.value}</p>
+                      <p className="text-xs text-muted-foreground font-medium mt-1">{q.range}</p>
+                      <p className={`text-[10px] ${classes.text} mt-0.5`}>{percentage}% do churn</p>
                     </motion.div>
-                    <motion.div 
-                      className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 hover:border-amber-500/40 transition-all duration-300"
-                      whileHover={{ scale: 1.03 }}
-                    >
-                      <div className="absolute inset-0 bg-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">{secondQuarter}</p>
-                      <p className="text-xs text-muted-foreground font-medium mt-1">4º-6º mês</p>
-                      <p className="text-[10px] text-amber-500 mt-0.5">{total > 0 ? ((secondQuarter / total) * 100).toFixed(0) : 0}% do churn</p>
-                    </motion.div>
-                    <motion.div 
-                      className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-300"
-                      whileHover={{ scale: 1.03 }}
-                    >
-                      <div className="absolute inset-0 bg-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">{secondHalf}</p>
-                      <p className="text-xs text-muted-foreground font-medium mt-1">7º-12º mês</p>
-                      <p className="text-[10px] text-emerald-500 mt-0.5">{total > 0 ? ((secondHalf / total) * 100).toFixed(0) : 0}% do churn</p>
-                    </motion.div>
-                  </>
-                );
+                  );
+                });
               })()}
             </div>
           </CardContent>
