@@ -28,6 +28,10 @@ interface Task {
   completed_at: string | null;
   custom_status_id: string | null;
   assigned_to: string | null;
+  deal_id: string | null;
+  lead_id: string | null;
+  client_id: string | null;
+  activity_type_id: string | null;
   assigned_user?: {
     id: string;
     name: string;
@@ -98,6 +102,10 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         completed_at,
         custom_status_id,
         assigned_to,
+        deal_id,
+        lead_id,
+        client_id,
+        activity_type_id,
         assigned_user:users!internal_tasks_assigned_to_fkey(id, name, avatar_url),
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status)
       `)
