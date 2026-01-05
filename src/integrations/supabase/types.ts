@@ -5017,6 +5017,65 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_events: {
+        Row: {
+          account_id: string
+          budget: number | null
+          color: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          event_type: string
+          goals: string | null
+          id: string
+          notes: string | null
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          budget?: number | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          event_type?: string
+          goals?: string | null
+          id?: string
+          notes?: string | null
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          budget?: number | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          event_type?: string
+          goals?: string | null
+          id?: string
+          notes?: string | null
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members_book_settings: {
         Row: {
           access_password: string | null
