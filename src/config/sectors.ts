@@ -19,11 +19,12 @@ import {
   FileSignature,
   UserPlus,
   MessageCircle,
+  Crown,
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes" | "diretoria";
 
 export interface NavItem {
   to: string;
@@ -148,6 +149,19 @@ export const sectors: Sector[] = [
     defaultRoute: "/settings",
     navItems: [
       { to: "/settings", icon: Settings, label: "Configurações" },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
+  },
+  {
+    id: "diretoria",
+    name: "Diretoria",
+    description: "Gestão executiva - Everton Pieri",
+    icon: Crown,
+    color: "text-rose-600",
+    bgColor: "bg-rose-500/10",
+    defaultRoute: "/roy-zapp",
+    navItems: [
+      { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
