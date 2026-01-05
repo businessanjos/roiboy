@@ -8221,6 +8221,7 @@ export type Database = {
         | "partnership"
         | "fair"
         | "other"
+        | "movimento"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
       integration_type:
@@ -8520,6 +8521,7 @@ export const Constants = {
         "partnership",
         "fair",
         "other",
+        "movimento",
       ],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
