@@ -53,46 +53,62 @@ export interface CreatePlaybookFolderInput {
   name: string;
 }
 
-export function usePlaybook() {
+export interface PlaybookOptions {
+  sectorId?: string | null;
+}
+
+export function usePlaybook(options: PlaybookOptions = {}) {
+  const { sectorId } = options;
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   const accountId = currentUser?.account_id;
 
-  // Fetch folders
+  // Fetch folders filtered by sector
   const {
     data: folders = [],
     isLoading: foldersLoading,
     refetch: refetchFolders,
   } = useQuery({
-    queryKey: ['playbook-folders', accountId],
+    queryKey: ['playbook-folders', accountId, sectorId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('playbook_folders')
         .select('*')
-        .eq('account_id', accountId)
-        .order('position', { ascending: true });
+        .eq('account_id', accountId);
+      
+      if (sectorId) {
+        query = query.eq('sector_id', sectorId);
+      }
+      
+      const { data, error } = await query.order('position', { ascending: true });
       if (error) throw error;
       return data as PlaybookFolder[];
     },
     enabled: !!accountId,
   });
 
-  // Fetch items
+  // Fetch items filtered by sector
   const {
     data: items = [],
     isLoading: itemsLoading,
     refetch: refetchItems,
   } = useQuery({
-    queryKey: ['playbook-items', accountId],
+    queryKey: ['playbook-items', accountId, sectorId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('playbook_items')
         .select('*')
-        .eq('account_id', accountId)
+        .eq('account_id', accountId);
+      
+      if (sectorId) {
+        query = query.eq('sector_id', sectorId);
+      }
+      
+      const { data, error } = await query
         .order('is_favorite', { ascending: false })
         .order('position', { ascending: true });
       if (error) throw error;
@@ -113,6 +129,7 @@ export function usePlaybook() {
           name: input.name,
           position: maxPosition + 1,
           created_by: currentUser.id,
+          sector_id: sectorId || null,
         })
         .select()
         .single();
@@ -120,7 +137,7 @@ export function usePlaybook() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playbook-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['playbook-folders', accountId, sectorId] });
       toast.success('Pasta criada com sucesso');
     },
     onError: (error: any) => {
@@ -190,6 +207,7 @@ export function usePlaybook() {
           list_items: input.list_items || null,
           position: maxPosition + 1,
           created_by: currentUser.id,
+          sector_id: sectorId || null,
         })
         .select()
         .single();
@@ -197,7 +215,7 @@ export function usePlaybook() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playbook-items'] });
+      queryClient.invalidateQueries({ queryKey: ['playbook-items', accountId, sectorId] });
       toast.success('Item criado com sucesso');
     },
     onError: (error: any) => {
