@@ -24,7 +24,11 @@ serve(async (req) => {
 
     const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-    // Find active contracts expiring within 40 days
+    // Find active contracts that are expired OR expiring within 40 days
+    // Include contracts that expired up to 120 days ago (to catch overdue renewals)
+    const past120Days = new Date(today);
+    past120Days.setDate(today.getDate() - 120);
+
     const { data: expiringContracts, error: contractsError } = await supabase
       .from("client_contracts")
       .select(`
@@ -39,7 +43,7 @@ serve(async (req) => {
       `)
       .eq("status", "active")
       .not("end_date", "is", null)
-      .gt("end_date", formatDate(today))
+      .gte("end_date", formatDate(past120Days))
       .lte("end_date", formatDate(in40Days));
 
     if (contractsError) {
@@ -64,21 +68,26 @@ serve(async (req) => {
       
       console.log(`Processing contract ${contract.id} for client ${clientName}`);
 
-      // Check if renewal deal already exists for this client (open deal with renovação tag)
+      // Check if renewal deal already exists for this client (open deal with renovação tag or source)
       const { data: existingDeals, error: dealsError } = await supabase
         .from("deals")
-        .select("id")
+        .select("id, source, tags")
         .eq("client_id", contract.client_id)
         .eq("status", "open")
-        .contains("tags", ["renovação"])
-        .limit(1);
+        .limit(50);
 
       if (dealsError) {
         console.error(`Error checking existing deals for client ${contract.client_id}:`, dealsError);
         continue;
       }
 
-      if (existingDeals && existingDeals.length > 0) {
+      // Filter for renewal deals in code (to avoid JSONB query issues with special chars)
+      const hasRenewalDeal = existingDeals?.some(d => 
+        d.source === 'contract_renewal' || 
+        (Array.isArray(d.tags) && d.tags.some((t: string) => t.toLowerCase().includes('renova')))
+      );
+
+      if (hasRenewalDeal) {
         console.log(`Renewal deal already exists for client ${clientName}, skipping`);
         dealsSkipped++;
         continue;
@@ -118,6 +127,10 @@ serve(async (req) => {
 
       const endDate = new Date(contract.end_date);
       const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const isExpired = daysUntilExpiry < 0;
+      const urgencyLabel = isExpired 
+        ? `VENCIDO há ${Math.abs(daysUntilExpiry)} dias` 
+        : `Vence em ${daysUntilExpiry} dias`;
 
       // Create renewal deal
       const { data: newDeal, error: createError } = await supabase
@@ -131,9 +144,9 @@ serve(async (req) => {
           currency: contract.currency || "BRL",
           source: "contract_renewal",
           source_contract_id: contract.id,
-          tags: ["renovação"],
-          notes: `Renovação automática do contrato que vence em ${endDate.toLocaleDateString("pt-BR")}.\n\nContrato original: ${contract.id}\nDias restantes: ${daysUntilExpiry}`,
-          expected_close_date: contract.end_date,
+          tags: isExpired ? ["renovação", "vencido"] : ["renovação"],
+          notes: `Renovação automática do contrato que ${isExpired ? 'venceu' : 'vence'} em ${endDate.toLocaleDateString("pt-BR")}.\n\n${urgencyLabel}\nContrato original: ${contract.id}`,
+          expected_close_date: isExpired ? formatDate(today) : contract.end_date,
           status: "open",
         })
         .select()
