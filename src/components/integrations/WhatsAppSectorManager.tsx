@@ -82,7 +82,9 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
 
       if (error) throw error;
       
-      const instances = (data?.instances || []) as UazapiInstance[];
+      // Handle nested response structure: data.data.instances or data.instances
+      const instances = (data?.data?.instances || data?.instances || []) as UazapiInstance[];
+      console.log("Available instances:", instances);
       setAvailableInstances(instances);
     } catch (error) {
       console.error("Error fetching instances:", error);
