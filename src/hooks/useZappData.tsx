@@ -173,10 +173,16 @@ export function useZappData() {
       });
 
       if (response.data) {
-        const state = response.data?.state || response.data?.data?.state;
-        const connected = state === "open" || response.data?.connected || response.data?.data?.connected;
-        setWhatsappConnected(connected);
-        setWhatsappInstanceName(response.data?.instance || response.data?.data?.instance || null);
+        // Respect locally_disconnected flag
+        if (response.data?.locally_disconnected) {
+          setWhatsappConnected(false);
+          setWhatsappInstanceName(null);
+        } else {
+          const state = response.data?.state || response.data?.data?.state;
+          const connected = state === "open" || state === "connected" || response.data?.connected || response.data?.data?.connected;
+          setWhatsappConnected(connected);
+          setWhatsappInstanceName(response.data?.instance || response.data?.data?.instance || null);
+        }
       }
     } catch (error) {
       console.log("WhatsApp status check failed:", error);
@@ -194,7 +200,10 @@ export function useZappData() {
 
         if (response.error) throw new Error(response.error.message);
         
+        // Clear all WhatsApp state
         setWhatsappConnected(false);
+        setWhatsappInstanceName(null);
+        
         toast.success("WhatsApp desconectado do zAPP");
       } else {
         const statusResponse = await supabase.functions.invoke("uazapi-manager", {

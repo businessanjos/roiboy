@@ -582,6 +582,20 @@ serve(async (req) => {
       }
 
       case "status": {
+        // Check if manually disconnected - respect local status
+        const wasDisconnectedManually = (existingWhatsapp?.config as { disconnected_manually?: boolean })?.disconnected_manually;
+        
+        if (existingWhatsapp?.status === "disconnected" && wasDisconnectedManually) {
+          console.log("Status check: Locally disconnected manually, returning disconnected state");
+          result = { 
+            state: "disconnected", 
+            connected: false,
+            instance_name: savedInstanceName,
+            locally_disconnected: true,
+          };
+          break;
+        }
+        
         // Get instance status - FIRST try listing all instances which is most reliable
         let connectionState = "unknown";
         let instanceToken = savedInstanceToken;
@@ -607,16 +621,12 @@ serve(async (req) => {
           // Find our instance by name
           let targetInstance = allInstances.find(i => i.name === instanceName);
           
-          // If not found by saved name, try to find any connected instance for this account
+          // If not found by saved name, try to find instance for this account by prefix
           if (!targetInstance) {
-            // Account prefix pattern
+            // Account prefix pattern - ONLY match this account's instances
             const accountPrefix = `roy-${accountId.slice(0, 8)}`;
             targetInstance = allInstances.find(i => i.name?.startsWith(accountPrefix));
-            
-            // If still not found, use any connected instance
-            if (!targetInstance) {
-              targetInstance = allInstances.find(i => i.status === "connected");
-            }
+            // DO NOT fallback to any connected instance - that could pick up other accounts' instances
           }
           
           if (targetInstance) {
@@ -809,25 +819,51 @@ serve(async (req) => {
           }
         }
         
-        // Even if logout API failed, update local status
-        // Update integration status
+        // Try to delete instance if logout failed
+        if (!disconnected) {
+          const deleteEndpoints = [
+            { url: `/instance/delete/${instanceName}`, method: "DELETE" },
+            { url: `/instance/${instanceName}`, method: "DELETE" },
+          ];
+          
+          for (const endpoint of deleteEndpoints) {
+            try {
+              console.log(`Trying to delete instance: ${endpoint.method} ${endpoint.url}`);
+              await uazapiAdminRequest(endpoint.url, endpoint.method);
+              console.log(`Instance deleted via ${endpoint.url}`);
+              disconnected = true;
+              break;
+            } catch (err) {
+              console.log(`Delete ${endpoint.url} failed:`, (err as Error).message);
+            }
+          }
+        }
+        
+        // Update local status - clear instance name and token to force fresh start on reconnect
         await supabase
           .from("integrations")
           .update({
             status: "disconnected",
             config: {
               provider: "uazapi",
-              instance_name: instanceName,
+              instance_name: null, // Clear to force new instance on reconnect
+              instance_token: null, // Clear token
               disconnected_at: new Date().toISOString(),
+              disconnected_manually: true, // Flag to prevent auto-reconnect
             },
           })
           .eq("account_id", accountId)
           .eq("type", "whatsapp");
         
         if (!disconnected) {
-          console.log("Could not logout via API, but local status updated");
-          result = { message: "Integração desconectada localmente" };
+          console.log("Could not logout/delete via API, but local status updated");
         }
+        
+        result = { 
+          message: "WhatsApp desconectado", 
+          api_disconnected: disconnected,
+          locally_disconnected: true 
+        };
           
         break;
       }
