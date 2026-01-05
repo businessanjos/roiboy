@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -46,9 +47,12 @@ import {
   RotateCcw,
   Building2,
   FileText,
+  ListTodo,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
+import { DealActivitiesTab } from "./DealActivitiesTab";
+import { DealLeadInfo } from "./DealLeadInfo";
 
 interface DealActivity {
   id: string;
@@ -554,12 +558,17 @@ export function DealDetailSheet({
                   )}
                 </div>
 
+                {/* Lead Info (if deal has lead) */}
+                {deal.lead_id && (
+                  <DealLeadInfo leadId={deal.lead_id} />
+                )}
+
                 {/* Lead Custom Fields */}
                 {deal.lead_id && leadCustomFields.length > 0 && (
                   <div className="rounded-lg border p-3">
                     <h4 className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
                       <FileText className="h-3.5 w-3.5" />
-                      Campos do Lead
+                      Campos Personalizados
                     </h4>
                     <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                       {leadCustomFields.map(field => {
@@ -581,110 +590,124 @@ export function DealDetailSheet({
                 )}
               </div>
 
-              {/* Right Column - Timeline */}
+              {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
-                <h4 className="font-medium text-sm flex items-center gap-1.5 text-muted-foreground">
-                  <Clock className="h-3.5 w-3.5" />
-                  Histórico Comercial
-                </h4>
+                <Tabs defaultValue="history" className="w-full">
+                  <TabsList className="w-full grid grid-cols-2 h-8">
+                    <TabsTrigger value="history" className="text-xs h-7">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Histórico
+                    </TabsTrigger>
+                    <TabsTrigger value="activities" className="text-xs h-7">
+                      <ListTodo className="h-3 w-3 mr-1" />
+                      Atividades
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* Add new activity */}
-                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Select value={eventType} onValueChange={setEventType}>
-                      <SelectTrigger className="w-[120px] h-8 text-xs bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover">
-                        {EVENT_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            <div className="flex items-center gap-2">
-                              <type.icon className="h-3.5 w-3.5" />
-                              {type.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-xs text-muted-foreground">Registrar atividade</span>
-                  </div>
-                  <Textarea
-                    placeholder="Descreva a interação..."
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    rows={2}
-                    className="resize-none text-sm bg-background"
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleAddActivity}
-                      disabled={!newNote.trim() || submitting}
-                    >
-                      {submitting ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                  <TabsContent value="history" className="mt-3 space-y-3">
+                    {/* Add new activity */}
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Select value={eventType} onValueChange={setEventType}>
+                          <SelectTrigger className="w-[120px] h-8 text-xs bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {EVENT_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                <div className="flex items-center gap-2">
+                                  <type.icon className="h-3.5 w-3.5" />
+                                  {type.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs text-muted-foreground">Registrar interação</span>
+                      </div>
+                      <Textarea
+                        placeholder="Descreva a interação..."
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        rows={2}
+                        className="resize-none text-sm bg-background"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleAddActivity}
+                          disabled={!newNote.trim() || submitting}
+                        >
+                          {submitting ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                          ) : (
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                          )}
+                          Adicionar
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Activities Timeline */}
+                    <div className="rounded-lg border bg-muted/30 overflow-hidden">
+                      {loading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : activities.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground text-xs">
+                          Nenhuma interação registrada
+                        </div>
                       ) : (
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                      )}
-                      Adicionar
-                    </Button>
-                  </div>
-                </div>
+                        <div className="max-h-[280px] overflow-y-auto divide-y">
+                          {activities.map((activity) => {
+                            const config = getEventConfig(activity.type);
+                            const Icon = config.icon;
+                            const userName = activity.user?.name || "Sistema";
 
-                {/* Activities Timeline */}
-                <div className="rounded-lg border bg-muted/30 overflow-hidden">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-6">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : activities.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground text-xs">
-                      Nenhuma atividade registrada
-                    </div>
-                  ) : (
-                    <div className="max-h-[280px] overflow-y-auto divide-y">
-                      {activities.map((activity) => {
-                        const config = getEventConfig(activity.type);
-                        const Icon = config.icon;
-                        const userName = activity.user?.name || "Sistema";
-
-                        return (
-                          <div key={activity.id} className="flex gap-2.5 p-3">
-                            <div className={cn(
-                              "w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0",
-                              config.bgColor
-                            )}>
-                              <Icon className="h-3 w-3" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1 text-xs">
-                                <span className="font-medium">{userName}</span>
-                                <span className="text-muted-foreground">·</span>
-                                <span className={cn("font-medium", config.textColor)}>
-                                  {activity.title || config.label}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground ml-auto">
-                                  {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
-                                </span>
+                            return (
+                              <div key={activity.id} className="flex gap-2.5 p-3">
+                                <div className={cn(
+                                  "w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0",
+                                  config.bgColor
+                                )}>
+                                  <Icon className="h-3 w-3" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <span className="font-medium">{userName}</span>
+                                    <span className="text-muted-foreground">·</span>
+                                    <span className={cn("font-medium", config.textColor)}>
+                                      {activity.title || config.label}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground ml-auto">
+                                      {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
+                                    </span>
+                                  </div>
+                                  {activity.content && (
+                                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                      {activity.content}
+                                    </p>
+                                  )}
+                                  {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {activity.old_value} → {activity.new_value}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              {activity.content && (
-                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                  {activity.content}
-                                </p>
-                              )}
-                              {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {activity.old_value} → {activity.new_value}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </TabsContent>
+
+                  <TabsContent value="activities" className="mt-3">
+                    <DealActivitiesTab dealId={deal.id} leadId={deal.lead_id} />
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           </div>
