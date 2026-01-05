@@ -275,27 +275,21 @@ serve(async (req) => {
           savedInstanceToken = instance.token;
           console.log(`Token found: ${savedInstanceToken.slice(0, 8)}... for instance ${actualInstanceName}`);
           
-          // Salvar o token
-          const updateQuery = supabase
-            .from("integrations")
-            .update({
-              config: {
-                ...(existingWhatsapp?.config as object || {}),
-                instance_name: actualInstanceName,
-                instance_token: savedInstanceToken,
-                token_recovered_at: new Date().toISOString(),
-              },
-            })
-            .eq("account_id", accountId)
-            .eq("type", "whatsapp");
-          
-          // Incluir sector_id na query se existir
-          if (sector_id) {
-            updateQuery.eq("sector_id", sector_id);
+          // Salvar o token - CRITICAL: use integration ID to avoid overwriting other sectors
+          if (existingWhatsapp?.id) {
+            await supabase
+              .from("integrations")
+              .update({
+                config: {
+                  ...(existingWhatsapp?.config as object || {}),
+                  instance_name: actualInstanceName,
+                  instance_token: savedInstanceToken,
+                  token_recovered_at: new Date().toISOString(),
+                },
+              })
+              .eq("id", existingWhatsapp.id); // CRITICAL: Always use ID
+            console.log(`Token saved to database for integration ${existingWhatsapp.id}`);
           }
-          
-          await updateQuery;
-          console.log(`Token saved to database`);
         } else {
           console.log(`Instance ${savedInstanceName} not found or has no token`);
         }
@@ -447,12 +441,13 @@ serve(async (req) => {
           }
         }
 
-        // Update integrations table
+        // Update integrations table - CRITICAL: include sector_id in upsert to avoid overwriting other sectors
         await supabase
           .from("integrations")
           .upsert({
             account_id: accountId,
             type: "whatsapp",
+            sector_id: sector_id || null,
             status: qrcodeBase64 ? "pending" : "disconnected",
             config: {
               provider: "uazapi",
@@ -461,7 +456,7 @@ serve(async (req) => {
               qrcode_base64: qrcodeBase64,
               created_at: new Date().toISOString(),
             },
-          }, { onConflict: "account_id,type" });
+          }, { onConflict: "account_id,type,sector_id" });
 
         result = {
           ...createResult as object,
@@ -497,13 +492,18 @@ serve(async (req) => {
         const cleanPhone = phone.replace(/\D/g, "");
         console.log(`Generating pairing code for phone: ${cleanPhone}`);
         
-        // Get instance token from integration or existing config
-        const { data: existingIntegration } = await supabase
+        // Get instance token from integration or existing config - filter by sector_id if available
+        let pairingIntegrationQuery = supabase
           .from("integrations")
-          .select("config")
+          .select("config, id")
           .eq("account_id", accountId)
-          .eq("type", "whatsapp")
-          .single();
+          .eq("type", "whatsapp");
+        
+        if (sector_id) {
+          pairingIntegrationQuery = pairingIntegrationQuery.eq("sector_id", sector_id);
+        }
+        
+        const { data: existingIntegration } = await pairingIntegrationQuery.maybeSingle();
 
         const instanceToken = (existingIntegration?.config as { instance_token?: string })?.instance_token;
         
@@ -558,12 +558,13 @@ serve(async (req) => {
         }
 
         if (paircode) {
-          // Update integration with pairing code
+          // Update integration with pairing code - CRITICAL: use sector_id to avoid overwriting other sectors
           await supabase
             .from("integrations")
             .upsert({
               account_id: accountId,
               type: "whatsapp",
+              sector_id: sector_id || null,
               status: "pending",
               config: {
                 provider: "uazapi",
@@ -573,7 +574,7 @@ serve(async (req) => {
                 phone_number: cleanPhone,
                 paircode_generated_at: new Date().toISOString(),
               },
-            }, { onConflict: "account_id,type" });
+            }, { onConflict: "account_id,type,sector_id" });
         }
 
         result = {
@@ -642,8 +643,8 @@ serve(async (req) => {
             
             console.log(`Found instance ${targetInstance.name} with status: ${connectionState}, profileName: ${profileName}`);
             
-            // Save the correct token if we found one and it was missing
-            if (instanceToken && !savedInstanceToken) {
+            // Save the correct token if we found one and it was missing - CRITICAL: use integration ID
+            if (instanceToken && !savedInstanceToken && existingWhatsapp?.id) {
               await supabase
                 .from("integrations")
                 .update({
@@ -654,8 +655,7 @@ serve(async (req) => {
                     token_recovered_at: new Date().toISOString(),
                   },
                 })
-                .eq("account_id", accountId)
-                .eq("type", "whatsapp");
+                .eq("id", existingWhatsapp.id); // CRITICAL: Use ID to avoid overwriting other sectors
               console.log(`Token recovered and saved for instance ${targetInstance.name}`);
             }
           }
@@ -1006,13 +1006,18 @@ serve(async (req) => {
           );
         }
 
-        // Get instance token from integration config
-        const { data: integration } = await supabase
+        // Get instance token from integration config - filter by sector_id if available
+        let sendTextIntQuery = supabase
           .from("integrations")
           .select("config")
           .eq("account_id", accountId)
-          .eq("type", "whatsapp")
-          .single();
+          .eq("type", "whatsapp");
+        
+        if (sector_id) {
+          sendTextIntQuery = sendTextIntQuery.eq("sector_id", sector_id);
+        }
+        
+        const { data: integration } = await sendTextIntQuery.maybeSingle();
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         const cleanPhone = phone.replace(/\D/g, "");
@@ -2756,13 +2761,18 @@ serve(async (req) => {
           );
         }
 
-        // Get instance token from integration config
-        const { data: integration } = await supabase
+        // Get instance token from integration config - filter by sector_id if available
+        let deleteIntQuery = supabase
           .from("integrations")
           .select("config")
           .eq("account_id", accountId)
-          .eq("type", "whatsapp")
-          .single();
+          .eq("type", "whatsapp");
+        
+        if (sector_id) {
+          deleteIntQuery = deleteIntQuery.eq("sector_id", sector_id);
+        }
+        
+        const { data: integration } = await deleteIntQuery.maybeSingle();
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         
