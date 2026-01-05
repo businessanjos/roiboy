@@ -537,11 +537,11 @@ export default function MarketingEventsTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-20">Data</TableHead>
                 <TableHead>Evento</TableHead>
                 <TableHead>Área</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Modalidade</TableHead>
-                <TableHead>Data/Hora</TableHead>
                 <TableHead>Produtos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -558,19 +558,54 @@ export default function MarketingEventsTab() {
                 filteredEvents.map((event) => {
                   const typeInfo = getTypeInfo(event.event_type);
                   const IconComponent = eventIconMap[typeInfo.icon] || Calendar;
+                  const eventDate = event.scheduled_at ? new Date(event.scheduled_at) : null;
                   return (
                     <TableRow key={event.id}>
+                      {/* Large Date Column */}
+                      <TableCell className="w-20">
+                        {eventDate ? (
+                          <div 
+                            className="flex flex-col items-center justify-center rounded-lg px-2 py-1 min-w-[56px]"
+                            style={{ backgroundColor: `${typeInfo.defaultColor}15` }}
+                          >
+                            <span 
+                              className="text-2xl font-bold leading-none"
+                              style={{ color: typeInfo.defaultColor }}
+                            >
+                              {format(eventDate, "dd")}
+                            </span>
+                            <span 
+                              className="text-[10px] font-medium uppercase"
+                              style={{ color: typeInfo.defaultColor }}
+                            >
+                              {format(eventDate, "MMM", { locale: ptBR })}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground">
+                              {format(eventDate, "HH:mm")}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center rounded-lg px-2 py-1 min-w-[56px] bg-muted/50">
+                            <span className="text-lg font-medium text-muted-foreground">TBD</span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div
-                            className="w-2 h-8 rounded-full"
-                            style={{ backgroundColor: event.color || typeInfo.defaultColor }}
+                            className="w-1.5 h-10 rounded-full"
+                            style={{ backgroundColor: typeInfo.defaultColor }}
                           />
                           <div>
                             <p className="font-medium">{event.title}</p>
                             {event.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
+                              <p className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">
                                 {event.description}
+                              </p>
+                            )}
+                            {event.ends_at && (
+                              <p className="text-[10px] text-muted-foreground">
+                                até {format(new Date(event.ends_at), "dd/MM HH:mm", { locale: ptBR })}
                               </p>
                             )}
                           </div>
@@ -613,23 +648,6 @@ export default function MarketingEventsTab() {
                         </Badge>
                         {(event.modality === "presencial" || event.modality === "hibrido") && event.address && (
                           <p className="text-xs text-muted-foreground mt-1">{event.address}</p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {event.scheduled_at ? (
-                          <div className="text-sm">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span>{format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-                            </div>
-                            {event.ends_at && (
-                              <p className="text-xs text-muted-foreground">
-                                até {format(new Date(event.ends_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
