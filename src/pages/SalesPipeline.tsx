@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
+import { useLeads } from "@/hooks/useLeads";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
@@ -29,8 +30,11 @@ import {
   List,
   Tag,
   BookOpen,
+  Users,
+  Target,
 } from "lucide-react";
 import { PlaybookDialog } from "@/components/sales/PlaybookDialog";
+import LeadsTab from "@/components/sales/LeadsTab";
 
 export default function SalesPipeline() {
   const navigate = useNavigate();
@@ -57,6 +61,8 @@ export default function SalesPipeline() {
     deleteStage,
     reorderStages,
   } = useDeals();
+  
+  const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads();
 
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -67,6 +73,7 @@ export default function SalesPipeline() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
@@ -215,9 +222,9 @@ export default function SalesPipeline() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold">Pipeline de Vendas</h1>
+            <h1 className="text-xl font-bold">Comercial</h1>
             <p className="text-muted-foreground text-xs">
-              Gerencie suas negociações e oportunidades
+              Gerencie prospecção e negociações
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -229,129 +236,154 @@ export default function SalesPipeline() {
               <BookOpen className="h-4 w-4 mr-2" />
               Playbook
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsStagesManagerOpen(true)}
-            >
-              <Settings2 className="h-4 w-4 mr-2" />
-              Etapas
-            </Button>
-            <div className="flex items-center border rounded-lg overflow-hidden">
-              <Button
-                variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="rounded-none"
-                onClick={() => setViewMode('kanban')}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="rounded-none"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
+            {mainTab === 'pipeline' && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsStagesManagerOpen(true)}
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Etapas
+                </Button>
+                <div className="flex items-center border rounded-lg overflow-hidden">
+                  <Button
+                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="rounded-none"
+                    onClick={() => setViewMode('kanban')}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="rounded-none"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button onClick={() => setIsNewDealOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Negociação
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Main Tabs */}
+        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
+          <TabsList>
+            <TabsTrigger value="prospeccao" className="gap-2">
+              <Users className="h-4 w-4" />
+              Prospecção
+              <Badge variant="secondary">{leads.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="pipeline" className="gap-2">
+              <Target className="h-4 w-4" />
+              Pipeline
+              <Badge variant="secondary">{openDeals.length}</Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="prospeccao" className="mt-4">
+            <LeadsTab />
+          </TabsContent>
+
+          <TabsContent value="pipeline" className="mt-4 space-y-4">
+            {/* Tag Filter and Tabs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+                <TabsList>
+                  <TabsTrigger value="open" className="gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Em Aberto
+                    <Badge variant="secondary">{filteredOpenDeals.length}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="won" className="gap-2">
+                    <Trophy className="h-4 w-4" />
+                    Ganhas
+                    <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700">
+                      {filteredWonDeals.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="lost" className="gap-2">
+                    <XCircle className="h-4 w-4" />
+                    Perdidas
+                    <Badge variant="secondary" className="bg-red-500/20 text-red-700">
+                      {filteredLostDeals.length}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {/* Tag Filter */}
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                <Select value={selectedTag} onValueChange={setSelectedTag}>
+                  <SelectTrigger className="w-[180px] h-9">
+                    <SelectValue placeholder="Filtrar por tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as tags</SelectItem>
+                    {availableTags.map(tag => (
+                      <SelectItem key={tag} value={tag}>
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedTag !== 'all' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTag('all')}
+                    className="h-9 px-2"
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
             </div>
-            <Button onClick={() => setIsNewDealOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Negociação
-            </Button>
-          </div>
-        </div>
 
-        {/* Tag Filter and Tabs */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-            <TabsList>
-              <TabsTrigger value="open" className="gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Em Aberto
-                <Badge variant="secondary">{filteredOpenDeals.length}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="won" className="gap-2">
-                <Trophy className="h-4 w-4" />
-                Ganhas
-                <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700">
-                  {filteredWonDeals.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="lost" className="gap-2">
-                <XCircle className="h-4 w-4" />
-                Perdidas
-                <Badge variant="secondary" className="bg-red-500/20 text-red-700">
-                  {filteredLostDeals.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsContent value="open" className="mt-0">
+                {viewMode === 'kanban' ? (
+                  <DealKanban
+                    stages={stages}
+                    deals={filteredOpenDeals}
+                    onDealClick={handleDealClick}
+                    onDealMove={handleDealMove}
+                  />
+                ) : (
+                  <DealListView 
+                    deals={filteredOpenDeals} 
+                    stages={stages}
+                    onDealClick={handleDealClick} 
+                  />
+                )}
+              </TabsContent>
 
-          {/* Tag Filter */}
-          <div className="flex items-center gap-2">
-            <Tag className="h-4 w-4 text-muted-foreground" />
-            <Select value={selectedTag} onValueChange={setSelectedTag}>
-              <SelectTrigger className="w-[180px] h-9">
-                <SelectValue placeholder="Filtrar por tag" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as tags</SelectItem>
-                {availableTags.map(tag => (
-                  <SelectItem key={tag} value={tag}>
-                    {tag}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedTag !== 'all' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedTag('all')}
-                className="h-9 px-2"
-              >
-                Limpar
-              </Button>
-            )}
-          </div>
-        </div>
+              <TabsContent value="won" className="mt-0">
+                <DealListView 
+                  deals={filteredWonDeals} 
+                  stages={stages}
+                  onDealClick={handleDealClick} 
+                  showStatus
+                />
+              </TabsContent>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-
-          <TabsContent value="open" className="mt-4">
-            {viewMode === 'kanban' ? (
-              <DealKanban
-                stages={stages}
-                deals={filteredOpenDeals}
-                onDealClick={handleDealClick}
-                onDealMove={handleDealMove}
-              />
-            ) : (
-              <DealListView 
-                deals={filteredOpenDeals} 
-                stages={stages}
-                onDealClick={handleDealClick} 
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="won" className="mt-4">
-            <DealListView 
-              deals={filteredWonDeals} 
-              stages={stages}
-              onDealClick={handleDealClick} 
-              showStatus
-            />
-          </TabsContent>
-
-          <TabsContent value="lost" className="mt-4">
-            <DealListView 
-              deals={filteredLostDeals} 
-              stages={stages}
-              onDealClick={handleDealClick} 
-              showStatus
-            />
+              <TabsContent value="lost" className="mt-0">
+                <DealListView 
+                  deals={filteredLostDeals} 
+                  stages={stages}
+                  onDealClick={handleDealClick} 
+                  showStatus
+                />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>
