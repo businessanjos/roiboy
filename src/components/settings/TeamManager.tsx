@@ -471,9 +471,16 @@ export function TeamManager() {
     }
 
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        toast.error("Erro ao obter usuário autenticado");
+        return;
+      }
+
       const { data: currentUser, error: userError } = await supabase
         .from("users")
         .select("account_id")
+        .eq("auth_user_id", authUser.id)
         .single();
 
       console.log("[TeamManager] currentUser", currentUser, "error", userError);
