@@ -101,6 +101,8 @@ interface ZappChatViewProps {
   signatureEnabled?: boolean;
   hasSignature?: boolean;
   onToggleSignature?: () => void;
+  // Playbook
+  onOpenPlaybook?: () => void;
 }
 
 export function ZappChatView({
@@ -153,6 +155,7 @@ export function ZappChatView({
   signatureEnabled,
   hasSignature,
   onToggleSignature,
+  onOpenPlaybook,
 }: ZappChatViewProps) {
   if (!selectedConversation) {
     return (
@@ -249,6 +252,7 @@ export function ZappChatView({
         signatureEnabled={signatureEnabled}
         hasSignature={hasSignature}
         onToggleSignature={onToggleSignature}
+        onOpenPlaybook={onOpenPlaybook}
       />
     </div>
   );
