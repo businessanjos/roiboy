@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -114,6 +115,9 @@ interface Event {
   goals: string | null;
   notes: string | null;
   target_deal_stages: string[] | null;
+  goal_invited: number | null;
+  goal_confirmed: number | null;
+  goal_present: number | null;
   created_at: string;
 }
 
@@ -168,6 +172,9 @@ export default function MarketingEventsTab() {
   const [isDateTbd, setIsDateTbd] = useState(false);
   const [tbdMonth, setTbdMonth] = useState<string>("");
   const [targetDealStages, setTargetDealStages] = useState<string[]>([]);
+  const [goalInvited, setGoalInvited] = useState<string>("");
+  const [goalConfirmed, setGoalConfirmed] = useState<string>("");
+  const [goalPresent, setGoalPresent] = useState<string>("");
   
   // Multi-day schedule state
   const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
@@ -264,6 +271,9 @@ export default function MarketingEventsTab() {
     setIsDateTbd(false);
     setTbdMonth("");
     setTargetDealStages([]);
+    setGoalInvited("");
+    setGoalConfirmed("");
+    setGoalPresent("");
     setDaySchedules({});
     setEditingEvent(null);
   };
@@ -310,6 +320,9 @@ export default function MarketingEventsTab() {
     setGoals(event.goals || "");
     setNotes(event.notes || "");
     setTargetDealStages(Array.isArray(event.target_deal_stages) ? event.target_deal_stages : []);
+    setGoalInvited(event.goal_invited?.toString() || "");
+    setGoalConfirmed(event.goal_confirmed?.toString() || "");
+    setGoalPresent(event.goal_present?.toString() || "");
     setDaySchedules({});
     setDialogOpen(true);
   };
@@ -368,6 +381,9 @@ export default function MarketingEventsTab() {
       goals: goals.trim() || null,
       notes: isDateTbd ? `[A DEFINIR - ${tbdMonth}] ${notes.trim() || ''}`.trim() : (notes.trim() || null),
       target_deal_stages: targetDealStages.length > 0 ? targetDealStages : null,
+      goal_invited: goalInvited ? parseInt(goalInvited) : 0,
+      goal_confirmed: goalConfirmed ? parseInt(goalConfirmed) : 0,
+      goal_present: goalPresent ? parseInt(goalPresent) : 0,
       account_id: accountId,
     };
 
@@ -989,6 +1005,52 @@ export default function MarketingEventsTab() {
               )}
             </div>
 
+            {/* Goals Section */}
+            <div className="space-y-2 border-t pt-4">
+              <Label className="font-medium">Metas do Evento</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="goalInvited" className="text-xs text-muted-foreground">
+                    Convidados
+                  </Label>
+                  <Input
+                    id="goalInvited"
+                    type="number"
+                    min="0"
+                    value={goalInvited}
+                    onChange={(e) => setGoalInvited(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="goalConfirmed" className="text-xs text-muted-foreground">
+                    Confirmados
+                  </Label>
+                  <Input
+                    id="goalConfirmed"
+                    type="number"
+                    min="0"
+                    value={goalConfirmed}
+                    onChange={(e) => setGoalConfirmed(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="goalPresent" className="text-xs text-muted-foreground">
+                    Presentes
+                  </Label>
+                  <Input
+                    id="goalPresent"
+                    type="number"
+                    min="0"
+                    value={goalPresent}
+                    onChange={(e) => setGoalPresent(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Notas</Label>
               <Textarea
@@ -1048,6 +1110,59 @@ export default function MarketingEventsTab() {
           </DialogHeader>
           {selectedEventForAttendance && (
             <div className="space-y-4">
+              {/* Goals Progress Bars */}
+              {(selectedEventForAttendance.goal_invited || selectedEventForAttendance.goal_confirmed || selectedEventForAttendance.goal_present) ? (
+                <div className="grid gap-3 p-4 bg-muted/50 rounded-lg">
+                  {selectedEventForAttendance.goal_present && selectedEventForAttendance.goal_present > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Meta de Presentes</span>
+                        <span className="font-medium">
+                          {attendance.length} / {selectedEventForAttendance.goal_present}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={Math.min(100, (attendance.length / selectedEventForAttendance.goal_present) * 100)} 
+                        className="h-2"
+                      />
+                      <p className="text-xs text-muted-foreground text-right">
+                        {Math.round((attendance.length / selectedEventForAttendance.goal_present) * 100)}% da meta
+                      </p>
+                    </div>
+                  )}
+                  {selectedEventForAttendance.goal_confirmed && selectedEventForAttendance.goal_confirmed > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Meta de Confirmados</span>
+                        <span className="font-medium text-blue-600">
+                          Meta: {selectedEventForAttendance.goal_confirmed}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={0} 
+                        className="h-2 opacity-50"
+                      />
+                      <p className="text-xs text-muted-foreground">Confirmações não rastreadas ainda</p>
+                    </div>
+                  )}
+                  {selectedEventForAttendance.goal_invited && selectedEventForAttendance.goal_invited > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Meta de Convidados</span>
+                        <span className="font-medium text-amber-600">
+                          Meta: {selectedEventForAttendance.goal_invited}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={0} 
+                        className="h-2 opacity-50"
+                      />
+                      <p className="text-xs text-muted-foreground">Convites não rastreados ainda</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">
                   {attendance.length} participante(s)
