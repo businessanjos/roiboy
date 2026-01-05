@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Calendar, CalendarDays, Bell } from 'lucide-react';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MarketingCalendar, MarketingEventDialog, MarketingEventSheet } from '@/components/marketing';
+import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
+import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab';
 
 export default function Marketing() {
   const [year, setYear] = useState(new Date().getFullYear());
@@ -11,6 +14,7 @@ export default function Marketing() {
   const [selectedEvent, setSelectedEvent] = useState<MarketingEvent | null>(null);
   const [defaultMonth, setDefaultMonth] = useState<number | undefined>();
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [activeTab, setActiveTab] = useState('calendar');
 
   const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(year, 'marketing');
 
@@ -73,28 +77,57 @@ export default function Marketing() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Calendário de Marketing</h1>
-          <p className="text-muted-foreground">Planeje seus eventos e campanhas do ano</p>
+          <h1 className="text-2xl font-bold">Marketing</h1>
+          <p className="text-muted-foreground">Gerencie eventos, campanhas e lembretes de marketing</p>
         </div>
-        <Button onClick={() => handleAddEvent()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Evento
-        </Button>
+        {activeTab === 'calendar' && (
+          <Button onClick={() => handleAddEvent()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Evento
+          </Button>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      ) : (
-        <MarketingCalendar
-          year={year}
-          events={events}
-          onYearChange={setYear}
-          onEventClick={handleEventClick}
-          onAddEvent={handleAddEvent}
-        />
-      )}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Calendário
+          </TabsTrigger>
+          <TabsTrigger value="events" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Eventos
+          </TabsTrigger>
+          <TabsTrigger value="reminders" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Lembretes
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="calendar" className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : (
+            <MarketingCalendar
+              year={year}
+              events={events}
+              onYearChange={setYear}
+              onEventClick={handleEventClick}
+              onAddEvent={handleAddEvent}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="events">
+          <MarketingEventsTab />
+        </TabsContent>
+
+        <TabsContent value="reminders">
+          <MarketingRemindersTab />
+        </TabsContent>
+      </Tabs>
 
       <MarketingEventDialog
         open={dialogOpen}
