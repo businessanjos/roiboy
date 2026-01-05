@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Mail, Phone, Calendar, RefreshCw } from "lucide-react";
+import { Mail, Phone, Calendar, RefreshCw, AlertTriangle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 interface DealCardProps {
@@ -52,6 +52,43 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
 
   // Check if it's a renewal deal
   const isRenewal = deal.source === 'contract_renewal' || deal.tags?.includes('renovação');
+
+  // Calculate contract expiry info for renewal deals
+  const getContractExpiryInfo = () => {
+    if (!isRenewal || !deal.expected_close_date) return null;
+    
+    const expiryDate = new Date(deal.expected_close_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    expiryDate.setHours(0, 0, 0, 0);
+    
+    const daysUntilExpiry = differenceInDays(expiryDate, today);
+    
+    if (daysUntilExpiry < 0) {
+      return { 
+        label: `Vencido há ${Math.abs(daysUntilExpiry)} dias`, 
+        bg: 'bg-red-500/20', 
+        text: 'text-red-600',
+        isExpired: true 
+      };
+    } else if (daysUntilExpiry === 0) {
+      return { 
+        label: 'Vence hoje', 
+        bg: 'bg-red-500/20', 
+        text: 'text-red-600',
+        isExpired: false 
+      };
+    } else {
+      return { 
+        label: `Vence em ${daysUntilExpiry} dias`, 
+        bg: 'bg-amber-500/20', 
+        text: 'text-amber-600',
+        isExpired: false 
+      };
+    }
+  };
+
+  const contractExpiry = getContractExpiryInfo();
 
   // Calculate days since creation
   const daysSinceCreation = differenceInDays(new Date(), new Date(deal.created_at));
@@ -139,21 +176,37 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           </span>
         </div>
 
-        {/* Tags - Only if exists */}
+        {/* Contract Expiry Badge for Renewal Deals */}
+        {contractExpiry && (
+          <div className="flex items-center gap-1">
+            <Badge 
+              variant="secondary" 
+              className={cn("text-[10px] px-1.5 py-0 flex items-center gap-1", contractExpiry.bg, contractExpiry.text)}
+            >
+              <AlertTriangle className="h-2.5 w-2.5" />
+              {contractExpiry.label}
+            </Badge>
+          </div>
+        )}
+
+        {/* Tags - Only if exists (exclude renovação/vencido as they're shown above) */}
         {deal.tags && deal.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {deal.tags.slice(0, 2).map((tag, index) => (
-              <Badge 
-                key={index} 
-                variant="outline" 
-                className="text-[10px] px-1.5 py-0 bg-background"
-              >
-                {tag}
-              </Badge>
-            ))}
-            {deal.tags.length > 2 && (
+            {deal.tags
+              .filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase()))
+              .slice(0, 2)
+              .map((tag, index) => (
+                <Badge 
+                  key={index} 
+                  variant="outline" 
+                  className="text-[10px] px-1.5 py-0 bg-background"
+                >
+                  {tag}
+                </Badge>
+              ))}
+            {deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length > 2 && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-background">
-                +{deal.tags.length - 2}
+                +{deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length - 2}
               </Badge>
             )}
           </div>
