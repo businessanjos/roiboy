@@ -5,10 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Mail, Phone, Calendar } from "lucide-react";
+import { Mail, Phone, Calendar, RefreshCw } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
 interface DealCardProps {
   deal: Deal;
   onClick: () => void;
@@ -51,6 +50,9 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   const contactPhone = deal.client?.phone_e164 || deal.contact_phone;
   const avatarUrl = deal.client?.avatar_url || null;
 
+  // Check if it's a renewal deal
+  const isRenewal = deal.source === 'contract_renewal' || deal.tags?.includes('renovação');
+
   // Calculate days since creation
   const daysSinceCreation = differenceInDays(new Date(), new Date(deal.created_at));
   const createdDate = format(new Date(deal.created_at), "dd/MM/yyyy", { locale: ptBR });
@@ -76,11 +78,20 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       {...listeners}
       className={cn(
         "cursor-pointer hover:shadow-lg transition-all bg-card border-border/50",
+        isRenewal && "ring-2 ring-amber-500/50 bg-amber-500/5",
         (isDragging || isSortableDragging) && "opacity-50 shadow-xl rotate-1 scale-105"
       )}
       onClick={onClick}
     >
     <CardContent className="p-3 space-y-2">
+        {/* Renewal Badge */}
+        {isRenewal && (
+          <div className="flex items-center gap-1 text-amber-600 mb-1">
+            <RefreshCw className="h-3 w-3" />
+            <span className="text-[10px] font-semibold uppercase">Renovação</span>
+          </div>
+        )}
+
         {/* Header with Title and Client */}
         <div className="flex items-start gap-2">
           <Avatar className="h-8 w-8 border border-primary/20">

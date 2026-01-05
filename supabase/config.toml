@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.sector-agent-chat]
 verify_jwt = true
+
+[functions.check-contract-renewal-deals]
+verify_jwt = false
