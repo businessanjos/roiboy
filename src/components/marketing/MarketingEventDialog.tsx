@@ -36,8 +36,8 @@ export function MarketingEventDialog({
     title: '',
     description: '',
     event_type: 'campaign' as MarketingEventType,
-    start_date: '',
-    end_date: '',
+    scheduled_at: '',
+    ends_at: '',
     start_time: '',
     end_time: '',
     budget: '',
@@ -53,13 +53,13 @@ export function MarketingEventDialog({
         title: event.title,
         description: event.description || '',
         event_type: event.event_type,
-        start_date: event.start_date,
-        end_date: event.end_date || '',
+        scheduled_at: event.scheduled_at ? format(new Date(event.scheduled_at), 'yyyy-MM-dd') : '',
+        ends_at: event.ends_at ? format(new Date(event.ends_at), 'yyyy-MM-dd') : '',
         start_time: event.start_time || '',
         end_time: event.end_time || '',
         budget: event.budget?.toString() || '',
         status: event.status,
-        color: event.color,
+        color: event.color || '#6366f1',
         goals: event.goals || '',
         notes: event.notes || '',
       });
@@ -72,8 +72,8 @@ export function MarketingEventDialog({
         title: '',
         description: '',
         event_type: 'campaign',
-        start_date: format(defaultDate, 'yyyy-MM-dd'),
-        end_date: '',
+        scheduled_at: format(defaultDate, 'yyyy-MM-dd'),
+        ends_at: '',
         start_time: '',
         end_time: '',
         budget: '',
@@ -87,12 +87,22 @@ export function MarketingEventDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Convert date string to ISO timestamp
+    const scheduledAt = formData.scheduled_at 
+      ? new Date(formData.scheduled_at + 'T00:00:00').toISOString()
+      : new Date().toISOString();
+    
+    const endsAt = formData.ends_at 
+      ? new Date(formData.ends_at + 'T23:59:59').toISOString()
+      : null;
+
     onSave({
       title: formData.title,
       description: formData.description || null,
       event_type: formData.event_type,
-      start_date: formData.start_date,
-      end_date: formData.end_date || null,
+      scheduled_at: scheduledAt,
+      ends_at: endsAt,
       start_time: formData.start_time || null,
       end_time: formData.end_time || null,
       budget: formData.budget ? parseFloat(formData.budget) : null,
@@ -100,6 +110,7 @@ export function MarketingEventDialog({
       color: formData.color,
       goals: formData.goals || null,
       notes: formData.notes || null,
+      category: 'marketing',
     });
   };
 
@@ -173,22 +184,22 @@ export function MarketingEventDialog({
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !formData.start_date && "text-muted-foreground"
+                      !formData.scheduled_at && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.start_date 
-                      ? format(parseISO(formData.start_date), "dd/MM/yyyy", { locale: ptBR })
+                    {formData.scheduled_at 
+                      ? format(parseISO(formData.scheduled_at), "dd/MM/yyyy", { locale: ptBR })
                       : "Selecione"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
-                    selected={formData.start_date ? parseISO(formData.start_date) : undefined}
+                    selected={formData.scheduled_at ? parseISO(formData.scheduled_at) : undefined}
                     onSelect={(date) => setFormData(prev => ({ 
                       ...prev, 
-                      start_date: date ? format(date, 'yyyy-MM-dd') : '' 
+                      scheduled_at: date ? format(date, 'yyyy-MM-dd') : '' 
                     }))}
                     locale={ptBR}
                     className="pointer-events-auto"
@@ -205,22 +216,22 @@ export function MarketingEventDialog({
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !formData.end_date && "text-muted-foreground"
+                      !formData.ends_at && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.end_date 
-                      ? format(parseISO(formData.end_date), "dd/MM/yyyy", { locale: ptBR })
+                    {formData.ends_at 
+                      ? format(parseISO(formData.ends_at), "dd/MM/yyyy", { locale: ptBR })
                       : "Opcional"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
-                    selected={formData.end_date ? parseISO(formData.end_date) : undefined}
+                    selected={formData.ends_at ? parseISO(formData.ends_at) : undefined}
                     onSelect={(date) => setFormData(prev => ({ 
                       ...prev, 
-                      end_date: date ? format(date, 'yyyy-MM-dd') : '' 
+                      ends_at: date ? format(date, 'yyyy-MM-dd') : '' 
                     }))}
                     locale={ptBR}
                     className="pointer-events-auto"
@@ -322,7 +333,7 @@ export function MarketingEventDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSaving || !formData.title || !formData.start_date}>
+            <Button type="submit" disabled={isSaving || !formData.title || !formData.scheduled_at}>
               {isSaving ? 'Salvando...' : event ? 'Salvar' : 'Criar Evento'}
             </Button>
           </div>

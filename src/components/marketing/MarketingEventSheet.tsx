@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { MarketingEvent, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
 import { Rocket, Megaphone, Video, FileText, Radio, Handshake, Building, Presentation, Circle, Pencil, Trash2, Calendar, DollarSign, Target, StickyNote, Copy, Clock } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -33,7 +33,7 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
 
   const typeConfig = eventTypeConfig[event.event_type];
   const status = statusConfig[event.status];
-  const Icon = iconMap[typeConfig.icon] || Circle;
+  const Icon = iconMap[typeConfig?.icon] || Circle;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -50,16 +50,16 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
           <div className="flex items-start gap-3">
             <div
               className="p-2 rounded-lg shrink-0"
-              style={{ backgroundColor: `${event.color}20`, color: event.color }}
+              style={{ backgroundColor: `${event.color}20`, color: event.color || '#888' }}
             >
               <Icon className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
               <SheetTitle className="text-left">{event.title}</SheetTitle>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline">{typeConfig.label}</Badge>
-                <Badge style={{ backgroundColor: status.color, color: 'white' }}>
-                  {status.label}
+                <Badge variant="outline">{typeConfig?.label || event.event_type}</Badge>
+                <Badge style={{ backgroundColor: status?.color, color: 'white' }}>
+                  {status?.label || event.status}
                 </Badge>
               </div>
             </div>
@@ -73,9 +73,9 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
             <div>
               <p className="text-sm font-medium">Período</p>
               <p className="text-sm text-muted-foreground">
-                {format(parseISO(event.start_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                {event.end_date && (
-                  <> até {format(parseISO(event.end_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
+                {format(new Date(event.scheduled_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                {event.ends_at && (
+                  <> até {format(new Date(event.ends_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</>
                 )}
               </p>
             </div>

@@ -41,7 +41,7 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
     }
 
     events.forEach(event => {
-      const startDate = new Date(event.start_date);
+      const startDate = new Date(event.scheduled_at);
       if (startDate.getFullYear() === year) {
         const month = startDate.getMonth();
         grouped[month].push(event);
@@ -51,7 +51,7 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
     // Sort events by date within each month
     Object.keys(grouped).forEach(month => {
       grouped[parseInt(month)].sort((a, b) => 
-        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
       );
     });
 
@@ -221,7 +221,7 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
                         </p>
                       ) : (
                         monthEvents.map(event => {
-                          const eventDate = new Date(event.start_date);
+                          const eventDate = new Date(event.scheduled_at);
                           const eventColor = event.color || eventTypeConfig[event.event_type]?.defaultColor || '#888';
                           
                           return (
@@ -253,8 +253,8 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
                                   {event.start_time && (
                                     <span>{event.start_time.slice(0, 5)}</span>
                                   )}
-                                  {event.end_date && event.end_date !== event.start_date && (
-                                    <span>até {format(new Date(event.end_date), "dd/MM", { locale: ptBR })}</span>
+                                  {event.ends_at && event.ends_at !== event.scheduled_at && (
+                                    <span>até {format(new Date(event.ends_at), "dd/MM", { locale: ptBR })}</span>
                                   )}
                                 </div>
                               </div>

@@ -60,7 +60,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao";
+type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao" | "launch" | "campaign" | "content" | "partnership" | "fair" | "other";
 
 interface Event {
   id: string;
@@ -642,6 +642,12 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       webinar: { label: "Webinar", icon: <Monitor className="h-3 w-3 mr-1" /> },
       imersao: { label: "Imersão", icon: <Calendar className="h-3 w-3 mr-1" /> },
       plantao: { label: "Plantão", icon: <Clock className="h-3 w-3 mr-1" /> },
+      launch: { label: "Lançamento", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      campaign: { label: "Campanha", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      content: { label: "Conteúdo", icon: <FileText className="h-3 w-3 mr-1" /> },
+      partnership: { label: "Parceria", icon: <Users className="h-3 w-3 mr-1" /> },
+      fair: { label: "Feira", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      other: { label: "Outro", icon: <Calendar className="h-3 w-3 mr-1" /> },
     };
     return typeMap[eventType] || typeMap.live;
   };
