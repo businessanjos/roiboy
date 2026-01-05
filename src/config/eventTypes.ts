@@ -30,6 +30,7 @@ export type EventType =
   | "content"
   | "partnership"
   | "fair"
+  | "movimento"
   | "other";
 
 export interface EventTypeConfig {
@@ -118,6 +119,12 @@ export const eventTypeConfig: Record<EventType, EventTypeConfig> = {
     label: 'Feira/Congresso', 
     icon: 'building', 
     defaultColor: '#6366f1',
+    category: 'marketing'
+  },
+  movimento: { 
+    label: 'Movimento', 
+    icon: 'megaphone', 
+    defaultColor: '#a855f7',
     category: 'marketing'
   },
   other: { 
