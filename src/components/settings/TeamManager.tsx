@@ -463,31 +463,41 @@ export function TeamManager() {
   };
 
   const handleSaveRole = async () => {
+    console.log("[TeamManager] handleSaveRole called", { roleFormName, roleFormPermissions, selectedRole });
+    
     if (!roleFormName) {
       toast.error("Nome da função é obrigatório");
       return;
     }
 
     try {
-      const { data: currentUser } = await supabase
+      const { data: currentUser, error: userError } = await supabase
         .from("users")
         .select("account_id")
         .single();
 
-      if (!currentUser) return;
+      console.log("[TeamManager] currentUser", currentUser, "error", userError);
+      
+      if (!currentUser) {
+        toast.error("Erro ao obter usuário atual");
+        return;
+      }
 
       let roleId = selectedRole?.id;
 
       if (selectedRole) {
-        const { error } = await supabase
+        console.log("[TeamManager] Updating role", selectedRole.id);
+        const { data: updateData, error } = await supabase
           .from("team_roles")
           .update({
             name: roleFormName,
             description: roleFormDescription,
             color: roleFormColor,
           })
-          .eq("id", selectedRole.id);
+          .eq("id", selectedRole.id)
+          .select();
 
+        console.log("[TeamManager] Update result", updateData, "error", error);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
