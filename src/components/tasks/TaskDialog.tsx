@@ -4,6 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
+import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +60,7 @@ interface Task {
   assigned_to: string | null;
   completed_at?: string | null;
   custom_status_id?: string | null;
+  activity_type_id?: string | null;
 }
 
 interface TaskDialogProps {
@@ -84,6 +86,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
   const { statuses: customStatuses } = useTaskStatuses();
+  const { activityTypes } = useActivityTypes();
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -99,6 +102,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     deal_id: dealId || "",
     lead_id: leadId || "",
     assigned_to: "",
+    activity_type_id: "",
   });
 
   useEffect(() => {
@@ -119,6 +123,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           deal_id: task.deal_id || "",
           lead_id: task.lead_id || "",
           assigned_to: task.assigned_to || "",
+          activity_type_id: task.activity_type_id || "",
         });
       } else {
         const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
@@ -132,6 +137,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           deal_id: dealId || "",
           lead_id: leadId || "",
           assigned_to: "",
+          activity_type_id: "",
         });
       }
     }
@@ -203,6 +209,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           deal_id: formData.deal_id || null,
           lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
+          activity_type_id: formData.activity_type_id || null,
           completed_at: isCompleted && !task.completed_at 
             ? new Date().toISOString() 
             : !isCompleted ? null : task.completed_at,
@@ -218,7 +225,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           entityType: "task",
           entityId: task.id,
           entityName: formData.title.trim(),
-          details: { custom_status_id: formData.custom_status_id, priority: formData.priority }
+          details: { custom_status_id: formData.custom_status_id, priority: formData.priority, activity_type_id: formData.activity_type_id }
         });
         
         toast.success("Tarefa atualizada!");
@@ -234,6 +241,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           deal_id: formData.deal_id || null,
           lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
+          activity_type_id: formData.activity_type_id || null,
           created_by: currentUser.id,
           completed_at: isCompleted ? new Date().toISOString() : null,
         };
@@ -383,6 +391,34 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                   {leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {activityTypes.length > 0 && (
+            <div className="space-y-2">
+              <Label>Tipo de Atividade</Label>
+              <Select
+                value={formData.activity_type_id}
+                onValueChange={(value) => setFormData({ ...formData, activity_type_id: value === "none" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem tipo</SelectItem>
+                  {activityTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: type.color }}
+                        />
+                        {type.name}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
