@@ -214,42 +214,64 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
                   </div>
 
                   {isExpanded && (
-                    <div className="mt-3 pt-3 border-t space-y-2">
+                    <div className="mt-3 pt-3 border-t space-y-1">
                       {monthEvents.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">
                           Nenhum evento neste mês
                         </p>
                       ) : (
-                        monthEvents.map(event => (
-                          <div
-                            key={event.id}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                            onClick={() => onEventClick(event)}
-                          >
+                        monthEvents.map(event => {
+                          const eventDate = new Date(event.start_date);
+                          const eventColor = event.color || eventTypeConfig[event.event_type]?.defaultColor || '#888';
+                          
+                          return (
                             <div
-                              className="w-3 h-3 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: event.color || eventTypeConfig[event.event_type]?.defaultColor || '#888' }}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{event.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(event.start_date), "dd 'de' MMM", { locale: ptBR })}
-                                {event.end_date && event.end_date !== event.start_date && (
-                                  <> - {format(new Date(event.end_date), "dd 'de' MMM", { locale: ptBR })}</>
-                                )}
-                              </p>
-                            </div>
-                            <span 
-                              className="text-xs px-2 py-0.5 rounded-full"
-                              style={{ 
-                                backgroundColor: `${event.color || eventTypeConfig[event.event_type]?.defaultColor}20`,
-                                color: event.color || eventTypeConfig[event.event_type]?.defaultColor 
-                              }}
+                              key={event.id}
+                              className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                              onClick={() => onEventClick(event)}
                             >
-                              {eventTypeConfig[event.event_type]?.label || event.event_type}
-                            </span>
-                          </div>
-                        ))
+                              {/* Date display - agenda style */}
+                              <div className="flex flex-col items-center min-w-[50px] flex-shrink-0">
+                                <span className="text-2xl font-bold leading-none">
+                                  {format(eventDate, 'dd')}
+                                </span>
+                                <span className="text-xs text-muted-foreground uppercase">
+                                  {format(eventDate, 'EEE', { locale: ptBR })}
+                                </span>
+                              </div>
+                              
+                              {/* Color bar */}
+                              <div 
+                                className="w-1 h-12 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: eventColor }}
+                              />
+                              
+                              {/* Event info */}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{event.title}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  {event.start_time && (
+                                    <span>{event.start_time.slice(0, 5)}</span>
+                                  )}
+                                  {event.end_date && event.end_date !== event.start_date && (
+                                    <span>até {format(new Date(event.end_date), "dd/MM", { locale: ptBR })}</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Type badge */}
+                              <span 
+                                className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                                style={{ 
+                                  backgroundColor: `${eventColor}20`,
+                                  color: eventColor 
+                                }}
+                              >
+                                {eventTypeConfig[event.event_type]?.label || event.event_type}
+                              </span>
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   )}
