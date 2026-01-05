@@ -2607,6 +2607,22 @@ serve(async (req) => {
           );
         }
         
+        // Find the department for this sector to properly associate conversations
+        let importDepartmentId: string | null = null;
+        if (sector_id) {
+          const { data: dept } = await supabase
+            .from("zapp_departments")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("sector_id", sector_id)
+            .maybeSingle();
+          
+          if (dept) {
+            importDepartmentId = dept.id;
+            console.log(`Found department for sector ${sector_id}: ${importDepartmentId}`);
+          }
+        }
+        
         // Helper to normalize phone
         const normalizePhoneNum = (p: string | undefined): string => {
           if (!p) return "";
@@ -2655,7 +2671,7 @@ serve(async (req) => {
           console.error("Failed to fetch chats:", e);
         }
         
-        console.log(`Found ${chats.length} chats to import`);
+        console.log(`Found ${chats.length} chats to import for sector ${sector_id}`);
         
         let imported = 0;
         let skipped = 0;
@@ -2666,11 +2682,11 @@ serve(async (req) => {
           const chatPhone = isGroup ? "" : normalizePhoneNum(chat.phone || chat.id?.split("@")[0]);
           const contactName = chat.wa_name || chat.name || chat.lead_fullName || (isGroup ? "Grupo" : chatPhone);
           
-          if (!isGroup && !phone) continue;
+          if (!isGroup && !chatPhone) continue;
           if (isGroup && !groupJid) continue;
           
           // Check if conversation already exists
-          let exists = false;
+          let existingConvoId: string | null = null;
           if (isGroup && groupJid) {
             const { data } = await supabase
               .from("zapp_conversations")
@@ -2678,7 +2694,7 @@ serve(async (req) => {
               .eq("account_id", accountId)
               .eq("group_jid", groupJid)
               .maybeSingle();
-            exists = !!data;
+            existingConvoId = data?.id || null;
           } else {
             const { data } = await supabase
               .from("zapp_conversations")
@@ -2687,10 +2703,32 @@ serve(async (req) => {
               .eq("phone_e164", chatPhone)
               .eq("is_group", false)
               .maybeSingle();
-            exists = !!data;
+            existingConvoId = data?.id || null;
           }
           
-          if (exists) {
+          if (existingConvoId) {
+            // Conversation exists - check if it needs to be assigned to this department
+            if (importDepartmentId) {
+              const { data: existingAssignment } = await supabase
+                .from("zapp_conversation_assignments")
+                .select("id, department_id")
+                .eq("zapp_conversation_id", existingConvoId)
+                .maybeSingle();
+              
+              // If no assignment or different department, update/create
+              if (!existingAssignment) {
+                await supabase
+                  .from("zapp_conversation_assignments")
+                  .insert({
+                    account_id: accountId,
+                    zapp_conversation_id: existingConvoId,
+                    department_id: importDepartmentId,
+                    status: "waiting",
+                  });
+              } else if (existingAssignment.department_id !== importDepartmentId) {
+                // Already assigned to different department - skip
+              }
+            }
             skipped++;
             continue;
           }
@@ -2732,20 +2770,21 @@ serve(async (req) => {
             continue;
           }
           
-          // Create assignment for queue
+          // Create assignment for queue with department
           if (newConvo) {
             await supabase
               .from("zapp_conversation_assignments")
               .insert({
                 account_id: accountId,
                 zapp_conversation_id: newConvo.id,
+                department_id: importDepartmentId,
                 status: "waiting",
               });
             imported++;
           }
         }
         
-        result = { imported, skipped, total: chats.length };
+        result = { imported, skipped, total: chats.length, sector_id, department_id: importDepartmentId };
         break;
       }
 
