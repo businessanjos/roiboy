@@ -2363,6 +2363,7 @@ export type Database = {
           probability: number | null
           responsible_user_id: string | null
           source: string | null
+          source_contract_id: string | null
           stage_id: string | null
           status: string
           tags: Json | null
@@ -2388,6 +2389,7 @@ export type Database = {
           probability?: number | null
           responsible_user_id?: string | null
           source?: string | null
+          source_contract_id?: string | null
           stage_id?: string | null
           status?: string
           tags?: Json | null
@@ -2413,6 +2415,7 @@ export type Database = {
           probability?: number | null
           responsible_user_id?: string | null
           source?: string | null
+          source_contract_id?: string | null
           stage_id?: string | null
           status?: string
           tags?: Json | null
@@ -2448,6 +2451,13 @@ export type Database = {
             columns: ["responsible_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_source_contract_id_fkey"
+            columns: ["source_contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
             referencedColumns: ["id"]
           },
           {
