@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Deal } from "@/hooks/useDeals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Mail, Phone, Calendar, RefreshCw, AlertTriangle } from "lucide-react";
+import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TaskDialog } from "@/components/tasks/TaskDialog";
+
 interface DealCardProps {
   deal: Deal;
   onClick: () => void;
@@ -15,6 +19,8 @@ interface DealCardProps {
 }
 
 export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  
   const {
     attributes,
     listeners,
@@ -163,14 +169,28 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           </div>
         </div>
 
-        {/* Time Badge and Value - Same Row */}
+        {/* Time Badge, Quick Task and Value - Same Row */}
         <div className="flex items-center justify-between pt-1">
-          <Badge 
-            variant="secondary" 
-            className={cn("text-[10px] px-1.5 py-0", timeBadge.bg, timeBadge.text)}
-          >
-            {timeBadge.label}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge 
+              variant="secondary" 
+              className={cn("text-[10px] px-1.5 py-0", timeBadge.bg, timeBadge.text)}
+            >
+              {timeBadge.label}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 hover:bg-primary/10"
+              onClick={(e) => {
+                e.stopPropagation();
+                setTaskDialogOpen(true);
+              }}
+              title="Agendar atividade"
+            >
+              <ListTodo className="h-3 w-3 text-muted-foreground" />
+            </Button>
+          </div>
           <span className="text-xs font-bold text-primary">
             {formatCurrency(deal.value)}
           </span>
@@ -212,6 +232,14 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           </div>
         )}
       </CardContent>
+
+      <TaskDialog
+        open={taskDialogOpen}
+        onOpenChange={setTaskDialogOpen}
+        dealId={deal.id}
+        leadId={deal.lead_id || undefined}
+        onSuccess={() => {}}
+      />
     </Card>
   );
 }
