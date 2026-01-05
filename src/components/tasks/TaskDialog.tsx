@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
@@ -105,6 +105,10 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     assigned_to: "",
     activity_type_id: "",
   });
+  
+  // Track if form was initialized for current open session
+  const initializedForTaskRef = useRef<string | null>(null);
+  const wasOpenRef = useRef(false);
 
   // Separate effect for fetching data
   useEffect(() => {
@@ -118,9 +122,27 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     }
   }, [open, hasVendasAccess]);
 
-  // Separate effect for initializing form data - only when dialog opens or task changes
+  // Separate effect for initializing form data - only when dialog opens
   useEffect(() => {
-    if (!open) return;
+    // Only initialize when dialog opens (transition from closed to open)
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    
+    if (!open) {
+      // Reset the initialization tracker when dialog closes
+      initializedForTaskRef.current = null;
+      return;
+    }
+    
+    // Create a unique key for the current task/new task scenario
+    const currentTaskKey = task?.id || "new";
+    
+    // Skip if already initialized for this task in this open session
+    if (initializedForTaskRef.current === currentTaskKey && !justOpened) {
+      return;
+    }
+    
+    initializedForTaskRef.current = currentTaskKey;
     
     if (task) {
       // Extract time from due_date if it exists and has time component
@@ -165,7 +187,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, task?.id, clientId, dealId, leadId, initialStatus]);
+  }, [open, task, clientId, dealId, leadId, initialStatus, customStatuses]);
 
   const fetchUsers = async () => {
     const { data } = await supabase
