@@ -5340,6 +5340,136 @@ export type Database = {
           },
         ]
       }
+      playbook_folders: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          position: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          position?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          position?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_folders_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_folders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbook_items: {
+        Row: {
+          account_id: string
+          content_type: string
+          created_at: string
+          created_by: string | null
+          folder_id: string | null
+          id: string
+          is_favorite: boolean | null
+          last_used_at: string | null
+          list_items: Json | null
+          media_duration: number | null
+          media_filename: string | null
+          media_size: number | null
+          media_url: string | null
+          name: string
+          position: number | null
+          text_content: string | null
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          account_id: string
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          folder_id?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          last_used_at?: string | null
+          list_items?: Json | null
+          media_duration?: number | null
+          media_filename?: string | null
+          media_size?: number | null
+          media_url?: string | null
+          name: string
+          position?: number | null
+          text_content?: string | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          account_id?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          folder_id?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          last_used_at?: string | null
+          list_items?: Json | null
+          media_duration?: number | null
+          media_filename?: string | null
+          media_size?: number | null
+          media_url?: string | null
+          name?: string
+          position?: number | null
+          text_content?: string | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_items_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_items_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           account_id: string
