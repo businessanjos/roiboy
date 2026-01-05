@@ -11,6 +11,7 @@ import {
   Radio,
   Building,
   Presentation,
+  Plane,
 } from 'lucide-react';
 
 // Unified event types for both operation and marketing
@@ -31,6 +32,7 @@ export type EventType =
   | "partnership"
   | "fair"
   | "movimento"
+  | "viagem"
   | "other";
 
 export interface EventTypeConfig {
@@ -41,96 +43,102 @@ export interface EventTypeConfig {
 }
 
 export const eventTypeConfig: Record<EventType, EventTypeConfig> = {
-  // Operation types
+  // Operation types - tons de azul/ciano/verde
   live: { 
     label: 'Live / Encontro', 
     icon: 'video', 
-    defaultColor: '#8b5cf6',
+    defaultColor: '#3b82f6', // blue-500
     category: 'both'
   },
   material: { 
     label: 'Material', 
     icon: 'file-text', 
-    defaultColor: '#64748b',
+    defaultColor: '#64748b', // slate-500
     category: 'operation'
   },
   mentoria: { 
     label: 'Mentoria', 
     icon: 'users', 
-    defaultColor: '#06b6d4',
+    defaultColor: '#0ea5e9', // sky-500
     category: 'operation'
   },
   workshop: { 
     label: 'Workshop', 
     icon: 'presentation', 
-    defaultColor: '#eab308',
+    defaultColor: '#14b8a6', // teal-500
     category: 'both'
   },
   masterclass: { 
     label: 'Masterclass', 
     icon: 'video', 
-    defaultColor: '#ec4899',
+    defaultColor: '#6366f1', // indigo-500
     category: 'operation'
   },
   webinar: { 
     label: 'Webinar', 
     icon: 'monitor', 
-    defaultColor: '#8b5cf6',
+    defaultColor: '#8b5cf6', // violet-500
     category: 'both'
   },
   imersao: { 
     label: 'Imersão', 
     icon: 'calendar', 
-    defaultColor: '#f97316',
+    defaultColor: '#0d9488', // teal-600
     category: 'both'
   },
   plantao: { 
     label: 'Plantão de Dúvidas', 
     icon: 'clock', 
-    defaultColor: '#10b981',
+    defaultColor: '#22c55e', // green-500
     category: 'operation'
   },
-  // Marketing types
+  // Marketing types - tons de vermelho/laranja/rosa/roxo
   launch: { 
     label: 'Lançamento', 
     icon: 'rocket', 
-    defaultColor: '#ef4444',
+    defaultColor: '#ef4444', // red-500
     category: 'marketing'
   },
   campaign: { 
     label: 'Campanha', 
     icon: 'megaphone', 
-    defaultColor: '#f97316',
+    defaultColor: '#f97316', // orange-500
     category: 'marketing'
   },
   content: { 
     label: 'Conteúdo', 
     icon: 'file-text', 
-    defaultColor: '#06b6d4',
+    defaultColor: '#eab308', // yellow-500
     category: 'marketing'
   },
   partnership: { 
     label: 'Parceria', 
     icon: 'handshake', 
-    defaultColor: '#10b981',
+    defaultColor: '#84cc16', // lime-500
     category: 'marketing'
   },
   fair: { 
     label: 'Feira/Congresso', 
     icon: 'building', 
-    defaultColor: '#6366f1',
+    defaultColor: '#a855f7', // purple-500
     category: 'marketing'
   },
   movimento: { 
     label: 'Movimento', 
     icon: 'megaphone', 
-    defaultColor: '#a855f7',
+    defaultColor: '#ec4899', // pink-500
+    category: 'marketing'
+  },
+  viagem: { 
+    label: 'Viagem', 
+    icon: 'plane', 
+    defaultColor: '#06b6d4', // cyan-500
     category: 'marketing'
   },
   other: { 
     label: 'Outro', 
     icon: 'calendar', 
-    defaultColor: '#64748b',
+    defaultColor: '#71717a', // zinc-500
     category: 'both'
   },
 };
@@ -149,6 +157,7 @@ export const eventIconMap: Record<string, React.ElementType> = {
   radio: Radio,
   building: Building,
   presentation: Presentation,
+  plane: Plane,
 };
 
 // Get types for specific category
