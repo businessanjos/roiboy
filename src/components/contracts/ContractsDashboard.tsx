@@ -47,6 +47,7 @@ interface Contract {
   client_id: string;
   start_date: string;
   end_date: string | null;
+  cancelled_at: string | null;
   value: number;
   status: string;
   contract_type: string;
@@ -246,13 +247,15 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
   }, [contracts]);
 
   // Customer Journey - Churn by contract month (1st, 2nd, 3rd... month)
+  // Uses cancelled_at for accurate churn timing
   const customerJourneyData = useMemo(() => {
     const journeyData: { month: number; label: string; churned: number; total: number; rate: number }[] = [];
     
     // Get contracts that churned (cancelled, dismissed, dropout_7d, ended)
+    // Uses cancelled_at for the actual churn date
     const churnedContracts = contracts.filter(c => 
       ['cancelled', 'dismissed', 'dropout_7d', 'ended'].includes(c.status) && 
-      c.end_date
+      c.cancelled_at
     );
     
     // Calculate the month of churn for each contract
@@ -261,22 +264,30 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
       let totalAtMonth = 0;
       
       churnedContracts.forEach(contract => {
-        if (!contract.end_date) return;
+        if (!contract.cancelled_at) return;
         
         const startDate = parseISO(contract.start_date);
-        const endDate = parseISO(contract.end_date);
-        const monthsActive = differenceInMonths(endDate, startDate) + 1;
+        const churnDate = parseISO(contract.cancelled_at);
+        const monthsActive = differenceInMonths(churnDate, startDate) + 1;
         
         if (monthsActive === month) {
           churnedInMonth++;
         }
       });
       
-      // Total contracts that reached this month
+      // Total contracts that reached this month (active or churned after this month)
       contracts.forEach(contract => {
         const startDate = parseISO(contract.start_date);
-        const endDate = contract.end_date ? parseISO(contract.end_date) : new Date();
-        const monthsActive = differenceInMonths(endDate, startDate) + 1;
+        
+        // For churned contracts, use cancelled_at; for active ones, use today
+        let referenceDate: Date;
+        if (['cancelled', 'dismissed', 'dropout_7d', 'ended'].includes(contract.status) && contract.cancelled_at) {
+          referenceDate = parseISO(contract.cancelled_at);
+        } else {
+          referenceDate = new Date();
+        }
+        
+        const monthsActive = differenceInMonths(referenceDate, startDate) + 1;
         
         if (monthsActive >= month) {
           totalAtMonth++;
