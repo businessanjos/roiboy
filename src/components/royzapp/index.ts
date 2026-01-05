@@ -16,3 +16,4 @@ export * from "./ZappChatView";
 export * from "./ZappAIAgentItem";
 export * from "./ZappAIAgentChat";
 export * from "./ZappSectorSelector";
+export * from "./ZappMarketingList";
