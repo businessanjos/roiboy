@@ -156,8 +156,8 @@ export const sectors: Sector[] = [
   },
   {
     id: "diretoria",
-    name: "Diretoria",
-    description: "Gestão executiva - Everton Pieri",
+    name: "Mentor",
+    description: "Gestão e mentoria executiva",
     icon: Crown,
     color: "text-rose-600",
     bgColor: "bg-rose-500/10",
