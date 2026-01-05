@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { MarketingEvent } from '@/hooks/useMarketingEvents';
+import { ChevronLeft, ChevronRight, Plus, LayoutGrid, List } from 'lucide-react';
+import { MarketingEvent, eventTypeConfig } from '@/hooks/useMarketingEvents';
 import { MarketingEventCard } from './MarketingEventCard';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -16,6 +18,8 @@ const MONTHS_SHORT = [
   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
 ];
 
+type ViewMode = 'grid' | 'list';
+
 interface MarketingCalendarProps {
   year: number;
   events: MarketingEvent[];
@@ -26,6 +30,8 @@ interface MarketingCalendarProps {
 
 export function MarketingCalendar({ year, events, onYearChange, onEventClick, onAddEvent }: MarketingCalendarProps) {
   const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
 
   const eventsByMonth = useMemo(() => {
     const grouped: Record<number, MarketingEvent[]> = {};
@@ -42,6 +48,13 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
       }
     });
 
+    // Sort events by date within each month
+    Object.keys(grouped).forEach(month => {
+      grouped[parseInt(month)].sort((a, b) => 
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      );
+    });
+
     return grouped;
   }, [events, year]);
 
@@ -49,9 +62,9 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-[calc(100vh-200px)] space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => onYearChange(year - 1)}>
             <ChevronLeft className="h-4 w-4" />
@@ -61,81 +74,191 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+        <div className="flex items-center gap-1 border rounded-lg p-1">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        {MONTHS.map((month, index) => {
-          const monthEvents = eventsByMonth[index];
-          const isCurrentMonth = index === currentMonth && year === currentYear;
-          const isPast = year < currentYear || (year === currentYear && index < currentMonth);
+      {/* Content */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 flex-1 overflow-auto">
+          {MONTHS.map((month, index) => {
+            const monthEvents = eventsByMonth[index];
+            const isCurrentMonth = index === currentMonth && year === currentYear;
+            const isPast = year < currentYear || (year === currentYear && index < currentMonth);
 
-          return (
-            <Card
-              key={index}
-              className={cn(
-                "relative transition-all",
-                isCurrentMonth && "ring-2 ring-primary",
-                isPast && "opacity-75"
-              )}
-              onMouseEnter={() => setHoveredMonth(index)}
-              onMouseLeave={() => setHoveredMonth(null)}
-            >
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className={cn(
-                    "font-semibold text-sm",
-                    isCurrentMonth && "text-primary"
-                  )}>
-                    {MONTHS_SHORT[index]}
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-6 w-6 transition-opacity",
-                      hoveredMonth === index ? "opacity-100" : "opacity-0"
-                    )}
-                    onClick={() => onAddEvent(index)}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-
-                <div className="space-y-1.5 min-h-[80px]">
-                  {monthEvents.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      Sem eventos
-                    </p>
-                  ) : (
-                    monthEvents.slice(0, 4).map(event => (
-                      <MarketingEventCard
-                        key={event.id}
-                        event={event}
-                        onClick={() => onEventClick(event)}
-                        compact
-                      />
-                    ))
-                  )}
-                  {monthEvents.length > 4 && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      +{monthEvents.length - 4} mais
-                    </p>
-                  )}
-                </div>
-
-                {monthEvents.length > 0 && (
-                  <div className="mt-2 pt-2 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      {monthEvents.length} evento{monthEvents.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
+            return (
+              <Card
+                key={index}
+                className={cn(
+                  "relative transition-all flex flex-col",
+                  isCurrentMonth && "ring-2 ring-primary",
+                  isPast && "opacity-75"
                 )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                onMouseEnter={() => setHoveredMonth(index)}
+                onMouseLeave={() => setHoveredMonth(null)}
+              >
+                <CardContent className="p-3 flex flex-col flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className={cn(
+                      "font-semibold text-sm",
+                      isCurrentMonth && "text-primary"
+                    )}>
+                      {MONTHS_SHORT[index]}
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-6 w-6 transition-opacity",
+                        hoveredMonth === index ? "opacity-100" : "opacity-0"
+                      )}
+                      onClick={() => onAddEvent(index)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-1 flex-1 overflow-y-auto max-h-[200px]">
+                    {monthEvents.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Sem eventos
+                      </p>
+                    ) : (
+                      monthEvents.map(event => (
+                        <MarketingEventCard
+                          key={event.id}
+                          event={event}
+                          onClick={() => onEventClick(event)}
+                          compact
+                        />
+                      ))
+                    )}
+                  </div>
+
+                  {monthEvents.length > 0 && (
+                    <div className="mt-2 pt-2 border-t flex-shrink-0">
+                      <p className="text-xs text-muted-foreground">
+                        {monthEvents.length} evento{monthEvents.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto space-y-2">
+          {MONTHS.map((month, index) => {
+            const monthEvents = eventsByMonth[index];
+            const isCurrentMonth = index === currentMonth && year === currentYear;
+            const isPast = year < currentYear || (year === currentYear && index < currentMonth);
+            const isExpanded = expandedMonth === index;
+
+            return (
+              <Card
+                key={index}
+                className={cn(
+                  "transition-all",
+                  isCurrentMonth && "ring-2 ring-primary",
+                  isPast && "opacity-75"
+                )}
+              >
+                <CardContent className="p-3">
+                  <div 
+                    className="flex items-center justify-between cursor-pointer"
+                    onClick={() => setExpandedMonth(isExpanded ? null : index)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <h3 className={cn(
+                        "font-semibold",
+                        isCurrentMonth && "text-primary"
+                      )}>
+                        {month}
+                      </h3>
+                      <span className="text-sm text-muted-foreground">
+                        {monthEvents.length} evento{monthEvents.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddEvent(index);
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <ChevronRight className={cn(
+                        "h-4 w-4 transition-transform",
+                        isExpanded && "rotate-90"
+                      )} />
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-3 pt-3 border-t space-y-2">
+                      {monthEvents.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhum evento neste mês
+                        </p>
+                      ) : (
+                        monthEvents.map(event => (
+                          <div
+                            key={event.id}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                            onClick={() => onEventClick(event)}
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: event.color || eventTypeConfig[event.event_type]?.defaultColor || '#888' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{event.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(event.start_date), "dd 'de' MMM", { locale: ptBR })}
+                                {event.end_date && event.end_date !== event.start_date && (
+                                  <> - {format(new Date(event.end_date), "dd 'de' MMM", { locale: ptBR })}</>
+                                )}
+                              </p>
+                            </div>
+                            <span 
+                              className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ 
+                                backgroundColor: `${event.color || eventTypeConfig[event.event_type]?.defaultColor}20`,
+                                color: event.color || eventTypeConfig[event.event_type]?.defaultColor 
+                              }}
+                            >
+                              {eventTypeConfig[event.event_type]?.label || event.event_type}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
