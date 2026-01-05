@@ -302,6 +302,11 @@ export default function MarketingEventsTab() {
       return;
     }
 
+    if (!scheduledAt) {
+      toast.error("Data é obrigatória");
+      return;
+    }
+
     if (!accountId) {
       toast.error("Conta não encontrada");
       return;
