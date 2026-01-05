@@ -137,7 +137,7 @@ serve(async (req) => {
         .from("deals")
         .insert({
           account_id: contract.account_id,
-          title: `Renovação - ${clientName}`,
+          title: `[RENOVAÇÃO] ${clientName}`,
           client_id: contract.client_id,
           stage_id: stages[0].id,
           value: contract.value || 0,
