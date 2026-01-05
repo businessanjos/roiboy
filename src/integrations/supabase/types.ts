@@ -5348,6 +5348,7 @@ export type Database = {
           id: string
           name: string
           position: number | null
+          sector_id: string | null
           updated_at: string
         }
         Insert: {
@@ -5357,6 +5358,7 @@ export type Database = {
           id?: string
           name: string
           position?: number | null
+          sector_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -5366,6 +5368,7 @@ export type Database = {
           id?: string
           name?: string
           position?: number | null
+          sector_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -5402,6 +5405,7 @@ export type Database = {
           media_url: string | null
           name: string
           position: number | null
+          sector_id: string | null
           text_content: string | null
           updated_at: string
           usage_count: number | null
@@ -5422,6 +5426,7 @@ export type Database = {
           media_url?: string | null
           name: string
           position?: number | null
+          sector_id?: string | null
           text_content?: string | null
           updated_at?: string
           usage_count?: number | null
@@ -5442,6 +5447,7 @@ export type Database = {
           media_url?: string | null
           name?: string
           position?: number | null
+          sector_id?: string | null
           text_content?: string | null
           updated_at?: string
           usage_count?: number | null

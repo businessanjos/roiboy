@@ -61,6 +61,9 @@ interface ZappConversationPanelProps {
   filterAgentId: string;
   setFilterAgentId: (id: string) => void;
   
+  // Sector for playbook
+  sectorId?: string | null;
+  
   // Data
   filteredAssignments: ConversationAssignment[];
   agents: Agent[];
@@ -158,6 +161,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   totalQueueConversations,
   queueUnreadCount,
   onlineAgents,
+  sectorId,
   selectedConversation,
   currentAgentId,
   whatsappConnected,
@@ -624,7 +628,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           />
         )}
         {activeView === "playbook" && (
-          <ZappPlaybookList />
+          <ZappPlaybookList sectorId={sectorId} />
         )}
       </ScrollArea>
     </div>

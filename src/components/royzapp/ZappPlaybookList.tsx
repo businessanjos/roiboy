@@ -53,7 +53,11 @@ const contentTypeColors: Record<PlaybookContentType, string> = {
   list: "text-cyan-400",
 };
 
-export const ZappPlaybookList = memo(function ZappPlaybookList() {
+interface ZappPlaybookListProps {
+  sectorId?: string | null;
+}
+
+export const ZappPlaybookList = memo(function ZappPlaybookList({ sectorId }: ZappPlaybookListProps) {
   const {
     folders,
     items,
@@ -63,7 +67,7 @@ export const ZappPlaybookList = memo(function ZappPlaybookList() {
     deleteItem,
     toggleFavorite,
     isCreatingFolder,
-  } = usePlaybook();
+  } = usePlaybook({ sectorId });
 
   const [search, setSearch] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -310,6 +314,7 @@ export const ZappPlaybookList = memo(function ZappPlaybookList() {
         onOpenChange={setFormOpen}
         editingItem={editingItem}
         folders={folders}
+        sectorId={sectorId}
         onClose={() => {
           setFormOpen(false);
           setEditingItem(null);

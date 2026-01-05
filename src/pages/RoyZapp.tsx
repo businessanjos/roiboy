@@ -2177,6 +2177,7 @@ export default function RoyZapp() {
           totalQueueConversations={totalQueueConversations}
           queueUnreadCount={queueUnreadCount}
           onlineAgents={onlineAgents}
+          sectorId={selectedSectorId}
           selectedConversation={selectedConversation}
           currentAgentId={currentAgent?.id || null}
           whatsappConnected={whatsappConnected}
@@ -2496,6 +2497,7 @@ export default function RoyZapp() {
       <PlaybookDialog
         open={playbookDialogOpen}
         onOpenChange={setPlaybookDialogOpen}
+        sectorId={selectedSectorId}
         onUseItem={(item, processedText) => {
           // Insert text content into message input
           if (item.content_type === 'text' && processedText) {

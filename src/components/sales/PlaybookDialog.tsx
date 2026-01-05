@@ -62,6 +62,7 @@ interface PlaybookDialogProps {
   onOpenChange: (open: boolean) => void;
   onUseItem?: (item: PlaybookItem, processedText?: string) => void;
   variables?: Record<string, string>;
+  sectorId?: string | null;
 }
 
 const contentTypeIcons: Record<PlaybookContentType, React.ReactNode> = {
@@ -99,6 +100,7 @@ export function PlaybookDialog({
   onOpenChange,
   onUseItem,
   variables = {},
+  sectorId,
 }: PlaybookDialogProps) {
   const {
     folders,
@@ -112,7 +114,7 @@ export function PlaybookDialog({
     trackUsage,
     replaceVariables,
     isCreatingFolder,
-  } = usePlaybook();
+  } = usePlaybook({ sectorId });
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<PlaybookContentType | 'all' | 'folder'>('all');
@@ -568,6 +570,7 @@ export function PlaybookDialog({
         onOpenChange={setFormOpen}
         editingItem={editingItem}
         folders={folders}
+        sectorId={sectorId}
         onClose={() => {
           setFormOpen(false);
           setEditingItem(null);

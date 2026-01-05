@@ -44,6 +44,7 @@ interface PlaybookItemFormProps {
   editingItem: PlaybookItem | null;
   folders: PlaybookFolder[];
   onClose: () => void;
+  sectorId?: string | null;
 }
 
 const contentTypeOptions: { value: PlaybookContentType; label: string; icon: React.ReactNode }[] = [
@@ -67,8 +68,9 @@ export function PlaybookItemForm({
   editingItem,
   folders,
   onClose,
+  sectorId,
 }: PlaybookItemFormProps) {
-  const { createItemAsync, updateItem, uploadMedia, isCreatingItem, uploadProgress } = usePlaybook();
+  const { createItemAsync, updateItem, uploadMedia, isCreatingItem, uploadProgress } = usePlaybook({ sectorId });
 
   const [name, setName] = useState('');
   const [contentType, setContentType] = useState<PlaybookContentType>('text');
