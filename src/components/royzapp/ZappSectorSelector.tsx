@@ -51,6 +51,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           .in("sector_id", WHATSAPP_SECTOR_IDS);
 
         if (error) throw error;
+        
+        console.log("[ZappSectorSelector] Integrations loaded:", integrations);
 
         // Buscar contagem de mensagens não lidas por departamento (setor)
         const { data: departments } = await supabase
