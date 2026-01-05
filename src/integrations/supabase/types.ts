@@ -7761,6 +7761,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_my_account_id: { Args: never; Returns: string }
       get_participant_by_rsvp_token: {
         Args: { p_token: string }
         Returns: {
