@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Settings2,
   CreditCard,
+  FileCheck,
 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -52,6 +53,7 @@ const managementNavItems: NavItem[] = [
 
 const operationsNavItems: NavItem[] = [
   { title: "Conciliação", href: "/financial/reconciliation", icon: Landmark },
+  { title: "Vendas", href: "/financial/sales-reconciliation", icon: FileCheck },
   { title: "Comissões", href: "/financial/commissions", icon: Percent },
   { title: "Alertas", href: "/financial/alerts", icon: Bell },
 ];

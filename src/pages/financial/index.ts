@@ -16,3 +16,4 @@ export { default as FinancialDRFPage } from "./FinancialDRFPage";
 export { default as FinancialBoletosPage } from "./FinancialBoletosPage";
 export { default as FinancialNotasFiscaisPage } from "./FinancialNotasFiscaisPage";
 export { default as FinancialBalanceSheetPage } from "./FinancialBalanceSheetPage";
+export { default as FinancialSalesReconciliationPage } from "./FinancialSalesReconciliationPage";
