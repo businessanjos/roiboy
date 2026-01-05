@@ -12,6 +12,7 @@ import {
   Building,
   Presentation,
   Plane,
+  Award,
 } from 'lucide-react';
 
 // Unified event types for both operation and marketing
@@ -33,6 +34,7 @@ export type EventType =
   | "fair"
   | "movimento"
   | "viagem"
+  | "autoridade"
   | "other";
 
 export interface EventTypeConfig {
@@ -135,6 +137,12 @@ export const eventTypeConfig: Record<EventType, EventTypeConfig> = {
     defaultColor: '#06b6d4', // cyan-500
     category: 'marketing'
   },
+  autoridade: { 
+    label: 'Autoridade', 
+    icon: 'award', 
+    defaultColor: '#eab308', // yellow-500
+    category: 'marketing'
+  },
   other: { 
     label: 'Outro', 
     icon: 'calendar', 
@@ -158,6 +166,7 @@ export const eventIconMap: Record<string, React.ElementType> = {
   building: Building,
   presentation: Presentation,
   plane: Plane,
+  award: Award,
 };
 
 // Get types for specific category

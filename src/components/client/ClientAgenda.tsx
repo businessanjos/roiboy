@@ -60,7 +60,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao" | "launch" | "campaign" | "content" | "partnership" | "fair" | "movimento" | "viagem" | "other";
+type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao" | "launch" | "campaign" | "content" | "partnership" | "fair" | "movimento" | "viagem" | "autoridade" | "other";
 
 interface Event {
   id: string;
@@ -649,6 +649,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       fair: { label: "Feira", icon: <Calendar className="h-3 w-3 mr-1" /> },
       movimento: { label: "Movimento", icon: <Calendar className="h-3 w-3 mr-1" /> },
       viagem: { label: "Viagem", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      autoridade: { label: "Autoridade", icon: <Calendar className="h-3 w-3 mr-1" /> },
       other: { label: "Outro", icon: <Calendar className="h-3 w-3 mr-1" /> },
     };
     return typeMap[eventType] || typeMap.live;
