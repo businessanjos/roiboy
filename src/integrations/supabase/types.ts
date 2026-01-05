@@ -255,6 +255,53 @@ export type Database = {
           },
         ]
       }
+      activity_types: {
+        Row: {
+          account_id: string
+          color: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_types_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agent_functions: {
         Row: {
           account_id: string
@@ -4433,6 +4480,7 @@ export type Database = {
       internal_tasks: {
         Row: {
           account_id: string
+          activity_type_id: string | null
           assigned_to: string | null
           checklist_item_id: string | null
           client_id: string | null
@@ -4452,6 +4500,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          activity_type_id?: string | null
           assigned_to?: string | null
           checklist_item_id?: string | null
           client_id?: string | null
@@ -4471,6 +4520,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          activity_type_id?: string | null
           assigned_to?: string | null
           checklist_item_id?: string | null
           client_id?: string | null
@@ -4489,6 +4539,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "internal_tasks_activity_type_id_fkey"
+            columns: ["activity_type_id"]
+            isOneToOne: false
+            referencedRelation: "activity_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "internal_tasks_assigned_to_fkey"
             columns: ["assigned_to"]

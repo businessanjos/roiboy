@@ -7,3 +7,4 @@ export { DealStagesManager } from "./DealStagesManager";
 export { PlaybookDialog } from "./PlaybookDialog";
 export { PlaybookItemForm } from "./PlaybookItemForm";
 export { PlaybookButton } from "./PlaybookButton";
+export { ActivityTypesManager } from "./ActivityTypesManager";
