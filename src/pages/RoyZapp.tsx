@@ -2224,12 +2224,9 @@ export default function RoyZapp() {
             localStorage.setItem("zapp_signature", value);
           }}
           getAgentName={getAgentName}
-          aiAgents={aiAgents}
-          selectedAIAgent={selectedAIAgent}
-          onSelectAIAgent={(agent) => {
-            setSelectedConversation(null); // Clear regular conversation when selecting AI agent
-            setSelectedAIAgent(agent);
-          }}
+          aiAgents={[]} // Hidden for now - TODO: configure AI agents properly
+          selectedAIAgent={null}
+          onSelectAIAgent={() => {}} // Disabled for now
         />
       </div>
 
