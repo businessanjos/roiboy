@@ -253,11 +253,11 @@ serve(async (req) => {
     // Generate unique suffix using timestamp to avoid collisions
     const uniqueSuffix = `-${Date.now().toString(36).slice(-4)}`;
     
-    // Se não temos token, buscar de qualquer instância conectada via /instance/all
-    // Isso corrige o caso onde o nome salvo não bate com a instância real
+    // Se não temos token, buscar APENAS da instância salva para este setor
+    // NÃO pegar instância de outro setor
     let actualInstanceName = savedInstanceName;
-    if (!savedInstanceToken) {
-      console.log(`Token missing. Fetching connected instances from /instance/all...`);
+    if (!savedInstanceToken && savedInstanceName) {
+      console.log(`Token missing for instance ${savedInstanceName}. Fetching from /instance/all...`);
       try {
         const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
           name?: string; 
@@ -268,25 +268,15 @@ serve(async (req) => {
         
         console.log(`Found ${allInstances.length} instances`);
         
-        // Primeiro, tentar achar pelo nome salvo
-        let instance = allInstances.find(i => i.name === savedInstanceName);
-        
-        // Se não achou pelo nome, pegar a primeira instância conectada
-        if (!instance?.token) {
-          const connectedInstance = allInstances.find(i => i.status === "connected" && i.token);
-          if (connectedInstance) {
-            instance = connectedInstance;
-            actualInstanceName = connectedInstance.name || savedInstanceName;
-            console.log(`Using connected instance: ${actualInstanceName} instead of saved: ${savedInstanceName}`);
-          }
-        }
+        // APENAS buscar pelo nome salvo - NÃO fazer fallback para outras instâncias
+        const instance = allInstances.find(i => i.name === savedInstanceName);
         
         if (instance?.token) {
           savedInstanceToken = instance.token;
           console.log(`Token found: ${savedInstanceToken.slice(0, 8)}... for instance ${actualInstanceName}`);
           
-          // Salvar o token e nome correto
-          await supabase
+          // Salvar o token
+          const updateQuery = supabase
             .from("integrations")
             .update({
               config: {
@@ -298,10 +288,16 @@ serve(async (req) => {
             })
             .eq("account_id", accountId)
             .eq("type", "whatsapp");
-            
-          console.log(`Token and instance name saved to database`);
+          
+          // Incluir sector_id na query se existir
+          if (sector_id) {
+            updateQuery.eq("sector_id", sector_id);
+          }
+          
+          await updateQuery;
+          console.log(`Token saved to database`);
         } else {
-          console.log(`No connected instance with token found`);
+          console.log(`Instance ${savedInstanceName} not found or has no token`);
         }
       } catch (err) {
         console.log("Failed to fetch from /instance/all:", (err as Error).message);
