@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
 
 interface SubscriptionStatus {
   isLoading: boolean;
@@ -12,6 +13,7 @@ interface SubscriptionStatus {
 }
 
 export function useSubscriptionStatus(): SubscriptionStatus {
+  const { user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<SubscriptionStatus>({
     isLoading: true,
     hasAccess: true,
@@ -23,14 +25,24 @@ export function useSubscriptionStatus(): SubscriptionStatus {
   });
 
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+    
+    // If no user, don't make queries - let AppLayout handle redirect
+    if (!user) {
+      setStatus(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+
     async function checkSubscription() {
       try {
-        const { data: user } = await supabase
+        const { data: userData } = await supabase
           .from("users")
           .select("account_id")
+          .eq("auth_user_id", user!.id)
           .maybeSingle();
 
-        if (!user?.account_id) {
+        if (!userData?.account_id) {
           setStatus(prev => ({ ...prev, isLoading: false, hasAccess: false }));
           return;
         }
@@ -38,7 +50,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
         const { data: account } = await supabase
           .from("accounts")
           .select("subscription_status, trial_ends_at, plan_id, payment_method_configured")
-          .eq("id", user.account_id)
+          .eq("id", userData.account_id)
           .maybeSingle();
 
         if (!account) {
@@ -84,7 +96,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
     }
 
     checkSubscription();
-  }, []);
+  }, [user, authLoading]);
 
   return status;
 }
