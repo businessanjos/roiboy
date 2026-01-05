@@ -8223,6 +8223,7 @@ export type Database = {
         | "other"
         | "movimento"
         | "viagem"
+        | "autoridade"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
       integration_type:
@@ -8524,6 +8525,7 @@ export const Constants = {
         "other",
         "movimento",
         "viagem",
+        "autoridade",
       ],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
