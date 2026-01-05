@@ -29,7 +29,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { message_id, message_ids } = await req.json();
+    const { message_id, message_ids, account_id: requestedAccountId } = await req.json();
     
     // Support both single message and batch processing
     const idsToProcess = message_ids || (message_id ? [message_id] : []);
@@ -41,15 +41,23 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Processing ${idsToProcess.length} media messages`);
+    console.log(`Processing ${idsToProcess.length} media messages for account ${requestedAccountId || 'any'}`);
 
-    // Fetch messages that need processing
-    const { data: messages, error: fetchError } = await supabase
+    // SECURITY: Build query with optional account_id filter
+    let messagesQuery = supabase
       .from("zapp_messages")
-      .select("id, media_type, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id")
+      .select("id, account_id, media_type, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id")
       .in("id", idsToProcess)
       .eq("media_download_status", "pending")
       .not("media_encrypted_url", "is", null);
+    
+    // SECURITY: If account_id provided, filter to prevent cross-account access
+    if (requestedAccountId) {
+      messagesQuery = messagesQuery.eq("account_id", requestedAccountId);
+    }
+    
+    // Fetch messages that need processing
+    const { data: messages, error: fetchError } = await messagesQuery;
 
     if (fetchError) {
       console.error("Error fetching messages:", fetchError);

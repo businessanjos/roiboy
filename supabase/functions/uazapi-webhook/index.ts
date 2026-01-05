@@ -1066,24 +1066,35 @@ serve(async (req) => {
           let zappConversationId: string | null = null;
           let existingZappConvo;
           
+          // SECURITY: Filter by sector_id for complete multi-tenant isolation
           if (isGroupMsg && groupJid) {
-            // For groups, search by group_jid
-            const { data } = await supabase
+            // For groups, search by group_jid + sector
+            let groupQuery = supabase
               .from("zapp_conversations")
               .select("id, unread_count")
               .eq("account_id", accountId)
-              .eq("group_jid", groupJid)
-              .maybeSingle();
+              .eq("group_jid", groupJid);
+            
+            if (sectorId) {
+              groupQuery = groupQuery.eq("sector_id", sectorId);
+            }
+            
+            const { data } = await groupQuery.maybeSingle();
             existingZappConvo = data;
           } else {
-            // For direct messages, search by phone_e164
-            const { data } = await supabase
+            // For direct messages, search by phone_e164 + sector
+            let directQuery = supabase
               .from("zapp_conversations")
               .select("id, unread_count")
               .eq("account_id", accountId)
               .eq("phone_e164", phone)
-              .eq("is_group", false)
-              .maybeSingle();
+              .eq("is_group", false);
+            
+            if (sectorId) {
+              directQuery = directQuery.eq("sector_id", sectorId);
+            }
+            
+            const { data } = await directQuery.maybeSingle();
             existingZappConvo = data;
           }
 
@@ -1113,6 +1124,7 @@ serve(async (req) => {
               clientId = existingClientForZapp?.id || null;
             }
             
+            // SECURITY: Include sector_id for multi-tenant isolation
             const { data: newZappConvo } = await supabase
               .from("zapp_conversations")
               .insert({
@@ -1124,6 +1136,7 @@ serve(async (req) => {
                 external_thread_id: msg.key.remoteJid,
                 is_group: isGroupMsg,
                 group_jid: groupJid,
+                sector_id: sectorId || null, // CRITICAL: Associate with sector for isolation
                 last_message_at: timestamp,
                 last_message_preview: isGroupMsg 
                   ? `${contactName}: ${content.substring(0, 80)}`

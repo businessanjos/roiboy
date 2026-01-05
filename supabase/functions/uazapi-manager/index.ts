@@ -2687,22 +2687,35 @@ serve(async (req) => {
           
           // Check if conversation already exists
           let existingConvoId: string | null = null;
+          // SECURITY: Filter by sector_id for complete isolation
           if (isGroup && groupJid) {
-            const { data } = await supabase
+            let groupQuery = supabase
               .from("zapp_conversations")
               .select("id")
               .eq("account_id", accountId)
-              .eq("group_jid", groupJid)
-              .maybeSingle();
+              .eq("group_jid", groupJid);
+            
+            // Add sector_id filter for multi-sector isolation
+            if (sector_id) {
+              groupQuery = groupQuery.eq("sector_id", sector_id);
+            }
+            
+            const { data } = await groupQuery.maybeSingle();
             existingConvoId = data?.id || null;
           } else {
-            const { data } = await supabase
+            let directQuery = supabase
               .from("zapp_conversations")
               .select("id")
               .eq("account_id", accountId)
               .eq("phone_e164", chatPhone)
-              .eq("is_group", false)
-              .maybeSingle();
+              .eq("is_group", false);
+            
+            // Add sector_id filter for multi-sector isolation
+            if (sector_id) {
+              directQuery = directQuery.eq("sector_id", sector_id);
+            }
+            
+            const { data } = await directQuery.maybeSingle();
             existingConvoId = data?.id || null;
           }
           
@@ -2745,7 +2758,7 @@ serve(async (req) => {
             clientId = existingClient?.id || null;
           }
           
-          // Create conversation
+          // Create conversation with sector_id for multi-tenant isolation
           const { data: newConvo, error: convoError } = await supabase
             .from("zapp_conversations")
             .insert({
@@ -2757,6 +2770,7 @@ serve(async (req) => {
               external_thread_id: chat.id || null,
               is_group: isGroup,
               group_jid: groupJid,
+              sector_id: sector_id || null, // CRITICAL: Associate with sector for isolation
               last_message_at: chat.wa_lastMsgTimestamp 
                 ? new Date(chat.wa_lastMsgTimestamp * 1000).toISOString() 
                 : new Date().toISOString(),
