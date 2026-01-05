@@ -131,13 +131,15 @@ export const sectors: Sector[] = [
   {
     id: "marketing",
     name: "Marketing",
-    description: "Campanhas e resultados de marketing",
+    description: "Calendário anual e campanhas de marketing",
     icon: Megaphone,
     color: "text-purple-600",
     bgColor: "bg-purple-500/10",
     defaultRoute: "/marketing",
-    navItems: [],
-    comingSoon: true,
+    navItems: [
+      { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
   },
   {
     id: "configuracoes",
