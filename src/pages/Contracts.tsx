@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -256,6 +257,9 @@ export default function Contracts() {
   const [importPreviewRows, setImportPreviewRows] = useState<ImportRowWithDuplicate[]>([]);
   const [importUserProfile, setImportUserProfile] = useState<{ account_id: string } | null>(null);
   const [importTeamUsers, setImportTeamUsers] = useState<{ id: string; name: string }[] | null>(null);
+  
+  // Track if contract is from deal win (for notifications)
+  const fromDealRef = useRef(false);
 
   // Fetch client data when selected
   const fetchClientData = async (clientId: string) => {
@@ -336,6 +340,7 @@ export default function Contracts() {
     const newContract = searchParams.get('newContract');
     const clientId = searchParams.get('clientId');
     const dealValue = searchParams.get('value');
+    const dealId = searchParams.get('dealId');
     
     if (newContract === 'true' && clientId && clients.length > 0) {
       const client = clients.find(c => c.id === clientId);
@@ -345,6 +350,8 @@ export default function Contracts() {
         if (dealValue) {
           setFormData(prev => ({ ...prev, value: dealValue }));
         }
+        // Mark as coming from deal for notifications
+        fromDealRef.current = !!dealId;
         setDialogOpen(true);
         
         // Clean up URL params
@@ -1011,6 +1018,7 @@ export default function Contracts() {
 
   const openNewContractDialog = () => {
     resetForm();
+    fromDealRef.current = false; // Reset deal flag for manual creation
     setDialogOpen(true);
   };
 
@@ -1214,11 +1222,34 @@ export default function Contracts() {
           : null,
       };
 
-      const { error } = await supabase
+      const { data: newContract, error } = await supabase
         .from("client_contracts")
-        .insert(contractData as any);
+        .insert(contractData as any)
+        .select("id")
+        .single();
 
       if (error) throw error;
+      
+      // Send notifications if contract is from a deal win
+      if (fromDealRef.current && newContract) {
+        const { data: currentUser } = await supabase
+          .from("users")
+          .select("id")
+          .eq("auth_user_id", userData.user.id)
+          .single();
+        
+        if (currentUser) {
+          notifyContractCreated({
+            contractId: newContract.id,
+            clientName: isCreatingNewClient ? clientFormData.full_name : (selectedClient?.full_name || ""),
+            contractValue: parseFloat(formData.value) || 0,
+            fromDeal: true,
+            createdByUserId: currentUser.id,
+            accountId: userProfile.account_id,
+          });
+        }
+        fromDealRef.current = false;
+      }
       
       toast.success(isCreatingNewClient ? "Cliente e contrato criados com sucesso" : "Contrato criado com sucesso");
       setDialogOpen(false);
