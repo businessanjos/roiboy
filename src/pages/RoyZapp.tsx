@@ -15,6 +15,7 @@ import {
   ConversationAssignment,
   ZappAIAgentChat,
 } from "@/components/royzapp";
+import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
 import type { AIAgent } from "@/components/royzapp/ZappAIAgentItem";
 import {
   ZappDepartmentDialog,
@@ -30,6 +31,7 @@ import {
   ZappNewConversationDialog,
 } from "@/components/royzapp/dialogs";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { SectorId, sectors } from "@/config/sectors";
 import {
   MessageSquare,
   ArrowLeft,
@@ -52,10 +54,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
-  const { hasVendasAccess } = useSectorAccess();
+  const { hasVendasAccess, hasSectorAccess } = useSectorAccess();
   const navigate = useNavigate();
   
-  // Use centralized data hook
+  // Sector selection state
+  const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(null);
+  
+  // Use centralized data hook with sector filtering
   const {
     departments,
     tags,
@@ -73,10 +78,24 @@ export default function RoyZapp() {
     whatsappConnecting,
     whatsappInstanceName,
     toggleWhatsAppConnection,
+    checkWhatsAppStatus,
     fetchData,
     fetchMessages,
     setMessages,
-  } = useZappData();
+  } = useZappData({ sectorId: selectedSectorId || undefined });
+
+  // Check WhatsApp status when sector changes
+  useEffect(() => {
+    if (selectedSectorId) {
+      checkWhatsAppStatus();
+    }
+  }, [selectedSectorId, checkWhatsAppStatus]);
+
+  // Get current sector info
+  const currentSector = useMemo(() => {
+    if (!selectedSectorId) return null;
+    return sectors.find(s => s.id === selectedSectorId);
+  }, [selectedSectorId]);
 
   // UI state
   const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings">("inbox");
@@ -1956,6 +1975,11 @@ export default function RoyZapp() {
         </div>
       </div>
     );
+  }
+
+  // If no sector selected, show selector
+  if (!selectedSectorId) {
+    return <ZappSectorSelector onSelectSector={setSelectedSectorId} />;
   }
 
   // Tag functions

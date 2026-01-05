@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Agent, ZappTag, Department, ConversationAssignment } from "@/components/royzapp";
-import { sectors } from "@/config/sectors";
+import { sectors, SectorId } from "@/config/sectors";
 
 interface TeamUser {
   id: string;
@@ -39,7 +39,12 @@ const HEARTBEAT_INTERVAL_MS = 60000;
 const REALTIME_DEBOUNCE_MS = 2000;
 const MIN_FETCH_INTERVAL_MS = 3000;
 
-export function useZappData() {
+interface UseZappDataOptions {
+  sectorId?: SectorId;
+}
+
+export function useZappData(options: UseZappDataOptions = {}) {
+  const { sectorId } = options;
   const { currentUser } = useCurrentUser();
   
   // Core data state
@@ -166,10 +171,10 @@ export function useZappData() {
   }, [fetchAssignmentsOnly]);
 
   // Check WhatsApp status
-  const checkWhatsAppStatus = async () => {
+  const checkWhatsAppStatus = useCallback(async () => {
     try {
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "status" },
+        body: { action: "status", sector_id: sectorId },
       });
 
       if (response.data) {
@@ -187,7 +192,7 @@ export function useZappData() {
     } catch (error) {
       console.log("WhatsApp status check failed:", error);
     }
-  };
+  }, [sectorId]);
 
   // Toggle WhatsApp connection
   const toggleWhatsAppConnection = async () => {
@@ -195,7 +200,7 @@ export function useZappData() {
     try {
       if (whatsappConnected) {
         const response = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "disconnect" },
+          body: { action: "disconnect", sector_id: sectorId },
         });
 
         if (response.error) throw new Error(response.error.message);
@@ -207,7 +212,7 @@ export function useZappData() {
         toast.success("WhatsApp desconectado do zAPP");
       } else {
         const statusResponse = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "status" },
+          body: { action: "status", sector_id: sectorId },
         });
 
         const state = statusResponse.data?.state || statusResponse.data?.data?.state;
@@ -580,6 +585,25 @@ export function useZappData() {
     };
   }, [currentUser?.account_id, debouncedFetchAssignments, fetchAssignmentsOnly]);
 
+  // Filter assignments by sector if sectorId is provided
+  const filteredAssignments = useMemo(() => {
+    if (!sectorId) return assignments;
+    
+    // Find the department that belongs to this sector
+    const sectorDepartment = departments.find(d => d.sector_id === sectorId);
+    
+    if (!sectorDepartment) {
+      // If no department for this sector, return empty
+      return [];
+    }
+    
+    // Filter assignments that belong to this department or have no department
+    return assignments.filter(a => 
+      a.department_id === sectorDepartment.id || 
+      (!a.department_id && a.department?.sector_id === sectorId)
+    );
+  }, [assignments, departments, sectorId]);
+
   return {
     // Data
     departments,
@@ -588,18 +612,20 @@ export function useZappData() {
     teamUsers,
     teamRoles,
     allClients,
-    assignments,
+    assignments: filteredAssignments,
     messages,
     loading,
     availableProducts,
     clientProducts,
     currentAgent,
+    sectorId,
     
     // WhatsApp
     whatsappConnected,
     whatsappConnecting,
     whatsappInstanceName,
     toggleWhatsAppConnection,
+    checkWhatsAppStatus,
     
     // Actions
     fetchData,
