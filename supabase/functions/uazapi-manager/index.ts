@@ -621,11 +621,12 @@ serve(async (req) => {
           
           console.log(`Status check: Found ${allInstances.length} instances from /instance/all`);
           
-          // Find our instance by name
+          // Find our instance by saved name FIRST
           let targetInstance = allInstances.find(i => i.name === instanceName);
           
-          // If not found by saved name, try to find instance for this account by prefix
-          if (!targetInstance) {
+          // If not found by saved name AND there's no saved instance name, try to find by account prefix
+          // But ONLY if we don't have a specific instance_name already configured
+          if (!targetInstance && !savedInstanceName) {
             // Account prefix pattern - ONLY match this account's instances
             const accountPrefix = `roy-${accountId.slice(0, 8)}`;
             targetInstance = allInstances.find(i => i.name?.startsWith(accountPrefix));
