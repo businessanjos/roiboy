@@ -72,6 +72,7 @@ import {
   XCircle,
   DollarSign,
   ChevronRight,
+  Upload,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -80,6 +81,7 @@ import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { toast } from "sonner";
 import { LeadCustomFieldsManager, LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
 import { CustomField } from "@/components/custom-fields";
+import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -122,6 +124,10 @@ export default function Leads() {
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
   
+  // Import state
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importRows, setImportRows] = useState<ImportLeadRow[]>([]);
+  const [importing, setImporting] = useState(false);
   // Deal detail state
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
@@ -396,6 +402,143 @@ export default function Leads() {
     await updateLead(leadId, { status });
   };
 
+  // Import CSV handling
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split("\n").filter(l => l.trim());
+    if (lines.length < 2) {
+      toast.error("Arquivo CSV vazio ou inválido");
+      return;
+    }
+
+    const headerLine = lines[0].toLowerCase();
+    const headers = headerLine.split(/[;,]/).map(h => h.trim().replace(/"/g, ""));
+    
+    // Map common column names
+    const colMap: Record<string, number> = {};
+    headers.forEach((h, i) => {
+      const normalized = h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (normalized.includes("nome")) colMap.full_name = i;
+      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) colMap.phone = i;
+      if (normalized.includes("email") || normalized.includes("e-mail")) colMap.email = i;
+      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte")) colMap.source = i;
+      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note")) colMap.notes = i;
+      if (normalized.includes("cpf")) colMap.cpf = i;
+      if (normalized.includes("empresa") || normalized.includes("company")) colMap.company_name = i;
+      if (normalized.includes("instagram") || normalized.includes("insta")) colMap.instagram = i;
+      if (normalized.includes("cidade") || normalized.includes("city")) colMap.city = i;
+      if (normalized.includes("estado") || normalized.includes("uf") || normalized.includes("state")) colMap.state = i;
+    });
+
+    if (colMap.full_name === undefined) {
+      toast.error("Coluna 'Nome' não encontrada no CSV");
+      return;
+    }
+
+    // Fetch existing leads for duplicate check
+    const { data: existingLeads } = await supabase
+      .from("leads")
+      .select("id, phone, email, cpf, full_name");
+
+    const existingPhones = new Set((existingLeads || []).map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
+    const existingEmails = new Set((existingLeads || []).map(l => l.email?.toLowerCase()).filter(Boolean));
+    const existingCpfs = new Set((existingLeads || []).map(l => l.cpf?.replace(/\D/g, "")).filter(Boolean));
+
+    const rows: ImportLeadRow[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      
+      const values = line.split(/[;,]/).map(v => v.trim().replace(/^"|"$/g, ""));
+      
+      const row: ImportLeadRow = {
+        lineNumber: i,
+        full_name: values[colMap.full_name] || "",
+        phone: colMap.phone !== undefined ? values[colMap.phone] : undefined,
+        email: colMap.email !== undefined ? values[colMap.email] : undefined,
+        source: colMap.source !== undefined ? values[colMap.source]?.toLowerCase() : undefined,
+        notes: colMap.notes !== undefined ? values[colMap.notes] : undefined,
+        cpf: colMap.cpf !== undefined ? values[colMap.cpf] : undefined,
+        company_name: colMap.company_name !== undefined ? values[colMap.company_name] : undefined,
+        instagram: colMap.instagram !== undefined ? values[colMap.instagram] : undefined,
+        city: colMap.city !== undefined ? values[colMap.city] : undefined,
+        state: colMap.state !== undefined ? values[colMap.state] : undefined,
+      };
+
+      // Validate
+      if (!row.full_name.trim()) {
+        row.hasError = true;
+        row.errorMessage = "Nome obrigatório";
+      }
+
+      // Check duplicates
+      const normalizedPhone = row.phone?.replace(/\D/g, "");
+      const normalizedEmail = row.email?.toLowerCase();
+      const normalizedCpf = row.cpf?.replace(/\D/g, "");
+
+      if (normalizedPhone && existingPhones.has(normalizedPhone)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "phone", existingName: "Telefone já cadastrado" };
+      } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "email", existingName: "Email já cadastrado" };
+      } else if (normalizedCpf && existingCpfs.has(normalizedCpf)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "cpf", existingName: "CPF já cadastrado" };
+      }
+
+      rows.push(row);
+    }
+
+    setImportRows(rows);
+    setImportPreviewOpen(true);
+    
+    // Reset file input
+    event.target.value = "";
+  };
+
+  const handleConfirmImport = async (selectedRows: ImportLeadRow[], skipDuplicates: boolean) => {
+    setImporting(true);
+    try {
+      const rowsToImport = skipDuplicates 
+        ? selectedRows.filter(r => !r.isDuplicate)
+        : selectedRows;
+      
+      if (rowsToImport.length === 0) {
+        toast.error("Nenhum lead para importar");
+        return;
+      }
+
+      let successCount = 0;
+      for (const row of rowsToImport) {
+        try {
+          await createLead({
+            full_name: row.full_name,
+            phone: row.phone,
+            email: row.email,
+            source: row.source,
+            notes: row.notes,
+          });
+          successCount++;
+        } catch (err) {
+          console.error("Error importing lead:", err);
+        }
+      }
+
+      toast.success(`${successCount} leads importados com sucesso!`);
+      setImportPreviewOpen(false);
+      setImportRows([]);
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Erro ao importar leads");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const filteredLeads = leads.filter(
     (lead) =>
       lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -453,6 +596,20 @@ export default function Leads() {
               <Settings2 className="h-4 w-4 mr-2" />
               Campos
             </Button>
+            <label>
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button variant="outline" size="sm" asChild>
+                <span className="cursor-pointer">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar
+                </span>
+              </Button>
+            </label>
             <Button onClick={openNewDialog} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Novo Lead
@@ -1106,6 +1263,15 @@ export default function Leads() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Import Preview */}
+      <LeadImportPreview
+        open={importPreviewOpen}
+        onOpenChange={setImportPreviewOpen}
+        rows={importRows}
+        onConfirmImport={handleConfirmImport}
+        importing={importing}
+      />
     </>
   );
 }
