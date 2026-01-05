@@ -591,8 +591,8 @@ export default function MarketingEventsTab() {
                         <Badge 
                           variant="outline"
                           style={{ 
-                            borderColor: event.color || typeInfo.defaultColor,
-                            color: event.color || typeInfo.defaultColor 
+                            borderColor: typeInfo.defaultColor,
+                            color: typeInfo.defaultColor 
                           }}
                         >
                           <IconComponent className="h-3 w-3 mr-1" />
