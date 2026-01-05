@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, CalendarDays, Bell } from 'lucide-react';
+import { Plus, Calendar, CalendarDays, Bell, Users } from 'lucide-react';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MarketingCalendar, MarketingEventDialog, MarketingEventSheet } from '@/components/marketing';
 import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
 import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab';
+import AttendanceReport from '@/components/events/AttendanceReport';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function Marketing() {
   const [year, setYear] = useState(new Date().getFullYear());
@@ -16,6 +18,7 @@ export default function Marketing() {
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
 
+  const { currentUser } = useCurrentUser();
   const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(year, 'marketing');
 
   const handleAddEvent = (month?: number) => {
@@ -98,6 +101,10 @@ export default function Marketing() {
             <CalendarDays className="h-4 w-4" />
             Eventos
           </TabsTrigger>
+          <TabsTrigger value="attendance" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Presenças
+          </TabsTrigger>
           <TabsTrigger value="reminders" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
             Lembretes
@@ -122,6 +129,10 @@ export default function Marketing() {
 
         <TabsContent value="events">
           <MarketingEventsTab />
+        </TabsContent>
+
+        <TabsContent value="attendance">
+          <AttendanceReport accountId={currentUser?.account_id ?? null} />
         </TabsContent>
 
         <TabsContent value="reminders">
