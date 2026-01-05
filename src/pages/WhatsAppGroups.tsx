@@ -130,8 +130,8 @@ export default function WhatsAppGroups() {
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   
-  // Send message state
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  // Send message state - now supports multiple groups
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   
@@ -283,10 +283,7 @@ export default function WhatsAppGroups() {
       return data;
     },
     onSuccess: () => {
-      toast.success("Mensagem enviada com sucesso!");
-      setSelectedGroupId(null);
-      setMessage("");
-      clearMedia();
+      // Success handled per-group in handleSendMessage
     },
     onError: (error: Error) => {
       toast.error("Erro ao enviar mensagem: " + error.message);
@@ -316,10 +313,7 @@ export default function WhatsAppGroups() {
       return data;
     },
     onSuccess: () => {
-      toast.success("Mídia enviada com sucesso!");
-      setSelectedGroupId(null);
-      setMessage("");
-      clearMedia();
+      // Success handled per-group in handleSendMessage
     },
     onError: (error: Error) => {
       toast.error("Erro ao enviar mídia: " + error.message);
@@ -584,12 +578,21 @@ export default function WhatsAppGroups() {
   };
 
   const handleSendMessage = async () => {
-    if (!selectedGroupId) {
-      toast.error("Selecione um grupo");
+    if (selectedGroupIds.length === 0) {
+      toast.error("Selecione pelo menos um grupo");
       return;
     }
 
-    // If has media, send media
+    if (!message.trim() && !mediaFile) {
+      toast.error("Digite uma mensagem ou selecione uma mídia");
+      return;
+    }
+
+    setIsSending(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    // If has media, upload once and send to all groups
     if (mediaFile) {
       setIsUploadingMedia(true);
       try {
@@ -599,28 +602,81 @@ export default function WhatsAppGroups() {
         const mediaType = isImage ? "image" : isAudio ? "audio" : "document";
         const originalFileName = mediaFile.name;
         
-        sendMediaToGroupMutation.mutate({ 
-          groupId: selectedGroupId, 
-          mediaUrl, 
-          mediaType, 
-          caption: message.trim() || undefined,
-          fileName: originalFileName,
-        });
+        for (const groupId of selectedGroupIds) {
+          try {
+            await supabase.functions.invoke("uazapi-manager", {
+              body: { 
+                action: "send_media_to_group",
+                group_id: groupId,
+                media_url: mediaUrl,
+                media_type: mediaType,
+                caption: message.trim() || undefined,
+                file_name: originalFileName,
+              },
+            });
+            successCount++;
+            // Small delay between sends to avoid rate limiting
+            if (selectedGroupIds.length > 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } catch (err) {
+            console.error(`Error sending to group ${groupId}:`, err);
+            errorCount++;
+          }
+        }
       } catch (error) {
         toast.error("Erro ao fazer upload da mídia");
         console.error(error);
-      } finally {
         setIsUploadingMedia(false);
+        setIsSending(false);
+        return;
       }
-      return;
+      setIsUploadingMedia(false);
+    } else {
+      // Send text to all selected groups
+      for (const groupId of selectedGroupIds) {
+        try {
+          await supabase.functions.invoke("uazapi-manager", {
+            body: { 
+              action: "send_to_group",
+              group_id: groupId,
+              message,
+            },
+          });
+          successCount++;
+          // Small delay between sends to avoid rate limiting
+          if (selectedGroupIds.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (err) {
+          console.error(`Error sending to group ${groupId}:`, err);
+          errorCount++;
+        }
+      }
     }
 
-    // Otherwise, send text
-    if (!message.trim()) {
-      toast.error("Digite uma mensagem ou selecione uma mídia");
-      return;
+    setIsSending(false);
+
+    if (successCount > 0) {
+      if (errorCount > 0) {
+        toast.warning(`Mensagem enviada para ${successCount} grupo(s), ${errorCount} falha(s)`);
+      } else {
+        toast.success(`Mensagem enviada para ${successCount} grupo(s)!`);
+      }
+      setSelectedGroupIds([]);
+      setMessage("");
+      clearMedia();
+    } else {
+      toast.error("Falha ao enviar para todos os grupos");
     }
-    sendToGroupMutation.mutate({ groupId: selectedGroupId, message });
+  };
+
+  const toggleSendGroupSelection = (groupJid: string) => {
+    setSelectedGroupIds(prev => 
+      prev.includes(groupJid)
+        ? prev.filter(id => id !== groupJid)
+        : [...prev, groupJid]
+    );
   };
 
   const handleAddParticipants = () => {
@@ -1151,7 +1207,7 @@ export default function WhatsAppGroups() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                setSelectedGroupId(group.group_jid || group.id);
+                                setSelectedGroupIds([group.group_jid || group.id]);
                                 setActiveTab("send");
                               }}
                               title="Enviar mensagem"
@@ -1251,20 +1307,22 @@ export default function WhatsAppGroups() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <Label>Selecione o Grupo</Label>
+                <Label>Selecione os Grupos ({selectedGroupIds.length} selecionados)</Label>
                 <div className="grid gap-2 mt-2 max-h-48 overflow-y-auto">
                   {groups.map((group) => {
                     const groupJid = group.group_jid || group.id;
+                    const isSelected = selectedGroupIds.includes(groupJid);
                     return (
                       <div
                         key={group.id}
                         className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedGroupId === groupJid 
+                          isSelected 
                             ? "border-primary bg-primary/5" 
                             : "hover:bg-muted/50"
                         }`}
-                        onClick={() => setSelectedGroupId(groupJid)}
+                        onClick={() => toggleSendGroupSelection(groupJid)}
                       >
+                        <Checkbox checked={isSelected} />
                         <Users className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{group.name || group.subject || "Sem nome"}</span>
                         <Badge variant="secondary" className="ml-auto">
@@ -1452,18 +1510,21 @@ export default function WhatsAppGroups() {
 
               <Button
                 onClick={handleSendMessage}
-                disabled={isSendingAny || !selectedGroupId || (!message.trim() && !mediaFile)}
+                disabled={isSending || selectedGroupIds.length === 0 || (!message.trim() && !mediaFile)}
                 className="w-full"
               >
-                {isSendingAny ? (
+                {isSending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {isUploadingMedia ? "Enviando mídia..." : "Enviando..."}
+                    {isUploadingMedia ? "Enviando mídia..." : `Enviando para ${selectedGroupIds.length} grupo(s)...`}
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    {mediaFile ? "Enviar Mídia" : "Enviar Mensagem"}
+                    {selectedGroupIds.length > 1 
+                      ? `Enviar para ${selectedGroupIds.length} Grupos`
+                      : mediaFile ? "Enviar Mídia" : "Enviar Mensagem"
+                    }
                   </>
                 )}
               </Button>
