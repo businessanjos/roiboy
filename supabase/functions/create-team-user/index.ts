@@ -55,18 +55,23 @@ serve(async (req: Request) => {
     // Get requesting user's account and check if admin
     const { data: requestingProfile, error: profileError } = await supabaseAdmin
       .from("users")
-      .select("account_id, role")
+      .select("account_id, role, is_also_admin")
       .eq("auth_user_id", requestingUser.id)
       .single();
 
     if (profileError || !requestingProfile) {
+      console.error("Profile not found for user:", requestingUser.id, profileError);
       return new Response(
         JSON.stringify({ error: "Perfil não encontrado" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (requestingProfile.role !== "admin") {
+    // Check if user has admin privileges (either role=admin OR is_also_admin=true)
+    const hasAdminPrivileges = requestingProfile.role === "admin" || requestingProfile.is_also_admin === true;
+    
+    if (!hasAdminPrivileges) {
+      console.log("User lacks admin privileges:", requestingProfile);
       return new Response(
         JSON.stringify({ error: "Apenas administradores podem criar usuários" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
