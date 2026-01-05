@@ -113,6 +113,10 @@ const PERMISSION_LABELS: Record<string, { label: string; category: string }> = {
   "royzapp.access": { label: "Acessar ROY zAPP", category: "ROY zAPP" },
 };
 
+const PERMISSION_HELP: Record<string, string> = {
+  "royzapp.access": "Os setores que o usuário pode acessar são definidos na aba Setores",
+};
+
 const PERMISSION_CATEGORIES = ["Clientes", "Equipe", "Relatórios", "Eventos", "Formulários", "Produtos", "Configurações", "ROY zAPP"];
 
 const DEFAULT_ROLE_COLORS = [
@@ -1399,20 +1403,27 @@ export function TeamManager() {
                         <div className="p-3 grid grid-cols-2 gap-x-4 gap-y-2">
                           {categoryPerms.map(([perm, { label }]) => {
                             const isChecked = roleFormPermissions.includes(perm);
+                            const helpText = PERMISSION_HELP[perm];
                             return (
-                              <label 
-                                key={perm}
-                                className="flex items-center gap-2 cursor-pointer"
-                              >
-                                <Checkbox
-                                  checked={isChecked}
-                                  onCheckedChange={() => togglePermission(perm)}
-                                  className="h-4 w-4"
-                                />
-                                <span className={`text-sm ${isChecked ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                  {label}
-                                </span>
-                              </label>
+                              <div key={perm} className="flex flex-col gap-0.5">
+                                <label 
+                                  className="flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Checkbox
+                                    checked={isChecked}
+                                    onCheckedChange={() => togglePermission(perm)}
+                                    className="h-4 w-4"
+                                  />
+                                  <span className={`text-sm ${isChecked ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                    {label}
+                                  </span>
+                                </label>
+                                {helpText && isChecked && (
+                                  <p className="text-xs text-muted-foreground ml-6">
+                                    {helpText}
+                                  </p>
+                                )}
+                              </div>
                             );
                           })}
                         </div>

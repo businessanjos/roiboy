@@ -118,6 +118,8 @@ export function UserSectorAccessManager() {
     if (!currentUser?.account_id || pendingChanges.size === 0) return;
 
     setSaving(true);
+    let hasErrors = false;
+    
     try {
       for (const [key, changes] of pendingChanges.entries()) {
         const [userId, sectorId] = key.split("-");
@@ -126,33 +128,53 @@ export function UserSectorAccessManager() {
         if (existing) {
           if (changes.is_active === false) {
             // Delete access
-            await supabase
+            const { error } = await supabase
               .from("user_sector_access")
               .delete()
               .eq("id", existing.id);
+            
+            if (error) {
+              console.error("Error deleting access:", error);
+              hasErrors = true;
+            }
           } else {
             // Update existing
-            await supabase
+            const { error } = await supabase
               .from("user_sector_access")
               .update({
                 role_in_sector: changes.role_in_sector || existing.role_in_sector,
                 is_active: changes.is_active ?? existing.is_active,
               })
               .eq("id", existing.id);
+            
+            if (error) {
+              console.error("Error updating access:", error);
+              hasErrors = true;
+            }
           }
         } else if (changes.is_active !== false) {
           // Insert new
-          await supabase.from("user_sector_access").insert({
+          const { error } = await supabase.from("user_sector_access").insert({
             account_id: currentUser.account_id,
             user_id: userId,
             sector_id: sectorId,
             role_in_sector: changes.role_in_sector || "member",
             is_active: true,
           });
+          
+          if (error) {
+            console.error("Error inserting access:", error);
+            hasErrors = true;
+          }
         }
       }
 
-      toast.success("Permissões salvas com sucesso!");
+      if (hasErrors) {
+        toast.error("Alguns itens falharam. Verifique o console.");
+      } else {
+        toast.success("Permissões salvas com sucesso!");
+      }
+      
       setPendingChanges(new Map());
       fetchData();
     } catch (error: any) {
@@ -202,7 +224,9 @@ export function UserSectorAccessManager() {
               Acesso aos Setores
             </CardTitle>
             <CardDescription>
-              Defina quais setores cada usuário pode acessar e sua função em cada um
+              Defina quais setores cada usuário pode acessar no ROY zAPP e sua função em cada um.
+              <br />
+              <span className="text-primary">O usuário também precisa ter a permissão "Acessar ROY zAPP" na função dele.</span>
             </CardDescription>
           </div>
           <div className="flex gap-2">
