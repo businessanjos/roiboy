@@ -3431,6 +3431,9 @@ export type Database = {
           ends_at: string | null
           event_type: Database["public"]["Enums"]["event_type"]
           expected_attendees: number | null
+          goal_confirmed: number | null
+          goal_invited: number | null
+          goal_present: number | null
           goals: string | null
           id: string
           is_recurring: boolean
@@ -3462,6 +3465,9 @@ export type Database = {
           ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           expected_attendees?: number | null
+          goal_confirmed?: number | null
+          goal_invited?: number | null
+          goal_present?: number | null
           goals?: string | null
           id?: string
           is_recurring?: boolean
@@ -3493,6 +3499,9 @@ export type Database = {
           ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           expected_attendees?: number | null
+          goal_confirmed?: number | null
+          goal_invited?: number | null
+          goal_present?: number | null
           goals?: string | null
           id?: string
           is_recurring?: boolean
