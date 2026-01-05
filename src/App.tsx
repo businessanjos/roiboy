@@ -72,6 +72,7 @@ const FinancialSuppliersPage = lazy(() => import("./pages/financial/FinancialSup
 const FinancialRecurringPage = lazy(() => import("./pages/financial/FinancialRecurringPage"));
 const FinancialBudgetPage = lazy(() => import("./pages/financial/FinancialBudgetPage"));
 const FinancialReconciliationPage = lazy(() => import("./pages/financial/FinancialReconciliationPage"));
+const FinancialSalesReconciliationPage = lazy(() => import("./pages/financial/FinancialSalesReconciliationPage"));
 const FinancialCommissionsPage = lazy(() => import("./pages/financial/FinancialCommissionsPage"));
 const FinancialAlertsPage = lazy(() => import("./pages/financial/FinancialAlertsPage"));
 const FinancialAgingPage = lazy(() => import("./pages/financial/FinancialAgingPage"));
@@ -149,6 +150,7 @@ const App = () => (
                               <Route path="recurring" element={<FinancialRecurringPage />} />
                               <Route path="budget" element={<FinancialBudgetPage />} />
                               <Route path="reconciliation" element={<FinancialReconciliationPage />} />
+                              <Route path="sales-reconciliation" element={<FinancialSalesReconciliationPage />} />
                               <Route path="commissions" element={<FinancialCommissionsPage />} />
                               <Route path="alerts" element={<FinancialAlertsPage />} />
                               <Route path="aging" element={<FinancialAgingPage />} />
