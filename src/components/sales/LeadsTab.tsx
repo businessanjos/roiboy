@@ -1,0 +1,1079 @@
+import { useState, useCallback } from "react";
+import { useLeads, Lead } from "@/hooks/useLeads";
+import { useDeals, Deal } from "@/hooks/useDeals";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Phone,
+  Mail,
+  Users,
+  UserCheck,
+  MessageSquare,
+  Clock,
+  TrendingUp,
+  DollarSign,
+  ChevronRight,
+  Upload,
+} from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { LeadTimeline } from "@/components/leads/LeadTimeline";
+import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
+import { toast } from "sonner";
+import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
+
+const LEAD_SOURCES = [
+  { value: "website", label: "Website" },
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "google", label: "Google" },
+  { value: "indicacao", label: "Indicação" },
+  { value: "evento", label: "Evento" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "outro", label: "Outro" },
+];
+
+const LEAD_STATUS = [
+  { value: "new", label: "Novo", color: "bg-blue-500" },
+  { value: "contacted", label: "Contatado", color: "bg-amber-500" },
+  { value: "qualified", label: "Qualificado", color: "bg-emerald-500" },
+  { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
+];
+
+export default function LeadsTab() {
+  const {
+    leads,
+    loading,
+    newLeads,
+    contactedLeads,
+    qualifiedLeads,
+    createLead,
+    updateLead,
+    deleteLead,
+    markAsConvertedToDeal,
+  } = useLeads();
+  const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [detailLead, setDetailLead] = useState<Lead | null>(null);
+  const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
+  
+  // Import state
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importRows, setImportRows] = useState<ImportLeadRow[]>([]);
+  const [importing, setImporting] = useState(false);
+  
+  // Deal detail state
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
+  
+  // Flow state for new lead creation and deal conversion
+  const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form'>('phone');
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
+  const [creatingDeal, setCreatingDeal] = useState(false);
+  const [leadForDeal, setLeadForDeal] = useState<Lead | null>(null);
+
+  // Get deals for the current lead
+  const getLeadDeals = useCallback((leadId: string) => {
+    return deals.filter(d => d.lead_id === leadId);
+  }, [deals]);
+  
+  // Deal form state
+  const [dealFormData, setDealFormData] = useState({
+    title: "",
+    value: "",
+    stage_id: "",
+    notes: "",
+  });
+
+  // Form state
+  const [formData, setFormData] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    source: "",
+    notes: "",
+  });
+
+  const resetForm = () => {
+    setFormData({
+      full_name: "",
+      phone: "",
+      email: "",
+      source: "",
+      notes: "",
+    });
+    setDealFormData({
+      title: "",
+      value: "",
+      stage_id: "",
+      notes: "",
+    });
+    setSelectedLead(null);
+    setExistingClient(null);
+    setLeadForDeal(null);
+    setDialogStep('phone');
+  };
+
+  const openNewDialog = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setFormData({
+      full_name: lead.full_name,
+      phone: lead.phone || "",
+      email: lead.email || "",
+      source: lead.source || "",
+      notes: lead.notes || "",
+    });
+    setDialogStep('lead-form');
+    setIsDialogOpen(true);
+  };
+
+  const handlePhoneCheck = async () => {
+    if (!formData.phone || formData.phone.replace(/\D/g, '').length < 8) {
+      toast.error("Informe um telefone válido");
+      return;
+    }
+    
+    setCheckingPhone(true);
+    try {
+      const normalizedPhone = formData.phone.replace(/\D/g, '');
+      
+      const { data } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164")
+        .or(`phone_e164.ilike.%${normalizedPhone}%`)
+        .limit(1);
+      
+      if (data && data.length > 0) {
+        setExistingClient(data[0]);
+        const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+        setDealFormData({
+          title: `Novo negócio - ${data[0].full_name}`,
+          value: "",
+          stage_id: firstStage?.id || "",
+          notes: "",
+        });
+        setDialogStep('deal-form');
+      } else {
+        setExistingClient(null);
+        setDialogStep('lead-form');
+      }
+    } catch (error) {
+      console.error("Error checking phone:", error);
+      toast.error("Erro ao verificar telefone");
+    } finally {
+      setCheckingPhone(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.full_name.trim()) return;
+
+    if (selectedLead) {
+      await updateLead(selectedLead.id, formData);
+      setIsDialogOpen(false);
+      resetForm();
+      return;
+    }
+
+    await createLead(formData);
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
+  const handleCreateDeal = async () => {
+    setCreatingDeal(true);
+    try {
+      if (existingClient) {
+        const deal = await createDeal({
+          title: dealFormData.title || `Novo negócio - ${existingClient.full_name}`,
+          client_id: existingClient.id,
+          stage_id: dealFormData.stage_id || undefined,
+          value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
+          notes: dealFormData.notes || undefined,
+        });
+
+        if (deal) {
+          toast.success("Negócio criado com sucesso!");
+          setIsDialogOpen(false);
+          resetForm();
+        }
+      } else if (leadForDeal) {
+        const deal = await createDeal({
+          title: dealFormData.title || `Novo negócio - ${leadForDeal.full_name}`,
+          lead_id: leadForDeal.id,
+          contact_name: leadForDeal.full_name,
+          contact_phone: leadForDeal.phone || undefined,
+          contact_email: leadForDeal.email || undefined,
+          stage_id: dealFormData.stage_id || undefined,
+          value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
+          notes: dealFormData.notes || leadForDeal.notes || undefined,
+          source: leadForDeal.source || undefined,
+        });
+
+        if (deal) {
+          await markAsConvertedToDeal(leadForDeal.id, deal.id);
+          toast.success("Lead convertido em negócio!");
+          setIsDialogOpen(false);
+          resetForm();
+        }
+      }
+    } catch (error) {
+      console.error("Error creating deal:", error);
+      toast.error("Erro ao criar negócio");
+    } finally {
+      setCreatingDeal(false);
+    }
+  };
+
+  const handleCreateLeadAnyway = () => {
+    setExistingClient(null);
+    setDialogStep('lead-form');
+  };
+
+  const handleDelete = async () => {
+    if (deleteLeadId) {
+      await deleteLead(deleteLeadId);
+      setDeleteLeadId(null);
+    }
+  };
+
+  const openDealDialogForLead = (lead: Lead) => {
+    setLeadForDeal(lead);
+    const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+    setDealFormData({
+      title: `Novo negócio - ${lead.full_name}`,
+      value: "",
+      stage_id: firstStage?.id || "",
+      notes: "",
+    });
+    setDialogStep('deal-form');
+    setIsDialogOpen(true);
+  };
+
+  const handleStatusChange = async (leadId: string, status: string) => {
+    await updateLead(leadId, { status });
+  };
+
+  // Import CSV handling
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split("\n").filter(l => l.trim());
+    if (lines.length < 2) {
+      toast.error("Arquivo CSV vazio ou inválido");
+      return;
+    }
+
+    const headerLine = lines[0].toLowerCase();
+    const headers = headerLine.split(/[;,]/).map(h => h.trim().replace(/"/g, ""));
+    
+    const colMap: Record<string, number> = {};
+    headers.forEach((h, i) => {
+      const normalized = h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (normalized.includes("nome")) colMap.full_name = i;
+      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) colMap.phone = i;
+      if (normalized.includes("email") || normalized.includes("e-mail")) colMap.email = i;
+      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte")) colMap.source = i;
+      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note")) colMap.notes = i;
+    });
+
+    if (colMap.full_name === undefined) {
+      toast.error("Coluna 'Nome' não encontrada no CSV");
+      return;
+    }
+
+    const { data: existingLeads } = await supabase
+      .from("leads")
+      .select("id, phone, email, full_name");
+
+    const existingPhones = new Set((existingLeads || []).map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
+    const existingEmails = new Set((existingLeads || []).map(l => l.email?.toLowerCase()).filter(Boolean));
+
+    const rows: ImportLeadRow[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      
+      const values = line.split(/[;,]/).map(v => v.trim().replace(/^"|"$/g, ""));
+      
+      const row: ImportLeadRow = {
+        lineNumber: i,
+        full_name: values[colMap.full_name] || "",
+        phone: colMap.phone !== undefined ? values[colMap.phone] : undefined,
+        email: colMap.email !== undefined ? values[colMap.email] : undefined,
+        source: colMap.source !== undefined ? values[colMap.source]?.toLowerCase() : undefined,
+        notes: colMap.notes !== undefined ? values[colMap.notes] : undefined,
+      };
+
+      if (!row.full_name.trim()) {
+        row.hasError = true;
+        row.errorMessage = "Nome obrigatório";
+      }
+
+      const normalizedPhone = row.phone?.replace(/\D/g, "");
+      const normalizedEmail = row.email?.toLowerCase();
+
+      if (normalizedPhone && existingPhones.has(normalizedPhone)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "phone", existingName: "Telefone já cadastrado" };
+      } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "email", existingName: "Email já cadastrado" };
+      }
+
+      rows.push(row);
+    }
+
+    setImportRows(rows);
+    setImportPreviewOpen(true);
+    event.target.value = "";
+  };
+
+  const handleConfirmImport = async (selectedRows: ImportLeadRow[], skipDuplicates: boolean) => {
+    setImporting(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const row of selectedRows) {
+      if (skipDuplicates && row.isDuplicate) continue;
+      if (row.hasError) continue;
+
+      try {
+        await createLead({
+          full_name: row.full_name,
+          phone: row.phone,
+          email: row.email,
+          source: row.source,
+          notes: row.notes,
+        });
+        successCount++;
+      } catch (error) {
+        errorCount++;
+        console.error("Error importing lead:", error);
+      }
+    }
+
+    setImporting(false);
+    setImportPreviewOpen(false);
+    setImportRows([]);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} leads importados com sucesso!`);
+    }
+    if (errorCount > 0) {
+      toast.error(`${errorCount} leads falharam ao importar`);
+    }
+  };
+
+  const filteredLeads = leads.filter((lead) => {
+    const search = searchQuery.toLowerCase();
+    return (
+      lead.full_name.toLowerCase().includes(search) ||
+      lead.phone?.toLowerCase().includes(search) ||
+      lead.email?.toLowerCase().includes(search)
+    );
+  });
+
+  const getStatusInfo = (status: string) => {
+    return LEAD_STATUS.find((s) => s.value === status) || LEAD_STATUS[0];
+  };
+
+  const getSourceLabel = (source: string | null) => {
+    return LEAD_SOURCES.find((s) => s.value === source)?.label || source || "—";
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20" />
+          ))}
+        </div>
+        <Skeleton className="h-[400px]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Users className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{newLeads.length}</p>
+                <p className="text-xs text-muted-foreground">Novos</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <MessageSquare className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{contactedLeads.length}</p>
+                <p className="text-xs text-muted-foreground">Contatados</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500/10 rounded-lg">
+                <UserCheck className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{qualifiedLeads.length}</p>
+                <p className="text-xs text-muted-foreground">Qualificados</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Header with search and actions */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar leads..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <label htmlFor="csv-upload-tab">
+          <Button variant="outline" size="sm" asChild>
+            <span>
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
+            </span>
+          </Button>
+        </label>
+        <input
+          id="csv-upload-tab"
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+        <Button onClick={openNewDialog}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Lead
+        </Button>
+      </div>
+
+      {/* Leads List */}
+      <Card>
+        <CardContent className="p-0">
+          {filteredLeads.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Nenhum lead encontrado
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredLeads.map((lead) => {
+                const statusInfo = getStatusInfo(lead.status);
+                const leadDeals = getLeadDeals(lead.id);
+                return (
+                  <div
+                    key={lead.id}
+                    className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => setDetailLead(lead)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {lead.full_name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .slice(0, 2)
+                              .join("")
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{lead.full_name}</p>
+                            {leadDeals.length > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                <DollarSign className="h-3 w-3 mr-1" />
+                                {leadDeals.length}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            {lead.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {lead.phone}
+                              </span>
+                            )}
+                            {lead.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {lead.email}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right text-sm text-muted-foreground">
+                          <p>{getSourceLabel(lead.source)}</p>
+                          <p className="text-xs">
+                            {formatDistanceToNow(new Date(lead.created_at), {
+                              addSuffix: true,
+                              locale: ptBR,
+                            })}
+                          </p>
+                        </div>
+                        <Badge className={`${statusInfo.color} text-white`}>
+                          {statusInfo.label}
+                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(lead);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDealDialogForLead(lead);
+                              }}
+                            >
+                              <TrendingUp className="h-4 w-4 mr-2" />
+                              Criar Negócio
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteLeadId(lead.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Lead Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedLead
+                ? "Editar Lead"
+                : dialogStep === 'phone'
+                ? "Novo Lead"
+                : dialogStep === 'deal-form'
+                ? "Criar Negócio"
+                : "Novo Lead"}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogStep === 'phone' && "Digite o telefone para verificar se já é cliente"}
+              {dialogStep === 'lead-form' && "Preencha os dados do lead"}
+              {dialogStep === 'deal-form' && existingClient && `Cliente encontrado: ${existingClient.full_name}`}
+              {dialogStep === 'deal-form' && leadForDeal && `Converter lead: ${leadForDeal.full_name}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {dialogStep === 'phone' && !selectedLead && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  placeholder="(11) 99999-9999"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={handlePhoneCheck}
+                  disabled={checkingPhone || !formData.phone}
+                  className="w-full"
+                >
+                  {checkingPhone ? "Verificando..." : "Continuar"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {dialogStep === 'lead-form' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome *</Label>
+                <Input
+                  placeholder="Nome completo"
+                  value={formData.full_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, full_name: e.target.value })
+                  }
+                />
+              </div>
+              {!selectedLead && (
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input
+                    placeholder="(11) 99999-9999"
+                    value={formData.phone}
+                    disabled
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Origem</Label>
+                <Select
+                  value={formData.source}
+                  onValueChange={(v) => setFormData({ ...formData, source: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_SOURCES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea
+                  placeholder="Notas sobre o lead..."
+                  value={formData.notes}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSave} disabled={!formData.full_name}>
+                  {selectedLead ? "Salvar" : "Criar Lead"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {dialogStep === 'deal-form' && (
+            <div className="space-y-4">
+              {existingClient && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm">
+                    <span className="font-medium">Cliente:</span>{" "}
+                    {existingClient.full_name}
+                  </p>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-xs"
+                    onClick={handleCreateLeadAnyway}
+                  >
+                    Criar lead de qualquer forma
+                  </Button>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Título do Negócio</Label>
+                <Input
+                  placeholder="Ex: Consultoria - João"
+                  value={dealFormData.title}
+                  onChange={(e) =>
+                    setDealFormData({ ...dealFormData, title: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor</Label>
+                <Input
+                  type="number"
+                  placeholder="0,00"
+                  value={dealFormData.value}
+                  onChange={(e) =>
+                    setDealFormData({ ...dealFormData, value: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Etapa</Label>
+                <Select
+                  value={dealFormData.stage_id}
+                  onValueChange={(v) =>
+                    setDealFormData({ ...dealFormData, stage_id: v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages
+                      .sort((a, b) => a.display_order - b.display_order)
+                      .map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea
+                  placeholder="Notas sobre o negócio..."
+                  value={dealFormData.notes}
+                  onChange={(e) =>
+                    setDealFormData({ ...dealFormData, notes: e.target.value })
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateDeal} disabled={creatingDeal}>
+                  {creatingDeal ? "Criando..." : "Criar Negócio"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lead Detail Sheet */}
+      <Sheet open={!!detailLead} onOpenChange={(open) => !open && setDetailLead(null)}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          {detailLead && (
+            <>
+              <SheetHeader>
+                <div className="flex items-center justify-between">
+                  <SheetTitle>{detailLead.full_name}</SheetTitle>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={detailLead.status}
+                      onValueChange={(v) => {
+                        handleStatusChange(detailLead.id, v);
+                        setDetailLead({ ...detailLead, status: v });
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LEAD_STATUS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-2 h-2 rounded-full ${s.color}`}
+                              />
+                              {s.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <div className="mt-6 space-y-6">
+                {/* Contact Info */}
+                <div className="space-y-3">
+                  {detailLead.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{detailLead.phone}</span>
+                    </div>
+                  )}
+                  {detailLead.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{detailLead.email}</span>
+                    </div>
+                  )}
+                  {detailLead.source && (
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <span>Origem: {getSourceLabel(detailLead.source)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Criado em{" "}
+                      {format(new Date(detailLead.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                        locale: ptBR,
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {detailLead.notes && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Observações</p>
+                    <p className="text-sm text-muted-foreground">
+                      {detailLead.notes}
+                    </p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Deals Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium">Negócios</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openDealDialogForLead(detailLead)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Novo
+                    </Button>
+                  </div>
+                  {getLeadDeals(detailLead.id).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum negócio vinculado
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getLeadDeals(detailLead.id).map((deal) => (
+                        <Card
+                          key={deal.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => {
+                            setSelectedDeal(deal);
+                            setIsDealDetailOpen(true);
+                          }}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {deal.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {deal.stage?.name}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {deal.value > 0 && (
+                                  <Badge variant="outline">
+                                    {new Intl.NumberFormat("pt-BR", {
+                                      style: "currency",
+                                      currency: "BRL",
+                                    }).format(deal.value)}
+                                  </Badge>
+                                )}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Timeline */}
+                <div>
+                  <p className="text-sm font-medium mb-3">Histórico</p>
+                  <LeadTimeline leadId={detailLead.id} />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setDetailLead(null);
+                      openEditDialog(detailLead);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-destructive"
+                    onClick={() => {
+                      setDetailLead(null);
+                      setDeleteLeadId(detailLead.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Deal Detail Sheet */}
+      <DealDetailSheet
+        open={isDealDetailOpen}
+        onOpenChange={setIsDealDetailOpen}
+        deal={selectedDeal}
+        stages={stages}
+        onEdit={() => {}}
+        onStageChange={async (dealId, stageId) => { return await moveDeal(dealId, stageId); }}
+        onMarkAsWon={async (dealId) => { await markAsWon(dealId); }}
+        onMarkAsLost={async (dealId, reason) => { await markAsLost(dealId, reason); }}
+        onReopen={async (dealId) => { await reopenDeal(dealId); }}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog
+        open={!!deleteLeadId}
+        onOpenChange={(open) => !open && setDeleteLeadId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O lead será permanentemente
+              excluído.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Import Preview */}
+      <LeadImportPreview
+        open={importPreviewOpen}
+        onOpenChange={setImportPreviewOpen}
+        rows={importRows}
+        onConfirmImport={handleConfirmImport}
+        importing={importing}
+      />
+    </div>
+  );
+}
