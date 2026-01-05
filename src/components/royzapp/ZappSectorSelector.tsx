@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 // Setores que têm WhatsApp configurável
-const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "diretoria"];
+const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing", "diretoria"];
 
 interface WhatsAppSectorStatus {
   sectorId: SectorId;
