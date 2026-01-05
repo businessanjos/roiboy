@@ -17,7 +17,8 @@ interface UazapiRequest {
     | "update_group_name" | "update_group_description" | "update_group_image"
     | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status"
     | "import-conversations"
-    | "delete_message";
+    | "delete_message"
+    | "list_instances" | "link_instance";
   limit?: number;
   instance_name?: string;
   phone?: string;
@@ -35,6 +36,7 @@ interface UazapiRequest {
   caption?: string;
   file_name?: string;
   groups?: Array<{ group_jid: string; name: string; participant_count: number }>;
+  sector_id?: string;
 }
 
 // Helper function to configure webhook automatically
@@ -221,15 +223,20 @@ serve(async (req) => {
 
     const accountId = userData.account_id;
     const payload: UazapiRequest = await req.json();
-    const { action, phone, message, group_id, group_name, participants, groups } = payload;
+    const { action, phone, message, group_id, group_name, participants, groups, sector_id } = payload;
 
-    // Get existing integration to use saved instance name
-    const { data: existingWhatsapp, error: existingError } = await supabase
+    // Build query for existing integration - use sector_id if provided
+    let integrationQuery = supabase
       .from("integrations")
-      .select("config, status")
+      .select("config, status, sector_id, id")
       .eq("account_id", accountId)
-      .eq("type", "whatsapp")
-      .maybeSingle();
+      .eq("type", "whatsapp");
+    
+    if (sector_id) {
+      integrationQuery = integrationQuery.eq("sector_id", sector_id);
+    }
+    
+    const { data: existingWhatsapp, error: existingError } = await integrationQuery.maybeSingle();
 
     console.log(`Existing WhatsApp integration:`, existingWhatsapp ? JSON.stringify(existingWhatsapp) : 'none', existingError?.message || '');
 
@@ -865,6 +872,127 @@ serve(async (req) => {
           locally_disconnected: true 
         };
           
+        break;
+      }
+
+      case "list_instances": {
+        // List all UAZAPI instances available for linking
+        console.log("Listing all UAZAPI instances...");
+        
+        try {
+          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+            name?: string; 
+            token?: string; 
+            status?: string;
+            owner?: string;
+            profileName?: string;
+            profilePicUrl?: string;
+          }>;
+          
+          console.log(`Found ${allInstances.length} instances`);
+          
+          result = {
+            instances: allInstances.map(i => ({
+              name: i.name || "",
+              status: i.status || "unknown",
+              owner: i.owner || "",
+              profileName: i.profileName || "",
+              profilePicUrl: i.profilePicUrl || "",
+              hasToken: !!i.token,
+            }))
+          };
+        } catch (err) {
+          console.error("Failed to list instances:", (err as Error).message);
+          result = { instances: [], error: (err as Error).message };
+        }
+        
+        break;
+      }
+
+      case "link_instance": {
+        // Link an existing UAZAPI instance to a sector
+        const targetInstanceName = payload.instance_name;
+        
+        if (!targetInstanceName) {
+          return new Response(
+            JSON.stringify({ error: "instance_name is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        if (!sector_id) {
+          return new Response(
+            JSON.stringify({ error: "sector_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`Linking instance ${targetInstanceName} to sector ${sector_id}...`);
+        
+        try {
+          // Get the instance token from UAZAPI
+          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+            name?: string; 
+            token?: string; 
+            status?: string;
+            owner?: string;
+            profileName?: string;
+          }>;
+          
+          const targetInstance = allInstances.find(i => i.name === targetInstanceName);
+          
+          if (!targetInstance) {
+            return new Response(
+              JSON.stringify({ error: `Instance ${targetInstanceName} not found in UAZAPI` }),
+              { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          const instanceToken = targetInstance.token || "";
+          const isConnected = targetInstance.status === "connected";
+          
+          // Update the existing integration for this sector
+          const { error: updateError } = await supabase
+            .from("integrations")
+            .update({
+              status: isConnected ? "connected" : "disconnected",
+              config: {
+                provider: "uazapi",
+                instance_name: targetInstanceName,
+                instance_token: instanceToken,
+                linked_at: new Date().toISOString(),
+                owner: targetInstance.owner || "",
+                profileName: targetInstance.profileName || "",
+              },
+            })
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp")
+            .eq("sector_id", sector_id);
+          
+          if (updateError) throw updateError;
+          
+          // Configure webhook for this instance
+          if (instanceToken) {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+            await configureWebhook(instanceToken, targetInstanceName, supabaseUrl);
+          }
+          
+          result = {
+            message: `Instance ${targetInstanceName} linked to sector ${sector_id}`,
+            instance_name: targetInstanceName,
+            status: isConnected ? "connected" : "disconnected",
+            profileName: targetInstance.profileName || "",
+          };
+          
+          console.log(`Successfully linked ${targetInstanceName} to sector ${sector_id}`);
+        } catch (err) {
+          console.error("Failed to link instance:", (err as Error).message);
+          return new Response(
+            JSON.stringify({ error: (err as Error).message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
         break;
       }
 
