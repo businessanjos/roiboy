@@ -3420,22 +3420,28 @@ export type Database = {
           account_id: string
           address: string | null
           budget: number | null
+          category: Database["public"]["Enums"]["event_category"]
           checkin_code: string | null
+          color: string | null
           cover_image_url: string | null
           created_at: string
           description: string | null
           duration_minutes: number | null
+          end_time: string | null
           ends_at: string | null
           event_type: Database["public"]["Enums"]["event_type"]
           expected_attendees: number | null
+          goals: string | null
           id: string
           is_recurring: boolean
           material_url: string | null
           max_capacity: number | null
           meeting_url: string | null
           modality: Database["public"]["Enums"]["event_modality"]
+          notes: string | null
           public_registration_code: string | null
           scheduled_at: string | null
+          start_time: string | null
           status: string | null
           title: string
           updated_at: string
@@ -3444,22 +3450,28 @@ export type Database = {
           account_id: string
           address?: string | null
           budget?: number | null
+          category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
+          color?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
+          end_time?: string | null
           ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           expected_attendees?: number | null
+          goals?: string | null
           id?: string
           is_recurring?: boolean
           material_url?: string | null
           max_capacity?: number | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
+          notes?: string | null
           public_registration_code?: string | null
           scheduled_at?: string | null
+          start_time?: string | null
           status?: string | null
           title: string
           updated_at?: string
@@ -3468,22 +3480,28 @@ export type Database = {
           account_id?: string
           address?: string | null
           budget?: number | null
+          category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
+          color?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
+          end_time?: string | null
           ends_at?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           expected_attendees?: number | null
+          goals?: string | null
           id?: string
           is_recurring?: boolean
           material_url?: string | null
           max_capacity?: number | null
           meeting_url?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
+          notes?: string | null
           public_registration_code?: string | null
           scheduled_at?: string | null
+          start_time?: string | null
           status?: string | null
           title?: string
           updated_at?: string
@@ -8218,6 +8236,7 @@ export type Database = {
         | "no_contract"
       delivery_status: "pending" | "delivered" | "missed"
       discount_type: "percentage" | "fixed"
+      event_category: "operation" | "marketing"
       event_checklist_status: "pending" | "in_progress" | "done" | "cancelled"
       event_cost_category:
         | "venue"
@@ -8261,6 +8280,12 @@ export type Database = {
         | "webinar"
         | "imersao"
         | "plantao"
+        | "launch"
+        | "campaign"
+        | "content"
+        | "partnership"
+        | "fair"
+        | "other"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
       integration_type:
@@ -8507,6 +8532,7 @@ export const Constants = {
       ],
       delivery_status: ["pending", "delivered", "missed"],
       discount_type: ["percentage", "fixed"],
+      event_category: ["operation", "marketing"],
       event_checklist_status: ["pending", "in_progress", "done", "cancelled"],
       event_cost_category: [
         "venue",
@@ -8553,6 +8579,12 @@ export const Constants = {
         "webinar",
         "imersao",
         "plantao",
+        "launch",
+        "campaign",
+        "content",
+        "partnership",
+        "fair",
+        "other",
       ],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
