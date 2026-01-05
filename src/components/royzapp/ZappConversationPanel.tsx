@@ -35,14 +35,15 @@ import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
 import { ZappDepartmentList } from "./ZappDepartmentList";
 import { ZappSidebarNav } from "./ZappSidebarNav";
+import { ZappPlaybookList } from "./ZappPlaybookList";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
 import { ZappAIAgentItem, type AIAgent } from "./ZappAIAgentItem";
 
 interface ZappConversationPanelProps {
   currentUser: { name: string; avatar_url: string | null } | null;
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings") => void;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook") => void;
   inboxTab: "mine" | "queue";
   setInboxTab: (tab: "mine" | "queue") => void;
   searchQuery: string;
@@ -621,6 +622,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onImportConversations={onImportConversations}
             onSignatureChange={onSignatureChange}
           />
+        )}
+        {activeView === "playbook" && (
+          <ZappPlaybookList />
         )}
       </ScrollArea>
     </div>

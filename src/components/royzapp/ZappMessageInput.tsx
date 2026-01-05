@@ -1,6 +1,7 @@
 import { memo, useRef, useState } from "react";
 import {
   Bold,
+  BookOpen,
   Code,
   Contact,
   FileText,
@@ -78,6 +79,7 @@ interface ZappMessageInputProps {
   onCancelReply?: () => void;
   onMentionInsert?: (mention: MentionData) => void;
   onToggleSignature?: () => void;
+  onOpenPlaybook?: () => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -118,6 +120,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onCancelReply,
   onMentionInsert,
   onToggleSignature,
+  onOpenPlaybook,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -321,6 +324,23 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        
+        {/* Playbook button */}
+        {onOpenPlaybook && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                onClick={onOpenPlaybook}
+              >
+                <BookOpen className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Playbook</TooltipContent>
+          </Tooltip>
+        )}
         
         {audioPreview ? (
           // Audio preview UI

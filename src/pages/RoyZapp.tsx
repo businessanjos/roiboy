@@ -42,6 +42,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ClientZappSheet } from "@/components/client/ClientZappSheet";
+import { PlaybookDialog } from "@/components/sales/PlaybookDialog";
+import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -98,7 +100,7 @@ export default function RoyZapp() {
   }, [selectedSectorId]);
 
   // UI state
-  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings">("inbox");
+  const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings" | "playbook">("inbox");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
@@ -244,6 +246,9 @@ export default function RoyZapp() {
   // AI Agents state
   const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
   const [selectedAIAgent, setSelectedAIAgent] = useState<AIAgent | null>(null);
+
+  // Playbook dialog state for chat
+  const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
 
   // Fetch AI agents
   useEffect(() => {
@@ -2314,6 +2319,7 @@ export default function RoyZapp() {
             setSignatureEnabled(newValue);
             localStorage.setItem("zapp_signatureEnabled", String(newValue));
           }}
+          onOpenPlaybook={() => setPlaybookDialogOpen(true)}
         />
         )}
       </div>
@@ -2484,6 +2490,28 @@ export default function RoyZapp() {
         clients={filteredNewConversationClients}
         onSelectClient={createConversationWithClient}
         creating={creatingConversation}
+      />
+
+      {/* Playbook Dialog for Chat */}
+      <PlaybookDialog
+        open={playbookDialogOpen}
+        onOpenChange={setPlaybookDialogOpen}
+        onUseItem={(item, processedText) => {
+          // Insert text content into message input
+          if (item.content_type === 'text' && processedText) {
+            setMessageInput(processedText);
+            messageInputRef.current?.focus();
+          } else if (item.media_url) {
+            // For media items, copy the URL to clipboard
+            navigator.clipboard.writeText(item.media_url);
+            toast.success("Link da mídia copiado!");
+          }
+        }}
+        variables={{
+          nome_cliente: selectedConversation?.zapp_conversation?.contact_name || (selectedConversation?.conversation?.client as any)?.full_name || '',
+          nome_empresa: (selectedConversation?.conversation?.client as any)?.company_name || '',
+          nome_vendedor: currentUser?.name || '',
+        }}
       />
     </div>
   );
