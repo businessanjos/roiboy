@@ -6123,6 +6123,41 @@ export type Database = {
           },
         ]
       }
+      sector_settings: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          royzapp_enabled: boolean | null
+          sector_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          royzapp_enabled?: boolean | null
+          sector_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          royzapp_enabled?: boolean | null
+          sector_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sector_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_audit_logs: {
         Row: {
           account_id: string | null
