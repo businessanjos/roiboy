@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
@@ -11,6 +11,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -20,6 +27,7 @@ import {
   Settings2,
   LayoutGrid,
   List,
+  Tag,
 } from "lucide-react";
 
 export default function SalesPipeline() {
@@ -55,6 +63,30 @@ export default function SalesPipeline() {
   const [isStagesManagerOpen, setIsStagesManagerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
+
+  // Extract unique tags from all deals
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    deals.forEach(deal => {
+      if (deal.tags && Array.isArray(deal.tags)) {
+        deal.tags.forEach(tag => tagSet.add(tag));
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [deals]);
+
+  // Filter deals by selected tag
+  const filterDealsByTag = (dealsList: Deal[]) => {
+    if (selectedTag === 'all') return dealsList;
+    return dealsList.filter(deal => 
+      deal.tags && Array.isArray(deal.tags) && deal.tags.includes(selectedTag)
+    );
+  };
+
+  const filteredOpenDeals = filterDealsByTag(openDeals);
+  const filteredWonDeals = filterDealsByTag(wonDeals);
+  const filteredLostDeals = filterDealsByTag(lostDeals);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -219,41 +251,74 @@ export default function SalesPipeline() {
           </div>
         </div>
 
-        {/* Tabs for different deal statuses */}
+        {/* Tag Filter and Tabs */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+            <TabsList>
+              <TabsTrigger value="open" className="gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Em Aberto
+                <Badge variant="secondary">{filteredOpenDeals.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="won" className="gap-2">
+                <Trophy className="h-4 w-4" />
+                Ganhas
+                <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700">
+                  {filteredWonDeals.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="lost" className="gap-2">
+                <XCircle className="h-4 w-4" />
+                Perdidas
+                <Badge variant="secondary" className="bg-red-500/20 text-red-700">
+                  {filteredLostDeals.length}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Tag Filter */}
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedTag} onValueChange={setSelectedTag}>
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Filtrar por tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as tags</SelectItem>
+                {availableTags.map(tag => (
+                  <SelectItem key={tag} value={tag}>
+                    {tag}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedTag !== 'all' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedTag('all')}
+                className="h-9 px-2"
+              >
+                Limpar
+              </Button>
+            )}
+          </div>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="open" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Em Aberto
-              <Badge variant="secondary">{openDeals.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="won" className="gap-2">
-              <Trophy className="h-4 w-4" />
-              Ganhas
-              <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700">
-                {wonDeals.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="lost" className="gap-2">
-              <XCircle className="h-4 w-4" />
-              Perdidas
-              <Badge variant="secondary" className="bg-red-500/20 text-red-700">
-                {lostDeals.length}
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
 
           <TabsContent value="open" className="mt-4">
             {viewMode === 'kanban' ? (
               <DealKanban
                 stages={stages}
-                deals={openDeals}
+                deals={filteredOpenDeals}
                 onDealClick={handleDealClick}
                 onDealMove={handleDealMove}
               />
             ) : (
               <DealListView 
-                deals={openDeals} 
+                deals={filteredOpenDeals} 
                 stages={stages}
                 onDealClick={handleDealClick} 
               />
@@ -262,7 +327,7 @@ export default function SalesPipeline() {
 
           <TabsContent value="won" className="mt-4">
             <DealListView 
-              deals={wonDeals} 
+              deals={filteredWonDeals} 
               stages={stages}
               onDealClick={handleDealClick} 
               showStatus
@@ -271,7 +336,7 @@ export default function SalesPipeline() {
 
           <TabsContent value="lost" className="mt-4">
             <DealListView 
-              deals={lostDeals} 
+              deals={filteredLostDeals} 
               stages={stages}
               onDealClick={handleDealClick} 
               showStatus
