@@ -354,7 +354,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </div>
           )}
 
-          {hasVendasAccess && !dealId && deals.length > 0 && (
+          {hasVendasAccess && !dealId && (
             <div className="space-y-2">
               <Label>Negócio (opcional)</Label>
               <Select
@@ -376,7 +376,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </div>
           )}
 
-          {hasVendasAccess && !leadId && leads.length > 0 && (
+          {hasVendasAccess && !leadId && (
             <div className="space-y-2">
               <Label>Lead (opcional)</Label>
               <Select
