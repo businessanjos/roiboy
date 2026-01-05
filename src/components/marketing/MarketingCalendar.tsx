@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Plus, LayoutGrid, List } from 'lucide-react';
-import { MarketingEvent, eventTypeConfig } from '@/hooks/useMarketingEvents';
+import { MarketingEvent } from '@/hooks/useMarketingEvents';
+import { getEventTypeConfig } from '@/config/eventTypes';
 import { MarketingEventCard } from './MarketingEventCard';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -222,7 +223,8 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
                       ) : (
                         monthEvents.map(event => {
                           const eventDate = new Date(event.scheduled_at);
-                          const eventColor = event.color || eventTypeConfig[event.event_type]?.defaultColor || '#888';
+                          const typeConfig = getEventTypeConfig(event.event_type);
+                          const eventColor = event.color || typeConfig.defaultColor;
                           
                           return (
                             <div
@@ -267,7 +269,7 @@ export function MarketingCalendar({ year, events, onYearChange, onEventClick, on
                                   color: eventColor 
                                 }}
                               >
-                                {eventTypeConfig[event.event_type]?.label || event.event_type}
+                                {typeConfig.label}
                               </span>
                             </div>
                           );

@@ -1,18 +1,7 @@
-import { MarketingEvent, eventTypeConfig } from '@/hooks/useMarketingEvents';
-import { Rocket, Megaphone, Video, FileText, Radio, Handshake, Building, Presentation, Circle } from 'lucide-react';
+import { MarketingEvent } from '@/hooks/useMarketingEvents';
+import { eventTypeConfig, eventIconMap, getEventTypeConfig } from '@/config/eventTypes';
+import { Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const iconMap: Record<string, React.ElementType> = {
-  rocket: Rocket,
-  megaphone: Megaphone,
-  video: Video,
-  'file-text': FileText,
-  radio: Radio,
-  handshake: Handshake,
-  building: Building,
-  presentation: Presentation,
-  circle: Circle,
-};
 
 interface MarketingEventCardProps {
   event: MarketingEvent;
@@ -21,8 +10,8 @@ interface MarketingEventCardProps {
 }
 
 export function MarketingEventCard({ event, onClick, compact = false }: MarketingEventCardProps) {
-  const config = eventTypeConfig[event.event_type] || eventTypeConfig.other;
-  const Icon = iconMap[config.icon] || Circle;
+  const config = getEventTypeConfig(event.event_type);
+  const Icon = eventIconMap[config.icon] || Circle;
   const bgColor = event.color || config.defaultColor;
 
   if (compact) {

@@ -3,11 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
+import { EventType, eventTypeConfig } from '@/config/eventTypes';
 
 type EventRow = Database['public']['Tables']['events']['Row'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
 
-export type MarketingEventType = 'launch' | 'campaign' | 'webinar' | 'content' | 'live' | 'partnership' | 'fair' | 'workshop' | 'other';
+export type MarketingEventType = EventType;
 export type MarketingEventStatus = 'draft' | 'planned' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface MarketingEvent {
@@ -30,17 +31,8 @@ export interface MarketingEvent {
   updated_at: string;
 }
 
-export const eventTypeConfig: Record<MarketingEventType, { label: string; icon: string; defaultColor: string }> = {
-  launch: { label: 'Lançamento', icon: 'rocket', defaultColor: '#ef4444' },
-  campaign: { label: 'Campanha', icon: 'megaphone', defaultColor: '#f97316' },
-  webinar: { label: 'Webinar', icon: 'video', defaultColor: '#8b5cf6' },
-  content: { label: 'Conteúdo', icon: 'file-text', defaultColor: '#06b6d4' },
-  live: { label: 'Live', icon: 'radio', defaultColor: '#ec4899' },
-  partnership: { label: 'Parceria', icon: 'handshake', defaultColor: '#10b981' },
-  fair: { label: 'Feira/Congresso', icon: 'building', defaultColor: '#6366f1' },
-  workshop: { label: 'Workshop', icon: 'presentation', defaultColor: '#eab308' },
-  other: { label: 'Outro', icon: 'circle', defaultColor: '#64748b' },
-};
+// Re-export the unified config
+export { eventTypeConfig };
 
 export const statusConfig: Record<MarketingEventStatus, { label: string; color: string }> = {
   draft: { label: 'Rascunho', color: '#64748b' },
