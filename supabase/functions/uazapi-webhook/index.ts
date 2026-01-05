@@ -225,7 +225,7 @@ serve(async (req) => {
       for (const tryName of possibleNames) {
         const { data: found } = await supabase
           .from("integrations")
-          .select("account_id, config")
+          .select("account_id, config, sector_id")
           .eq("type", "whatsapp")
           .filter("config->>instance_name", "eq", tryName)
           .maybeSingle();
@@ -298,7 +298,26 @@ serve(async (req) => {
     markLatency("integration_found");
 
     const accountId = integration.account_id;
-    console.log(`Processing for account: ${accountId}`);
+    const sectorId = integration.sector_id;
+    console.log(`Processing for account: ${accountId}, sector: ${sectorId}`);
+    
+    // Find the department for this sector to properly associate conversations
+    let sectorDepartmentId: string | null = null;
+    if (sectorId) {
+      const { data: dept } = await supabase
+        .from("zapp_departments")
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("sector_id", sectorId)
+        .maybeSingle();
+      
+      if (dept) {
+        sectorDepartmentId = dept.id;
+        console.log(`Found department for sector ${sectorId}: ${sectorDepartmentId}`);
+      } else {
+        console.log(`No department found for sector ${sectorId}`);
+      }
+    }
 
     // Handle message events (EventType: "messages" or event: "messages.upsert")
     if (eventType === "messages" || eventType === "messages.upsert") {
@@ -813,12 +832,15 @@ serve(async (req) => {
             .maybeSingle();
 
           if (existingAssignment) {
+            // Update existing assignment - also set department if not set
             await supabase
               .from("zapp_conversation_assignments")
               .update({
                 updated_at: timestamp,
                 // If conversation was closed and client sends new message, reopen to triage
                 status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
+                // Set department_id if we have it and assignment doesn't have one
+                ...(sectorDepartmentId ? { department_id: sectorDepartmentId } : {}),
               })
               .eq("id", existingAssignment.id);
             markLatency("assignment_updated");
@@ -830,12 +852,13 @@ serve(async (req) => {
                 account_id: accountId,
                 zapp_conversation_id: zappConversationId,
                 status: "triage", // New conversations start in triage
+                department_id: sectorDepartmentId, // Associate with sector's department
               });
 
             if (assignmentError) {
               console.error("Error creating zapp assignment:", assignmentError);
             } else {
-              console.log("Created new zapp assignment in queue");
+              console.log(`Created new zapp assignment in queue (department: ${sectorDepartmentId})`);
             }
           }
         }
@@ -1132,6 +1155,8 @@ serve(async (req) => {
                   updated_at: timestamp,
                   // If conversation was closed and client sends new message, reopen to triage
                   status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
+                  // Set department_id if we have it
+                  ...(sectorDepartmentId ? { department_id: sectorDepartmentId } : {}),
                 })
                 .eq("id", existingAssignment.id);
             } else {
@@ -1141,6 +1166,7 @@ serve(async (req) => {
                   account_id: accountId,
                   zapp_conversation_id: zappConversationId,
                   status: "triage", // New conversations start in triage
+                  department_id: sectorDepartmentId, // Associate with sector's department
                 });
             }
           }
