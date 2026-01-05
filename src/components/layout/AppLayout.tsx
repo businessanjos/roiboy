@@ -68,8 +68,8 @@ export function AppLayout() {
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
 
-      {/* Chat com agentes de IA - visível apenas para admins */}
-      {isAdmin && <GlobalAgentChat />}
+      {/* Chat com agentes de IA - temporariamente oculto */}
+      {/* {isAdmin && <GlobalAgentChat />} */}
     </div>
   );
 }
