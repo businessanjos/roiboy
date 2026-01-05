@@ -111,28 +111,58 @@ export function PlaybookItemForm({
     }
   }, [open, editingItem]);
 
+  // Get file extension
+  const getFileExtension = (filename: string): string => {
+    return filename.split('.').pop()?.toLowerCase() || '';
+  };
+
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type based on content type
+    console.log('[Playbook Form] File selected:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      contentType,
+    });
+
+    // Validate file type based on content type - allow both MIME types and extensions
     const validTypes: Record<string, string[]> = {
-      audio: ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm'],
-      image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-      video: ['video/mp4', 'video/webm'],
+      audio: ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/aac', 'audio/x-m4a', 'audio/mp4'],
+      image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
+      video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
       document: [
         'application/pdf',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/octet-stream', // Fallback for unknown types
       ],
       sticker: ['image/webp', 'image/png'],
     };
 
-    if (!validTypes[contentType]?.includes(file.type)) {
-      toast.error(`Tipo de arquivo inválido para ${contentType}`);
+    // Also validate by extension as fallback
+    const validExtensions: Record<string, string[]> = {
+      audio: ['mp3', 'm4a', 'aac', 'ogg', 'wav', 'webm'],
+      image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+      video: ['mp4', 'webm', 'mov', 'avi'],
+      document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'],
+      sticker: ['webp', 'png'],
+    };
+
+    const fileExtension = getFileExtension(file.name);
+    const isValidByType = validTypes[contentType]?.includes(file.type);
+    const isValidByExtension = validExtensions[contentType]?.includes(fileExtension);
+
+    console.log('[Playbook Form] Validation:', { isValidByType, isValidByExtension, fileExtension });
+
+    if (!isValidByType && !isValidByExtension) {
+      toast.error(`Tipo de arquivo inválido para ${contentType}. Extensões aceitas: ${validExtensions[contentType]?.join(', ')}`);
       return;
     }
 
@@ -149,6 +179,8 @@ export function PlaybookItemForm({
     } else {
       setMediaPreview(null);
     }
+
+    console.log('[Playbook Form] File accepted for upload');
   };
 
   // Handle form submit
@@ -180,11 +212,23 @@ export function PlaybookItemForm({
 
     try {
       setIsUploading(true);
+      console.log('[Playbook Form] Starting submit...', { contentType, hasMediaFile: !!mediaFile, hasExistingUrl: !!existingMediaUrl });
+      
       let mediaUrl = existingMediaUrl;
 
       // Upload new file if needed
       if (mediaFile) {
-        mediaUrl = await uploadMedia(mediaFile);
+        console.log('[Playbook Form] Uploading file:', mediaFile.name);
+        try {
+          mediaUrl = await uploadMedia(mediaFile);
+          console.log('[Playbook Form] Upload complete, URL:', mediaUrl);
+        } catch (uploadError: any) {
+          console.error('[Playbook Form] Upload failed:', uploadError);
+          const errorMessage = uploadError.message || 'Erro desconhecido';
+          const errorDetails = uploadError.statusCode ? ` (${uploadError.statusCode})` : '';
+          toast.error(`Falha no upload: ${errorMessage}${errorDetails}`);
+          return;
+        }
       }
 
       const input: CreatePlaybookItemInput = {
@@ -198,6 +242,8 @@ export function PlaybookItemForm({
         list_items: contentType === 'list' ? listItems.filter(item => item.title.trim()) : null,
       };
 
+      console.log('[Playbook Form] Saving item:', input);
+
       if (editingItem) {
         updateItem({
           id: editingItem.id,
@@ -207,9 +253,11 @@ export function PlaybookItemForm({
         await createItemAsync(input);
       }
 
+      console.log('[Playbook Form] Item saved successfully');
       onClose();
     } catch (error: any) {
-      toast.error('Erro ao salvar: ' + error.message);
+      console.error('[Playbook Form] Error saving:', error);
+      toast.error('Erro ao salvar: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploading(false);
     }
@@ -247,17 +295,17 @@ export function PlaybookItemForm({
   const getAcceptedFileTypes = () => {
     switch (contentType) {
       case 'audio':
-        return 'audio/mpeg,audio/ogg,audio/wav,audio/webm';
+        return '.mp3,.m4a,.aac,.ogg,.wav,.webm,audio/*';
       case 'image':
-        return 'image/jpeg,image/png,image/gif,image/webp';
+        return '.jpg,.jpeg,.png,.gif,.webp,.svg,image/*';
       case 'video':
-        return 'video/mp4,video/webm';
+        return '.mp4,.webm,.mov,.avi,video/*';
       case 'document':
-        return '.pdf,.doc,.docx,.xls,.xlsx';
+        return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       case 'sticker':
-        return 'image/webp,image/png';
+        return '.webp,.png,image/webp,image/png';
       default:
-        return '';
+        return '*/*';
     }
   };
 

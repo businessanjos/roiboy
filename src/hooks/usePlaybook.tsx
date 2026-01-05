@@ -284,12 +284,57 @@ export function usePlaybook(options: PlaybookOptions = {}) {
     queryClient.invalidateQueries({ queryKey: ['playbook-items'] });
   }, [items, queryClient]);
 
+  // Get MIME type from file extension as fallback
+  const getMimeTypeFromExtension = useCallback((filename: string): string => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const mimeMap: Record<string, string> = {
+      // Audio
+      mp3: 'audio/mpeg',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+      ogg: 'audio/ogg',
+      wav: 'audio/wav',
+      webm: 'audio/webm',
+      // Video
+      mp4: 'video/mp4',
+      mov: 'video/quicktime',
+      avi: 'video/x-msvideo',
+      // Images
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      // Documents
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    };
+    return mimeMap[ext || ''] || 'application/octet-stream';
+  }, []);
+
   // Upload media file
   const uploadMedia = useCallback(async (file: File): Promise<string> => {
     if (!accountId) throw new Error('User not authenticated');
     
-    const fileExt = file.name.split('.').pop();
+    console.log('[Playbook Upload] Starting upload:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      accountId,
+    });
+    
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin';
     const fileName = `${accountId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    // Determine content type - use file.type or fallback to extension-based detection
+    const contentType = file.type || getMimeTypeFromExtension(file.name);
+    console.log('[Playbook Upload] Using content type:', contentType);
     
     setUploadProgress(0);
     
@@ -298,17 +343,24 @@ export function usePlaybook(options: PlaybookOptions = {}) {
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false,
+        contentType,
       });
     
-    if (error) throw error;
+    if (error) {
+      console.error('[Playbook Upload] Upload error:', error);
+      throw error;
+    }
+    
+    console.log('[Playbook Upload] Upload successful:', data.path);
     
     const { data: urlData } = supabase.storage
       .from('playbook-media')
       .getPublicUrl(data.path);
     
     setUploadProgress(100);
+    console.log('[Playbook Upload] Public URL:', urlData.publicUrl);
     return urlData.publicUrl;
-  }, [accountId]);
+  }, [accountId, getMimeTypeFromExtension]);
 
   // Delete media file
   const deleteMedia = useCallback(async (url: string) => {
