@@ -157,6 +157,8 @@ export default function MarketingEventsTab() {
   const [color, setColor] = useState("#f97316");
   const [goals, setGoals] = useState("");
   const [notes, setNotes] = useState("");
+  const [isDateTbd, setIsDateTbd] = useState(false);
+  const [tbdMonth, setTbdMonth] = useState<string>("");
   
   // Multi-day schedule state
   const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
@@ -237,6 +239,8 @@ export default function MarketingEventsTab() {
     setColor("#f97316");
     setGoals("");
     setNotes("");
+    setIsDateTbd(false);
+    setTbdMonth("");
     setDaySchedules({});
     setEditingEvent(null);
   };
@@ -292,8 +296,13 @@ export default function MarketingEventsTab() {
       return;
     }
 
-    if (!scheduledAt) {
-      toast.error("Data é obrigatória");
+    if (!isDateTbd && !scheduledAt) {
+      toast.error("Data é obrigatória (ou marque 'A definir')");
+      return;
+    }
+
+    if (isDateTbd && !tbdMonth) {
+      toast.error("Selecione pelo menos o mês previsto");
       return;
     }
 
@@ -311,20 +320,29 @@ export default function MarketingEventsTab() {
       return code;
     };
 
+    // If TBD, set scheduled_at to first day of selected month at midnight
+    let computedScheduledAt: string | null = null;
+    if (isDateTbd && tbdMonth) {
+      // tbdMonth format: "2026-03"
+      computedScheduledAt = new Date(`${tbdMonth}-01T00:00:00`).toISOString();
+    } else if (scheduledAt) {
+      computedScheduledAt = new Date(scheduledAt).toISOString();
+    }
+
     const eventData: any = {
       title: title.trim(),
       description: description.trim() || null,
       event_type: eventType,
       modality: modality,
       address: modality === "presencial" ? address.trim() || null : null,
-      scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-      ends_at: isMultiDay && endsAt ? new Date(endsAt).toISOString() : null,
+      scheduled_at: computedScheduledAt,
+      ends_at: !isDateTbd && endsAt ? new Date(endsAt).toISOString() : null,
       duration_minutes: !isMultiDay && durationMinutes ? parseInt(durationMinutes) : null,
       meeting_url: meetingUrl.trim() || null,
       category: "marketing",
       color: color,
       goals: goals.trim() || null,
-      notes: notes.trim() || null,
+      notes: isDateTbd ? `[A DEFINIR - ${tbdMonth}] ${notes.trim() || ''}`.trim() : (notes.trim() || null),
       account_id: accountId,
     };
 
@@ -765,25 +783,60 @@ export default function MarketingEventsTab() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Data/Hora Início</Label>
-                <Input
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Data/Hora Fim</Label>
-                <Input
-                  type="datetime-local"
-                  value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                />
-              </div>
+            {/* Date TBD toggle */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isDateTbd"
+                checked={isDateTbd}
+                onCheckedChange={(checked) => {
+                  setIsDateTbd(!!checked);
+                  if (checked) {
+                    setScheduledAt("");
+                    setEndsAt("");
+                  } else {
+                    setTbdMonth("");
+                  }
+                }}
+              />
+              <Label htmlFor="isDateTbd" className="text-sm font-normal cursor-pointer">
+                Data a definir
+              </Label>
             </div>
+
+            {isDateTbd ? (
+              <div className="space-y-2">
+                <Label>Mês Previsto *</Label>
+                <Input
+                  type="month"
+                  value={tbdMonth}
+                  onChange={(e) => setTbdMonth(e.target.value)}
+                  placeholder="Selecione o mês"
+                />
+                <p className="text-xs text-muted-foreground">
+                  A data exata será definida posteriormente
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data/Hora Início *</Label>
+                  <Input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Data/Hora Fim</Label>
+                  <Input
+                    type="datetime-local"
+                    value={endsAt}
+                    onChange={(e) => setEndsAt(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Cor</Label>
