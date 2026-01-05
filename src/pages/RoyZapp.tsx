@@ -1520,7 +1520,8 @@ export default function RoyZapp() {
       const response = await supabase.functions.invoke("uazapi-manager", {
         body: { 
           action: "import-conversations",
-          limit: limit
+          limit: limit,
+          sector_id: selectedSectorId, // Import for current sector
         },
       });
 
