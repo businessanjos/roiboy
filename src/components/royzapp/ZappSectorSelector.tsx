@@ -90,7 +90,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
             sectorId,
             connected: !!connected,
             instanceName: config?.instance_name || null,
-            profileName: config?.profile_name || null,
+            // Support both snake_case and camelCase field names
+            profileName: config?.profile_name || config?.profileName || null,
             unreadCount,
           };
         });
