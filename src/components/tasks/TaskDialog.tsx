@@ -109,9 +109,11 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   useEffect(() => {
     if (open) {
       fetchUsers();
-      if (!clientId) fetchClients();
-      if (!dealId && hasVendasAccess) fetchDeals();
-      if (!leadId && hasVendasAccess) fetchLeads();
+      fetchClients();
+      if (hasVendasAccess) {
+        fetchDeals();
+        fetchLeads();
+      }
       
       if (task) {
         // Extract time from due_date if it exists and has time component
@@ -357,71 +359,80 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </Select>
           </div>
 
-          {!clientId && (
-            <div className="space-y-2">
-              <Label>Cliente (opcional)</Label>
-              <Select
-                value={formData.client_id}
-                onValueChange={(value) => setFormData({ ...formData, client_id: value === "none" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Vincular a um cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem cliente</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {hasVendasAccess && !dealId && (
-            <div className="space-y-2">
-              <Label>Negócio (opcional)</Label>
-              <Select
-                value={formData.deal_id}
-                onValueChange={(value) => setFormData({ ...formData, deal_id: value === "none" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Vincular a um negócio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem negócio</SelectItem>
-                  {deals.map((deal) => (
-                    <SelectItem key={deal.id} value={deal.id}>
-                      {deal.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {hasVendasAccess && (
-            <div className="space-y-2">
-              <Label>Lead (opcional)</Label>
-              <Select
-                value={formData.lead_id}
-                onValueChange={(value) => setFormData({ ...formData, lead_id: value === "none" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Vincular a um lead" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem lead</SelectItem>
-                  {leads.map((lead) => (
-                    <SelectItem key={lead.id} value={lead.id}>
-                      {lead.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          {/* Unified linking field */}
+          <div className="space-y-2">
+            <Label>Vincular a (opcional)</Label>
+            <Select
+              value={
+                formData.deal_id ? `deal:${formData.deal_id}` :
+                formData.lead_id ? `lead:${formData.lead_id}` :
+                formData.client_id ? `client:${formData.client_id}` :
+                "none"
+              }
+              onValueChange={(value) => {
+                if (value === "none") {
+                  setFormData({ ...formData, client_id: "", deal_id: "", lead_id: "" });
+                } else {
+                  const [type, id] = value.split(":");
+                  setFormData({
+                    ...formData,
+                    client_id: type === "client" ? id : "",
+                    deal_id: type === "deal" ? id : "",
+                    lead_id: type === "lead" ? id : "",
+                  });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione cliente, lead ou negócio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem vínculo</SelectItem>
+                
+                {hasVendasAccess && deals.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Negócios</div>
+                    {deals.map((deal) => (
+                      <SelectItem key={`deal:${deal.id}`} value={`deal:${deal.id}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          {deal.title}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                
+                {hasVendasAccess && leads.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Leads</div>
+                    {leads.map((lead) => (
+                      <SelectItem key={`lead:${lead.id}`} value={`lead:${lead.id}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          {lead.full_name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                
+                {clients.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Clientes</div>
+                    {clients.map((client) => (
+                      <SelectItem key={`client:${client.id}`} value={`client:${client.id}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          {client.full_name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
           {activityTypes.length > 0 && (
             <div className="space-y-2">
