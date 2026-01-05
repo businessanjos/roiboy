@@ -271,26 +271,26 @@ serve(async (req) => {
       }
     }
     
-    // Method 4: Fallback - get by provider but log warning
+    // CRITICAL SECURITY: NO FALLBACK - Reject if integration cannot be precisely identified
+    // This prevents messages from being routed to the wrong account in multi-tenant environment
     if (!integration) {
-      console.warn("FALLBACK: Could not find specific integration, using provider=uazapi");
-      const { data: found } = await supabase
-        .from("integrations")
-        .select("account_id, config, sector_id")
-        .eq("type", "whatsapp")
-        .filter("config->>provider", "eq", "uazapi")
-        .limit(1)
-        .maybeSingle();
-      
-      if (found) {
-        integration = found;
-        console.log("Found integration by provider=uazapi (fallback)");
-      }
-    }
-
-    if (!integration) {
-      console.log("No UAZAPI integration found");
-      return new Response(JSON.stringify({ ignored: true, reason: "no_integration" }), { 
+      console.error("SECURITY REJECTION: Could not identify specific integration for webhook payload");
+      console.error(JSON.stringify({
+        event: "webhook_rejected",
+        reason: "cannot_identify_account",
+        identifiers: { 
+          instanceName: instanceName || "none", 
+          payloadToken: payloadToken?.slice(0, 8) || "none", 
+          instanceOwner: instanceOwner || "none" 
+        },
+        timestamp: new Date().toISOString()
+      }));
+      return new Response(JSON.stringify({ 
+        rejected: true, 
+        reason: "cannot_identify_account",
+        message: "Webhook payload could not be matched to a specific integration. This is a security measure to prevent cross-account data leakage." 
+      }), { 
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
