@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from './useCurrentUser';
 import { toast } from 'sonner';
 
-export type PlaybookContentType = 'text' | 'audio' | 'image' | 'video' | 'document' | 'sticker' | 'list';
+export type PlaybookContentType = 'text' | 'audio' | 'image' | 'video' | 'document' | 'sticker' | 'list' | 'link' | 'template';
 
 export interface PlaybookFolder {
   id: string;
@@ -14,6 +14,13 @@ export interface PlaybookFolder {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface TemplateButton {
+  type: 'quick_reply' | 'url' | 'phone';
+  text: string;
+  value?: string;
+  [key: string]: string | undefined;
 }
 
 export interface PlaybookItem {
@@ -28,6 +35,15 @@ export interface PlaybookItem {
   media_size: number | null;
   media_duration: number | null;
   list_items: any[] | null;
+  // Link fields
+  link_url: string | null;
+  link_title: string | null;
+  link_description: string | null;
+  // Template fields
+  template_header: string | null;
+  template_body: string | null;
+  template_footer: string | null;
+  template_buttons: TemplateButton[] | null;
   position: number;
   is_favorite: boolean;
   usage_count: number;
@@ -47,6 +63,15 @@ export interface CreatePlaybookItemInput {
   media_size?: number | null;
   media_duration?: number | null;
   list_items?: any[] | null;
+  // Link fields
+  link_url?: string | null;
+  link_title?: string | null;
+  link_description?: string | null;
+  // Template fields
+  template_header?: string | null;
+  template_body?: string | null;
+  template_footer?: string | null;
+  template_buttons?: TemplateButton[] | null;
 }
 
 export interface CreatePlaybookFolderInput {
@@ -112,7 +137,11 @@ export function usePlaybook(options: PlaybookOptions = {}) {
         .order('is_favorite', { ascending: false })
         .order('position', { ascending: true });
       if (error) throw error;
-      return data as PlaybookItem[];
+      // Cast template_buttons from Json to TemplateButton[]
+      return (data || []).map(item => ({
+        ...item,
+        template_buttons: item.template_buttons as TemplateButton[] | null,
+      })) as PlaybookItem[];
     },
     enabled: !!accountId,
   });
@@ -205,6 +234,15 @@ export function usePlaybook(options: PlaybookOptions = {}) {
           media_size: input.media_size || null,
           media_duration: input.media_duration || null,
           list_items: input.list_items || null,
+          // Link fields
+          link_url: input.link_url || null,
+          link_title: input.link_title || null,
+          link_description: input.link_description || null,
+          // Template fields
+          template_header: input.template_header || null,
+          template_body: input.template_body || null,
+          template_footer: input.template_footer || null,
+          template_buttons: input.template_buttons || null,
           position: maxPosition + 1,
           created_by: currentUser.id,
           sector_id: sectorId || null,
