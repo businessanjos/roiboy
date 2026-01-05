@@ -200,7 +200,7 @@ export default function Contracts() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"az" | "recent">("recent");
-  const [activeTab, setActiveTab] = useState<string>("conciliados");
+  const [activeTab, setActiveTab] = useState<string>("fila");
   
   // New contract dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1655,7 +1655,17 @@ export default function Contracts() {
 
       {/* Tabs for Reconciliation Status */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
+          <TabsTrigger value="fila" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden sm:inline">Fila de Conciliação</span>
+            <span className="sm:hidden">Fila</span>
+            {queueContracts.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                {queueContracts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="conciliados" className="flex items-center gap-2">
             <ListChecks className="h-4 w-4" />
             Conciliados
@@ -1751,6 +1761,22 @@ export default function Contracts() {
 
         {activeTab !== "dashboard" && (
           <TabsContent value={activeTab} className="space-y-4">
+            {/* Queue Status Info */}
+            {activeTab === "fila" && (
+            <Card className="border-amber-200 bg-amber-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Contratos aguardando conciliação</p>
+                    <p className="text-sm text-amber-700">
+                      Estes contratos ainda não tiveram os recebíveis gerados. Acesse o contrato e configure a negociação para gerar o fluxo financeiro.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
       {/* Contracts Table */}
       <Card>
@@ -1856,6 +1882,33 @@ export default function Contracts() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {activeTab === "fila" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const { error } = await supabase
+                                    .from("client_contracts")
+                                    .update({ 
+                                      receivables_generated: true,
+                                      receivables_generated_at: new Date().toISOString()
+                                    })
+                                    .eq("id", contract.id);
+                                  if (error) throw error;
+                                  toast.success("Contrato marcado como conciliado");
+                                  fetchContracts();
+                                } catch (error) {
+                                  console.error("Error:", error);
+                                  toast.error("Erro ao atualizar contrato");
+                                }
+                              }}
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Conciliar
+                            </Button>
+                          )}
                           <Button
                             variant="default"
                             size="sm"
