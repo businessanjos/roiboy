@@ -709,14 +709,15 @@ serve(async (req) => {
           webhookConfigured = await configureWebhook(instanceToken, instanceName, supabaseUrl);
         }
         
-        // Update integration status based on result
-        await supabase
+        // Update integration status based on result - CRITICAL: filter by sector_id to avoid overwriting other sectors
+        const updateQuery = supabase
           .from("integrations")
           .update({
             status: isConnected ? "connected" : (connectionState === "unknown" ? (existingWhatsapp?.status || "disconnected") : "disconnected"),
             config: {
               ...(existingWhatsapp?.config as object || {}),
               instance_token: instanceToken || (existingWhatsapp?.config as { instance_token?: string })?.instance_token,
+              instance_name: savedInstanceName || instanceName, // Preserve instance_name
               last_status_check: new Date().toISOString(),
               connection_state: connectionState,
               profile_name: profileName || (existingWhatsapp?.config as { profile_name?: string })?.profile_name,
@@ -727,6 +728,13 @@ serve(async (req) => {
           })
           .eq("account_id", accountId)
           .eq("type", "whatsapp");
+        
+        // Add sector_id filter if present to avoid updating wrong integration
+        if (sector_id) {
+          await updateQuery.eq("sector_id", sector_id);
+        } else {
+          await updateQuery.eq("id", existingWhatsapp?.id);
+        }
         
         result = { 
           state: connectionState, 
