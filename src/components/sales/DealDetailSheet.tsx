@@ -151,24 +151,36 @@ export function DealDetailSheet({
   const fetchLeadCustomFields = async () => {
     if (!deal?.lead_id) return;
     
-    // Get account_id
-    const userRes = await supabase
+    // Get account_id from auth user
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      console.error("[DealDetailSheet] No auth user found");
+      return;
+    }
+
+    const { data: userData } = await supabase
       .from("users")
       .select("account_id")
-      .single();
+      .eq("auth_user_id", authUser.id)
+      .maybeSingle();
     
-    const accountId = userRes.data?.account_id;
-    if (!accountId) return;
+    const accountId = userData?.account_id;
+    if (!accountId) {
+      console.error("[DealDetailSheet] No account_id found for user");
+      return;
+    }
 
     try {
       // Fetch custom fields for leads
-      const { data: fields, error: fieldsError } = await (supabase as any)
+      const { data: fields, error: fieldsError } = await supabase
         .from("custom_fields")
         .select("id, account_id, name, field_type, options, display_order, is_active, is_required, show_in_clients, show_in_leads, created_at, updated_at")
         .eq("account_id", accountId)
         .eq("show_in_leads", true)
         .eq("is_active", true)
         .order("display_order");
+      
+      console.log("[DealDetailSheet] Lead custom fields fetched:", fields?.length || 0, "fields");
       
       if (fieldsError) {
         console.error("Error fetching custom fields:", fieldsError);
@@ -200,12 +212,15 @@ export function DealDetailSheet({
       setLeadCustomFields(formattedFields);
 
       // Fetch field values for this lead
-      const valuesRes = await supabase
+      const { data: values, error: valuesError } = await supabase
         .from("lead_field_values")
         .select("*")
         .eq("lead_id", deal.lead_id);
       
-      const values = valuesRes.data;
+      console.log("[DealDetailSheet] Lead field values fetched:", values?.length || 0, "values for lead", deal.lead_id);
+      if (valuesError) {
+        console.error("[DealDetailSheet] Error fetching lead field values:", valuesError);
+      }
 
       if (values) {
         const valuesMap: Record<string, any> = {};
@@ -242,10 +257,14 @@ export function DealDetailSheet({
   };
 
   const fetchCurrentUser = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+    
     const { data } = await supabase
       .from("users")
       .select("id, name, avatar_url, account_id")
-      .single();
+      .eq("auth_user_id", authUser.id)
+      .maybeSingle();
     if (data) setCurrentUser(data);
   };
 
