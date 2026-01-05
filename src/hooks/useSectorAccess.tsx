@@ -9,6 +9,11 @@ interface SectorAccess {
   is_active: boolean;
 }
 
+interface SectorSettings {
+  sector_id: string;
+  royzapp_enabled: boolean;
+}
+
 export function useSectorAccess() {
   const { currentUser } = useCurrentUser();
 
@@ -30,6 +35,23 @@ export function useSectorAccess() {
     staleTime: 60000,
   });
 
+  const { data: sectorSettings = [] } = useQuery({
+    queryKey: ["sector-settings", currentUser?.account_id],
+    queryFn: async () => {
+      if (!currentUser?.account_id) return [];
+
+      const { data, error } = await supabase
+        .from("sector_settings")
+        .select("sector_id, royzapp_enabled")
+        .eq("account_id", currentUser.account_id);
+
+      if (error) throw error;
+      return (data || []) as SectorSettings[];
+    },
+    enabled: !!currentUser?.account_id,
+    staleTime: 60000,
+  });
+
   const hasSectorAccess = (sectorId: SectorId): boolean => {
     // Admins have access to all sectors
     if (currentUser?.role === "admin") return true;
@@ -37,12 +59,26 @@ export function useSectorAccess() {
     return sectorAccess.some((access) => access.sector_id === sectorId);
   };
 
+  const isSectorRoyzappEnabled = (sectorId: SectorId): boolean => {
+    const setting = sectorSettings.find(s => s.sector_id === sectorId);
+    // Default to true if no setting exists
+    return setting?.royzapp_enabled ?? true;
+  };
+
+  const canAccessSectorRoyzapp = (sectorId: SectorId): boolean => {
+    // Check if sector has ROY zAPP enabled AND user has access
+    return isSectorRoyzappEnabled(sectorId) && hasSectorAccess(sectorId);
+  };
+
   const hasVendasAccess = hasSectorAccess("vendas");
 
   return {
     sectorAccess,
+    sectorSettings,
     isLoading,
     hasSectorAccess,
+    isSectorRoyzappEnabled,
+    canAccessSectorRoyzapp,
     hasVendasAccess,
   };
 }
