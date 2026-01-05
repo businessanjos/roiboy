@@ -433,7 +433,7 @@ export function useInternalChat() {
     queryClient.invalidateQueries({ queryKey: ['internal-chats'] });
   }, [currentUser?.id, queryClient]);
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates for selected chat
   useEffect(() => {
     if (!selectedChatId) return;
 
@@ -458,6 +458,57 @@ export function useInternalChat() {
       supabase.removeChannel(channel);
     };
   }, [selectedChatId, queryClient]);
+
+  // Subscribe to realtime updates for all chats (notifications)
+  useEffect(() => {
+    if (!currentUser?.id || !currentUser?.account_id) return;
+
+    // Get all chat IDs the user participates in
+    const userChatIds = chats.map(c => c.id);
+    if (userChatIds.length === 0) return;
+
+    const channel = supabase
+      .channel('internal-messages-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'internal_messages'
+        },
+        (payload: any) => {
+          const newMessage = payload.new;
+          
+          // Only notify if message is from someone else and in a chat we're part of
+          if (
+            newMessage.sender_id !== currentUser.id &&
+            userChatIds.includes(newMessage.chat_id) &&
+            newMessage.chat_id !== selectedChatId
+          ) {
+            // Find the chat and sender info
+            const chat = chats.find(c => c.id === newMessage.chat_id);
+            const sender = chat?.participants?.find(p => p.user_id === newMessage.sender_id)?.user;
+            
+            const chatName = chat?.is_group 
+              ? chat.name || 'Grupo' 
+              : sender?.name || 'Alguém';
+
+            toast({
+              title: `💬 ${chatName}`,
+              description: newMessage.content?.substring(0, 50) + (newMessage.content?.length > 50 ? '...' : '') || 'Nova mensagem',
+            });
+
+            // Invalidate chats to update unread counts
+            queryClient.invalidateQueries({ queryKey: ['internal-chats'] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id, currentUser?.account_id, chats, selectedChatId, queryClient, toast]);
 
   // Mark as read when selecting chat
   useEffect(() => {
