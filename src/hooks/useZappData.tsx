@@ -600,6 +600,14 @@ export function useZappData(options: UseZappDataOptions = {}) {
         },
         (payload) => {
           console.log("[ZappData] zapp_conversations change detected:", payload.eventType);
+          
+          // CRITICAL SECURITY: Validate account_id matches current user
+          const payloadAccountId = (payload.new as any)?.account_id || (payload.old as any)?.account_id;
+          if (payloadAccountId && payloadAccountId !== currentUser?.account_id) {
+            console.warn("[ZappData] SECURITY: Ignoring realtime event from different account");
+            return;
+          }
+          
           // CRITICAL: Only process if we have a sector selected
           if (!sectorId) {
             console.log("[ZappData] Ignoring realtime event - no sector selected");
@@ -652,6 +660,14 @@ export function useZappData(options: UseZappDataOptions = {}) {
         },
         (payload) => {
           console.log("[ZappData] zapp_messages INSERT detected");
+          
+          // CRITICAL SECURITY: Validate account_id matches current user
+          const payloadAccountId = (payload.new as any)?.account_id;
+          if (payloadAccountId && payloadAccountId !== currentUser?.account_id) {
+            console.warn("[ZappData] SECURITY: Ignoring message event from different account");
+            return;
+          }
+          
           // CRITICAL: Only process if we have a sector selected
           if (!sectorId) {
             console.log("[ZappData] Ignoring realtime event - no sector selected");
