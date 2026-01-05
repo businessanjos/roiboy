@@ -709,31 +709,26 @@ serve(async (req) => {
           webhookConfigured = await configureWebhook(instanceToken, instanceName, supabaseUrl);
         }
         
-        // Update integration status based on result - CRITICAL: filter by sector_id to avoid overwriting other sectors
-        const updateQuery = supabase
-          .from("integrations")
-          .update({
-            status: isConnected ? "connected" : (connectionState === "unknown" ? (existingWhatsapp?.status || "disconnected") : "disconnected"),
-            config: {
-              ...(existingWhatsapp?.config as object || {}),
-              instance_token: instanceToken || (existingWhatsapp?.config as { instance_token?: string })?.instance_token,
-              instance_name: savedInstanceName || instanceName, // Preserve instance_name
-              last_status_check: new Date().toISOString(),
-              connection_state: connectionState,
-              profile_name: profileName || (existingWhatsapp?.config as { profile_name?: string })?.profile_name,
-              profile_pic_url: profilePicUrl || (existingWhatsapp?.config as { profile_pic_url?: string })?.profile_pic_url,
-              phone_number: instanceOwner || (existingWhatsapp?.config as { phone_number?: string })?.phone_number,
-              webhook_configured: webhookConfigured || (existingWhatsapp?.config as { webhook_configured?: boolean })?.webhook_configured,
-            },
-          })
-          .eq("account_id", accountId)
-          .eq("type", "whatsapp");
-        
-        // Add sector_id filter if present to avoid updating wrong integration
-        if (sector_id) {
-          await updateQuery.eq("sector_id", sector_id);
-        } else {
-          await updateQuery.eq("id", existingWhatsapp?.id);
+        // Update integration status based on result - CRITICAL: Always filter by integration ID
+        // This prevents overwriting other sector's integrations
+        if (existingWhatsapp?.id) {
+          await supabase
+            .from("integrations")
+            .update({
+              status: isConnected ? "connected" : (connectionState === "unknown" ? (existingWhatsapp?.status || "disconnected") : "disconnected"),
+              config: {
+                ...(existingWhatsapp?.config as object || {}),
+                instance_token: instanceToken || (existingWhatsapp?.config as { instance_token?: string })?.instance_token,
+                instance_name: savedInstanceName || instanceName, // Preserve instance_name from config
+                last_status_check: new Date().toISOString(),
+                connection_state: connectionState,
+                profile_name: profileName || (existingWhatsapp?.config as { profile_name?: string })?.profile_name,
+                profile_pic_url: profilePicUrl || (existingWhatsapp?.config as { profile_pic_url?: string })?.profile_pic_url,
+                phone_number: instanceOwner || (existingWhatsapp?.config as { phone_number?: string })?.phone_number,
+                webhook_configured: webhookConfigured || (existingWhatsapp?.config as { webhook_configured?: boolean })?.webhook_configured,
+              },
+            })
+            .eq("id", existingWhatsapp.id); // CRITICAL: Always use the specific integration ID
         }
         
         result = { 
@@ -762,6 +757,7 @@ serve(async (req) => {
         const webhookConfigured = await configureWebhook(savedToken, instanceName, supabaseUrl);
         
         if (webhookConfigured) {
+        if (existingWhatsapp?.id) {
           await supabase
             .from("integrations")
             .update({
@@ -771,8 +767,8 @@ serve(async (req) => {
                 webhook_configured_at: new Date().toISOString(),
               },
             })
-            .eq("account_id", accountId)
-            .eq("type", "whatsapp");
+            .eq("id", existingWhatsapp.id);
+        }
         }
         
         result = {
@@ -852,20 +848,21 @@ serve(async (req) => {
         }
         
         // Update local status - clear instance name and token to force fresh start on reconnect
-        await supabase
-          .from("integrations")
-          .update({
-            status: "disconnected",
-            config: {
-              provider: "uazapi",
-              instance_name: null, // Clear to force new instance on reconnect
-              instance_token: null, // Clear token
-              disconnected_at: new Date().toISOString(),
-              disconnected_manually: true, // Flag to prevent auto-reconnect
-            },
-          })
-          .eq("account_id", accountId)
-          .eq("type", "whatsapp");
+        if (existingWhatsapp?.id) {
+          await supabase
+            .from("integrations")
+            .update({
+              status: "disconnected",
+              config: {
+                provider: "uazapi",
+                instance_name: null, // Clear to force new instance on reconnect
+                instance_token: null, // Clear token
+                disconnected_at: new Date().toISOString(),
+                disconnected_manually: true, // Flag to prevent auto-reconnect
+              },
+            })
+            .eq("id", existingWhatsapp.id);
+        }
         
         if (!disconnected) {
           console.log("Could not logout/delete via API, but local status updated");
@@ -1094,17 +1091,18 @@ serve(async (req) => {
         
         if (instanceToken) {
           // Save token to integration
-          await supabase
-            .from("integrations")
-            .update({
-              config: {
-                ...(existingWhatsapp?.config as object || {}),
-                instance_token: instanceToken,
-                token_fetched_at: new Date().toISOString(),
-              },
-            })
-            .eq("account_id", accountId)
-            .eq("type", "whatsapp");
+          if (existingWhatsapp?.id) {
+            await supabase
+              .from("integrations")
+              .update({
+                config: {
+                  ...(existingWhatsapp?.config as object || {}),
+                  instance_token: instanceToken,
+                  token_fetched_at: new Date().toISOString(),
+                },
+              })
+              .eq("id", existingWhatsapp.id);
+          }
           
           result = { 
             success: true, 
