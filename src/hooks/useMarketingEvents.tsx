@@ -2,6 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
+import { Database } from '@/integrations/supabase/types';
+
+type EventRow = Database['public']['Tables']['events']['Row'];
+type EventInsert = Database['public']['Tables']['events']['Insert'];
 
 export type MarketingEventType = 'launch' | 'campaign' | 'webinar' | 'content' | 'live' | 'partnership' | 'fair' | 'workshop' | 'other';
 export type MarketingEventStatus = 'draft' | 'planned' | 'in_progress' | 'completed' | 'cancelled';
@@ -12,15 +16,16 @@ export interface MarketingEvent {
   title: string;
   description: string | null;
   event_type: MarketingEventType;
-  start_date: string;
-  end_date: string | null;
+  scheduled_at: string;
+  ends_at: string | null;
   start_time: string | null;
   end_time: string | null;
   budget: number | null;
   status: MarketingEventStatus;
-  color: string;
+  color: string | null;
   goals: string | null;
   notes: string | null;
+  category: 'marketing' | 'operation';
   created_at: string;
   updated_at: string;
 }
@@ -45,31 +50,57 @@ export const statusConfig: Record<MarketingEventStatus, { label: string; color: 
   cancelled: { label: 'Cancelado', color: '#ef4444' },
 };
 
-export function useMarketingEvents(year?: number) {
+function mapEventRowToMarketingEvent(row: EventRow): MarketingEvent {
+  return {
+    id: row.id,
+    account_id: row.account_id,
+    title: row.title,
+    description: row.description,
+    event_type: row.event_type as MarketingEventType,
+    scheduled_at: row.scheduled_at,
+    ends_at: row.ends_at,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    budget: row.budget ? Number(row.budget) : null,
+    status: (row.status || 'planned') as MarketingEventStatus,
+    color: row.color,
+    goals: row.goals,
+    notes: row.notes,
+    category: row.category as 'marketing' | 'operation',
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+export function useMarketingEvents(year?: number, category?: 'marketing' | 'operation') {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['marketing-events', currentUser?.account_id, year],
+    queryKey: ['events', currentUser?.account_id, year, category],
     queryFn: async () => {
       if (!currentUser?.account_id) return [];
 
       let queryBuilder = supabase
-        .from('marketing_events')
+        .from('events')
         .select('*')
         .eq('account_id', currentUser.account_id)
-        .order('start_date', { ascending: true });
+        .order('scheduled_at', { ascending: true });
+
+      if (category) {
+        queryBuilder = queryBuilder.eq('category', category);
+      }
 
       if (year) {
         queryBuilder = queryBuilder
-          .gte('start_date', `${year}-01-01`)
-          .lte('start_date', `${year}-12-31`);
+          .gte('scheduled_at', `${year}-01-01`)
+          .lte('scheduled_at', `${year}-12-31`);
       }
 
       const { data, error } = await queryBuilder;
 
       if (error) throw error;
-      return data as MarketingEvent[];
+      return (data || []).map(mapEventRowToMarketingEvent);
     },
     enabled: !!currentUser?.account_id,
   });
@@ -78,9 +109,26 @@ export function useMarketingEvents(year?: number) {
     mutationFn: async (event: Omit<MarketingEvent, 'id' | 'account_id' | 'created_at' | 'updated_at'>) => {
       if (!currentUser?.account_id) throw new Error('No account');
 
+      const insertData: EventInsert = {
+        account_id: currentUser.account_id,
+        title: event.title,
+        description: event.description,
+        event_type: event.event_type as Database['public']['Enums']['event_type'],
+        scheduled_at: event.scheduled_at,
+        ends_at: event.ends_at,
+        budget: event.budget,
+        status: event.status,
+        category: event.category as Database['public']['Enums']['event_category'],
+        color: event.color,
+        goals: event.goals,
+        notes: event.notes,
+        start_time: event.start_time,
+        end_time: event.end_time,
+      };
+
       const { data, error } = await supabase
-        .from('marketing_events')
-        .insert({ ...event, account_id: currentUser.account_id })
+        .from('events')
+        .insert(insertData)
         .select()
         .single();
 
@@ -88,7 +136,7 @@ export function useMarketingEvents(year?: number) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['marketing-events'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       toast.success('Evento criado com sucesso');
     },
     onError: () => {
@@ -98,9 +146,25 @@ export function useMarketingEvents(year?: number) {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<MarketingEvent> & { id: string }) => {
+      const updateData: Partial<EventInsert> = {};
+      
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.event_type !== undefined) updateData.event_type = updates.event_type as Database['public']['Enums']['event_type'];
+      if (updates.scheduled_at !== undefined) updateData.scheduled_at = updates.scheduled_at;
+      if (updates.ends_at !== undefined) updateData.ends_at = updates.ends_at;
+      if (updates.budget !== undefined) updateData.budget = updates.budget;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.category !== undefined) updateData.category = updates.category as Database['public']['Enums']['event_category'];
+      if (updates.color !== undefined) updateData.color = updates.color;
+      if (updates.goals !== undefined) updateData.goals = updates.goals;
+      if (updates.notes !== undefined) updateData.notes = updates.notes;
+      if (updates.start_time !== undefined) updateData.start_time = updates.start_time;
+      if (updates.end_time !== undefined) updateData.end_time = updates.end_time;
+
       const { data, error } = await supabase
-        .from('marketing_events')
-        .update(updates)
+        .from('events')
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -109,7 +173,7 @@ export function useMarketingEvents(year?: number) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['marketing-events'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       toast.success('Evento atualizado com sucesso');
     },
     onError: () => {
@@ -120,14 +184,14 @@ export function useMarketingEvents(year?: number) {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('marketing_events')
+        .from('events')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['marketing-events'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       toast.success('Evento excluído com sucesso');
     },
     onError: () => {

@@ -12,7 +12,7 @@ export default function Marketing() {
   const [defaultMonth, setDefaultMonth] = useState<number | undefined>();
   const [isDuplicating, setIsDuplicating] = useState(false);
 
-  const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(year);
+  const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(year, 'marketing');
 
   const handleAddEvent = (month?: number) => {
     setSelectedEvent(null);
