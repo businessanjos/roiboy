@@ -45,7 +45,7 @@ const WHATSAPP_SECTORS: { id: SectorId; name: string; description: string; color
   { id: "operacoes", name: "Operações", description: "Atendimento CX/CS e suporte geral", color: "text-primary" },
   { id: "financeiro", name: "Finanças", description: "Cobranças, boletos e pagamentos", color: "text-emerald-600" },
   { id: "vendas", name: "Vendas", description: "Pipeline comercial e leads", color: "text-blue-600" },
-  { id: "royzapp", name: "ROY zAPP", description: "Central de atendimento unificada", color: "text-amber-600" },
+  { id: "diretoria", name: "Diretoria", description: "Gestão executiva - Everton Pieri", color: "text-rose-600" },
 ];
 
 export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: WhatsAppSectorManagerProps) {
