@@ -7245,6 +7245,7 @@ export type Database = {
           muted_until: string | null
           phone_e164: string
           pinned_at: string | null
+          sector_id: string | null
           unread_count: number | null
           updated_at: string
         }
@@ -7271,6 +7272,7 @@ export type Database = {
           muted_until?: string | null
           phone_e164: string
           pinned_at?: string | null
+          sector_id?: string | null
           unread_count?: number | null
           updated_at?: string
         }
@@ -7297,6 +7299,7 @@ export type Database = {
           muted_until?: string | null
           phone_e164?: string
           pinned_at?: string | null
+          sector_id?: string | null
           unread_count?: number | null
           updated_at?: string
         }

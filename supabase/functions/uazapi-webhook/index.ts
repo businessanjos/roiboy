@@ -650,23 +650,36 @@ serve(async (req) => {
         let existingZappConvo;
         
         if (isGroupMessage && groupJid) {
-          // For groups, search by group_jid
-          const { data } = await supabase
+          // For groups, search by group_jid + sector_id for multi-sector isolation
+          let groupQuery = supabase
             .from("zapp_conversations")
             .select("id, unread_count")
             .eq("account_id", accountId)
-            .eq("group_jid", groupJid)
-            .maybeSingle();
+            .eq("group_jid", groupJid);
+          
+          // Filter by sector_id if available for multi-sector isolation
+          if (sectorId) {
+            groupQuery = groupQuery.eq("sector_id", sectorId);
+          }
+          
+          const { data } = await groupQuery.maybeSingle();
           existingZappConvo = data;
         } else {
-          // For direct messages, search by phone_e164
-          const { data } = await supabase
+          // For direct messages, search by phone_e164 + sector_id for multi-sector isolation
+          // CRITICAL: This ensures same phone number creates separate conversations per sector
+          let directQuery = supabase
             .from("zapp_conversations")
             .select("id, unread_count")
             .eq("account_id", accountId)
             .eq("phone_e164", phone)
-            .eq("is_group", false)
-            .maybeSingle();
+            .eq("is_group", false);
+          
+          // Filter by sector_id if available for multi-sector isolation
+          if (sectorId) {
+            directQuery = directQuery.eq("sector_id", sectorId);
+          }
+          
+          const { data } = await directQuery.maybeSingle();
           existingZappConvo = data;
         }
 
@@ -728,6 +741,8 @@ serve(async (req) => {
               external_thread_id: chat.id,
               is_group: isGroupMessage,
               group_jid: groupJid,
+              // CRITICAL: Set sector_id for multi-sector isolation
+              sector_id: sectorId || null,
               last_message_at: timestamp,
               last_message_preview: direction === "outbound"
                 ? `Você: ${content.substring(0, 80)}`
