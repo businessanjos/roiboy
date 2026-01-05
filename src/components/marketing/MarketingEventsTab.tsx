@@ -1,14 +1,14 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -50,8 +50,6 @@ import {
   Pencil, 
   Trash2, 
   Clock,
-  Link as LinkIcon,
-  Package,
   Monitor,
   MapPin,
   QrCode,
@@ -67,10 +65,16 @@ import {
   Building,
   Presentation,
 } from "lucide-react";
-import { format, eachDayOfInterval, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AttendanceReport from "@/components/events/AttendanceReport";
+import { 
+  EventType, 
+  eventTypeConfig, 
+  eventIconMap, 
+  getEventTypeConfig 
+} from "@/config/eventTypes";
 
 interface Attendance {
   id: string;
@@ -83,8 +87,6 @@ interface Attendance {
     avatar_url: string | null;
   };
 }
-
-type MarketingEventType = "launch" | "campaign" | "webinar" | "content" | "live" | "partnership" | "fair" | "workshop" | "other";
 
 interface Event {
   id: string;
@@ -121,18 +123,6 @@ interface EventWithProducts extends Event {
   event_products: EventProduct[];
 }
 
-const eventTypeConfig: Record<MarketingEventType, { label: string; icon: React.ReactNode; defaultColor: string }> = {
-  launch: { label: 'Lançamento', icon: <Rocket className="h-4 w-4" />, defaultColor: '#ef4444' },
-  campaign: { label: 'Campanha', icon: <Megaphone className="h-4 w-4" />, defaultColor: '#f97316' },
-  webinar: { label: 'Webinar', icon: <Video className="h-4 w-4" />, defaultColor: '#8b5cf6' },
-  content: { label: 'Conteúdo', icon: <FileText className="h-4 w-4" />, defaultColor: '#06b6d4' },
-  live: { label: 'Live', icon: <Radio className="h-4 w-4" />, defaultColor: '#ec4899' },
-  partnership: { label: 'Parceria', icon: <Handshake className="h-4 w-4" />, defaultColor: '#10b981' },
-  fair: { label: 'Feira/Congresso', icon: <Building className="h-4 w-4" />, defaultColor: '#6366f1' },
-  workshop: { label: 'Workshop', icon: <Presentation className="h-4 w-4" />, defaultColor: '#eab308' },
-  other: { label: 'Outro', icon: <Calendar className="h-4 w-4" />, defaultColor: '#64748b' },
-};
-
 export default function MarketingEventsTab() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -156,7 +146,7 @@ export default function MarketingEventsTab() {
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [eventType, setEventType] = useState<MarketingEventType>("campaign");
+  const [eventType, setEventType] = useState<EventType>("campaign");
   const [modality, setModality] = useState<"online" | "presencial">("online");
   const [address, setAddress] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -281,7 +271,7 @@ export default function MarketingEventsTab() {
     setEditingEvent(event);
     setTitle(event.title);
     setDescription(event.description || "");
-    setEventType(event.event_type as MarketingEventType);
+    setEventType(event.event_type as EventType);
     setModality(event.modality || "online");
     setAddress(event.address || "");
     setScheduledAt(event.scheduled_at ? event.scheduled_at.slice(0, 16) : "");
@@ -447,7 +437,7 @@ export default function MarketingEventsTab() {
   };
 
   const getTypeInfo = (type: string) => {
-    return eventTypeConfig[type as MarketingEventType] || eventTypeConfig.other;
+    return getEventTypeConfig(type);
   };
 
   if (loading) {
@@ -532,15 +522,16 @@ export default function MarketingEventsTab() {
                 <TableHead>Evento</TableHead>
                 <TableHead>Área</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Data</TableHead>
                 <TableHead>Modalidade</TableHead>
+                <TableHead>Data/Hora</TableHead>
+                <TableHead>Produtos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredEvents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>Nenhum evento encontrado</p>
                   </TableCell>
@@ -548,6 +539,7 @@ export default function MarketingEventsTab() {
               ) : (
                 filteredEvents.map((event) => {
                   const typeInfo = getTypeInfo(event.event_type);
+                  const IconComponent = eventIconMap[typeInfo.icon] || Calendar;
                   return (
                     <TableRow key={event.id}>
                       <TableCell>
@@ -585,21 +577,9 @@ export default function MarketingEventsTab() {
                             color: event.color || typeInfo.defaultColor 
                           }}
                         >
-                          {typeInfo.icon}
-                          <span className="ml-1">{typeInfo.label}</span>
+                          <IconComponent className="h-3 w-3 mr-1" />
+                          {typeInfo.label}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {event.scheduled_at ? (
-                          <div className="text-sm">
-                            <p>{format(new Date(event.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(event.scheduled_at), "HH:mm", { locale: ptBR })}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={event.modality === "presencial" ? "default" : "secondary"}>
@@ -609,6 +589,39 @@ export default function MarketingEventsTab() {
                             <><Monitor className="h-3 w-3 mr-1" /> Online</>
                           )}
                         </Badge>
+                        {event.modality === "presencial" && event.address && (
+                          <p className="text-xs text-muted-foreground mt-1">{event.address}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {event.scheduled_at ? (
+                          <div className="text-sm">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span>{format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+                            </div>
+                            {event.ends_at && (
+                              <p className="text-xs text-muted-foreground">
+                                até {format(new Date(event.ends_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {event.event_products && event.event_products.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {event.event_products.map((ep) => (
+                              <Badge key={ep.product_id} variant="outline" className="text-xs">
+                                {ep.products.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Nenhum</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -702,8 +715,8 @@ export default function MarketingEventsTab() {
               <div className="space-y-2">
                 <Label>Tipo</Label>
                 <Select value={eventType} onValueChange={(v) => {
-                  setEventType(v as MarketingEventType);
-                  setColor(eventTypeConfig[v as MarketingEventType].defaultColor);
+                  setEventType(v as EventType);
+                  setColor(getEventTypeConfig(v).defaultColor);
                 }}>
                   <SelectTrigger>
                     <SelectValue />
