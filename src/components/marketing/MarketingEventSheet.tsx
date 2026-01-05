@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { MarketingEvent, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
-import { Rocket, Megaphone, Video, FileText, Radio, Handshake, Building, Presentation, Circle, Pencil, Trash2, Calendar, DollarSign, Target, StickyNote } from 'lucide-react';
+import { Rocket, Megaphone, Video, FileText, Radio, Handshake, Building, Presentation, Circle, Pencil, Trash2, Calendar, DollarSign, Target, StickyNote, Copy, Clock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -25,9 +25,10 @@ interface MarketingEventSheetProps {
   onOpenChange: (open: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
 }
 
-export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelete }: MarketingEventSheetProps) {
+export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelete, onDuplicate }: MarketingEventSheetProps) {
   if (!event) return null;
 
   const typeConfig = eventTypeConfig[event.event_type];
@@ -36,6 +37,10 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+
+  const formatTime = (time: string) => {
+    return time.slice(0, 5); // HH:MM format
   };
 
   return (
@@ -75,6 +80,21 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
               </p>
             </div>
           </div>
+
+          {/* Time */}
+          {(event.start_time || event.end_time) && (
+            <div className="flex items-start gap-3">
+              <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Horário</p>
+                <p className="text-sm text-muted-foreground">
+                  {event.start_time && formatTime(event.start_time)}
+                  {event.start_time && event.end_time && ' - '}
+                  {event.end_time && formatTime(event.end_time)}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Budget */}
           {event.budget && (
@@ -127,6 +147,9 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
             <Button onClick={onEdit} className="flex-1">
               <Pencil className="h-4 w-4 mr-2" />
               Editar
+            </Button>
+            <Button variant="outline" onClick={onDuplicate}>
+              <Copy className="h-4 w-4" />
             </Button>
             <Button variant="destructive" onClick={onDelete}>
               <Trash2 className="h-4 w-4" />

@@ -14,6 +14,8 @@ export interface MarketingEvent {
   event_type: MarketingEventType;
   start_date: string;
   end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   budget: number | null;
   status: MarketingEventStatus;
   color: string;

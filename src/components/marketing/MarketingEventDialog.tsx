@@ -38,6 +38,8 @@ export function MarketingEventDialog({
     event_type: 'campaign' as MarketingEventType,
     start_date: '',
     end_date: '',
+    start_time: '',
+    end_time: '',
     budget: '',
     status: 'draft' as MarketingEventStatus,
     color: '#6366f1',
@@ -53,6 +55,8 @@ export function MarketingEventDialog({
         event_type: event.event_type,
         start_date: event.start_date,
         end_date: event.end_date || '',
+        start_time: event.start_time || '',
+        end_time: event.end_time || '',
         budget: event.budget?.toString() || '',
         status: event.status,
         color: event.color,
@@ -70,6 +74,8 @@ export function MarketingEventDialog({
         event_type: 'campaign',
         start_date: format(defaultDate, 'yyyy-MM-dd'),
         end_date: '',
+        start_time: '',
+        end_time: '',
         budget: '',
         status: 'draft',
         color: eventTypeConfig.campaign.defaultColor,
@@ -87,6 +93,8 @@ export function MarketingEventDialog({
       event_type: formData.event_type,
       start_date: formData.start_date,
       end_date: formData.end_date || null,
+      start_time: formData.start_time || null,
+      end_time: formData.end_time || null,
       budget: formData.budget ? parseFloat(formData.budget) : null,
       status: formData.status,
       color: formData.color,
@@ -174,7 +182,7 @@ export function MarketingEventDialog({
                       : "Selecione"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
                     selected={formData.start_date ? parseISO(formData.start_date) : undefined}
@@ -183,6 +191,7 @@ export function MarketingEventDialog({
                       start_date: date ? format(date, 'yyyy-MM-dd') : '' 
                     }))}
                     locale={ptBR}
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -205,7 +214,7 @@ export function MarketingEventDialog({
                       : "Opcional"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
                     selected={formData.end_date ? parseISO(formData.end_date) : undefined}
@@ -214,9 +223,32 @@ export function MarketingEventDialog({
                       end_date: date ? format(date, 'yyyy-MM-dd') : '' 
                     }))}
                     locale={ptBR}
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start_time">Horário Início</Label>
+              <Input
+                id="start_time"
+                type="time"
+                value={formData.start_time}
+                onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end_time">Horário Fim</Label>
+              <Input
+                id="end_time"
+                type="time"
+                value={formData.end_time}
+                onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+              />
             </div>
           </div>
 

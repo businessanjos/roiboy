@@ -5025,11 +5025,13 @@ export type Database = {
           created_at: string
           description: string | null
           end_date: string | null
+          end_time: string | null
           event_type: string
           goals: string | null
           id: string
           notes: string | null
           start_date: string
+          start_time: string | null
           status: string
           title: string
           updated_at: string
@@ -5041,11 +5043,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          end_time?: string | null
           event_type?: string
           goals?: string | null
           id?: string
           notes?: string | null
           start_date: string
+          start_time?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -5057,11 +5061,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          end_time?: string | null
           event_type?: string
           goals?: string | null
           id?: string
           notes?: string | null
           start_date?: string
+          start_time?: string | null
           status?: string
           title?: string
           updated_at?: string
