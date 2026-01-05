@@ -647,6 +647,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       content: { label: "Conteúdo", icon: <FileText className="h-3 w-3 mr-1" /> },
       partnership: { label: "Parceria", icon: <Users className="h-3 w-3 mr-1" /> },
       fair: { label: "Feira", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      movimento: { label: "Movimento", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      viagem: { label: "Viagem", icon: <Calendar className="h-3 w-3 mr-1" /> },
       other: { label: "Outro", icon: <Calendar className="h-3 w-3 mr-1" /> },
     };
     return typeMap[eventType] || typeMap.live;
