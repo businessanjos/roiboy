@@ -56,6 +56,8 @@ interface ZappConversationPanelProps {
   setFilterUnread: (unread: boolean) => void;
   filterGroups: boolean;
   setFilterGroups: (groups: boolean) => void;
+  filterArchived: boolean;
+  setFilterArchived: (archived: boolean) => void;
   filterProductId: string;
   setFilterProductId: (id: string) => void;
   filterTagId: string;
@@ -152,6 +154,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   setFilterUnread,
   filterGroups,
   setFilterGroups,
+  filterArchived = false,
+  setFilterArchived,
   filterProductId,
   setFilterProductId,
   filterTagId,
@@ -305,6 +309,20 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               >
                 <span>Finalizado</span>
                 {filterStatus === "closed" && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator className="bg-zapp-border" />
+              
+              {/* Archived filter */}
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterArchived && "bg-amber-500 text-white font-semibold"
+                )}
+                onClick={() => setFilterArchived(!filterArchived)}
+              >
+                <span>📦 Arquivadas</span>
+                {filterArchived && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               
               {/* Product filters */}

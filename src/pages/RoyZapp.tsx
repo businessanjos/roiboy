@@ -109,6 +109,7 @@ export default function RoyZapp() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
   const [filterGroups, setFilterGroups] = useState(false);
+  const [filterArchived, setFilterArchived] = useState(false);
   const [filterProductId, setFilterProductId] = useState<string>("all");
   const [filterTagId, setFilterTagId] = useState<string>("all");
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
@@ -1917,14 +1918,23 @@ export default function RoyZapp() {
   // Filtered conversations based on tab (mine vs queue)
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
-      // Hide archived conversations from main inbox
+      // Archive filter logic
       const isArchived = a.zapp_conversation?.is_archived || false;
-      if (isArchived) return false;
+      
+      // If viewing archived, show only archived; otherwise hide archived
+      if (filterArchived) {
+        if (!isArchived) return false;
+      } else {
+        if (isArchived) return false;
+      }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only
-      const matchesTab = inboxTab === "mine" 
-        ? a.agent_id === currentAgent?.id
-        : a.agent_id === null; // Queue shows only unassigned conversations
+      // Skip tab filter when viewing archived (show all archived regardless of assignment)
+      const matchesTab = filterArchived ? true : (
+        inboxTab === "mine" 
+          ? a.agent_id === currentAgent?.id
+          : a.agent_id === null
+      );
       
       const contact = getContactInfo(a);
       const matchesSearch = searchQuery === "" ||
@@ -1955,7 +1965,7 @@ export default function RoyZapp() {
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesGroups && matchesProduct && matchesTag && matchesAgent;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
 
   // Helper to get agent name by id
   const getAgentName = (agentId: string | null) => {
@@ -2245,6 +2255,8 @@ export default function RoyZapp() {
           setFilterUnread={setFilterUnread}
           filterGroups={filterGroups}
           setFilterGroups={setFilterGroups}
+          filterArchived={filterArchived}
+          setFilterArchived={setFilterArchived}
           filterProductId={filterProductId}
           setFilterProductId={setFilterProductId}
           filterTagId={filterTagId}
