@@ -9,3 +9,6 @@ export { PlaybookItemForm } from "./PlaybookItemForm";
 export { PlaybookButton } from "./PlaybookButton";
 export { ActivityTypesManager } from "./ActivityTypesManager";
 export { default as LeadsTab } from "./LeadsTab";
+export { SalesTeamTab } from "./SalesTeamTab";
+export { SalesRepCard } from "./SalesRepCard";
+export { SalesRepDetailSheet } from "./SalesRepDetailSheet";
