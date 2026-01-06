@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import royLogo from "@/assets/roy-logo.png";
+import { RoyLogo } from "@/components/ui/roy-logo";
 
 const tourSlides = [
   {
@@ -283,7 +283,7 @@ export default function Presentation() {
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container flex h-16 max-w-screen-xl items-center justify-between px-4 mx-auto">
             <div className="flex items-center gap-2">
-              <img src={royLogo} alt="ROY APP" className="h-10 w-10 object-contain" />
+              <RoyLogo size="lg" />
               <span className="font-bold text-xl">ROY APP</span>
             </div>
             <div className="flex items-center gap-3">
@@ -544,7 +544,7 @@ export default function Presentation() {
         <div className="container max-w-screen-xl mx-auto px-4 py-12">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src={royLogo} alt="ROY APP" className="h-8 w-8 object-contain" />
+              <RoyLogo size="md" />
               <span className="font-bold">ROY APP</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">

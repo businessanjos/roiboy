@@ -79,7 +79,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import royLogo from "@/assets/roy-logo.png";
+import { RoyLogo } from "@/components/ui/roy-logo";
 
 interface NavItem {
   to: string;
@@ -466,7 +466,7 @@ export function MobileHeader() {
   return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
       <NavLink to="/dashboard" className="flex items-center gap-2">
-        <img src={royLogo} alt="ROY APP" className="h-8 w-8 object-contain" />
+        <RoyLogo size="md" />
         <span className="font-semibold text-lg tracking-tight text-foreground">
           ROY APP
         </span>
@@ -485,7 +485,7 @@ export function MobileHeader() {
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between h-14 px-4 border-b border-border">
               <NavLink to="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <img src={royLogo} alt="ROY APP" className="h-8 w-8 object-contain" />
+                <RoyLogo size="md" />
                 <span className="font-semibold text-lg tracking-tight text-foreground">
                   ROY APP
                 </span>
@@ -522,7 +522,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-border">
         <NavLink to="/dashboard" className="flex items-center gap-2">
-          <img src={royLogo} alt="ROY APP" className="h-8 w-8 object-contain" />
+          <RoyLogo size="md" />
           {!collapsed && (
             <span className="font-semibold text-lg tracking-tight text-foreground">
               ROY APP

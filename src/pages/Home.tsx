@@ -24,6 +24,7 @@ import {
   Rocket,
   Building2,
 } from "lucide-react";
+import { RoyLogo } from "@/components/ui/roy-logo";
 
 interface Plan {
   id: string;
@@ -128,7 +129,7 @@ const Home = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <img src="/roy-logo.png" alt="ROY" className="h-8 w-auto" />
+            <RoyLogo size="md" />
             <span className="text-xl font-bold text-foreground">ROY</span>
           </div>
 

@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import royLogo from "@/assets/roy-logo.png";
+import { RoyLogo } from "@/components/ui/roy-logo";
 
 interface LoadingScreenProps {
   message?: string;
@@ -19,19 +19,11 @@ export const LoadingScreen = forwardRef<HTMLDivElement, LoadingScreenProps>(
         <div className="relative">
           {/* Glow effect */}
           <div className="absolute inset-0 animate-ping opacity-20">
-            <img 
-              src={royLogo} 
-              alt="" 
-              className="h-16 w-16 object-contain blur-sm"
-            />
+            <RoyLogo size="xl" className="blur-sm" />
           </div>
           
           {/* Main logo with pulse */}
-          <img 
-            src={royLogo} 
-            alt="Roy Logo" 
-            className="h-16 w-16 object-contain animate-pulse"
-          />
+          <RoyLogo size="xl" className="animate-pulse" />
         </div>
         
         {/* Loading dots animation */}
@@ -51,11 +43,7 @@ export const LoadingScreen = forwardRef<HTMLDivElement, LoadingScreenProps>(
 export function LoadingSpinner({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center ${className}`}>
-      <img 
-        src={royLogo} 
-        alt="Carregando" 
-        className="h-8 w-8 object-contain animate-pulse"
-      />
+      <RoyLogo size="md" className="animate-pulse" />
     </div>
   );
 }
