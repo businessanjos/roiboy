@@ -1374,9 +1374,9 @@ export default function RoyZapp() {
       toast.success("Áudio enviado!");
     } catch (error: any) {
       console.error("Error sending audio:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-      toast.error(error.message || "Erro ao enviar áudio");
+      // Keep message in UI but mark as failed (don't remove)
+      // The message stays visible so user can see what they tried to send
+      toast.error(error.message || "Erro ao enviar áudio. O áudio foi gravado mas não enviado ao WhatsApp.");
     } finally {
       setUploadingMedia(false);
     }
