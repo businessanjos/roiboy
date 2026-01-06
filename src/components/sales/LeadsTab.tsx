@@ -332,9 +332,14 @@ export default function LeadsTab() {
   // Import CSV handling
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log("Nenhum arquivo selecionado");
+      return;
+    }
 
+    console.log("Arquivo selecionado:", file.name, file.size);
     const text = await file.text();
+    console.log("Texto do arquivo (primeiros 200 chars):", text.substring(0, 200));
     const lines = text.split("\n").filter(l => l.trim());
     if (lines.length < 2) {
       toast.error("Arquivo CSV vazio ou inválido");
@@ -369,9 +374,13 @@ export default function LeadsTab() {
     });
 
     if (colMap.full_name.length === 0) {
+      console.log("Headers encontrados:", headers);
+      console.log("ColMap:", colMap);
       toast.error("Coluna 'Nome' não encontrada no CSV");
       return;
     }
+    
+    console.log("Headers mapeados:", colMap);
 
     // Helper to get first non-empty value from multiple columns
     const getFirstValue = (values: string[], indices: number[]): string | undefined => {
@@ -434,9 +443,11 @@ export default function LeadsTab() {
       rows.push(row);
     }
 
+    console.log("Rows parseadas:", rows.length, "Abrindo preview...");
     setImportRows(rows);
     setImportPreviewOpen(true);
     event.target.value = "";
+    console.log("Preview aberto, importPreviewOpen setado para true");
   };
 
   const handleConfirmImport = async (selectedRows: ImportLeadRow[]) => {
