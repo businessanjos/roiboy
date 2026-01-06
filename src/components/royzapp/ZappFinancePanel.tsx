@@ -46,9 +46,6 @@ interface FinancialEntry {
   clients?: { full_name: string } | null;
   suppliers?: { name: string } | null;
 }
-  clients?: { full_name: string } | null;
-  suppliers?: { name: string } | null;
-}
 
 interface DelinquentClient {
   client_id: string;
