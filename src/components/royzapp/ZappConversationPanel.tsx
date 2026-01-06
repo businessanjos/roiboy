@@ -67,6 +67,8 @@ interface ZappConversationPanelProps {
   
   // Sector for playbook
   sectorId?: string | null;
+  sectorName?: string | null;
+  sectorColor?: string | null;
   
   // Data
   filteredAssignments: ConversationAssignment[];
@@ -177,6 +179,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   queueUnreadCount,
   onlineAgents,
   sectorId,
+  sectorName,
+  sectorColor,
   selectedConversation,
   currentAgentId,
   whatsappConnected,
@@ -233,7 +237,21 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="text-zapp-text font-medium">ROY zAPP</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-zapp-text font-medium">ROY zAPP</h2>
+              {sectorName && (
+                <Badge 
+                  variant="outline" 
+                  className="text-[10px] px-1.5 py-0 h-4"
+                  style={{ 
+                    borderColor: sectorColor || '#6b7280',
+                    color: sectorColor || '#6b7280'
+                  }}
+                >
+                  {sectorName}
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-zapp-text-muted">{activeConversations} em atendimento</p>
           </div>
         </div>

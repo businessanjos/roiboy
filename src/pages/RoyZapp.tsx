@@ -37,7 +37,9 @@ import {
   ArrowLeft,
   Loader2,
   X,
+  Building2,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -2320,6 +2322,8 @@ export default function RoyZapp() {
           queueUnreadCount={queueUnreadCount}
           onlineAgents={onlineAgents}
           sectorId={selectedSectorId}
+          sectorName={currentSector?.name}
+          sectorColor={currentSector?.color?.replace('text-', '').replace('-600', '')}
           selectedConversation={selectedConversation}
           currentAgentId={currentAgent?.id || null}
           whatsappConnected={whatsappConnected}

@@ -841,25 +841,38 @@ serve(async (req) => {
           // Create or update zapp_conversation_assignment for the queue
           const { data: existingAssignment } = await supabase
             .from("zapp_conversation_assignments")
-            .select("id, status")
+            .select("id, status, agent_id")
             .eq("account_id", accountId)
             .eq("zapp_conversation_id", zappConversationId)
             .maybeSingle();
 
           if (existingAssignment) {
             // Update existing assignment - also set department if not set
+            // CRITICAL: Update status based on message direction
+            let newStatus = existingAssignment.status;
+            
+            if (existingAssignment.status === "closed") {
+              // Reopen closed conversations only for inbound messages
+              newStatus = direction === "inbound" ? "triage" : "closed";
+            } else if (direction === "outbound" && existingAssignment.status !== "closed") {
+              // Outbound message: we're waiting for client response
+              newStatus = "waiting";
+            } else if (direction === "inbound") {
+              // Inbound message: client is waiting for our response
+              newStatus = existingAssignment.agent_id ? "active" : "pending";
+            }
+            
             await supabase
               .from("zapp_conversation_assignments")
               .update({
                 updated_at: timestamp,
-                // If conversation was closed and client sends new message, reopen to triage
-                status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
+                status: newStatus,
                 // Set department_id if we have it and assignment doesn't have one
                 ...(sectorDepartmentId ? { department_id: sectorDepartmentId } : {}),
               })
               .eq("id", existingAssignment.id);
             markLatency("assignment_updated");
-            console.log("Updated existing zapp assignment");
+            console.log(`Updated zapp assignment - direction: ${direction}, newStatus: ${newStatus}`);
           } else {
             const { error: assignmentError } = await supabase
               .from("zapp_conversation_assignments")

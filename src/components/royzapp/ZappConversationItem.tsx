@@ -291,14 +291,23 @@ export const ZappConversationItem = memo(function ZappConversationItem({
         
         {/* Third row: Wait time (queue) / Agent + Products */}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {/* Show waiting time for unassigned conversations - use last_message_at from conversation */}
-          {!assignment.agent_id && assignment.zapp_conversation?.last_message_at && (
+        {/* Show status badge based on assignment status */}
+          {assignment.status === "pending" && assignment.zapp_conversation?.last_message_at && (
             <Badge 
               variant="secondary" 
               className="bg-amber-500/15 text-amber-600 border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
             >
               <Clock className="h-2.5 w-2.5" />
               Aguardando {formatWaitTime(assignment.zapp_conversation.last_message_at)}
+            </Badge>
+          )}
+          {assignment.status === "waiting" && (
+            <Badge 
+              variant="secondary" 
+              className="bg-blue-500/15 text-blue-600 border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
+            >
+              <Clock className="h-2.5 w-2.5" />
+              Aguard. cliente
             </Badge>
           )}
           {assignment.agent_id && (
