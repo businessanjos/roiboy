@@ -712,7 +712,12 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           <ZappMarketingList sectorId={sectorId || undefined} />
         )}
         {activeView === "sector" && sectorId === "vendas" && (
-          <ZappCRMPanel />
+          <ZappCRMPanel 
+            conversationPhone={selectedConversation?.zapp_conversation?.phone_e164 || selectedConversation?.zapp_conversation?.group_jid}
+            conversationClientId={selectedConversation?.zapp_conversation?.client_id}
+            conversationLeadId={selectedConversation?.zapp_conversation?.lead_id}
+            conversationContactName={selectedConversation?.zapp_conversation?.contact_name || selectedConversation?.zapp_conversation?.client?.full_name || selectedConversation?.zapp_conversation?.lead?.full_name}
+          />
         )}
         {activeView === "sector" && sectorId === "financeiro" && (
           <ZappFinancePanel sectorId={sectorId} />

@@ -1,31 +1,27 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { 
   Briefcase, 
-  Users, 
   Plus, 
-  Search, 
-  ChevronRight,
-  Phone,
-  Mail,
   DollarSign,
-  ArrowRight,
-  GripVertical,
   ExternalLink,
-  TrendingUp,
+  ArrowRight,
+  User,
+  Phone,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -34,6 +30,7 @@ interface ZappCRMPanelProps {
   conversationPhone?: string | null;
   conversationClientId?: string | null;
   conversationLeadId?: string | null;
+  conversationContactName?: string | null;
 }
 
 interface DealStage {
@@ -48,11 +45,8 @@ interface Deal {
   title: string;
   value: number;
   stage_id: string;
-  lead_id: string | null;
-  client_id: string | null;
+  status: string;
   created_at: string;
-  leads?: { full_name: string; phone: string | null } | null;
-  clients?: { full_name: string; phone_e164: string | null } | null;
 }
 
 interface Lead {
@@ -60,20 +54,21 @@ interface Lead {
   full_name: string;
   phone: string | null;
   email: string | null;
-  source: string | null;
   status: string;
-  created_at: string;
-  responsible_user_id: string | null;
 }
 
-export function ZappCRMPanel({ conversationPhone, conversationClientId, conversationLeadId }: ZappCRMPanelProps) {
-  const { session } = useAuth();
+export function ZappCRMPanel({ 
+  conversationPhone, 
+  conversationClientId, 
+  conversationLeadId,
+  conversationContactName 
+}: ZappCRMPanelProps) {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"kanban" | "leads">("kanban");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStageFilter, setSelectedStageFilter] = useState<string>("all");
+  const [showCreateDeal, setShowCreateDeal] = useState(false);
+  const [newDealTitle, setNewDealTitle] = useState("");
+  const [newDealValue, setNewDealValue] = useState("");
 
   // Fetch deal stages
   const { data: stages = [] } = useQuery({
@@ -89,38 +84,45 @@ export function ZappCRMPanel({ conversationPhone, conversationClientId, conversa
     enabled: !!currentUser?.account_id,
   });
 
-  // Fetch deals
-  const { data: deals = [], isLoading: dealsLoading } = useQuery({
-    queryKey: ["deals-zapp", currentUser?.account_id],
+  // Fetch lead info if we have a lead_id
+  const { data: leadInfo, isLoading: leadLoading } = useQuery({
+    queryKey: ["lead-info-zapp", conversationLeadId],
     queryFn: async () => {
+      if (!conversationLeadId) return null;
       const { data, error } = await supabase
+        .from("leads")
+        .select("id, full_name, phone, email, status")
+        .eq("id", conversationLeadId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Lead | null;
+    },
+    enabled: !!conversationLeadId,
+  });
+
+  // Fetch deals for this lead/client
+  const { data: deals = [], isLoading: dealsLoading, refetch: refetchDeals } = useQuery({
+    queryKey: ["contact-deals-zapp", conversationLeadId, conversationClientId],
+    queryFn: async () => {
+      let query = supabase
         .from("deals")
-        .select(`
-          id, title, value, stage_id, lead_id, client_id, created_at,
-          leads (full_name, phone),
-          clients (full_name, phone_e164)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .select("id, title, value, stage_id, status, created_at")
+        .neq("status", "lost")
+        .order("created_at", { ascending: false });
+
+      if (conversationLeadId) {
+        query = query.eq("lead_id", conversationLeadId);
+      } else if (conversationClientId) {
+        query = query.eq("client_id", conversationClientId);
+      } else {
+        return [];
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Deal[];
     },
-    enabled: !!currentUser?.account_id,
-  });
-
-  // Fetch leads
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({
-    queryKey: ["leads-zapp", currentUser?.account_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("leads")
-        .select("id, full_name, phone, email, source, status, created_at, responsible_user_id")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data as Lead[];
-    },
-    enabled: !!currentUser?.account_id,
+    enabled: !!(conversationLeadId || conversationClientId),
   });
 
   // Move deal mutation
@@ -133,53 +135,40 @@ export function ZappCRMPanel({ conversationPhone, conversationClientId, conversa
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["deals-zapp"] });
+      refetchDeals();
       toast.success("Negócio movido!");
     },
   });
 
-  // Filter deals by search and stage
-  const filteredDeals = useMemo(() => {
-    return deals.filter(deal => {
-      const matchesSearch = !searchQuery || 
-        deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.leads?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.clients?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Create deal mutation
+  const createDeal = useMutation({
+    mutationFn: async () => {
+      if (!currentUser?.account_id || !stages[0]) throw new Error("Dados insuficientes");
       
-      const matchesStage = selectedStageFilter === "all" || deal.stage_id === selectedStageFilter;
-      
-      return matchesSearch && matchesStage;
-    });
-  }, [deals, searchQuery, selectedStageFilter]);
-
-  // Filter leads by search
-  const filteredLeads = useMemo(() => {
-    return leads.filter(lead => {
-      return !searchQuery || 
-        lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.phone?.includes(searchQuery) ||
-        lead.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-  }, [leads, searchQuery]);
-
-  // Group deals by stage
-  const dealsByStage = useMemo(() => {
-    const grouped: Record<string, Deal[]> = {};
-    stages.forEach(stage => {
-      grouped[stage.id] = filteredDeals.filter(d => d.stage_id === stage.id);
-    });
-    return grouped;
-  }, [filteredDeals, stages]);
-
-  // Stats
-  const stats = useMemo(() => ({
-    totalDeals: deals.length,
-    totalValue: deals.reduce((sum, d) => sum + (d.value || 0), 0),
-    totalLeads: leads.length,
-    newLeadsToday: leads.filter(l => 
-      new Date(l.created_at).toDateString() === new Date().toDateString()
-    ).length,
-  }), [deals, leads]);
+      const { error } = await supabase
+        .from("deals")
+        .insert({
+          account_id: currentUser.account_id,
+          title: newDealTitle || conversationContactName || "Novo negócio",
+          value: parseFloat(newDealValue.replace(/\D/g, "")) / 100 || 0,
+          stage_id: stages[0].id,
+          lead_id: conversationLeadId || null,
+          client_id: conversationClientId || null,
+          status: "open",
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchDeals();
+      setShowCreateDeal(false);
+      setNewDealTitle("");
+      setNewDealValue("");
+      toast.success("Negócio criado!");
+    },
+    onError: () => {
+      toast.error("Erro ao criar negócio");
+    },
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -189,13 +178,47 @@ export function ZappCRMPanel({ conversationPhone, conversationClientId, conversa
     }).format(value);
   };
 
-  const getContactName = (deal: Deal) => deal.leads?.full_name || deal.clients?.full_name || "Sem contato";
+  const handleCurrencyInput = (value: string) => {
+    const numericValue = value.replace(/\D/g, "");
+    if (numericValue) {
+      const formatted = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(parseInt(numericValue) / 100);
+      setNewDealValue(formatted);
+    } else {
+      setNewDealValue("");
+    }
+  };
+
+  const isLoading = leadLoading || dealsLoading;
+  const hasContact = conversationLeadId || conversationClientId;
+  const activeDeal = deals.find(d => d.status === "open");
+
+  if (!hasContact) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b border-zapp-border bg-zapp-bg">
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-zapp-accent" />
+            <span className="font-medium text-zapp-text">CRM</span>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center text-zapp-text-muted">
+            <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Selecione uma conversa com lead ou cliente para ver o CRM</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-zapp-border bg-zapp-bg">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-4 w-4 text-zapp-accent" />
             <span className="font-medium text-zapp-text">CRM</span>
@@ -207,212 +230,197 @@ export function ZappCRMPanel({ conversationPhone, conversationClientId, conversa
             onClick={() => navigate("/sales")}
           >
             <ExternalLink className="h-3 w-3 mr-1" />
-            Abrir
+            Pipeline
           </Button>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <Card className="p-2 bg-zapp-panel border-zapp-border">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-lg font-bold text-zapp-text">{stats.totalDeals}</p>
-                <p className="text-[10px] text-zapp-text-muted">Negócios</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-2 bg-zapp-panel border-zapp-border">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-zapp-accent" />
-              <div>
-                <p className="text-lg font-bold text-zapp-text">{formatCurrency(stats.totalValue)}</p>
-                <p className="text-[10px] text-zapp-text-muted">Pipeline</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <div className="relative mb-3">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar..."
-            className="pl-8 h-8 text-sm bg-zapp-panel border-zapp-border text-zapp-text"
-          />
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid grid-cols-2 w-full h-8 bg-zapp-panel p-0.5">
-            <TabsTrigger value="kanban" className="h-6 text-xs px-2 gap-1">
-              <Briefcase className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">Negócios</span>
-            </TabsTrigger>
-            <TabsTrigger value="leads" className="h-6 text-xs px-2 gap-1">
-              <Users className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">Leads</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
 
-      {/* Content */}
       <ScrollArea className="flex-1">
-        {activeTab === "kanban" ? (
-          <div className="p-3">
-            {/* Stage filter chips */}
-            <div className="flex gap-1 flex-wrap mb-3">
-              <Badge
-                variant={selectedStageFilter === "all" ? "default" : "outline"}
-                className="cursor-pointer text-[10px]"
-                onClick={() => setSelectedStageFilter("all")}
-              >
-                Todos
-              </Badge>
-              {stages.map(stage => (
-                <Badge
-                  key={stage.id}
-                  variant={selectedStageFilter === stage.id ? "default" : "outline"}
-                  className="cursor-pointer text-[10px]"
-                  style={selectedStageFilter === stage.id ? { backgroundColor: stage.color } : { borderColor: stage.color, color: stage.color }}
-                  onClick={() => setSelectedStageFilter(stage.id)}
-                >
-                  {stage.name} ({dealsByStage[stage.id]?.length || 0})
+        <div className="p-3 space-y-3">
+          {/* Contact Info */}
+          <Card className="p-3 bg-zapp-panel border-zapp-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-zapp-accent/20 flex items-center justify-center">
+                <User className="h-5 w-5 text-zapp-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-zapp-text truncate">
+                  {conversationContactName || leadInfo?.full_name || "Contato"}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-zapp-text-muted">
+                  <Phone className="h-3 w-3" />
+                  <span>{conversationPhone || leadInfo?.phone || "-"}</span>
+                </div>
+              </div>
+              {conversationLeadId && (
+                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-500">
+                  Lead
                 </Badge>
-              ))}
+              )}
+              {conversationClientId && (
+                <Badge variant="outline" className="text-[10px] border-green-500 text-green-500">
+                  Cliente
+                </Badge>
+              )}
             </div>
+          </Card>
 
-            {/* Deals list */}
-            {dealsLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin h-6 w-6 border-2 border-zapp-accent border-t-transparent rounded-full" />
+          {isLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-zapp-accent" />
+            </div>
+          ) : activeDeal ? (
+            /* Active Deal Card */
+            <Card className="p-3 bg-zapp-panel border-zapp-border">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium text-zapp-text">Negócio Ativo</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs"
+                  onClick={() => navigate(`/sales?deal=${activeDeal.id}`)}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Ver
+                </Button>
               </div>
-            ) : filteredDeals.length === 0 ? (
-              <div className="text-center py-8 text-zapp-text-muted text-sm">
-                Nenhum negócio encontrado
+
+              <div className="mb-3">
+                <p className="font-medium text-zapp-text truncate">{activeDeal.title}</p>
+                <p className="text-lg font-bold text-zapp-accent">{formatCurrency(activeDeal.value)}</p>
               </div>
-            ) : (
+
+              {/* Stage selector */}
               <div className="space-y-2">
-                {filteredDeals.map(deal => {
-                  const stage = stages.find(s => s.id === deal.stage_id);
-                  return (
-                    <Card 
-                      key={deal.id} 
-                      className="p-3 bg-zapp-panel border-zapp-border cursor-pointer hover:bg-zapp-panel/80"
-                      onClick={() => navigate(`/sales?deal=${deal.id}`)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge 
-                              className="text-[10px] px-1.5 py-0"
-                              style={{ backgroundColor: stage?.color || '#6b7280' }}
-                            >
-                              {stage?.name || "Sem estágio"}
-                            </Badge>
-                          </div>
-                          <p className="font-medium text-sm text-zapp-text truncate">{deal.title}</p>
-                          <p className="text-xs text-zapp-text-muted">{getContactName(deal)}</p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-bold text-sm text-zapp-accent">{formatCurrency(deal.value)}</p>
-                          <p className="text-[10px] text-zapp-text-muted">
-                            {format(new Date(deal.created_at), "dd/MM", { locale: ptBR })}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Quick stage move buttons */}
-                      <div className="flex gap-1 mt-2 pt-2 border-t border-zapp-border">
-                        {stages.slice(0, 4).map(s => (
-                          <Button
-                            key={s.id}
-                            size="sm"
-                            variant={s.id === deal.stage_id ? "default" : "ghost"}
-                            className="h-5 text-[10px] px-1.5 flex-1"
-                            style={s.id === deal.stage_id ? { backgroundColor: s.color } : {}}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (s.id !== deal.stage_id) {
-                                moveDeal.mutate({ dealId: deal.id, stageId: s.id });
-                              }
-                            }}
-                          >
-                            {s.name.slice(0, 8)}
-                          </Button>
-                        ))}
-                      </div>
-                    </Card>
-                  );
-                })}
+                <Label className="text-xs text-zapp-text-muted">Mover para estágio:</Label>
+                <div className="flex flex-wrap gap-1">
+                  {stages.map(stage => {
+                    const isActive = stage.id === activeDeal.stage_id;
+                    return (
+                      <Button
+                        key={stage.id}
+                        size="sm"
+                        variant={isActive ? "default" : "outline"}
+                        className={cn(
+                          "h-7 text-xs px-2",
+                          isActive && "pointer-events-none"
+                        )}
+                        style={isActive ? { backgroundColor: stage.color } : { borderColor: stage.color, color: stage.color }}
+                        onClick={() => {
+                          if (!isActive) {
+                            moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
+                          }
+                        }}
+                        disabled={moveDeal.isPending}
+                      >
+                        {stage.name}
+                        {isActive && <CheckCircle className="h-3 w-3 ml-1" />}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="p-3">
-            {/* Leads list */}
-            {leadsLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin h-6 w-6 border-2 border-zapp-accent border-t-transparent rounded-full" />
+            </Card>
+          ) : showCreateDeal ? (
+            /* Create Deal Form */
+            <Card className="p-3 bg-zapp-panel border-zapp-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Plus className="h-4 w-4 text-zapp-accent" />
+                <span className="text-sm font-medium text-zapp-text">Criar Negócio</span>
               </div>
-            ) : filteredLeads.length === 0 ? (
-              <div className="text-center py-8 text-zapp-text-muted text-sm">
-                Nenhum lead encontrado
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredLeads.map(lead => (
-                  <Card 
-                    key={lead.id} 
-                    className="p-3 bg-zapp-panel border-zapp-border cursor-pointer hover:bg-zapp-panel/80"
-                    onClick={() => navigate(`/leads?lead=${lead.id}`)}
+
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-zapp-text-muted">Título</Label>
+                  <Input
+                    value={newDealTitle}
+                    onChange={(e) => setNewDealTitle(e.target.value)}
+                    placeholder={conversationContactName || "Nome do negócio"}
+                    className="h-8 text-sm bg-zapp-bg border-zapp-border text-zapp-text mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs text-zapp-text-muted">Valor</Label>
+                  <Input
+                    value={newDealValue}
+                    onChange={(e) => handleCurrencyInput(e.target.value)}
+                    placeholder="R$ 0,00"
+                    className="h-8 text-sm bg-zapp-bg border-zapp-border text-zapp-text mt-1"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="flex-1 h-8"
+                    onClick={() => setShowCreateDeal(false)}
                   >
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback className="text-xs bg-zapp-accent/20 text-zapp-accent">
-                          {lead.full_name.split(" ").map(n => n[0]).slice(0, 2).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-sm text-zapp-text truncate">{lead.full_name}</p>
-                          <Badge 
-                            variant="outline" 
-                            className={cn(
-                              "text-[10px] px-1.5 py-0",
-                              lead.status === "new" && "border-green-500 text-green-500",
-                              lead.status === "contacted" && "border-blue-500 text-blue-500",
-                              lead.status === "qualified" && "border-purple-500 text-purple-500",
-                            )}
-                          >
-                            {lead.status === "new" ? "Novo" : 
-                             lead.status === "contacted" ? "Contato" : 
-                             lead.status === "qualified" ? "Qualificado" : lead.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-zapp-text-muted">
-                          {lead.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {lead.phone}
-                            </span>
-                          )}
-                          {lead.source && (
-                            <span className="truncate">{lead.source}</span>
-                          )}
-                        </div>
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 h-8"
+                    onClick={() => createDeal.mutate()}
+                    disabled={createDeal.isPending}
+                  >
+                    {createDeal.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Criar"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            /* No active deal - show create button */
+            <Card className="p-4 bg-zapp-panel border-zapp-border border-dashed">
+              <div className="text-center">
+                <Briefcase className="h-8 w-8 mx-auto mb-2 text-zapp-text-muted opacity-50" />
+                <p className="text-sm text-zapp-text-muted mb-3">
+                  Nenhum negócio ativo para este contato
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateDeal(true)}
+                  className="h-8"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Criar Negócio
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Past deals (won) */}
+          {deals.filter(d => d.status === "won").length > 0 && (
+            <div>
+              <p className="text-xs text-zapp-text-muted mb-2">Negócios ganhos</p>
+              <div className="space-y-2">
+                {deals.filter(d => d.status === "won").map(deal => (
+                  <Card 
+                    key={deal.id}
+                    className="p-2 bg-zapp-panel/50 border-zapp-border cursor-pointer hover:bg-zapp-panel"
+                    onClick={() => navigate(`/sales?deal=${deal.id}`)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-zapp-text truncate">{deal.title}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-green-500 font-medium">{formatCurrency(deal.value)}</span>
+                        <Badge className="text-[10px] bg-green-500/20 text-green-500">Ganho</Badge>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-zapp-text-muted flex-shrink-0" />
                     </div>
                   </Card>
                 ))}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </ScrollArea>
     </div>
   );
