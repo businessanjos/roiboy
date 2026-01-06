@@ -1802,17 +1802,24 @@ serve(async (req) => {
         
         console.log(`send_media: isAudio=${isAudio}, media_url=${media_url}, hasToken=${!!savedInstanceToken}`);
         
+        // IMPORTANT: UAZAPI requires OGG or MP3 format for audio
+        // WebM is NOT supported by WhatsApp API
+        // Check if URL is webm and warn in logs
+        if (media_url.includes('.webm')) {
+          console.log('WARNING: WebM format detected. WhatsApp may not accept this format. Converting may be required.');
+        }
+        
         const mediaEndpoints = isAudio ? [
-          // UAZAPI GO v2 documented format - /chat/sendAudio
-          { url: `/chat/sendAudio`, method: "POST", body: { phone: cleanPhone, audio: media_url, ptt: true } },
-          { url: `/chat/sendAudio`, method: "POST", body: { number: cleanPhone, audio: media_url, ptt: true } },
-          // Alternative: /chat/sendMedia with type=audio
-          { url: `/chat/sendMedia`, method: "POST", body: { phone: cleanPhone, mediaUrl: media_url, type: "audio", ptt: true } },
-          // UAZAPI PTT endpoint
+          // UAZAPI primary format - try with file field (like successful messages used)
+          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, file: media_url } },
+          // With audio field
+          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, audio: media_url } },
+          // PTT format
+          { url: `/send/ptt`, method: "POST", body: { number: cleanPhone, audio: media_url } },
           { url: `/sendPTT`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
-          // /send/audio variants
-          { url: `/send/audio`, method: "POST", body: { phone: cleanPhone, audio: media_url, ptt: true } },
-          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, audio: media_url, ptt: true } },
+          // Chat endpoints
+          { url: `/chat/sendAudio`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
+          { url: `/chat/sendMedia`, method: "POST", body: { phone: cleanPhone, mediaUrl: media_url, type: "audio" } },
         ] : [
           // Image/document endpoints
           { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, file: media_url, caption: caption || "" } },

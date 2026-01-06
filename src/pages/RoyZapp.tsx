@@ -1145,11 +1145,19 @@ export default function RoyZapp() {
         } 
       });
       
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-          ? 'audio/webm;codecs=opus' 
-          : 'audio/webm'
-      });
+      // Try to use ogg format first (better WhatsApp compatibility), fallback to webm
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+        mimeType = 'audio/ogg;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+        mimeType = 'audio/ogg';
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      }
+      
+      console.log('Recording with mimeType:', mimeType);
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -1165,7 +1173,9 @@ export default function RoyZapp() {
         stream.getTracks().forEach(track => track.stop());
         
         if (audioChunksRef.current.length > 0) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          // Use the actual mimeType from the recorder for the blob
+          const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+          const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
           const audioUrl = URL.createObjectURL(audioBlob);
           // Set preview instead of sending immediately
           setAudioPreview({ 
@@ -1278,8 +1288,13 @@ export default function RoyZapp() {
     setMessages(prev => [...prev, optimisticMessage]);
     
     try {
+      // Determine file extension based on audio format
+      // WhatsApp prefers ogg/mp3, but webm might work too
+      const isOgg = audioBlob.type.includes('ogg');
+      const extension = isOgg ? 'ogg' : 'webm';
+      
       // Upload audio to public bucket (UAZAPI needs to access the URL)
-      const fileName = `${currentUser!.account_id}/audio_${Date.now()}.webm`;
+      const fileName = `${currentUser!.account_id}/audio_${Date.now()}.${extension}`;
       const bucket = "zapp-media";
       
       const { data: uploadData, error: uploadError } = await supabase.storage
