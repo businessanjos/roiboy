@@ -1888,18 +1888,21 @@ serve(async (req) => {
         let mediaSuccess = false;
         
         // UAZAPI GO v2 - Media to group (uses "number" field for group JID)
-        // Include fileName for documents to preserve original name
-        const mediaEndpoints = [
-          // Standard UAZAPI format - uses "number" for recipient, with fileName for documents
-          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, file: media_url, caption: caption || "", fileName: file_name || "" } },
-          // Alternative with url field
-          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, url: media_url, caption: caption || "", fileName: file_name || "" } },
-          // Alternative format with "to" field
-          { url: `/send/${media_type}`, method: "POST", body: { to: groupJid, file: media_url, caption: caption || "", fileName: file_name || "" } },
-          // Alternative endpoint structure
-          { url: `/chat/send/${media_type}`, method: "POST", body: { Phone: groupJid, File: media_url, Caption: caption || "", FileName: file_name || "" } },
-          // Generic media endpoint
-          { url: `/send/media`, method: "POST", body: { number: groupJid, file: media_url, type: media_type, caption: caption || "", fileName: file_name || "" } },
+        // For audio: use /send/media with type: "ptt" (same as individual chats)
+        const isAudio = media_type === "audio";
+        
+        const mediaEndpoints = isAudio ? [
+          // PRIMARY: /send/media with type: ptt (voice message) - per UAZAPI v2 docs
+          { url: `/send/media`, method: "POST", body: { number: groupJid, type: "ptt", file: media_url } },
+          // Alternative: myaudio type
+          { url: `/send/media`, method: "POST", body: { number: groupJid, type: "myaudio", file: media_url } },
+          // Alternative: audio type (non-voice)
+          { url: `/send/media`, method: "POST", body: { number: groupJid, type: "audio", file: media_url } },
+        ] : [
+          // For images/videos/documents: /send/media with appropriate type
+          { url: `/send/media`, method: "POST", body: { number: groupJid, type: media_type, file: media_url, text: caption || "", docName: file_name || "" } },
+          // Fallback: direct endpoint
+          { url: `/send/${media_type}`, method: "POST", body: { number: groupJid, file: media_url, text: caption || "", docName: file_name || "" } },
         ];
 
         for (const endpoint of mediaEndpoints) {
