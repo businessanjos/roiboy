@@ -16,7 +16,10 @@ import {
   Megaphone,
   Clock,
   ChevronRight,
+  Copy,
+  Link,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { getEventTypeConfig } from "@/config/eventTypes";
 
@@ -31,6 +34,7 @@ interface MarketingEvent {
   goal_invited: number | null;
   goal_confirmed: number | null;
   goal_present: number | null;
+  public_registration_code: string | null;
   confirmed_count: number;
   attended_count: number;
 }
@@ -53,7 +57,7 @@ export function ZappMarketingList() {
 
       const { data, error } = await supabase
         .from("events")
-        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present")
+        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code")
         .eq("account_id", userData.account_id)
         .eq("category", "marketing")
         .order("scheduled_at", { ascending: true });
@@ -79,6 +83,7 @@ export function ZappMarketingList() {
           goal_invited: event.goal_invited,
           goal_confirmed: event.goal_confirmed,
           goal_present: event.goal_present,
+          public_registration_code: event.public_registration_code,
           confirmed_count: 0,
           attended_count: attendedCount || 0,
         });
@@ -230,6 +235,26 @@ export function ZappMarketingList() {
                           </span>
                         )}
                       </div>
+                      
+                      {/* RSVP Link */}
+                      {event.public_registration_code && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 text-[10px] px-2 gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const link = `${window.location.origin}/inscricao/${event.public_registration_code}`;
+                              navigator.clipboard.writeText(link);
+                              toast.success("Link de RSVP copiado!");
+                            }}
+                          >
+                            <Link className="h-3 w-3" />
+                            Copiar RSVP
+                          </Button>
+                        </div>
+                      )}
                       
                       {/* Progress indicators */}
                       {(event.goal_confirmed || event.goal_present) && (
