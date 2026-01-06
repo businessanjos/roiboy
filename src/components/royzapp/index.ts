@@ -20,3 +20,4 @@ export * from "./ZappMarketingList";
 export * from "./ZappCallButton";
 export * from "./ZappCallDialog";
 export * from "./ZappCallHistory";
+export * from "./ZappAIAssistBar";

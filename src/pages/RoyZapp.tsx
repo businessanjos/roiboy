@@ -154,6 +154,20 @@ export default function RoyZapp() {
     return saved !== null ? saved === "true" : true;
   });
   
+  // AI Assistant settings (persisted to localStorage)
+  const [spellingEnabled, setSpellingEnabled] = useState(() => {
+    const saved = localStorage.getItem("zapp_spelling_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState(() => {
+    const saved = localStorage.getItem("zapp_suggestions_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [autoLearningEnabled, setAutoLearningEnabled] = useState(() => {
+    const saved = localStorage.getItem("zapp_auto_learning_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
+  
   // Import conversations state
   const [importingConversations, setImportingConversations] = useState(false);
   const [importLimit, setImportLimit] = useState("50");
@@ -2303,6 +2317,21 @@ export default function RoyZapp() {
             setUserSignature(value);
             localStorage.setItem("zapp_signature", value);
           }}
+          spellingEnabled={spellingEnabled}
+          suggestionsEnabled={suggestionsEnabled}
+          autoLearningEnabled={autoLearningEnabled}
+          onSpellingChange={(checked) => {
+            setSpellingEnabled(checked);
+            localStorage.setItem("zapp_spelling_enabled", String(checked));
+          }}
+          onSuggestionsChange={(checked) => {
+            setSuggestionsEnabled(checked);
+            localStorage.setItem("zapp_suggestions_enabled", String(checked));
+          }}
+          onAutoLearningChange={(checked) => {
+            setAutoLearningEnabled(checked);
+            localStorage.setItem("zapp_auto_learning_enabled", String(checked));
+          }}
           getAgentName={getAgentName}
           onPullFromQueue={pullFromQueue}
           aiAgents={[]} // Hidden for now - TODO: configure AI agents properly
@@ -2344,6 +2373,9 @@ export default function RoyZapp() {
           imageInputRef={imageInputRef}
           fileInputRef={fileInputRef}
           sectorId={selectedSectorId}
+          spellingEnabled={spellingEnabled}
+          suggestionsEnabled={suggestionsEnabled}
+          autoLearningEnabled={autoLearningEnabled}
           onlineAgents={onlineAgents}
           totalQueueConversations={totalQueueConversations}
           activeConversations={activeConversations}

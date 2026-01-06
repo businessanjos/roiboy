@@ -99,6 +99,11 @@ interface ZappConversationPanelProps {
   importingConversations: boolean;
   userSignature: string;
   
+  // AI Settings
+  spellingEnabled?: boolean;
+  suggestionsEnabled?: boolean;
+  autoLearningEnabled?: boolean;
+  
   // Callbacks
   onSelectConversation: (assignment: ConversationAssignment) => void;
   onOpenNewConversationDialog: () => void;
@@ -121,6 +126,9 @@ interface ZappConversationPanelProps {
   onImportLimitChange: (limit: string) => void;
   onImportConversations: () => void;
   onSignatureChange: (value: string) => void;
+  onSpellingChange?: (checked: boolean) => void;
+  onSuggestionsChange?: (checked: boolean) => void;
+  onAutoLearningChange?: (checked: boolean) => void;
   getAgentName: (agentId: string) => string;
   onPullFromQueue?: () => void;
   
@@ -197,6 +205,12 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onImportLimitChange,
   onImportConversations,
   onSignatureChange,
+  spellingEnabled = true,
+  suggestionsEnabled = true,
+  autoLearningEnabled = true,
+  onSpellingChange,
+  onSuggestionsChange,
+  onAutoLearningChange,
   getAgentName,
   onPullFromQueue,
   aiAgents = [],
@@ -637,6 +651,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             importLimit={importLimit}
             importingConversations={importingConversations}
             userSignature={userSignature}
+            spellingEnabled={spellingEnabled}
+            suggestionsEnabled={suggestionsEnabled}
+            autoLearningEnabled={autoLearningEnabled}
             onToggleWhatsAppConnection={onToggleWhatsAppConnection}
             onRoundRobinChange={onRoundRobinChange}
             onRespectLimitChange={onRespectLimitChange}
@@ -644,6 +661,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onImportLimitChange={onImportLimitChange}
             onImportConversations={onImportConversations}
             onSignatureChange={onSignatureChange}
+            onSpellingChange={onSpellingChange}
+            onSuggestionsChange={onSuggestionsChange}
+            onAutoLearningChange={onAutoLearningChange}
           />
         )}
         {activeView === "playbook" && (
