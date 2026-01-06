@@ -107,6 +107,7 @@ export interface ConversationAssignment {
     phone_e164: string;
     contact_name: string | null;
     client_id: string | null;
+    lead_id?: string | null;
     last_message_at: string | null;
     last_message_preview: string | null;
     unread_count: number;
@@ -123,6 +124,13 @@ export interface ConversationAssignment {
       full_name: string;
       phone_e164: string;
       avatar_url: string | null;
+    } | null;
+    lead?: {
+      id: string;
+      full_name: string;
+      phone: string | null;
+      email: string | null;
+      status: string;
     } | null;
   };
 }
@@ -174,12 +182,13 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
   
   if (zappConv) {
     const clientData = zappConv.client;
+    const leadData = zappConv.lead;
     return {
-      name: clientData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido",
+      name: clientData?.full_name || leadData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido",
       phone: zappConv.phone_e164 || "",
       avatar: clientData?.avatar_url || zappConv.avatar_url || null,
       clientId: zappConv.client_id || null,
-      isClient: !!zappConv.client_id,
+      isClient: !!zappConv.client_id || !!zappConv.lead_id,
       isGroup: zappConv.is_group || false,
       lastMessageAt: zappConv.last_message_at || assignment.created_at,
       lastMessagePreview: zappConv.last_message_preview || "",

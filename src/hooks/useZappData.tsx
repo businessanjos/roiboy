@@ -153,7 +153,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
           agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
           department:zapp_departments(*),
           conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
+          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url), lead:leads(id, full_name, phone, email, status))
         `)
         .eq("account_id", currentUser.account_id)
         .eq("department_id", dept.id) // CRITICAL: Filter by department
@@ -305,7 +305,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
           agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
           department:zapp_departments(*),
           conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url))
+          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url), lead:leads(id, full_name, phone, email, status))
         `)
         .eq("account_id", currentUser.account_id)
         .neq("status", "closed")

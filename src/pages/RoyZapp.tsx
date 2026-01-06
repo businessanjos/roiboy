@@ -1786,10 +1786,13 @@ export default function RoyZapp() {
 
       if (leadError) throw leadError;
 
-      // Link the zapp_conversation to the new lead
+      // Link the zapp_conversation to the new lead and update contact_name
       const { error: linkError } = await supabase
         .from("zapp_conversations")
-        .update({ lead_id: newLead.id } as any)
+        .update({ 
+          lead_id: newLead.id,
+          contact_name: data.full_name.trim()
+        })
         .eq("id", selectedConversation.zapp_conversation.id);
 
       if (linkError) throw linkError;
