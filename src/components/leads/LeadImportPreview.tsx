@@ -187,7 +187,7 @@ export function LeadImportPreview({
       .filter(r => selectedRows.has(r.lineNumber))
       .map(r => ({
         ...r,
-        source: r.source || defaultSource || undefined,
+        source: r.source || (defaultSource === "none" ? undefined : defaultSource) || undefined,
         duplicateAction: getRowAction(r),
       }));
     await onConfirmImport(selectedData);
@@ -283,7 +283,7 @@ export function LeadImportPreview({
                 <SelectValue placeholder="Selecionar" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma</SelectItem>
+                <SelectItem value="none">Nenhuma</SelectItem>
                 {LEAD_SOURCES.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
