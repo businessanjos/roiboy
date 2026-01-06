@@ -2726,6 +2726,18 @@ export default function RoyZapp() {
         onSaveLead={saveNewLead}
         savingClient={savingNewClient}
         savingLead={savingNewLead}
+        accountId={currentUser?.account_id}
+        conversationId={selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id}
+        onLinked={() => {
+          fetchData();
+          // Update selected conversation
+          if (selectedConversation) {
+            const zappConvId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
+            if (zappConvId) {
+              fetchMessages(zappConvId);
+            }
+          }
+        }}
       />
 
       {/* New Conversation Dialog */}
