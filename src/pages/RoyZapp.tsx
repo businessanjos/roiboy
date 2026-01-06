@@ -1797,7 +1797,45 @@ export default function RoyZapp() {
       toast.success("Lead cadastrado com sucesso!");
       setAddContactDialogOpen(false);
       
-      // Refresh data
+      // Update selectedConversation with new lead data
+      setSelectedConversation(prev => {
+        if (!prev || !prev.zapp_conversation) return prev;
+        return {
+          ...prev,
+          zapp_conversation: {
+            ...prev.zapp_conversation,
+            lead_id: newLead.id,
+            lead: {
+              id: newLead.id,
+              full_name: data.full_name.trim(),
+              phone: data.phone.trim() || null,
+              email: data.email?.trim() || null,
+              status: "new",
+            } as any,
+          },
+        };
+      });
+      
+      // Update the assignment in the assignments list
+      setAssignments(prev => prev.map(a => {
+        if (a.id !== selectedConversation.id) return a;
+        return {
+          ...a,
+          zapp_conversation: a.zapp_conversation ? {
+            ...a.zapp_conversation,
+            lead_id: newLead.id,
+            lead: {
+              id: newLead.id,
+              full_name: data.full_name.trim(),
+              phone: data.phone.trim() || null,
+              email: data.email?.trim() || null,
+              status: "new",
+            } as any,
+          } : a.zapp_conversation,
+        };
+      }));
+      
+      // Refresh data in background
       fetchData();
     } catch (error: any) {
       console.error("Error creating lead:", error);
