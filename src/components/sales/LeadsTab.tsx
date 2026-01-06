@@ -60,6 +60,7 @@ import {
   Users,
   UserCheck,
   MessageSquare,
+  MessageCircle,
   Clock,
   TrendingUp,
   DollarSign,
@@ -72,6 +73,7 @@ import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { toast } from "sonner";
 import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
+import { useZappNavigation } from "@/hooks/useZappNavigation";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -104,6 +106,7 @@ export default function LeadsTab() {
     markAsConvertedToDeal,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
+  const { openZappConversation, loading: zappLoading } = useZappNavigation();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -590,7 +593,7 @@ export default function LeadsTab() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <div className="text-right text-sm text-muted-foreground">
                           <p>{getSourceLabel(lead.source)}</p>
                           <p className="text-xs">
@@ -603,6 +606,26 @@ export default function LeadsTab() {
                         <Badge className={`${statusInfo.color} text-white`}>
                           {statusInfo.label}
                         </Badge>
+                        {/* WhatsApp Button */}
+                        {lead.phone && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-emerald-500/20"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openZappConversation({
+                                phone: lead.phone,
+                                leadId: lead.id,
+                                name: lead.full_name,
+                              });
+                            }}
+                            disabled={zappLoading}
+                            title="Abrir conversa no RoyZapp"
+                          >
+                            <MessageCircle className="h-4 w-4 text-emerald-600" />
+                          </Button>
+                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon">
@@ -619,6 +642,21 @@ export default function LeadsTab() {
                               <Pencil className="h-4 w-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
+                            {lead.phone && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openZappConversation({
+                                    phone: lead.phone,
+                                    leadId: lead.id,
+                                    name: lead.full_name,
+                                  });
+                                }}
+                              >
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                Conversar no RoyZapp
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
