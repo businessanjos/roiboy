@@ -492,13 +492,28 @@ export function useZappData(options: UseZappDataOptions = {}) {
         }, HEARTBEAT_INTERVAL_MS);
       }
       
-      // Filter agents strictly by current sector's department
-      // Only admins/gestores can appear across all departments
+      // Filter agents by current sector's department
+      // Include: agents assigned to this department, admins/gestores, or agents with department_id = null
       let filteredAgents = finalAgents;
       if (sectorId && targetDepartmentId) {
+        console.log(`[ZappData] Filtering agents for sector ${sectorId}, targetDeptId: ${targetDepartmentId}`);
+        console.log(`[ZappData] All agents:`, finalAgents.map((a: Agent) => ({ 
+          name: a.user?.name, 
+          dept_id: a.department_id,
+          matches: a.department_id === targetDepartmentId
+        })));
+        
         filteredAgents = finalAgents.filter((a: Agent) => {
           // Show if assigned to this specific department
-          if (a.department_id === targetDepartmentId) return true;
+          if (a.department_id === targetDepartmentId) {
+            console.log(`[ZappData] Agent ${a.user?.name} matches department`);
+            return true;
+          }
+          
+          // Show if assigned to ALL departments (department_id is null)
+          if (a.department_id === null) {
+            console.log(`[ZappData] Agent ${a.user?.name} has null department (all depts)`);
+          }
           
           // Admins/gestores appear in all departments
           const userRole = a.user?.role || usersData?.find((u: any) => u.id === a.user_id)?.role;
@@ -508,7 +523,12 @@ export function useZappData(options: UseZappDataOptions = {}) {
           const teamUser = usersData?.find((u: any) => u.id === a.user_id);
           const hasAdminFlag = (teamUser as any)?.is_also_admin === true;
           
-          return isAdmin || isGestor || hasAdminFlag;
+          if (isAdmin || isGestor || hasAdminFlag) {
+            console.log(`[ZappData] Agent ${a.user?.name} is admin/gestor`);
+            return true;
+          }
+          
+          return false;
         });
         console.log(`[ZappData] Filtered agents for sector ${sectorId}: ${filteredAgents.length} of ${finalAgents.length}`);
       }

@@ -37,7 +37,7 @@ export const ZappTeamList = memo(function ZappTeamList({
         <h3 className="text-zapp-text font-medium">Equipe de Atendimento</h3>
         <Button
           size="sm"
-          className="bg-zapp-accent hover:bg-zapp-accent-hover text-white"
+          variant="default"
           onClick={() => onOpenAgentDialog()}
           disabled={availableUsersCount === 0}
         >
