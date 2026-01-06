@@ -404,10 +404,10 @@ export default function ClientDetail() {
     }
   };
 
-  // Helper to ensure array fields are always valid arrays
+  // Helper to ensure array fields are always valid arrays (filtering null/undefined)
   const ensureArray = <T,>(value: unknown): T[] => {
-    if (Array.isArray(value)) return value;
-    return [];
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is T => item != null);
   };
 
   const openEditInfoDialog = () => {
