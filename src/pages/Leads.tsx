@@ -109,6 +109,20 @@ const REVENUE_RANGES = [
   { value: "acima_5m", label: "Acima de R$ 5 milhões" },
 ];
 
+// Normalize revenue range from various formats to our standard values
+const normalizeRevenueRange = (value: string | undefined): string | undefined => {
+  if (!value) return undefined;
+  const normalized = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  
+  if (normalized.includes("81") && normalized.includes("360")) return "81k_360k";
+  if (normalized.includes("360") && (normalized.includes("1m") || normalized.includes("milhao") || normalized.includes("1.000"))) return "360k_1m";
+  if ((normalized.includes("1m") || normalized.includes("milhao") || normalized.includes("1.000")) && (normalized.includes("5m") || normalized.includes("5.000"))) return "1m_5m";
+  if (normalized.includes("acima") || normalized.includes("5m") || normalized.includes("5.000") || normalized.includes("mais")) return "acima_5m";
+  if (normalized.includes("ate") || normalized.includes("81") || normalized.includes("menor")) return "ate_81k";
+  
+  return undefined;
+};
+
 export default function Leads() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
@@ -434,13 +448,14 @@ export default function Leads() {
       if (normalized.includes("nome")) colMap.full_name = i;
       if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) colMap.phone = i;
       if (normalized.includes("email") || normalized.includes("e-mail")) colMap.email = i;
-      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte")) colMap.source = i;
-      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note")) colMap.notes = i;
+      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte") || normalized.includes("lead source")) colMap.source = i;
+      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note") || normalized.includes("anotac")) colMap.notes = i;
       if (normalized.includes("cpf")) colMap.cpf = i;
-      if (normalized.includes("empresa") || normalized.includes("company")) colMap.company_name = i;
+      if (normalized.includes("empresa") || normalized.includes("company") || normalized.includes("razao social")) colMap.company_name = i;
       if (normalized.includes("instagram") || normalized.includes("insta")) colMap.instagram = i;
       if (normalized.includes("cidade") || normalized.includes("city")) colMap.city = i;
       if (normalized.includes("estado") || normalized.includes("uf") || normalized.includes("state")) colMap.state = i;
+      if (normalized.includes("faturamento") || normalized.includes("revenue") || normalized.includes("receita")) colMap.revenue_range = i;
     });
 
     if (colMap.full_name === undefined) {
@@ -476,6 +491,7 @@ export default function Leads() {
         instagram: colMap.instagram !== undefined ? values[colMap.instagram] : undefined,
         city: colMap.city !== undefined ? values[colMap.city] : undefined,
         state: colMap.state !== undefined ? values[colMap.state] : undefined,
+        revenue_range: colMap.revenue_range !== undefined ? normalizeRevenueRange(values[colMap.revenue_range]) : undefined,
       };
 
       // Validate
@@ -531,6 +547,7 @@ export default function Leads() {
             email: row.email,
             source: row.source,
             notes: row.notes,
+            revenue_range: row.revenue_range,
           });
           successCount++;
         } catch (err) {
