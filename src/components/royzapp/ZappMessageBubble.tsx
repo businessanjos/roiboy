@@ -248,14 +248,14 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             </p>
           )}
           
-          {/* Media content - show loading state for pending downloads */}
-          {message.media_download_status === "pending" && message.media_type && (
+          {/* Media content - show loading state ONLY for pending downloads without a URL */}
+          {message.media_download_status === "pending" && message.media_type && !message.media_url && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
               <span className="text-xs text-zapp-text-muted">Carregando mídia...</span>
             </div>
           )}
-          {message.media_download_status === "failed" && message.media_type && (
+          {message.media_download_status === "failed" && message.media_type && !message.media_url && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
               <span className="text-xs text-zapp-text-muted">Falha ao carregar mídia</span>
