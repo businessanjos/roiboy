@@ -10,6 +10,7 @@ import {
   MoreVertical,
   Check,
   Bot,
+  ArrowDownToLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -121,6 +122,7 @@ interface ZappConversationPanelProps {
   onImportConversations: () => void;
   onSignatureChange: (value: string) => void;
   getAgentName: (agentId: string) => string;
+  onPullFromQueue?: () => void;
   
   // AI Agents
   aiAgents?: AIAgent[];
@@ -196,6 +198,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onImportConversations,
   onSignatureChange,
   getAgentName,
+  onPullFromQueue,
   aiAgents = [],
   selectedAIAgent,
   onSelectAIAgent,
@@ -503,6 +506,21 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           )}
         </button>
       </div>
+
+      {/* Pull from queue button - shows when there are unassigned conversations */}
+      {inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
+        <div className="px-3 py-2 bg-zapp-bg-dark border-b border-zapp-border">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full bg-zapp-accent/10 border-zapp-accent/30 text-zapp-accent hover:bg-zapp-accent/20 hover:text-zapp-accent"
+            onClick={onPullFromQueue}
+          >
+            <ArrowDownToLine className="h-4 w-4 mr-2" />
+            Puxar da Fila ({totalQueueConversations})
+          </Button>
+        </div>
+      )}
 
       {/* Search */}
       <div className="px-3 py-2 bg-zapp-bg">
