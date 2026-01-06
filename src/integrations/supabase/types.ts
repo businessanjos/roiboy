@@ -419,6 +419,84 @@ export type Database = {
           },
         ]
       }
+      ai_effective_patterns: {
+        Row: {
+          account_id: string
+          created_at: string
+          effective_response: string
+          extracted_at: string | null
+          id: string
+          is_active: boolean | null
+          last_used_at: string | null
+          pattern_type: string
+          positive_outcomes: number | null
+          reviewed_by: string | null
+          sector_id: string
+          source_conversation_id: string | null
+          source_message_id: string | null
+          success_score: number | null
+          times_used: number | null
+          trigger_context: string | null
+          updated_at: string
+          why_it_works: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          effective_response: string
+          extracted_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          pattern_type: string
+          positive_outcomes?: number | null
+          reviewed_by?: string | null
+          sector_id: string
+          source_conversation_id?: string | null
+          source_message_id?: string | null
+          success_score?: number | null
+          times_used?: number | null
+          trigger_context?: string | null
+          updated_at?: string
+          why_it_works?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          effective_response?: string
+          extracted_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_used_at?: string | null
+          pattern_type?: string
+          positive_outcomes?: number | null
+          reviewed_by?: string | null
+          sector_id?: string
+          source_conversation_id?: string | null
+          source_message_id?: string | null
+          success_score?: number | null
+          times_used?: number | null
+          trigger_context?: string | null
+          updated_at?: string
+          why_it_works?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_effective_patterns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_effective_patterns_source_conversation_id_fkey"
+            columns: ["source_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_sector_agents: {
         Row: {
           avatar_url: string | null
@@ -475,6 +553,81 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      ai_suggestion_feedback: {
+        Row: {
+          account_id: string
+          client_responded: boolean | null
+          client_sentiment: string | null
+          context_messages: Json | null
+          conversation_id: string | null
+          created_at: string
+          edited_before_send: boolean | null
+          feedback: string
+          final_text_sent: string | null
+          id: string
+          original_text: string | null
+          response_time_minutes: number | null
+          sector_id: string
+          suggested_text: string
+          suggestion_type: string
+          user_id: string
+          was_used: boolean | null
+        }
+        Insert: {
+          account_id: string
+          client_responded?: boolean | null
+          client_sentiment?: string | null
+          context_messages?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          edited_before_send?: boolean | null
+          feedback: string
+          final_text_sent?: string | null
+          id?: string
+          original_text?: string | null
+          response_time_minutes?: number | null
+          sector_id: string
+          suggested_text: string
+          suggestion_type: string
+          user_id: string
+          was_used?: boolean | null
+        }
+        Update: {
+          account_id?: string
+          client_responded?: boolean | null
+          client_sentiment?: string | null
+          context_messages?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          edited_before_send?: boolean | null
+          feedback?: string
+          final_text_sent?: string | null
+          id?: string
+          original_text?: string | null
+          response_time_minutes?: number | null
+          sector_id?: string
+          suggested_text?: string
+          suggestion_type?: string
+          user_id?: string
+          was_used?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestion_feedback_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_suggestion_feedback_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_usage_logs: {
         Row: {
