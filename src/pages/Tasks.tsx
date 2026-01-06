@@ -103,6 +103,7 @@ interface Task {
   status: "pending" | "in_progress" | "done" | "overdue" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
+  due_time: string | null;
   client_id: string | null;
   deal_id: string | null;
   lead_id: string | null;

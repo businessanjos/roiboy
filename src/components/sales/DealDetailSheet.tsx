@@ -324,6 +324,7 @@ export function DealDetailSheet({
           status,
           priority,
           due_date,
+          due_time,
           completed_at,
           created_at,
           assigned_user:users!internal_tasks_assigned_to_fkey(name, avatar_url),

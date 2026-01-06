@@ -23,6 +23,7 @@ interface PendingTask {
   id: string;
   title: string;
   due_date: string | null;
+  due_time: string | null;
   priority: string;
   assigned_to: string | null;
   custom_status?: {
@@ -58,7 +59,8 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
         .select(`
           id, 
           title,
-          due_date, 
+          due_date,
+          due_time,
           priority,
           assigned_to,
           custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name, color, is_completed_status),
@@ -332,7 +334,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                 >
                   <Clock className="h-2.5 w-2.5" />
                   {nextTaskDate 
-                    ? `Agendado: ${format(new Date(nextTaskDate), "dd/MM", { locale: ptBR })}`
+                    ? `Agendado: ${format(new Date(nextTaskDate + 'T00:00:00'), "dd/MM", { locale: ptBR })}${pendingTasks[0]?.due_time ? ` às ${pendingTasks[0].due_time.slice(0, 5)}` : ''}`
                     : `${pendingTasks.length} atividade(s) pendente(s)`
                   }
                 </Badge>
@@ -358,7 +360,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                         {task.due_date && (
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Calendar className="h-2.5 w-2.5" />
-                            {format(new Date(task.due_date), "dd/MM/yy", { locale: ptBR })}
+                            {format(new Date(task.due_date + 'T00:00:00'), "dd/MM/yy", { locale: ptBR })}{task.due_time ? ` às ${task.due_time.slice(0, 5)}` : ''}
                           </p>
                         )}
                         {task.assigned_user && (

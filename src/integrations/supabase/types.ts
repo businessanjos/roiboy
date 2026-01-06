@@ -4521,6 +4521,7 @@ export type Database = {
           deal_id: string | null
           description: string | null
           due_date: string | null
+          due_time: string | null
           id: string
           lead_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
@@ -4541,6 +4542,7 @@ export type Database = {
           deal_id?: string | null
           description?: string | null
           due_date?: string | null
+          due_time?: string | null
           id?: string
           lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
@@ -4561,6 +4563,7 @@ export type Database = {
           deal_id?: string | null
           description?: string | null
           due_date?: string | null
+          due_time?: string | null
           id?: string
           lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
