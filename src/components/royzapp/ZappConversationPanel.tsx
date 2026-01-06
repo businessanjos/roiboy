@@ -39,7 +39,6 @@ import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappPlaybookList } from "./ZappPlaybookList";
 import { ZappMarketingList } from "./ZappMarketingList";
 import { ZappCRMPanel } from "./ZappCRMPanel";
-import { ZappOperationPanel } from "./ZappOperationPanel";
 import { ZappFinancePanel } from "./ZappFinancePanel";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
@@ -714,9 +713,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         )}
         {activeView === "sector" && sectorId === "vendas" && (
           <ZappCRMPanel />
-        )}
-        {activeView === "sector" && sectorId === "operacoes" && (
-          <ZappOperationPanel sectorId={sectorId} />
         )}
         {activeView === "sector" && sectorId === "financeiro" && (
           <ZappFinancePanel sectorId={sectorId} />

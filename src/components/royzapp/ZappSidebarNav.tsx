@@ -48,7 +48,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   };
   
   const SectorIcon = getSectorIcon();
-  const showSectorButton = sectorId && ["vendas", "operacoes", "financeiro"].includes(sectorId);
+  const showSectorButton = sectorId && ["vendas", "financeiro"].includes(sectorId);
   
   return (
     <div className="flex items-center gap-1 px-3 py-2 bg-zapp-bg border-b border-zapp-border">
