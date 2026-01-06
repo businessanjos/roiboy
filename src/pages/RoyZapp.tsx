@@ -1300,6 +1300,7 @@ export default function RoyZapp() {
         media_type: "audio",
         caption: "",
         file_name: `audio_${Date.now()}.webm`,
+        sector_id: selectedSectorId || "",
       };
       
       if (isGroup && groupJid) {
@@ -1378,6 +1379,7 @@ export default function RoyZapp() {
           action: "delete_message",
           message_id: messageId,
           phone: getContactInfo(selectedConversation).phone,
+          sector_id: selectedSectorId || "",
         },
       });
       
