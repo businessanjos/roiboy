@@ -246,7 +246,7 @@ export function WhatsAppFormattingToolbar({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="rounded-t-none font-mono text-sm"
+        className="rounded-t-none font-mono text-sm text-foreground bg-background border-input"
         disabled={disabled}
       />
     </div>
