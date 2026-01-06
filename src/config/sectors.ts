@@ -82,7 +82,6 @@ export const sectors: Sector[] = [
       { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial", icon: CreditCard, label: "Financeiro", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/clients", icon: Users, label: "Clientes Ativos", permission: PERMISSIONS.CLIENTS_VIEW },
-      { to: "/roy-zapp?sector=financeiro", icon: MessageSquare, label: "ROY zAPP" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
@@ -126,7 +125,6 @@ export const sectors: Sector[] = [
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
-      { to: "/roy-zapp?sector=vendas", icon: MessageSquare, label: "ROY zAPP" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
@@ -140,7 +138,6 @@ export const sectors: Sector[] = [
     defaultRoute: "/marketing",
     navItems: [
       { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
-      { to: "/roy-zapp?sector=marketing", icon: MessageSquare, label: "ROY zAPP" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
