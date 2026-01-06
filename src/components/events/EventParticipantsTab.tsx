@@ -353,8 +353,8 @@ export default function EventParticipantsTab({
           )}
         </div>
         {maxCapacity && (
-          <Badge variant="outline">
-            Capacidade: {stats.confirmed}/{maxCapacity}
+          <Badge variant={stats.confirmed >= maxCapacity ? "destructive" : "outline"}>
+            {stats.confirmed >= maxCapacity ? "Esgotado" : "Capacidade"}: {stats.confirmed}/{maxCapacity}
           </Badge>
         )}
       </div>

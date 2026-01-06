@@ -42,6 +42,7 @@ interface MarketingEvent {
   public_registration_code: string | null;
   confirmed_count: number;
   attended_count: number;
+  max_capacity: number | null;
 }
 
 export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
@@ -67,7 +68,7 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
       // Build query based on sector
       let query = supabase
         .from("events")
-        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code, allow_external_guests")
+        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code, allow_external_guests, max_capacity")
         .eq("account_id", userData.account_id);
       
       if (isVendasSector) {
@@ -114,6 +115,7 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
           public_registration_code: event.public_registration_code,
           confirmed_count: confirmedResult.count || 0,
           attended_count: attendanceResult.count || 0,
+          max_capacity: event.max_capacity,
         });
       }
 
@@ -143,8 +145,14 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
     }
   };
 
+  const isSoldOut = (event: MarketingEvent) => 
+    event.max_capacity && event.confirmed_count >= event.max_capacity;
+
   const getEventStatusBadge = (event: MarketingEvent) => {
     const eventDate = new Date(event.scheduled_at);
+    if (isSoldOut(event)) {
+      return <Badge variant="destructive" className="text-[10px]">Esgotado</Badge>;
+    }
     if (isToday(eventDate)) {
       return <Badge className="bg-green-500 text-white text-[10px]">Hoje</Badge>;
     }
@@ -289,9 +297,9 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
                       
                       {/* Progress indicators - always show confirmed count */}
                       <div className="flex items-center gap-3 mt-2 text-[10px]">
-                        <span className="flex items-center gap-1 text-zapp-text-muted">
+                        <span className={`flex items-center gap-1 ${isSoldOut(event) ? 'text-destructive font-medium' : 'text-zapp-text-muted'}`}>
                           <Users className="h-3 w-3" />
-                          {event.confirmed_count}{event.goal_confirmed ? `/${event.goal_confirmed}` : ''} confirmados
+                          {event.confirmed_count}{event.max_capacity ? `/${event.max_capacity}` : (event.goal_confirmed ? `/${event.goal_confirmed}` : '')} confirmados
                         </span>
                         {event.goal_present ? (
                           <span className="flex items-center gap-1 text-zapp-text-muted">
