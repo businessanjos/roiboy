@@ -35,8 +35,6 @@ import {
   Users,
   Target,
   Search,
-  MessageSquare,
-  User,
 } from "lucide-react";
 import LeadsTab from "@/components/sales/LeadsTab";
 
@@ -341,14 +339,12 @@ export default function SalesPipeline() {
               </Tabs>
 
               {/* Filters */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
                 {/* Sales Rep Filter */}
                 <Select value={selectedSalesRep} onValueChange={setSelectedSalesRep}>
-                  <SelectTrigger className="w-[180px] h-9">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Vendedor" />
-                    </div>
+                  <SelectTrigger className="h-9 w-auto gap-2 bg-background border-border">
+                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="Todos vendedores" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos vendedores</SelectItem>
@@ -370,11 +366,9 @@ export default function SalesPipeline() {
 
                 {/* Tag Filter */}
                 <Select value={selectedTag} onValueChange={setSelectedTag}>
-                  <SelectTrigger className="w-[150px] h-9">
-                    <div className="flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Tags" />
-                    </div>
+                  <SelectTrigger className="h-9 w-auto gap-2 bg-background border-border">
+                    <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="Todas as tags" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as tags</SelectItem>
@@ -386,20 +380,6 @@ export default function SalesPipeline() {
                   </SelectContent>
                 </Select>
                 
-                {(selectedTag !== 'all' || selectedSalesRep !== 'all') && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedTag('all');
-                      setSelectedSalesRep('all');
-                    }}
-                    className="h-9 px-2"
-                  >
-                    Limpar
-                  </Button>
-                )}
-                
                 {/* Search bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -407,7 +387,7 @@ export default function SalesPipeline() {
                     placeholder="Buscar nome ou telefone..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9 w-[250px]"
+                    className="pl-9 h-9 w-[220px] bg-background border-border"
                   />
                 </div>
               </div>
