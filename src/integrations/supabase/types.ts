@@ -4948,6 +4948,7 @@ export type Database = {
           pix_key: string | null
           pix_key_type: string | null
           responsible_user_id: string | null
+          revenue_range: string | null
           rg: string | null
           source: string | null
           state: string | null
@@ -5000,6 +5001,7 @@ export type Database = {
           pix_key?: string | null
           pix_key_type?: string | null
           responsible_user_id?: string | null
+          revenue_range?: string | null
           rg?: string | null
           source?: string | null
           state?: string | null
@@ -5052,6 +5054,7 @@ export type Database = {
           pix_key?: string | null
           pix_key_type?: string | null
           responsible_user_id?: string | null
+          revenue_range?: string | null
           rg?: string | null
           source?: string | null
           state?: string | null
