@@ -55,8 +55,8 @@ interface Deal {
 
 interface DealActivity {
   id: string;
-  event_type: string;
-  description: string | null;
+  type: string;
+  content: string | null;
   created_at: string;
   user?: { name: string; avatar_url: string | null } | null;
 }
@@ -76,10 +76,9 @@ interface InternalTask {
 
 interface CustomField {
   id: string;
-  field_name: string;
+  name: string;
   field_type: string;
   options: string[] | null;
-  option_colors: Record<string, string> | null;
   display_order: number;
 }
 
@@ -142,7 +141,7 @@ export function ZappDealDetailSheet({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_fields")
-        .select("id, name, field_type, options, option_colors, display_order")
+        .select("id, name, field_type, options, display_order")
         .eq("account_id", currentUser?.account_id)
         .eq("show_in_leads", true)
         .eq("is_active", true)
@@ -252,15 +251,16 @@ export function ZappDealDetailSheet({
   // Add activity mutation
   const addActivity = useMutation({
     mutationFn: async () => {
-      if (!currentUser?.id) throw new Error("Usuário não autenticado");
+      if (!currentUser?.id || !currentUser?.account_id) throw new Error("Usuário não autenticado");
       const { error } = await supabase
         .from("deal_activities")
-        .insert({
+        .insert([{
+          account_id: currentUser.account_id,
           deal_id: dealId,
           type: newActivityType,
           content: newActivityDescription.trim() || null,
           user_id: currentUser.id,
-        });
+        }]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -525,18 +525,37 @@ export function ZappDealDetailSheet({
                     <Card className="p-3 bg-zapp-panel border-zapp-border">
                       <Label className="text-xs text-zapp-text-muted mb-2 block">Campos Personalizados</Label>
                       <div className="space-y-2">
-                        {customFields.map(field => (
-                          <div key={field.id} className="flex items-center justify-between">
-                            <span className="text-xs text-zapp-text-muted">{field.name}</span>
-                            <LeadFieldValueEditor
-                              field={{ ...field, field_name: field.name, is_required: false, is_active: true }}
-                              leadId={leadId}
-                              accountId={currentUser?.account_id || ""}
-                              currentValue={getFieldValue(field.id)}
-                              onValueChange={() => refetchFieldValues()}
-                            />
-                          </div>
-                        ))}
+                        {customFields.map(field => {
+                          // Convert string[] options to FieldOption[] format
+                          const formattedOptions = Array.isArray(field.options)
+                            ? field.options.map((opt: any) => 
+                                typeof opt === 'string' 
+                                  ? { value: opt, label: opt, color: 'gray' }
+                                  : opt
+                              )
+                            : [];
+                          
+                          return (
+                            <div key={field.id} className="flex items-center justify-between">
+                              <span className="text-xs text-zapp-text-muted">{field.name}</span>
+                              <LeadFieldValueEditor
+                                field={{
+                                  id: field.id,
+                                  name: field.name,
+                                  field_type: field.field_type as any,
+                                  options: formattedOptions,
+                                  is_required: false,
+                                  is_active: true,
+                                  display_order: field.display_order,
+                                }}
+                                leadId={leadId}
+                                accountId={currentUser?.account_id || ""}
+                                currentValue={getFieldValue(field.id)}
+                                onValueChange={() => refetchFieldValues()}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                     </Card>
                   )}
