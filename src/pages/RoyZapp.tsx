@@ -1319,8 +1319,10 @@ export default function RoyZapp() {
       
       if (error) throw error;
       
-      if (data && !data.success) {
-        throw new Error(data.message || "Falha ao enviar áudio");
+      // Check both wrapper and inner success
+      const innerData = data?.data || data;
+      if (!innerData?.success && innerData?.message) {
+        throw new Error(innerData.message || "Falha ao enviar áudio");
       }
       
       // Save message to zapp_messages

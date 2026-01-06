@@ -1800,6 +1800,8 @@ serve(async (req) => {
         // For images/documents: uses /send/{type} with "file" field
         const isAudio = media_type === "audio";
         
+        console.log(`send_media: isAudio=${isAudio}, media_url=${media_url}, hasToken=${!!savedInstanceToken}`);
+        
         const mediaEndpoints = isAudio ? [
           // UAZAPI PTT endpoint (voice messages) - this is the correct one!
           { url: `/sendPTT`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
@@ -1807,6 +1809,9 @@ serve(async (req) => {
           { url: `/sendPTT`, method: "POST", body: { number: cleanPhone, audio: media_url } },
           { url: `/send/ptt`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
           { url: `/message/audio`, method: "POST", body: { number: cleanPhone, source: media_url, asVoiceNote: true } },
+          // Also try /send/audio with different body formats
+          { url: `/send/audio`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
+          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, audio: media_url, ptt: true } },
         ] : [
           // Image/document endpoints
           { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, file: media_url, caption: caption || "" } },
