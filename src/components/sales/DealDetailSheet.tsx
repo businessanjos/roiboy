@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import * as icons from "lucide-react";
 import {
   StickyNote,
   Phone,
@@ -48,6 +49,7 @@ import {
   Building2,
   FileText,
   ListTodo,
+  type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
@@ -87,6 +89,11 @@ interface DealTask {
     name: string;
     color: string;
     is_completed_status: boolean;
+  } | null;
+  activity_type?: {
+    name: string;
+    icon: string | null;
+    color: string | null;
   } | null;
 }
 
@@ -320,7 +327,8 @@ export function DealDetailSheet({
           completed_at,
           created_at,
           assigned_user:users!internal_tasks_assigned_to_fkey(name, avatar_url),
-          custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name, color, is_completed_status)
+          custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name, color, is_completed_status),
+          activity_type:activity_types!internal_tasks_activity_type_id_fkey(name, icon, color)
         `)
         .eq("deal_id", deal.id)
         .order("created_at", { ascending: false })
@@ -794,23 +802,31 @@ export function DealDetailSheet({
                               const task = item.data;
                               const isCompleted = task.custom_status?.is_completed_status || task.completed_at !== null;
                               const userName = task.assigned_user?.name || "Sem responsável";
+                              
+                              // Get icon from activity_type or use default
+                              const iconName = task.activity_type?.icon;
+                              const activityColor = task.activity_type?.color || (isCompleted ? "#22c55e" : "#f59e0b");
+                              const activityName = task.activity_type?.name || "Atividade";
+                              
+                              // Dynamically get icon component
+                              const IconComponent = iconName 
+                                ? (icons[iconName as keyof typeof icons] as LucideIcon | undefined) || ListTodo
+                                : ListTodo;
 
                               return (
                                 <div key={`task-${task.id}`} className="flex gap-2.5 p-3">
-                                  <div className={cn(
-                                    "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0",
-                                    isCompleted 
-                                      ? "bg-emerald-500 text-white" 
-                                      : "bg-amber-500 text-white"
-                                  )}>
-                                    <ListTodo className="h-3 w-3" />
+                                  <div 
+                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white"
+                                    style={{ backgroundColor: activityColor }}
+                                  >
+                                    <IconComponent className="h-3 w-3" />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-1 text-xs">
                                       <span className="font-medium">{userName}</span>
                                       <span className="text-muted-foreground">·</span>
-                                      <span className={cn("font-medium", isCompleted ? "text-emerald-500" : "text-amber-500")}>
-                                        {isCompleted ? "Concluiu" : "Criou"} atividade
+                                      <span className="font-medium" style={{ color: activityColor }}>
+                                        {isCompleted ? "Concluiu" : "Agendou"} {activityName}
                                       </span>
                                       <span className="text-[10px] text-muted-foreground ml-auto">
                                         {formatDistanceToNow(new Date(task.created_at), { locale: ptBR, addSuffix: true })}
@@ -822,17 +838,11 @@ export function DealDetailSheet({
                                     )}>
                                       {task.title}
                                     </p>
-                                    {task.custom_status && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-[9px] h-4 px-1 mt-1"
-                                        style={{
-                                          borderColor: task.custom_status.color,
-                                          color: task.custom_status.color,
-                                        }}
-                                      >
-                                        {task.custom_status.name}
-                                      </Badge>
+                                    {task.due_date && (
+                                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
+                                        <Calendar className="h-2.5 w-2.5" />
+                                        {format(new Date(task.due_date), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+                                      </span>
                                     )}
                                   </div>
                                 </div>
