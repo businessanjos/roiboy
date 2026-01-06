@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Deal } from "@/hooks/useDeals";
@@ -7,10 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo } from "lucide-react";
+import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, Clock } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DealCardProps {
   deal: Deal;
@@ -20,7 +21,49 @@ interface DealCardProps {
 
 export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [pendingTasksCount, setPendingTasksCount] = useState(0);
+  const [nextTaskDate, setNextTaskDate] = useState<string | null>(null);
   
+  // Fetch pending tasks count for this deal
+  useEffect(() => {
+    const fetchPendingTasks = async () => {
+      const { data, error } = await supabase
+        .from("internal_tasks")
+        .select("id, due_date, custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)")
+        .eq("deal_id", deal.id)
+        .is("completed_at", null);
+      
+      if (!error && data) {
+        // Filter out completed statuses
+        const pending = data.filter(t => !t.custom_status?.is_completed_status);
+        setPendingTasksCount(pending.length);
+        
+        // Find next due date
+        const withDueDate = pending.filter(t => t.due_date).sort((a, b) => 
+          new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime()
+        );
+        if (withDueDate.length > 0) {
+          setNextTaskDate(withDueDate[0].due_date);
+        }
+      }
+    };
+    
+    fetchPendingTasks();
+    
+    // Subscribe to changes
+    const channel = supabase
+      .channel(`deal-card-tasks-${deal.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "internal_tasks", filter: `deal_id=eq.${deal.id}` },
+        () => fetchPendingTasks()
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [deal.id]);
   const {
     attributes,
     listeners,
@@ -181,20 +224,44 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 hover:bg-primary/10"
+              className={cn(
+                "h-5 w-5 relative",
+                pendingTasksCount > 0 ? "hover:bg-primary/10" : "hover:bg-muted"
+              )}
               onClick={(e) => {
                 e.stopPropagation();
                 setTaskDialogOpen(true);
               }}
-              title="Agendar atividade"
+              title={pendingTasksCount > 0 ? `${pendingTasksCount} atividade(s) pendente(s)` : "Agendar atividade"}
             >
-              <ListTodo className="h-3 w-3 text-muted-foreground" />
+              <ListTodo className={cn(
+                "h-3 w-3",
+                pendingTasksCount > 0 ? "text-primary" : "text-muted-foreground"
+              )} />
+              {pendingTasksCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[8px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-bold">
+                  {pendingTasksCount}
+                </span>
+              )}
             </Button>
           </div>
           <span className="text-xs font-bold text-primary">
             {formatCurrency(deal.value)}
           </span>
         </div>
+
+        {/* Next Task Date */}
+        {nextTaskDate && (
+          <div className="flex items-center gap-1">
+            <Badge 
+              variant="secondary" 
+              className="text-[10px] px-1.5 py-0 flex items-center gap-1 bg-blue-500/20 text-blue-600"
+            >
+              <Clock className="h-2.5 w-2.5" />
+              Próxima: {format(new Date(nextTaskDate), "dd/MM 'às' HH:mm", { locale: ptBR })}
+            </Badge>
+          </div>
+        )}
 
         {/* Contract Expiry Badge for Renewal Deals */}
         {contractExpiry && (
