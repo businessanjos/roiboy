@@ -493,25 +493,28 @@ export function useZappData(options: UseZappDataOptions = {}) {
       }
       
       // Filter agents by current sector's department
-      // BUT always include admin/gestor users even if not explicitly assigned to this department
+      // Include: agents for this department, agents for ALL departments (null), and admins/gestores
       let filteredAgents = finalAgents;
       if (sectorId && targetDepartmentId) {
         filteredAgents = finalAgents.filter((a: Agent) => {
-          // Always show if assigned to this department
+          // Show if assigned to this specific department
           if (a.department_id === targetDepartmentId) return true;
+          
+          // Show if assigned to ALL departments (department_id is null means "Todos os departamentos")
+          if (a.department_id === null) return true;
           
           // Also show admins/gestores (they have access to all departments)
           const userRole = a.user?.role || usersData?.find((u: any) => u.id === a.user_id)?.role;
           const isAdmin = userRole === 'admin' || userRole === 'super_admin';
           const isGestor = userRole === 'gestor';
           
-          // Check if user has is_also_admin flag (alternative admin check via team_user data)
+          // Check if user has is_also_admin flag
           const teamUser = usersData?.find((u: any) => u.id === a.user_id);
           const hasAdminFlag = (teamUser as any)?.is_also_admin === true;
           
           return isAdmin || isGestor || hasAdminFlag;
         });
-        console.log(`[ZappData] Filtered agents for sector ${sectorId}: ${filteredAgents.length} of ${finalAgents.length} (includes admins/gestores)`);
+        console.log(`[ZappData] Filtered agents for sector ${sectorId}: ${filteredAgents.length} of ${finalAgents.length}`);
       }
       
       setAgents(filteredAgents);
