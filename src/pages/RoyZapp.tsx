@@ -500,6 +500,7 @@ export default function RoyZapp() {
         .update({ 
           agent_id: currentAgent.id, 
           status: "active",
+          assigned_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq("id", assignmentId);
@@ -521,6 +522,69 @@ export default function RoyZapp() {
     } catch (error: any) {
       console.error("Error assigning conversation:", error);
       toast.error(error.message || "Erro ao atribuir conversa");
+    }
+  };
+
+  // Pull next available conversation from queue
+  const pullFromQueue = async () => {
+    if (!currentAgent) {
+      toast.error("Você não está cadastrado como atendente");
+      return;
+    }
+
+    // Find the oldest unassigned conversation
+    const unassignedConversations = assignments.filter(a => 
+      a.agent_id === null && 
+      a.status !== "closed" && 
+      !a.zapp_conversation?.is_archived
+    ).sort((a, b) => {
+      // Sort by last_message_at ascending (oldest first)
+      const dateA = new Date(a.zapp_conversation?.last_message_at || a.created_at).getTime();
+      const dateB = new Date(b.zapp_conversation?.last_message_at || b.created_at).getTime();
+      return dateA - dateB;
+    });
+
+    if (unassignedConversations.length === 0) {
+      toast.info("Não há conversas na fila");
+      return;
+    }
+
+    const nextConversation = unassignedConversations[0];
+    
+    try {
+      const { error } = await supabase
+        .from("zapp_conversation_assignments")
+        .update({ 
+          agent_id: currentAgent.id, 
+          status: "active",
+          assigned_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", nextConversation.id);
+
+      if (error) throw error;
+      
+      toast.success("Conversa puxada da fila!");
+      fetchData();
+      
+      // Switch to "mine" tab and select the conversation
+      setInboxTab("mine");
+      setSelectedAIAgent(null);
+      setSelectedConversation({
+        ...nextConversation,
+        agent_id: currentAgent.id,
+        status: "active" as const,
+        agent: { ...currentAgent }
+      });
+      
+      // Mark as read
+      const zappConvId = nextConversation.zapp_conversation?.id;
+      if (zappConvId && (nextConversation.zapp_conversation?.unread_count || 0) > 0) {
+        markAsRead(zappConvId);
+      }
+    } catch (error: any) {
+      console.error("Error pulling from queue:", error);
+      toast.error(error.message || "Erro ao puxar da fila");
     }
   };
 
@@ -1843,10 +1907,10 @@ export default function RoyZapp() {
       const isArchived = a.zapp_conversation?.is_archived || false;
       if (isArchived) return false;
       
-      // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
+      // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only
       const matchesTab = inboxTab === "mine" 
         ? a.agent_id === currentAgent?.id
-        : true; // Queue shows ALL conversations
+        : a.agent_id === null; // Queue shows only unassigned conversations
       
       const contact = getContactInfo(a);
       const matchesSearch = searchQuery === "" ||
@@ -1889,7 +1953,8 @@ export default function RoyZapp() {
   // Memoized stats to avoid recalculating on every render
   const stats = useMemo(() => {
     const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
-    const totalQueueConversations = assignments.filter((a) => a.status !== "closed").length;
+    // Queue shows only unassigned conversations (agent_id === null)
+    const totalQueueConversations = assignments.filter((a) => a.agent_id === null && a.status !== "closed").length;
     const myConversations = assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
     const activeConversations = assignments.filter((a) => a.status === "active").length;
     const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
@@ -1900,7 +1965,9 @@ export default function RoyZapp() {
       !a.zapp_conversation?.is_archived &&
       (a.zapp_conversation?.unread_count || 0) > 0
     ).length;
+    // Queue unread shows only unassigned conversations with unread messages
     const queueUnreadCount = assignments.filter((a) => 
+      a.agent_id === null &&
       a.status !== "closed" && 
       !a.zapp_conversation?.is_archived &&
       (a.zapp_conversation?.unread_count || 0) > 0
@@ -2195,12 +2262,20 @@ export default function RoyZapp() {
           soundEnabled={soundEnabled}
           importLimit={importLimit}
           importingConversations={importingConversations}
-          onSelectConversation={(a) => {
+          onSelectConversation={async (a) => {
             setSelectedAIAgent(null); // Clear AI agent when selecting regular conversation
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
               markAsRead(zappConvId);
+            }
+            // Auto-assign to current agent if conversation is unassigned (from queue)
+            if (a.agent_id === null && currentAgent?.id) {
+              try {
+                await assignToMe(a.id);
+              } catch (error) {
+                console.error("Error auto-assigning conversation:", error);
+              }
             }
           }}
           onOpenNewConversationDialog={openNewConversationDialog}
@@ -2237,6 +2312,7 @@ export default function RoyZapp() {
             localStorage.setItem("zapp_signature", value);
           }}
           getAgentName={getAgentName}
+          onPullFromQueue={pullFromQueue}
           aiAgents={[]} // Hidden for now - TODO: configure AI agents properly
           selectedAIAgent={null}
           onSelectAIAgent={() => {}} // Disabled for now
