@@ -28,10 +28,10 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertTriangle, Check, Upload, X, Users, RefreshCw, Plus, SkipForward, FileKey } from "lucide-react";
+import { AlertTriangle, Check, Upload, X, Users, RefreshCw, Plus, SkipForward, FileKey, UserCheck } from "lucide-react";
 
 export type DuplicateMatchType = "external_id" | "phone" | "email" | "cpf" | "name";
-export type DuplicateAction = "skip" | "update" | "create";
+export type DuplicateAction = "skip" | "update" | "create" | "link_client";
 
 export interface ExistingLeadInfo {
   id: string;
@@ -39,6 +39,14 @@ export interface ExistingLeadInfo {
   phone?: string;
   email?: string;
   external_id?: string;
+}
+
+export interface ExistingClientInfo {
+  id: string;
+  full_name: string;
+  phone?: string;
+  email?: string;
+  status?: string;
 }
 
 export interface ImportLeadRow {
@@ -65,6 +73,9 @@ export interface ImportLeadRow {
     existingLead?: ExistingLeadInfo;
   };
   duplicateAction?: DuplicateAction;
+  // Client match info
+  isClientMatch?: boolean;
+  clientInfo?: ExistingClientInfo;
 }
 
 interface LeadImportPreviewProps {
@@ -111,7 +122,7 @@ export function LeadImportPreview({
   const [selectedRows, setSelectedRows] = useState<Set<number>>(
     new Set(rows.filter(r => !r.hasError).map(r => r.lineNumber))
   );
-  const [filterMode, setFilterMode] = useState<"all" | "new" | "update" | "duplicates" | "errors">("all");
+  const [filterMode, setFilterMode] = useState<"all" | "new" | "update" | "duplicates" | "clients" | "errors">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [defaultSource, setDefaultSource] = useState<string>("");
   const [defaultDuplicateAction, setDefaultDuplicateAction] = useState<DuplicateAction>("skip");
@@ -119,6 +130,9 @@ export function LeadImportPreview({
 
   // Update row actions when default action changes
   const getRowAction = (row: ImportLeadRow): DuplicateAction => {
+    if (row.isClientMatch) {
+      return rowActions[row.lineNumber] ?? "skip";
+    }
     if (!row.isDuplicate) return "create";
     return rowActions[row.lineNumber] ?? row.duplicateAction ?? defaultDuplicateAction;
   };
@@ -132,11 +146,13 @@ export function LeadImportPreview({
 
     // Filter by mode
     if (filterMode === "new") {
-      result = result.filter(r => !r.hasError && !r.isDuplicate);
+      result = result.filter(r => !r.hasError && !r.isDuplicate && !r.isClientMatch);
     } else if (filterMode === "update") {
       result = result.filter(r => r.isDuplicate && r.duplicateInfo?.type === "external_id");
     } else if (filterMode === "duplicates") {
       result = result.filter(r => r.isDuplicate && r.duplicateInfo?.type !== "external_id");
+    } else if (filterMode === "clients") {
+      result = result.filter(r => r.isClientMatch);
     } else if (filterMode === "errors") {
       result = result.filter(r => r.hasError);
     }
@@ -157,11 +173,12 @@ export function LeadImportPreview({
   }, [rows, filterMode, searchTerm]);
 
   const stats = useMemo(() => {
-    const newCount = rows.filter(r => !r.hasError && !r.isDuplicate).length;
+    const newCount = rows.filter(r => !r.hasError && !r.isDuplicate && !r.isClientMatch).length;
     const updateCount = rows.filter(r => r.isDuplicate && r.duplicateInfo?.type === "external_id").length;
     const duplicateCount = rows.filter(r => r.isDuplicate && r.duplicateInfo?.type !== "external_id").length;
+    const clientCount = rows.filter(r => r.isClientMatch).length;
     const errorCount = rows.filter(r => r.hasError).length;
-    return { newCount, updateCount, duplicateCount, errorCount };
+    return { newCount, updateCount, duplicateCount, clientCount, errorCount };
   }, [rows]);
 
   const toggleRow = (lineNumber: number) => {
@@ -216,11 +233,11 @@ export function LeadImportPreview({
         </DialogHeader>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-4 gap-3 py-2">
+        <div className="grid grid-cols-5 gap-2 py-2">
           <button
             onClick={() => setFilterMode(filterMode === "new" ? "all" : "new")}
-            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
-              filterMode === "new" ? "bg-green-50 border-green-300" : "hover:bg-muted/50"
+            className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
+              filterMode === "new" ? "bg-green-50 border-green-300 dark:bg-green-950/30" : "hover:bg-muted/50"
             }`}
           >
             <div className="flex items-center gap-1 text-green-600">
@@ -231,20 +248,20 @@ export function LeadImportPreview({
           </button>
           <button
             onClick={() => setFilterMode(filterMode === "update" ? "all" : "update")}
-            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
-              filterMode === "update" ? "bg-blue-50 border-blue-300" : "hover:bg-muted/50"
+            className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
+              filterMode === "update" ? "bg-blue-50 border-blue-300 dark:bg-blue-950/30" : "hover:bg-muted/50"
             }`}
           >
             <div className="flex items-center gap-1 text-blue-600">
               <RefreshCw className="h-4 w-4" />
               <span className="text-lg font-bold">{stats.updateCount}</span>
             </div>
-            <span className="text-xs text-muted-foreground">Atualizar (ID)</span>
+            <span className="text-xs text-muted-foreground">Atualizar</span>
           </button>
           <button
             onClick={() => setFilterMode(filterMode === "duplicates" ? "all" : "duplicates")}
-            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
-              filterMode === "duplicates" ? "bg-amber-50 border-amber-300" : "hover:bg-muted/50"
+            className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
+              filterMode === "duplicates" ? "bg-amber-50 border-amber-300 dark:bg-amber-950/30" : "hover:bg-muted/50"
             }`}
           >
             <div className="flex items-center gap-1 text-amber-600">
@@ -254,9 +271,21 @@ export function LeadImportPreview({
             <span className="text-xs text-muted-foreground">Duplicados</span>
           </button>
           <button
+            onClick={() => setFilterMode(filterMode === "clients" ? "all" : "clients")}
+            className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
+              filterMode === "clients" ? "bg-cyan-50 border-cyan-300 dark:bg-cyan-950/30" : "hover:bg-muted/50"
+            }`}
+          >
+            <div className="flex items-center gap-1 text-cyan-600">
+              <UserCheck className="h-4 w-4" />
+              <span className="text-lg font-bold">{stats.clientCount}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">Clientes</span>
+          </button>
+          <button
             onClick={() => setFilterMode(filterMode === "errors" ? "all" : "errors")}
-            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
-              filterMode === "errors" ? "bg-red-50 border-red-300" : "hover:bg-muted/50"
+            className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
+              filterMode === "errors" ? "bg-red-50 border-red-300 dark:bg-red-950/30" : "hover:bg-muted/50"
             }`}
           >
             <div className="flex items-center gap-1 text-red-600">
@@ -417,6 +446,28 @@ export function LeadImportPreview({
                             <X className="h-3 w-3 mr-1" />
                             {row.errorMessage || "Erro"}
                           </Badge>
+                        ) : row.isClientMatch && row.clientInfo ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs bg-cyan-100 text-cyan-700 border-cyan-300"
+                                >
+                                  <UserCheck className="h-3 w-3 mr-1" />
+                                  Cliente ativo
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="text-xs">
+                                  <div><strong>Cliente existente:</strong></div>
+                                  <div>Nome: {row.clientInfo.full_name}</div>
+                                  {row.clientInfo.phone && <div>Tel: {row.clientInfo.phone}</div>}
+                                  {row.clientInfo.email && <div>Email: {row.clientInfo.email}</div>}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         ) : row.isDuplicate && row.duplicateInfo ? (
                           <Badge 
                             variant="outline" 
@@ -439,6 +490,11 @@ export function LeadImportPreview({
                       <TableCell>
                         {row.hasError ? (
                           <span className="text-xs text-muted-foreground">-</span>
+                        ) : row.isClientMatch ? (
+                          <Badge variant="outline" className="text-xs text-cyan-600">
+                            <SkipForward className="h-3 w-3 mr-1" />
+                            Pular
+                          </Badge>
                         ) : row.isDuplicate ? (
                           <Select 
                             value={action} 
