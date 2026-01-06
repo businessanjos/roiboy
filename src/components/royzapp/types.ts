@@ -42,6 +42,8 @@ export interface Agent {
     email: string;
     avatar_url: string | null;
     team_role_id?: string | null;
+    role?: string | null;
+    is_also_admin?: boolean | null;
   };
   department?: Department | null;
 }
@@ -53,6 +55,7 @@ export interface TeamUser {
   avatar_url: string | null;
   role: string;
   team_role_id: string | null;
+  is_also_admin?: boolean | null;
   team_role?: {
     id: string;
     name: string;
