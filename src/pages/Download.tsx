@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Monitor, Apple, Chrome, CheckCircle2, Download, Smartphone, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
+import { RoyLogo } from "@/components/ui/roy-logo";
 
 export default function DownloadPage() {
   const features = [
@@ -18,7 +19,7 @@ export default function DownloadPage() {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/sobre" className="flex items-center gap-2">
-            <img src="/roy-logo.png" alt="ROY" className="h-8 w-8" />
+            <RoyLogo size="md" />
             <span className="font-bold text-xl">ROY APP</span>
           </Link>
           <Link to="/auth">

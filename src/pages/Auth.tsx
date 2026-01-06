@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PasswordStrength, validatePassword, usePasswordStrength } from "@/components/ui/password-strength";
 import { LoadingScreen } from "@/components/ui/loading-screen";
-import royLogo from "@/assets/roy-logo.png";
+import { RoyLogo } from "@/components/ui/roy-logo";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
@@ -229,7 +229,7 @@ export default function Auth() {
 
         <div className="relative z-10 w-full max-w-md animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <img src={royLogo} alt="ROY APP" className="h-12 w-12 object-contain" />
+            <RoyLogo size="lg" />
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY APP</h1>
               <p className="text-sm text-muted-foreground">Recuperar senha</p>
@@ -333,7 +333,7 @@ export default function Auth() {
 
         <div className="relative z-10 w-full max-w-md animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-8">
-            <img src={royLogo} alt="ROY APP" className="h-12 w-12 object-contain" />
+            <RoyLogo size="lg" />
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY APP</h1>
               <p className="text-sm text-muted-foreground">Redefinir senha</p>
@@ -433,13 +433,13 @@ export default function Auth() {
 
       <div className="relative z-10 w-full max-w-md animate-fade-in">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <img src={royLogo} alt="ROY APP" className="h-12 w-12 object-contain" />
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY APP</h1>
-            <p className="text-sm text-muted-foreground">Sua plataforma de encantamento</p>
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <RoyLogo size="lg" />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">ROY APP</h1>
+              <p className="text-sm text-muted-foreground">Sua plataforma de encantamento</p>
+            </div>
           </div>
-        </div>
 
         <Card className="shadow-elevated border-border/50">
           <Tabs defaultValue={initialTab} className="w-full">
