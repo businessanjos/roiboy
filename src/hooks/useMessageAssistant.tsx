@@ -120,13 +120,21 @@ export function useMessageAssistant({
   // Load suggestions when messages change
   useEffect(() => {
     if (!suggestionsEnabled || lastMessages.length === 0) {
+      console.log("[AI Suggestions] Disabled or no messages");
       setSuggestions([]);
       return;
     }
 
-    // Check if last message is from client
-    const lastMessage = lastMessages[lastMessages.length - 1];
-    if (!lastMessage?.is_from_client) {
+    // Wait for account_id to be available
+    if (!currentUser?.account_id) {
+      console.log("[AI Suggestions] Waiting for account_id...");
+      return;
+    }
+
+    // Check if there's ANY message from client in the conversation (more flexible)
+    const hasClientMessage = lastMessages.some(m => m.is_from_client);
+    if (!hasClientMessage) {
+      console.log("[AI Suggestions] No client messages found");
       return;
     }
 
@@ -141,6 +149,7 @@ export function useMessageAssistant({
     }
 
     suggestionsTimeoutRef.current = setTimeout(async () => {
+      console.log("[AI Suggestions] Fetching suggestions for sector:", sectorId);
       setIsLoadingSuggestions(true);
       lastMessagesRef.current = messagesSignature;
 
@@ -153,24 +162,25 @@ export function useMessageAssistant({
             })),
             clientName,
             sectorId,
-            accountId: currentUser?.account_id,
+            accountId: currentUser.account_id,
           },
         });
 
         if (error) {
-          console.error("Error loading suggestions:", error);
+          console.error("[AI Suggestions] Error:", error);
           return;
         }
 
+        console.log("[AI Suggestions] Received:", data?.suggestions?.length || 0, "suggestions");
         if (data?.suggestions) {
           setSuggestions(data.suggestions);
         }
       } catch (err) {
-        console.error("Error in suggestions:", err);
+        console.error("[AI Suggestions] Error in suggestions:", err);
       } finally {
         setIsLoadingSuggestions(false);
       }
-    }, 500); // 500ms debounce
+    }, 300); // Reduced debounce from 500ms to 300ms
 
     return () => {
       if (suggestionsTimeoutRef.current) {
