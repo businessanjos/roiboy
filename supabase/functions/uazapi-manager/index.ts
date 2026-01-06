@@ -1795,26 +1795,23 @@ serve(async (req) => {
         let sendMediaResult: unknown = null;
         let mediaSuccess = false;
         
-        // UAZAPI GO v2 - Media endpoints for audio
-        // For audio, UAZAPI typically expects base64 or a publicly accessible URL
-        // The field name varies: file, media, mediaUrl, audio, url
-        const mediaEndpoints = [
-          // Primary format - using "audio" field for audio type
-          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, audio: media_url } },
-          // Alternative with media field
-          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, media: media_url } },
-          // Generic media endpoint with file field
-          { url: `/send/media`, method: "POST", body: { number: cleanPhone, file: media_url, type: media_type, caption: caption || "" } },
-          // With mediaUrl field
-          { url: `/send/media`, method: "POST", body: { number: cleanPhone, mediaUrl: media_url, mediatype: media_type } },
-          // Dynamic type endpoint with file field
+        // UAZAPI GO - Media endpoints
+        // For audio/PTT: uses /sendPTT endpoint with "audio" field
+        // For images/documents: uses /send/{type} with "file" field
+        const isAudio = media_type === "audio";
+        
+        const mediaEndpoints = isAudio ? [
+          // UAZAPI PTT endpoint (voice messages) - this is the correct one!
+          { url: `/sendPTT`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
+          // Alternative formats
+          { url: `/sendPTT`, method: "POST", body: { number: cleanPhone, audio: media_url } },
+          { url: `/send/ptt`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
+          { url: `/message/audio`, method: "POST", body: { number: cleanPhone, source: media_url, asVoiceNote: true } },
+        ] : [
+          // Image/document endpoints
           { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, file: media_url, caption: caption || "" } },
-          // With url field
           { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, url: media_url, caption: caption || "" } },
-          // PTT/voice message format
-          { url: `/send/ptt`, method: "POST", body: { number: cleanPhone, audio: media_url } },
-          // Alternative with 'to' instead of 'number'
-          { url: `/send/audio`, method: "POST", body: { to: cleanPhone, audio: media_url } },
+          { url: `/send/media`, method: "POST", body: { number: cleanPhone, file: media_url, type: media_type, caption: caption || "" } },
         ];
 
         for (const endpoint of mediaEndpoints) {
