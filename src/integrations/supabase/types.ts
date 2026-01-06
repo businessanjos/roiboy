@@ -5596,6 +5596,7 @@ export type Database = {
           position: number | null
           sector_id: string | null
           updated_at: string
+          visibility: string | null
         }
         Insert: {
           account_id: string
@@ -5606,6 +5607,7 @@ export type Database = {
           position?: number | null
           sector_id?: string | null
           updated_at?: string
+          visibility?: string | null
         }
         Update: {
           account_id?: string
@@ -5616,6 +5618,7 @@ export type Database = {
           position?: number | null
           sector_id?: string | null
           updated_at?: string
+          visibility?: string | null
         }
         Relationships: [
           {
@@ -5662,6 +5665,7 @@ export type Database = {
           text_content: string | null
           updated_at: string
           usage_count: number | null
+          visibility: string | null
         }
         Insert: {
           account_id: string
@@ -5690,6 +5694,7 @@ export type Database = {
           text_content?: string | null
           updated_at?: string
           usage_count?: number | null
+          visibility?: string | null
         }
         Update: {
           account_id?: string
@@ -5718,6 +5723,7 @@ export type Database = {
           text_content?: string | null
           updated_at?: string
           usage_count?: number | null
+          visibility?: string | null
         }
         Relationships: [
           {

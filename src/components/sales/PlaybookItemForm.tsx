@@ -16,8 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { WhatsAppFormattingToolbar } from '@/components/ui/whatsapp-formatting-toolbar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { VariablePickerDropdown } from '@/components/playbook/VariablePickerDropdown';
 import {
   FileText,
   Mic,
@@ -38,8 +40,10 @@ import {
   Phone,
   ExternalLink,
   MessageSquareReply,
+  Lock,
+  Users,
 } from 'lucide-react';
-import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder, CreatePlaybookItemInput, TemplateButton } from '@/hooks/usePlaybook';
+import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder, CreatePlaybookItemInput, TemplateButton, PlaybookVisibility } from '@/hooks/usePlaybook';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -98,6 +102,10 @@ export function PlaybookItemForm({
   const [templateBody, setTemplateBody] = useState('');
   const [templateFooter, setTemplateFooter] = useState('');
   const [templateButtons, setTemplateButtons] = useState<TemplateButton[]>([]);
+  // Visibility
+  const [visibility, setVisibility] = useState<PlaybookVisibility>('sector');
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -123,6 +131,8 @@ export function PlaybookItemForm({
         setTemplateBody(editingItem.template_body || '');
         setTemplateFooter(editingItem.template_footer || '');
         setTemplateButtons(editingItem.template_buttons || []);
+        // Visibility
+        setVisibility(editingItem.visibility || 'sector');
       } else {
         setName('');
         setContentType('text');
@@ -141,6 +151,8 @@ export function PlaybookItemForm({
         setTemplateBody('');
         setTemplateFooter('');
         setTemplateButtons([]);
+        // Visibility
+        setVisibility('sector');
       }
     }
   }, [open, editingItem]);
@@ -293,6 +305,8 @@ export function PlaybookItemForm({
         template_body: contentType === 'template' ? templateBody : null,
         template_footer: contentType === 'template' ? templateFooter : null,
         template_buttons: contentType === 'template' ? templateButtons : null,
+        // Visibility
+        visibility,
       };
 
       console.log('[Playbook Form] Saving item:', input);
@@ -449,19 +463,48 @@ export function PlaybookItemForm({
               </Select>
             </div>
 
+            {/* Visibility */}
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+              <Label>Visibilidade</Label>
+              <RadioGroup
+                value={visibility}
+                onValueChange={(v) => setVisibility(v as PlaybookVisibility)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="personal" id="personal" />
+                  <Label htmlFor="personal" className="flex items-center gap-1.5 cursor-pointer font-normal">
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                    Apenas para mim
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="sector" id="sector" />
+                  <Label htmlFor="sector" className="flex items-center gap-1.5 cursor-pointer font-normal">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    Compartilhar com o setor
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* Content fields based on type */}
             {contentType === 'text' && (
               <div className="space-y-2">
-                <Label>Conteúdo do Texto *</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Conteúdo do Texto *</Label>
+                  <VariablePickerDropdown
+                    onSelectVariable={(variable) => {
+                      setTextContent(prev => prev + variable);
+                    }}
+                  />
+                </div>
                 <WhatsAppFormattingToolbar
                   value={textContent}
                   onChange={setTextContent}
                   placeholder="Digite o texto... Use {{nome_cliente}} para variáveis"
                   rows={6}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Variáveis disponíveis: {'{{nome_cliente}}'}, {'{{nome_empresa}}'}, {'{{valor_deal}}'}
-                </p>
               </div>
             )}
 
@@ -562,16 +605,20 @@ export function PlaybookItemForm({
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Corpo da Mensagem *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Corpo da Mensagem *</Label>
+                    <VariablePickerDropdown
+                      onSelectVariable={(variable) => {
+                        setTemplateBody(prev => prev + variable);
+                      }}
+                    />
+                  </div>
                   <WhatsAppFormattingToolbar
                     value={templateBody}
                     onChange={setTemplateBody}
                     placeholder="Corpo da mensagem com suporte a variáveis..."
                     rows={4}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Variáveis: {'{{nome_cliente}}'}, {'{{nome_empresa}}'}, {'{{valor_deal}}'}
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="templateFooter">Rodapé (opcional)</Label>

@@ -4,13 +4,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from './useCurrentUser';
 import { toast } from 'sonner';
 
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
 export type PlaybookContentType = 'text' | 'audio' | 'image' | 'video' | 'document' | 'sticker' | 'list' | 'link' | 'template';
+export type PlaybookVisibility = 'personal' | 'sector';
 
 export interface PlaybookFolder {
   id: string;
   account_id: string;
   name: string;
   position: number;
+  visibility: PlaybookVisibility;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -48,6 +53,7 @@ export interface PlaybookItem {
   is_favorite: boolean;
   usage_count: number;
   last_used_at: string | null;
+  visibility: PlaybookVisibility;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -72,10 +78,13 @@ export interface CreatePlaybookItemInput {
   template_body?: string | null;
   template_footer?: string | null;
   template_buttons?: TemplateButton[] | null;
+  // Visibility
+  visibility?: PlaybookVisibility;
 }
 
 export interface CreatePlaybookFolderInput {
   name: string;
+  visibility?: PlaybookVisibility;
 }
 
 export interface PlaybookOptions {
@@ -159,6 +168,7 @@ export function usePlaybook(options: PlaybookOptions = {}) {
           position: maxPosition + 1,
           created_by: currentUser.id,
           sector_id: sectorId || null,
+          visibility: input.visibility || 'sector',
         })
         .select()
         .single();
@@ -246,6 +256,7 @@ export function usePlaybook(options: PlaybookOptions = {}) {
           position: maxPosition + 1,
           created_by: currentUser.id,
           sector_id: sectorId || null,
+          visibility: input.visibility || 'sector',
         })
         .select()
         .single();
@@ -413,16 +424,32 @@ export function usePlaybook(options: PlaybookOptions = {}) {
     }
   }, []);
 
-  // Replace variables in text
+  // Replace variables in text with comprehensive variable support
   const replaceVariables = useCallback((
     text: string,
     variables: Record<string, string>
   ): string => {
     let result = text;
+    
+    // Replace provided variables
     Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      result = result.replace(regex, value || '');
+    });
+    
+    // Add date/time variables that are always available
+    const now = new Date();
+    const dateVariables: Record<string, string> = {
+      data_hoje: format(now, 'dd/MM/yyyy', { locale: ptBR }),
+      hora_atual: format(now, 'HH:mm', { locale: ptBR }),
+      dia_semana: format(now, 'EEEE', { locale: ptBR }),
+    };
+    
+    Object.entries(dateVariables).forEach(([key, value]) => {
       const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
       result = result.replace(regex, value);
     });
+    
     return result;
   }, []);
 

@@ -140,6 +140,9 @@ export const ZappPlaybookList = memo(function ZappPlaybookList({ sectorId }: Zap
           {item.is_favorite && (
             <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
           )}
+          {item.visibility === 'personal' && (
+            <span className="text-[10px] text-zapp-text-muted" title="Apenas você pode ver">🔒</span>
+          )}
         </div>
         {item.usage_count > 0 && (
           <span className="text-[10px] text-zapp-text-muted">
