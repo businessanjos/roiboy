@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useLeads } from "@/hooks/useLeads";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
@@ -40,15 +40,8 @@ import {
 } from "lucide-react";
 import LeadsTab from "@/components/sales/LeadsTab";
 
-interface SalesUser {
-  id: string;
-  name: string;
-  avatar_url: string | null;
-}
-
 export default function SalesPipeline() {
   const navigate = useNavigate();
-  const { currentUser } = useCurrentUser();
   const {
     stages,
     deals,
@@ -74,6 +67,7 @@ export default function SalesPipeline() {
   } = useDeals();
   
   const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads();
+  const { users: salesUsers } = useSectorUsers({ sectorId: "vendas" });
 
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -86,26 +80,6 @@ export default function SalesPipeline() {
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSalesRep, setSelectedSalesRep] = useState<string>('all');
-  const [salesUsers, setSalesUsers] = useState<SalesUser[]>([]);
-
-  // Fetch sales team users
-  useEffect(() => {
-    const fetchSalesUsers = async () => {
-      if (!currentUser?.account_id) return;
-      
-      const { data } = await supabase
-        .from("users")
-        .select("id, name, avatar_url")
-        .eq("account_id", currentUser.account_id)
-        .order("name");
-      
-      if (data) {
-        setSalesUsers(data);
-      }
-    };
-    
-    fetchSalesUsers();
-  }, [currentUser?.account_id]);
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
