@@ -7690,14 +7690,21 @@ export type Database = {
           account_id: string
           agent_id: string | null
           assigned_at: string | null
+          close_ai_summary: string | null
+          close_notes: string | null
+          close_outcome: string | null
+          close_summary: string | null
           closed_at: string | null
           closed_by: string | null
           conversation_id: string | null
           created_at: string
           department_id: string | null
+          first_message_at: string | null
           first_response_at: string | null
           id: string
+          last_client_message_at: string | null
           priority: number
+          service_duration_minutes: number | null
           status: Database["public"]["Enums"]["zapp_assignment_status"]
           updated_at: string
           zapp_conversation_id: string | null
@@ -7706,14 +7713,21 @@ export type Database = {
           account_id: string
           agent_id?: string | null
           assigned_at?: string | null
+          close_ai_summary?: string | null
+          close_notes?: string | null
+          close_outcome?: string | null
+          close_summary?: string | null
           closed_at?: string | null
           closed_by?: string | null
           conversation_id?: string | null
           created_at?: string
           department_id?: string | null
+          first_message_at?: string | null
           first_response_at?: string | null
           id?: string
+          last_client_message_at?: string | null
           priority?: number
+          service_duration_minutes?: number | null
           status?: Database["public"]["Enums"]["zapp_assignment_status"]
           updated_at?: string
           zapp_conversation_id?: string | null
@@ -7722,14 +7736,21 @@ export type Database = {
           account_id?: string
           agent_id?: string | null
           assigned_at?: string | null
+          close_ai_summary?: string | null
+          close_notes?: string | null
+          close_outcome?: string | null
+          close_summary?: string | null
           closed_at?: string | null
           closed_by?: string | null
           conversation_id?: string | null
           created_at?: string
           department_id?: string | null
+          first_message_at?: string | null
           first_response_at?: string | null
           id?: string
+          last_client_message_at?: string | null
           priority?: number
+          service_duration_minutes?: number | null
           status?: Database["public"]["Enums"]["zapp_assignment_status"]
           updated_at?: string
           zapp_conversation_id?: string | null
