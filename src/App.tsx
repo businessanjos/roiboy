@@ -59,6 +59,7 @@ const BillingPortal = lazy(() => import("./pages/BillingPortal"));
 const Sectors = lazy(() => import("./pages/Sectors"));
 const Contracts = lazy(() => import("./pages/Contracts"));
 const SalesPipeline = lazy(() => import("./pages/SalesPipeline"));
+const SalesTeam = lazy(() => import("./pages/SalesTeam"));
 const Leads = lazy(() => import("./pages/Leads"));
 const TeamChat = lazy(() => import("./pages/TeamChat"));
 const Marketing = lazy(() => import("./pages/Marketing"));
@@ -139,6 +140,7 @@ const App = () => (
                             <Route path="/clients/:id" element={<ClientDetail />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/pipeline" element={<SalesPipeline />} />
+                            <Route path="/sales-team" element={<SalesTeam />} />
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/entries" replace />} />
