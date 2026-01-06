@@ -272,14 +272,15 @@ export const ZappConversationItem = memo(function ZappConversationItem({
         {/* Third row: Agent + Products */}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {assignment.agent_id && (
-            <div className="flex items-center gap-1">
-              <User className="h-3 w-3 text-zapp-accent" />
-              <span className="text-[11px] text-zapp-accent">
-                {assignment.agent_id === currentAgentId 
-                  ? "Você" 
-                  : getAgentName(assignment.agent_id) || "Atendente"}
-              </span>
-            </div>
+            <Badge 
+              variant="secondary" 
+              className="bg-zapp-accent/15 text-zapp-accent border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
+            >
+              <User className="h-2.5 w-2.5" />
+              {assignment.agent_id === currentAgentId 
+                ? "Você" 
+                : getAgentName(assignment.agent_id) || "Atendente"}
+            </Badge>
           )}
           {products && products.length > 0 && (
             <>
