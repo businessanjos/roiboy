@@ -86,14 +86,6 @@ export default function Marketing() {
           <p className="text-muted-foreground">Gerencie eventos, campanhas e lembretes de marketing</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/roy-zapp?sector=marketing")}
-            className="gap-2"
-          >
-            <MessageSquare className="h-4 w-4" />
-            ROY zAPP
-          </Button>
           {activeTab === 'calendar' && (
             <Button onClick={() => handleAddEvent()}>
               <Plus className="h-4 w-4 mr-2" />
