@@ -1,13 +1,14 @@
 import { useState, useCallback } from "react";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal } from "@/hooks/useDeals";
+import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -66,6 +67,7 @@ import {
   DollarSign,
   ChevronRight,
   Upload,
+  User,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -107,8 +109,10 @@ export default function LeadsTab() {
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
   const { openZappConversation, loading: zappLoading } = useZappNavigation();
+  const { users: salesUsers, loading: usersLoading } = useSectorUsers({ sectorId: "vendas" });
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
@@ -150,6 +154,7 @@ export default function LeadsTab() {
     email: "",
     source: "",
     notes: "",
+    responsible_user_id: "",
   });
 
   const resetForm = () => {
@@ -159,6 +164,7 @@ export default function LeadsTab() {
       email: "",
       source: "",
       notes: "",
+      responsible_user_id: "",
     });
     setDealFormData({
       title: "",
@@ -185,6 +191,7 @@ export default function LeadsTab() {
       email: lead.email || "",
       source: lead.source || "",
       notes: lead.notes || "",
+      responsible_user_id: lead.responsible_user_id || "",
     });
     setDialogStep('lead-form');
     setIsDialogOpen(true);
@@ -231,14 +238,19 @@ export default function LeadsTab() {
   const handleSave = async () => {
     if (!formData.full_name.trim()) return;
 
+    const dataToSave = {
+      ...formData,
+      responsible_user_id: formData.responsible_user_id || undefined,
+    };
+
     if (selectedLead) {
-      await updateLead(selectedLead.id, formData);
+      await updateLead(selectedLead.id, dataToSave);
       setIsDialogOpen(false);
       resetForm();
       return;
     }
 
-    await createLead(formData);
+    await createLead(dataToSave);
     setIsDialogOpen(false);
     resetForm();
   };
@@ -432,11 +444,16 @@ export default function LeadsTab() {
 
   const filteredLeads = leads.filter((lead) => {
     const search = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       lead.full_name.toLowerCase().includes(search) ||
       lead.phone?.toLowerCase().includes(search) ||
-      lead.email?.toLowerCase().includes(search)
-    );
+      lead.email?.toLowerCase().includes(search);
+    
+    const matchesOwner = selectedOwnerFilter === "all" || 
+      lead.responsible_user_id === selectedOwnerFilter ||
+      (selectedOwnerFilter === "unassigned" && !lead.responsible_user_id);
+    
+    return matchesSearch && matchesOwner;
   });
 
   const getStatusInfo = (status: string) => {
@@ -506,8 +523,8 @@ export default function LeadsTab() {
       </div>
 
       {/* Header with search and actions */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar leads..."
@@ -516,6 +533,55 @@ export default function LeadsTab() {
             className="pl-9"
           />
         </div>
+        
+        {/* Owner Filter */}
+        <Select value={selectedOwnerFilter} onValueChange={setSelectedOwnerFilter}>
+          <SelectTrigger className="w-[200px]">
+            <User className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectValue placeholder="Todos proprietários" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              <span className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Todos proprietários
+              </span>
+            </SelectItem>
+            <SelectItem value="unassigned">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <User className="h-4 w-4" />
+                Sem proprietário
+              </span>
+            </SelectItem>
+            {salesUsers.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                <span className="flex items-center gap-2">
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={user.avatar_url || undefined} />
+                    <AvatarFallback className="text-[10px]">
+                      {user.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {user.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {(selectedOwnerFilter !== "all" || searchQuery) && (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              setSelectedOwnerFilter("all");
+              setSearchQuery("");
+            }}
+          >
+            Limpar
+          </Button>
+        )}
+        
         <label htmlFor="csv-upload-tab">
           <Button variant="outline" size="sm" asChild>
             <span>
@@ -594,6 +660,18 @@ export default function LeadsTab() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* Owner badge */}
+                        {lead.responsible_user && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={lead.responsible_user.avatar_url || undefined} />
+                              <AvatarFallback className="text-[8px]">
+                                {lead.responsible_user.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="hidden sm:inline">{lead.responsible_user.name.split(" ")[0]}</span>
+                          </div>
+                        )}
                         <div className="text-right text-sm text-muted-foreground">
                           <p>{getSourceLabel(lead.source)}</p>
                           <p className="text-xs">
@@ -780,6 +858,35 @@ export default function LeadsTab() {
                     {LEAD_SOURCES.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
                         {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Proprietário</Label>
+                <Select
+                  value={formData.responsible_user_id || "none"}
+                  onValueChange={(v) => setFormData({ ...formData, responsible_user_id: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">Sem proprietário</span>
+                    </SelectItem>
+                    {salesUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <span className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={user.avatar_url || undefined} />
+                            <AvatarFallback className="text-[10px]">
+                              {user.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {user.name}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
