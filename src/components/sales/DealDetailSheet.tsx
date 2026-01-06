@@ -656,11 +656,6 @@ export function DealDetailSheet({
                   )}
                 </div>
 
-                {/* Lead Info (if deal has lead) */}
-                {deal.lead_id && (
-                  <DealLeadInfo leadId={deal.lead_id} />
-                )}
-
                 {/* Lead Custom Fields */}
                 {deal.lead_id && leadCustomFields.length > 0 && (
                   <div className="rounded-lg border p-3">
