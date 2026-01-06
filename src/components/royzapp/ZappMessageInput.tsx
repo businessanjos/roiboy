@@ -63,6 +63,7 @@ interface ZappMessageInputProps {
   replyingTo?: ReplyingToMessage | null;
   signatureEnabled?: boolean;
   hasSignature?: boolean;
+  sectorId?: string;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -104,6 +105,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   replyingTo,
   signatureEnabled,
   hasSignature,
+  sectorId,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -458,6 +460,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 onKeyDown={onKeyPress}
                 disabled={sendingMessage}
                 groupJid={groupJid}
+                sectorId={sectorId}
                 onMentionInsert={onMentionInsert}
               />
             ) : (

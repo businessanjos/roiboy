@@ -2275,6 +2275,7 @@ export default function RoyZapp() {
           messageInputRef={messageInputRef}
           imageInputRef={imageInputRef}
           fileInputRef={fileInputRef}
+          sectorId={selectedSectorId}
           onlineAgents={onlineAgents}
           totalQueueConversations={totalQueueConversations}
           activeConversations={activeConversations}
