@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 
 interface ZappNavigationOptions {
@@ -12,6 +13,7 @@ interface ZappNavigationOptions {
 
 export function useZappNavigation() {
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(false);
 
   const openZappConversation = useCallback(async (options: ZappNavigationOptions) => {
@@ -22,32 +24,19 @@ export function useZappNavigation() {
       return;
     }
 
+    if (!currentUser?.account_id) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Get current user to find account_id
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Usuário não autenticado");
-        return;
-      }
-
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!userData?.account_id) {
-        toast.error("Conta não encontrada");
-        return;
-      }
-
       // First, try to find existing conversation
       let conversationQuery = supabase
         .from("zapp_conversations")
         .select("id, sector_id")
-        .eq("account_id", userData.account_id)
+        .eq("account_id", currentUser.account_id)
         .eq("sector_id", "vendas");
 
       if (leadId) {
@@ -81,7 +70,7 @@ export function useZappNavigation() {
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, currentUser?.account_id]);
 
   return { openZappConversation, loading };
 }
