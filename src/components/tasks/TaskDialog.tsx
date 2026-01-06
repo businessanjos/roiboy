@@ -72,6 +72,8 @@ interface TaskDialogProps {
   dealId?: string;
   leadId?: string;
   initialStatus?: string;
+  initialActivityTypeId?: string;
+  suggestedTitle?: string;
   onSuccess: () => void;
 }
 
@@ -82,7 +84,7 @@ const PRIORITY_LABELS = {
   urgent: "Urgente",
 };
 
-export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialStatus, onSuccess }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialStatus, initialActivityTypeId, suggestedTitle, onSuccess }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
@@ -162,7 +164,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     } else {
       const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
       setFormData({
-        title: "",
+        title: suggestedTitle || "",
         description: "",
         custom_status_id: defaultStatusId,
         priority: "medium",
@@ -172,7 +174,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         deal_id: dealId || "",
         lead_id: leadId || "",
         assigned_to: "",
-        activity_type_id: "",
+        activity_type_id: initialActivityTypeId || "",
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -10,21 +11,28 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { 
   Briefcase, 
   Plus, 
   DollarSign,
   ExternalLink,
-  ArrowRight,
   User,
   Phone,
   Loader2,
   CheckCircle,
   AlertCircle,
+  Calendar,
+  Zap,
+  ListTodo,
+  Eye,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { DynamicIcon } from "@/components/ui/dynamic-icon";
+import { ZappDealDetailSheet } from "./ZappDealDetailSheet";
+import { TaskDialog } from "@/components/tasks/TaskDialog";
 
 interface ZappCRMPanelProps {
   conversationPhone?: string | null;
@@ -57,6 +65,21 @@ interface Lead {
   status: string;
 }
 
+interface PendingTask {
+  id: string;
+  title: string;
+  due_date: string | null;
+  due_time: string | null;
+  activity_type?: { name: string; color: string; icon: string | null } | null;
+}
+
+interface ActivityType {
+  id: string;
+  name: string;
+  color: string | null;
+  icon: string | null;
+}
+
 export function ZappCRMPanel({ 
   conversationPhone, 
   conversationClientId, 
@@ -64,11 +87,15 @@ export function ZappCRMPanel({
   conversationContactName 
 }: ZappCRMPanelProps) {
   const { currentUser } = useCurrentUser();
+  const { activityTypes } = useActivityTypes();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCreateDeal, setShowCreateDeal] = useState(false);
   const [newDealTitle, setNewDealTitle] = useState("");
   const [newDealValue, setNewDealValue] = useState("");
+  const [dealDetailOpen, setDealDetailOpen] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [selectedActivityType, setSelectedActivityType] = useState<ActivityType | null>(null);
 
   // Fetch deal stages
   const { data: stages = [] } = useQuery({
@@ -125,6 +152,39 @@ export function ZappCRMPanel({
     enabled: !!(conversationLeadId || conversationClientId),
   });
 
+  const activeDeal = deals.find(d => d.status === "open");
+
+  // Fetch pending tasks for active deal
+  const { data: pendingTasks = [], refetch: refetchPendingTasks } = useQuery({
+    queryKey: ["pending-tasks-deal-zapp", activeDeal?.id, conversationLeadId],
+    queryFn: async () => {
+      let query = supabase
+        .from("internal_tasks")
+        .select(`
+          id, title, due_date, due_time,
+          activity_type:activity_types(name, color, icon)
+        `)
+        .is("completed_at", null)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(5);
+      
+      if (activeDeal?.id && conversationLeadId) {
+        query = query.or(`deal_id.eq.${activeDeal.id},lead_id.eq.${conversationLeadId}`);
+      } else if (activeDeal?.id) {
+        query = query.eq("deal_id", activeDeal.id);
+      } else if (conversationLeadId) {
+        query = query.eq("lead_id", conversationLeadId);
+      } else {
+        return [];
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as PendingTask[];
+    },
+    enabled: !!(activeDeal?.id || conversationLeadId),
+  });
+
   // Move deal mutation
   const moveDeal = useMutation({
     mutationFn: async ({ dealId, stageId }: { dealId: string; stageId: string }) => {
@@ -170,6 +230,21 @@ export function ZappCRMPanel({
     },
   });
 
+  // Complete task mutation
+  const completeTask = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase
+        .from("internal_tasks")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchPendingTasks();
+      toast.success("Tarefa concluída!");
+    },
+  });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -191,9 +266,18 @@ export function ZappCRMPanel({
     }
   };
 
+  const openTaskDialog = (activityType?: ActivityType) => {
+    setSelectedActivityType(activityType || null);
+    setTaskDialogOpen(true);
+  };
+
   const isLoading = leadLoading || dealsLoading;
   const hasContact = conversationLeadId || conversationClientId;
-  const activeDeal = deals.find(d => d.status === "open");
+
+  // Get next scheduled task date
+  const nextTaskDate = pendingTasks[0]?.due_date 
+    ? format(new Date(pendingTasks[0].due_date), "dd/MM", { locale: ptBR })
+    : null;
 
   if (!hasContact) {
     return (
@@ -270,60 +354,132 @@ export function ZappCRMPanel({
               <Loader2 className="h-6 w-6 animate-spin text-zapp-accent" />
             </div>
           ) : activeDeal ? (
-            /* Active Deal Card */
-            <Card className="p-3 bg-zapp-panel border-zapp-border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-medium text-zapp-text">Negócio Ativo</span>
+            <>
+              {/* Active Deal Card */}
+              <Card className="p-3 bg-zapp-panel border-zapp-border">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium text-zapp-text">Negócio Ativo</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {nextTaskDate && (
+                      <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-500">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {nextTaskDate}
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-xs"
+                      onClick={() => setDealDetailOpen(true)}
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Detalhes
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 text-xs"
-                  onClick={() => navigate(`/sales?deal=${activeDeal.id}`)}
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Ver
-                </Button>
-              </div>
 
-              <div className="mb-3">
-                <p className="font-medium text-zapp-text truncate">{activeDeal.title}</p>
-                <p className="text-lg font-bold text-zapp-accent">{formatCurrency(activeDeal.value)}</p>
-              </div>
+                <div className="mb-3">
+                  <p className="font-medium text-zapp-text truncate">{activeDeal.title}</p>
+                  <p className="text-lg font-bold text-zapp-accent">{formatCurrency(activeDeal.value)}</p>
+                </div>
 
-              {/* Stage selector */}
-              <div className="space-y-2">
-                <Label className="text-xs text-zapp-text-muted">Mover para estágio:</Label>
-                <div className="flex flex-wrap gap-1">
-                  {stages.map(stage => {
-                    const isActive = stage.id === activeDeal.stage_id;
-                    return (
-                      <Button
-                        key={stage.id}
-                        size="sm"
-                        variant={isActive ? "default" : "outline"}
-                        className={cn(
-                          "h-7 text-xs px-2",
-                          isActive && "pointer-events-none"
-                        )}
-                        style={isActive ? { backgroundColor: stage.color } : { borderColor: stage.color, color: stage.color }}
-                        onClick={() => {
-                          if (!isActive) {
-                            moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
-                          }
-                        }}
-                        disabled={moveDeal.isPending}
+                {/* Stage selector */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-zapp-text-muted">Mover para estágio:</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {stages.map(stage => {
+                      const isActive = stage.id === activeDeal.stage_id;
+                      return (
+                        <Button
+                          key={stage.id}
+                          size="sm"
+                          variant={isActive ? "default" : "outline"}
+                          className={cn(
+                            "h-7 text-xs px-2",
+                            isActive && "pointer-events-none"
+                          )}
+                          style={isActive ? { backgroundColor: stage.color } : { borderColor: stage.color, color: stage.color }}
+                          onClick={() => {
+                            if (!isActive) {
+                              moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
+                            }
+                          }}
+                          disabled={moveDeal.isPending}
+                        >
+                          {stage.name}
+                          {isActive && <CheckCircle className="h-3 w-3 ml-1" />}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Quick Actions */}
+              {activityTypes.length > 0 && (
+                <Card className="p-3 bg-zapp-panel border-zapp-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    <span className="text-xs font-medium text-zapp-text">Ações Rápidas</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activityTypes.slice(0, 3).map(type => (
+                      <Button 
+                        key={type.id} 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-7 text-xs"
+                        style={{ borderColor: type.color || undefined, color: type.color || undefined }}
+                        onClick={() => openTaskDialog(type)}
                       >
-                        {stage.name}
-                        {isActive && <CheckCircle className="h-3 w-3 ml-1" />}
+                        {type.icon && <DynamicIcon name={type.icon} className="h-3 w-3 mr-1" />}
+                        {type.name}
                       </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            </Card>
+                    ))}
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-7 text-xs"
+                      onClick={() => openTaskDialog()}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Outra
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Pending Tasks */}
+              {pendingTasks.length > 0 && (
+                <Card className="p-3 bg-zapp-panel border-zapp-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ListTodo className="h-3.5 w-3.5 text-zapp-text-muted" />
+                    <span className="text-xs font-medium text-zapp-text">
+                      Próximas ({pendingTasks.length})
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {pendingTasks.slice(0, 3).map(task => (
+                      <div key={task.id} className="flex items-center gap-2 text-xs">
+                        <Checkbox 
+                          onCheckedChange={() => completeTask.mutate(task.id)}
+                          className="h-3.5 w-3.5"
+                        />
+                        <span className="flex-1 truncate text-zapp-text">{task.title}</span>
+                        {task.due_date && (
+                          <span className="text-zapp-text-muted">
+                            {format(new Date(task.due_date), "dd/MM")}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </>
           ) : showCreateDeal ? (
             /* Create Deal Form */
             <Card className="p-3 bg-zapp-panel border-zapp-border">
@@ -422,6 +578,35 @@ export function ZappCRMPanel({
           )}
         </div>
       </ScrollArea>
+
+      {/* Deal Detail Sheet */}
+      {activeDeal && (
+        <ZappDealDetailSheet
+          open={dealDetailOpen}
+          onOpenChange={setDealDetailOpen}
+          dealId={activeDeal.id}
+          leadId={conversationLeadId}
+          clientId={conversationClientId}
+          stages={stages}
+          onDealUpdated={() => {
+            refetchDeals();
+            refetchPendingTasks();
+          }}
+        />
+      )}
+
+      {/* Task Dialog */}
+      <TaskDialog
+        open={taskDialogOpen}
+        onOpenChange={setTaskDialogOpen}
+        dealId={activeDeal?.id}
+        leadId={conversationLeadId || undefined}
+        initialActivityTypeId={selectedActivityType?.id}
+        onSuccess={() => {
+          refetchPendingTasks();
+          setTaskDialogOpen(false);
+        }}
+      />
     </div>
   );
 }
