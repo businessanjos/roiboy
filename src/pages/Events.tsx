@@ -202,11 +202,22 @@ export default function Events() {
           event_products (
             product_id,
             products (id, name)
+          ),
+          event_participants!event_participants_event_id_fkey (
+            id,
+            rsvp_status
           )
         `)
         .order("scheduled_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
-      return (data as EventWithProducts[]) || [];
+      
+      // Add confirmed_count to each event
+      return (data || []).map((event: any) => ({
+        ...event,
+        confirmed_count: (event.event_participants || []).filter(
+          (p: any) => p.rsvp_status === 'confirmed'
+        ).length,
+      })) as EventWithProducts[];
     },
     staleTime: 30000,
   });
@@ -1042,6 +1053,7 @@ export default function Events() {
                     <TableHead className="min-w-[100px]">Tipo</TableHead>
                     <TableHead className="min-w-[120px]">Modalidade</TableHead>
                     <TableHead className="min-w-[140px]">Data/Hora</TableHead>
+                    <TableHead className="min-w-[80px]">Vagas</TableHead>
                     <TableHead className="min-w-[120px]">Produtos</TableHead>
                     <TableHead className="text-right min-w-[100px]">Ações</TableHead>
                   </TableRow>
@@ -1124,6 +1136,17 @@ export default function Events() {
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {(event as any).max_capacity ? (
+                          <Badge variant={(event as any).confirmed_count >= (event as any).max_capacity ? "destructive" : "outline"}>
+                            {(event as any).confirmed_count >= (event as any).max_capacity 
+                              ? "Esgotado" 
+                              : `${(event as any).max_capacity - ((event as any).confirmed_count || 0)} vagas`}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
                       <TableCell>
