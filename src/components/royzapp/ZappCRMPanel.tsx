@@ -246,14 +246,14 @@ export function ZappCRMPanel({ conversationPhone, conversationClientId, conversa
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="w-full h-8 bg-zapp-panel">
-            <TabsTrigger value="kanban" className="flex-1 h-6 text-xs">
-              <Briefcase className="h-3 w-3 mr-1" />
-              Negócios
+          <TabsList className="grid grid-cols-2 w-full h-8 bg-zapp-panel p-0.5">
+            <TabsTrigger value="kanban" className="h-6 text-xs px-2 gap-1">
+              <Briefcase className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">Negócios</span>
             </TabsTrigger>
-            <TabsTrigger value="leads" className="flex-1 h-6 text-xs">
-              <Users className="h-3 w-3 mr-1" />
-              Leads ({stats.totalLeads})
+            <TabsTrigger value="leads" className="h-6 text-xs px-2 gap-1">
+              <Users className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">Leads</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
