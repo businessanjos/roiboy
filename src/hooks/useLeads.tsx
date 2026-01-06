@@ -36,6 +36,8 @@ interface CreateLeadData {
   responsible_user_id?: string;
   tags?: string[];
   revenue_range?: string;
+  external_id?: string;
+  external_source?: string;
 }
 
 interface UpdateLeadData extends Partial<CreateLeadData> {

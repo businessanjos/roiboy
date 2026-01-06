@@ -377,10 +377,10 @@ export default function LeadsTab() {
 
       if (normalizedPhone && existingPhones.has(normalizedPhone)) {
         row.isDuplicate = true;
-        row.duplicateInfo = { type: "phone", existingName: "Telefone já cadastrado" };
+        row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
       } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
         row.isDuplicate = true;
-        row.duplicateInfo = { type: "email", existingName: "Email já cadastrado" };
+        row.duplicateInfo = { type: "email", matchValue: normalizedEmail };
       }
 
       rows.push(row);
@@ -391,13 +391,13 @@ export default function LeadsTab() {
     event.target.value = "";
   };
 
-  const handleConfirmImport = async (selectedRows: ImportLeadRow[], skipDuplicates: boolean) => {
+  const handleConfirmImport = async (selectedRows: ImportLeadRow[]) => {
     setImporting(true);
     let successCount = 0;
     let errorCount = 0;
 
     for (const row of selectedRows) {
-      if (skipDuplicates && row.isDuplicate) continue;
+      if (row.duplicateAction === "skip") continue;
       if (row.hasError) continue;
 
       try {
