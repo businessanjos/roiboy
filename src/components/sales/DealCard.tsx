@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Deal } from "@/hooks/useDeals";
+import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, Clock, Edit, CheckCircle } from "lucide-react";
+import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, Clock, Edit, CheckCircle, MessageCircle } from "lucide-react";
 import { format, differenceInDays, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
@@ -48,6 +49,8 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   const [nextTaskDate, setNextTaskDate] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<PendingTask | null>(null);
   const [taskPopoverOpen, setTaskPopoverOpen] = useState(false);
+  
+  const { openZappConversation, loading: zappLoading } = useZappNavigation();
   
   const pendingTasksCount = pendingTasks.length;
   
@@ -279,15 +282,37 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           </div>
         </div>
 
-        {/* Time Badge, Quick Task and Value - Same Row */}
+        {/* Time Badge, Quick Actions and Value - Same Row */}
         <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <Badge 
               variant="secondary" 
               className={cn("text-[10px] px-1.5 py-0", timeBadge.bg, timeBadge.text)}
             >
               {timeBadge.label}
             </Badge>
+            {/* WhatsApp Button */}
+            {contactPhone && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 hover:bg-emerald-500/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openZappConversation({
+                    phone: contactPhone,
+                    clientId: deal.client_id || undefined,
+                    leadId: deal.lead_id || undefined,
+                    name: contactName,
+                  });
+                }}
+                disabled={zappLoading}
+                title="Abrir conversa no RoyZapp"
+              >
+                <MessageCircle className="h-3 w-3 text-emerald-600" />
+              </Button>
+            )}
+            {/* Task Button */}
             <Button
               variant="ghost"
               size="icon"
