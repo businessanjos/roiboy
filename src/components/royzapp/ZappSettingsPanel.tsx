@@ -8,11 +8,13 @@ import {
   Download,
   Loader2,
   PenLine,
+  Sparkles,
+  Wand2,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -33,6 +35,10 @@ interface ZappSettingsPanelProps {
   importLimit: string;
   importingConversations: boolean;
   userSignature: string;
+  // AI Settings
+  spellingEnabled?: boolean;
+  suggestionsEnabled?: boolean;
+  autoLearningEnabled?: boolean;
   onToggleWhatsAppConnection: () => void;
   onRoundRobinChange: (checked: boolean) => void;
   onRespectLimitChange: (checked: boolean) => void;
@@ -40,6 +46,10 @@ interface ZappSettingsPanelProps {
   onImportLimitChange: (value: string) => void;
   onImportConversations: () => void;
   onSignatureChange: (value: string) => void;
+  // AI Handlers
+  onSpellingChange?: (checked: boolean) => void;
+  onSuggestionsChange?: (checked: boolean) => void;
+  onAutoLearningChange?: (checked: boolean) => void;
 }
 
 export const ZappSettingsPanel = memo(function ZappSettingsPanel({
@@ -52,6 +62,9 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   importLimit,
   importingConversations,
   userSignature,
+  spellingEnabled = true,
+  suggestionsEnabled = true,
+  autoLearningEnabled = true,
   onToggleWhatsAppConnection,
   onRoundRobinChange,
   onRespectLimitChange,
@@ -59,6 +72,9 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   onImportLimitChange,
   onImportConversations,
   onSignatureChange,
+  onSpellingChange,
+  onSuggestionsChange,
+  onAutoLearningChange,
 }: ZappSettingsPanelProps) {
   const navigate = useNavigate();
 
@@ -185,6 +201,59 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           <Switch 
             checked={soundEnabled} 
             onCheckedChange={onSoundChange}
+            className="data-[state=checked]:bg-zapp-accent" 
+          />
+        </div>
+      </div>
+
+      {/* AI Assistant Settings */}
+      <div className="space-y-4 pt-4 border-t border-zapp-border">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-zapp-accent" />
+          <p className="text-zapp-text text-sm font-medium">Assistente IA</p>
+        </div>
+        
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="flex items-center gap-2">
+            <Wand2 className="h-4 w-4 text-amber-500" />
+            <div>
+              <p className="text-zapp-text text-sm">Corretor de Português</p>
+              <p className="text-zapp-text-muted text-xs">Corrige ortografia e gramática</p>
+            </div>
+          </div>
+          <Switch 
+            checked={spellingEnabled} 
+            onCheckedChange={onSpellingChange}
+            className="data-[state=checked]:bg-zapp-accent" 
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-zapp-accent" />
+            <div>
+              <p className="text-zapp-text text-sm">Sugestões de Resposta</p>
+              <p className="text-zapp-text-muted text-xs">Sugere respostas contextuais</p>
+            </div>
+          </div>
+          <Switch 
+            checked={suggestionsEnabled} 
+            onCheckedChange={onSuggestionsChange}
+            className="data-[state=checked]:bg-zapp-accent" 
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 text-purple-500" />
+            <div>
+              <p className="text-zapp-text text-sm">Aprendizado Automático</p>
+              <p className="text-zapp-text-muted text-xs">IA aprende com suas conversas</p>
+            </div>
+          </div>
+          <Switch 
+            checked={autoLearningEnabled} 
+            onCheckedChange={onAutoLearningChange}
             className="data-[state=checked]:bg-zapp-accent" 
           />
         </div>
