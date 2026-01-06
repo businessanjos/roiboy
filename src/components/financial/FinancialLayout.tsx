@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   DollarSign,
@@ -18,6 +18,7 @@ import {
   Settings2,
   CreditCard,
   FileCheck,
+  MessageSquare,
 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -137,6 +138,8 @@ function NavDropdown({
 }
 
 export function FinancialLayout() {
+  const navigate = useNavigate();
+  
   return (
     <div className="flex flex-col h-full">
       {/* Header Navigation */}
@@ -169,6 +172,19 @@ export function FinancialLayout() {
                 items={reportsNavItems} 
                 icon={BarChart3} 
               />
+              
+              <div className="w-px h-6 bg-border mx-2" />
+              
+              {/* ROY zAPP shortcut */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/roy-zapp?sector=financeiro")}
+                className="gap-2 whitespace-nowrap"
+              >
+                <MessageSquare className="h-4 w-4" />
+                ROY zAPP
+              </Button>
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
