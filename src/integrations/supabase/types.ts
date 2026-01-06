@@ -3572,6 +3572,7 @@ export type Database = {
         Row: {
           account_id: string
           address: string | null
+          allow_external_guests: boolean
           budget: number | null
           category: Database["public"]["Enums"]["event_category"]
           checkin_code: string | null
@@ -3606,6 +3607,7 @@ export type Database = {
         Insert: {
           account_id: string
           address?: string | null
+          allow_external_guests?: boolean
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
@@ -3640,6 +3642,7 @@ export type Database = {
         Update: {
           account_id?: string
           address?: string | null
+          allow_external_guests?: boolean
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null

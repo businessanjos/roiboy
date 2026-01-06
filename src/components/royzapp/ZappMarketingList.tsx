@@ -50,8 +50,8 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
   const [filter, setFilter] = useState<"upcoming" | "past">("upcoming");
 
   // Determinar categoria baseado no setor
-  const eventCategory = sectorId === "operacoes" ? "operation" : "marketing";
   const isOperationSector = sectorId === "operacoes";
+  const isVendasSector = sectorId === "vendas";
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["zapp-marketing-events", session?.user?.id, sectorId],
@@ -64,12 +64,24 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
 
       if (!userData?.account_id) return [];
 
-      const { data, error } = await supabase
+      // Build query based on sector
+      let query = supabase
         .from("events")
-        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code")
-        .eq("account_id", userData.account_id)
-        .eq("category", eventCategory)
-        .order("scheduled_at", { ascending: true });
+        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code, allow_external_guests")
+        .eq("account_id", userData.account_id);
+      
+      if (isVendasSector) {
+        // For sales sector: only show events that allow external guests
+        query = query.eq("allow_external_guests", true);
+      } else if (isOperationSector) {
+        // For operations: show operation events
+        query = query.eq("category", "operation");
+      } else {
+        // For marketing and others: show marketing events
+        query = query.eq("category", "marketing");
+      }
+      
+      const { data, error } = await query.order("scheduled_at", { ascending: true });
 
       if (error) throw error;
       

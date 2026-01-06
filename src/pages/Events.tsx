@@ -151,6 +151,7 @@ export default function Events() {
   const [meetingUrl, setMeetingUrl] = useState("");
   const [materialUrl, setMaterialUrl] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
+  const [allowExternalGuests, setAllowExternalGuests] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
   // Multi-day schedule state: { 'YYYY-MM-DD': { startTime: 'HH:mm', endTime: 'HH:mm' } }
@@ -244,6 +245,7 @@ export default function Events() {
     setMeetingUrl("");
     setMaterialUrl("");
     setIsRecurring(false);
+    setAllowExternalGuests(false);
     setSelectedProducts([]);
     setDaySchedules({});
     setEditingEvent(null);
@@ -289,6 +291,7 @@ export default function Events() {
     setMeetingUrl(event.meeting_url || "");
     setMaterialUrl(event.material_url || "");
     setIsRecurring(event.is_recurring);
+    setAllowExternalGuests((event as any).allow_external_guests || false);
     setSelectedProducts(event.event_products.map(ep => ep.product_id));
     setDaySchedules({});
     setDialogOpen(true);
@@ -335,6 +338,7 @@ export default function Events() {
       meeting_url: meetingUrl.trim() || null,
       material_url: materialUrl.trim() || null,
       is_recurring: isRecurring,
+      allow_external_guests: allowExternalGuests,
       account_id: accountId,
     };
 
@@ -842,17 +846,28 @@ export default function Events() {
                     />
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="recurring"
-                      checked={isRecurring}
-                      onCheckedChange={(checked) => setIsRecurring(!!checked)}
-                    />
-                    <Label htmlFor="recurring" className="text-sm font-normal">
-                      Evento recorrente (semanal)
-                    </Label>
-                  </div>
-                </>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="recurring"
+                        checked={isRecurring}
+                        onCheckedChange={(checked) => setIsRecurring(!!checked)}
+                      />
+                      <Label htmlFor="recurring" className="text-sm font-normal">
+                        Evento recorrente (semanal)
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="allowExternalGuests"
+                        checked={allowExternalGuests}
+                        onCheckedChange={(checked) => setAllowExternalGuests(!!checked)}
+                      />
+                      <Label htmlFor="allowExternalGuests" className="text-sm font-normal">
+                        Permitir convidados externos (visível no Comercial)
+                      </Label>
+                    </div>
+                  </>
               )}
 
               {eventType === "material" && (
