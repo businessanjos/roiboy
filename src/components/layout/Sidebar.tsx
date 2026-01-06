@@ -340,6 +340,33 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {/* Plan Info - hide for super admins (unless impersonating) */}
       {showRegularUI && <SidebarPlanInfo collapsed={collapsed} />}
 
+      {/* ROY zAPP Quick Access - show for sectors: vendas, financeiro, marketing */}
+      {currentSector && ["vendas", "financeiro", "marketing"].includes(currentSector.id) && (
+        <div className="px-3 pb-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <NavLink
+                  to={`/roy-zapp?sector=${currentSector.id}`}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                    "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20",
+                    collapsed && "justify-center px-2"
+                  )}
+                >
+                  <MessageSquare className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span>ROY zAPP</span>}
+                </NavLink>
+              </TooltipTrigger>
+              {collapsed && (
+                <TooltipContent side="right">ROY zAPP</TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+
       {/* User Menu */}
       <div className="p-3 border-t border-border">
         <DropdownMenu>
