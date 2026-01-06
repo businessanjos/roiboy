@@ -105,6 +105,7 @@ export function ZappLinkClientDialog({
       // Combine results - clients first, then leads
       const clientResults: ClientResult[] = (clientsData || []).map(c => ({
         ...c,
+        additional_phones: Array.isArray(c.additional_phones) ? c.additional_phones as string[] : null,
         type: "client" as const,
       }));
 
@@ -154,61 +155,84 @@ export function ZappLinkClientDialog({
     }
   }, [open, contactName]);
 
-  // Link conversation to client
+  // Link conversation to client or lead
   const handleLink = async () => {
     if (!selectedClient) return;
 
     setLinking(true);
     try {
-      // 1. Update conversation with client_id
-      const { error: convError } = await supabase
-        .from("zapp_conversations")
-        .update({ client_id: selectedClient.id })
-        .eq("id", conversationId);
+      // Update conversation based on type
+      if (selectedClient.type === "lead") {
+        // Link to lead
+        const { error: convError } = await supabase
+          .from("zapp_conversations")
+          .update({ lead_id: selectedClient.id, client_id: null })
+          .eq("id", conversationId);
 
-      if (convError) throw convError;
+        if (convError) throw convError;
 
-      // 2. If checkbox is checked, add phone to client's additional_phones
-      if (addPhoneToClient && conversationPhone) {
-        const currentPhones = Array.isArray(selectedClient.additional_phones)
-          ? selectedClient.additional_phones
-          : [];
-
-        // Check if phone is already in the list or is the main phone
-        const cleanConversationPhone = conversationPhone.replace(/\D/g, "");
-        const cleanMainPhone = (selectedClient.phone_e164 || "").replace(/\D/g, "");
-        const phoneExists =
-          cleanConversationPhone === cleanMainPhone ||
-          currentPhones.some(p => p.replace(/\D/g, "") === cleanConversationPhone);
-
-        if (!phoneExists) {
-          const { error: phoneError } = await supabase
-            .from("clients")
-            .update({
-              additional_phones: [...currentPhones, conversationPhone],
-            })
-            .eq("id", selectedClient.id);
-
-          if (phoneError) {
-            console.error("Error adding phone:", phoneError);
-            // Don't fail the whole operation for this
+        // Optionally update lead's phone
+        if (addPhoneToClient && conversationPhone) {
+          const cleanConversationPhone = conversationPhone.replace(/\D/g, "");
+          const cleanMainPhone = (selectedClient.phone_e164 || "").replace(/\D/g, "");
+          
+          if (cleanConversationPhone !== cleanMainPhone && !selectedClient.phone_e164) {
+            await supabase
+              .from("leads")
+              .update({ phone: conversationPhone })
+              .eq("id", selectedClient.id);
           }
         }
+      } else {
+        // Link to client (existing logic)
+        const { error: convError } = await supabase
+          .from("zapp_conversations")
+          .update({ client_id: selectedClient.id, lead_id: null })
+          .eq("id", conversationId);
+
+        if (convError) throw convError;
+
+        // Add phone to client's additional_phones
+        if (addPhoneToClient && conversationPhone) {
+          const currentPhones = Array.isArray(selectedClient.additional_phones)
+            ? selectedClient.additional_phones
+            : [];
+
+          const cleanConversationPhone = conversationPhone.replace(/\D/g, "");
+          const cleanMainPhone = (selectedClient.phone_e164 || "").replace(/\D/g, "");
+          const phoneExists =
+            cleanConversationPhone === cleanMainPhone ||
+            currentPhones.some(p => p.replace(/\D/g, "") === cleanConversationPhone);
+
+          if (!phoneExists) {
+            const { error: phoneError } = await supabase
+              .from("clients")
+              .update({
+                additional_phones: [...currentPhones, conversationPhone],
+              })
+              .eq("id", selectedClient.id);
+
+            if (phoneError) {
+              console.error("Error adding phone:", phoneError);
+            }
+          }
+        }
+
+        // Mark any pending suggestions as accepted
+        await supabase
+          .from("zapp_client_suggestions")
+          .update({ status: "accepted" })
+          .eq("zapp_conversation_id", conversationId)
+          .eq("suggested_client_id", selectedClient.id);
       }
 
-      // 3. Mark any pending suggestions as accepted
-      await supabase
-        .from("zapp_client_suggestions")
-        .update({ status: "accepted" })
-        .eq("zapp_conversation_id", conversationId)
-        .eq("suggested_client_id", selectedClient.id);
-
-      toast.success(`Conversa vinculada a ${selectedClient.full_name}`);
+      const typeLabel = selectedClient.type === "lead" ? "lead" : "cliente";
+      toast.success(`Conversa vinculada ao ${typeLabel} ${selectedClient.full_name}`);
       onLinked();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error linking client:", error);
-      toast.error(error.message || "Erro ao vincular cliente");
+      console.error("Error linking:", error);
+      toast.error(error.message || "Erro ao vincular");
     } finally {
       setLinking(false);
     }
@@ -240,7 +264,7 @@ export function ZappLinkClientDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5 text-primary" />
-            Vincular a Cliente Existente
+            Vincular a Cliente ou Lead
           </DialogTitle>
         </DialogHeader>
 
@@ -283,10 +307,10 @@ export function ZappLinkClientDialog({
               <div className="p-1 space-y-1">
                 {results.map((client) => (
                   <button
-                    key={client.id}
+                    key={`${client.type}-${client.id}`}
                     onClick={() => setSelectedClient(client)}
                     className={`w-full p-3 rounded-lg text-left transition-colors ${
-                      selectedClient?.id === client.id
+                      selectedClient?.id === client.id && selectedClient?.type === client.type
                         ? "bg-primary/10 border border-primary"
                         : "hover:bg-muted/50 border border-transparent"
                     }`}
@@ -294,18 +318,30 @@ export function ZappLinkClientDialog({
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={client.avatar_url || undefined} />
-                        <AvatarFallback className="bg-muted text-xs">
+                        <AvatarFallback className={`text-xs ${client.type === "lead" ? "bg-amber-500/20 text-amber-600" : "bg-muted"}`}>
                           {getInitials(client.full_name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{client.full_name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{client.full_name}</p>
+                          <Badge 
+                            variant={client.type === "lead" ? "outline" : "secondary"} 
+                            className={`text-[10px] px-1.5 py-0 h-4 ${
+                              client.type === "lead" 
+                                ? "border-amber-500 text-amber-600 bg-amber-500/10" 
+                                : "bg-emerald-500/10 text-emerald-600 border-emerald-500"
+                            }`}
+                          >
+                            {client.type === "lead" ? "Lead" : "Cliente"}
+                          </Badge>
+                        </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Phone className="h-3 w-3" />
-                          <span>{formatPhone(client.phone_e164)}</span>
+                          <span>{formatPhone(client.phone_e164) || "Sem telefone"}</span>
                         </div>
-                        {/* Products */}
-                        {client.client_products && client.client_products.length > 0 && (
+                        {/* Products for clients */}
+                        {client.type === "client" && client.client_products && client.client_products.length > 0 && (
                           <div className="flex items-center gap-1 mt-1 flex-wrap">
                             <Package className="h-3 w-3 text-muted-foreground" />
                             {client.client_products.slice(0, 3).map((cp) => (
@@ -328,6 +364,16 @@ export function ZappLinkClientDialog({
                             )}
                           </div>
                         )}
+                        {/* Status for leads */}
+                        {client.type === "lead" && client.status && (
+                          <div className="mt-1">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                              {client.status === "new" ? "Novo" : 
+                               client.status === "contacted" ? "Contatado" : 
+                               client.status === "qualified" ? "Qualificado" : client.status}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -345,7 +391,10 @@ export function ZappLinkClientDialog({
                 onCheckedChange={(checked) => setAddPhoneToClient(checked === true)}
               />
               <Label htmlFor="addPhone" className="text-sm cursor-pointer">
-                Adicionar {formatPhone(conversationPhone)} como telefone adicional do cliente
+                {selectedClient.type === "lead" 
+                  ? `Atualizar telefone do lead para ${formatPhone(conversationPhone)}`
+                  : `Adicionar ${formatPhone(conversationPhone)} como telefone adicional`
+                }
               </Label>
             </div>
           )}
