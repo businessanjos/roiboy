@@ -323,8 +323,8 @@ export function LeadImportPreview({
         </div>
 
         {/* Table */}
-        <ScrollArea className="flex-1 border rounded-md">
-          <Table>
+        <div className="flex-1 border rounded-md overflow-auto">
+          <Table className="min-w-[900px]">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead className="w-10">
@@ -471,7 +471,7 @@ export function LeadImportPreview({
               )}
             </TableBody>
           </Table>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="pt-4">
           <div className="flex-1 text-sm text-muted-foreground">
