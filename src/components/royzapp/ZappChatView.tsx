@@ -161,6 +161,7 @@ export function ZappChatView({
     refreshSuggestions,
     selectSuggestion,
     sendFeedback,
+    currentSpinPhase,
   } = useMessageAssistant({
     messageInput,
     lastMessages: messages.slice(-10),
@@ -259,6 +260,7 @@ export function ZappChatView({
         onSelectSuggestion={handleSelectSuggestion}
         onRefreshSuggestions={refreshSuggestions}
         onSendFeedback={sendFeedback}
+        currentSpinPhase={currentSpinPhase}
         spellingEnabled={spellingEnabled}
         suggestionsEnabled={suggestionsEnabled}
       />

@@ -39,6 +39,7 @@ interface UseMessageAssistantReturn {
   isLoadingSuggestions: boolean;
   refreshSuggestions: () => void;
   selectSuggestion: (suggestion: Suggestion) => void;
+  currentSpinPhase: string | null;
   
   // Feedback
   sendFeedback: (suggestionId: string, feedback: "positive" | "negative") => Promise<void>;
@@ -65,6 +66,7 @@ export function useMessageAssistant({
   // Suggestions state
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [currentSpinPhase, setCurrentSpinPhase] = useState<string | null>(null);
   const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessagesRef = useRef<string>("");
 
@@ -171,9 +173,14 @@ export function useMessageAssistant({
           return;
         }
 
-        console.log("[AI Suggestions] Received:", data?.suggestions?.length || 0, "suggestions");
+        console.log("[AI Suggestions] Received:", data?.suggestions?.length || 0, "suggestions", "SPIN phase:", data?.currentSpinPhase);
         if (data?.suggestions) {
           setSuggestions(data.suggestions);
+        }
+        if (data?.currentSpinPhase) {
+          setCurrentSpinPhase(data.currentSpinPhase);
+        } else {
+          setCurrentSpinPhase(null);
         }
       } catch (err) {
         console.error("[AI Suggestions] Error in suggestions:", err);
@@ -222,6 +229,11 @@ export function useMessageAssistant({
       if (error) throw error;
       if (data?.suggestions) {
         setSuggestions(data.suggestions);
+      }
+      if (data?.currentSpinPhase) {
+        setCurrentSpinPhase(data.currentSpinPhase);
+      } else {
+        setCurrentSpinPhase(null);
       }
     } catch (err) {
       console.error("Error refreshing suggestions:", err);
@@ -290,6 +302,7 @@ export function useMessageAssistant({
     isLoadingSuggestions,
     refreshSuggestions,
     selectSuggestion,
+    currentSpinPhase,
     
     // Feedback
     sendFeedback,

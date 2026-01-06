@@ -8,11 +8,37 @@ const corsHeaders = {
 
 // Sector-specific prompts
 const sectorPrompts: Record<string, string> = {
-  vendas: `Você é um assistente de vendas profissional. Suas sugestões devem:
-- Focar em identificar necessidades e apresentar soluções
-- Usar técnicas de fechamento sutis
-- Criar urgência quando apropriado
-- Ser persuasivo mas não agressivo`,
+  vendas: `Você é um assistente de vendas especializado na metodologia SPIN Selling.
+
+METODOLOGIA SPIN - Aplique conforme a fase da conversa:
+
+**SITUAÇÃO (início da conversa)**
+- Faça perguntas para entender o contexto atual do cliente
+- Exemplos: "Como funciona hoje...", "Quantas pessoas...", "Há quanto tempo..."
+- Use quando: cliente ainda não compartilhou informações sobre sua situação
+
+**PROBLEMA (após entender situação)**
+- Identifique dores, dificuldades e desafios
+- Exemplos: "Qual o maior desafio...", "O que te impede de...", "Onde está a dificuldade..."
+- Use quando: você já sabe a situação mas não identificou os problemas
+
+**IMPLICAÇÃO (após identificar problemas)**
+- Explore consequências e impactos dos problemas
+- Exemplos: "Quanto isso representa em perdas...", "Como isso afeta...", "Se continuar assim..."
+- Use quando: cliente já revelou problemas, hora de criar urgência
+
+**NECESSIDADE (após criar urgência)**
+- Faça o cliente visualizar a solução e seus benefícios
+- Exemplos: "Se você pudesse resolver isso...", "Qual seria o ganho de...", "Imagina ter..."
+- Use quando: cliente entendeu as implicações, pronto para ver a solução
+
+REGRAS:
+- Analise as últimas mensagens para identificar em qual fase SPIN está
+- Sugira perguntas/respostas adequadas à fase atual
+- Progrida naturalmente pelas fases
+- Use tom consultivo, não agressivo
+- Foque em descobrir necessidades antes de apresentar soluções
+- Inclua a fase SPIN atual na resposta`,
   operacoes: `Você é um assistente de atendimento ao cliente. Suas sugestões devem:
 - Focar em resolver problemas rapidamente
 - Demonstrar empatia e compreensão
@@ -106,8 +132,9 @@ ${patternsContext}
 
 FORMATO DE RESPOSTA (JSON):
 {
+  "current_spin_phase": "situation|problem|implication|need|closing" (apenas para setor vendas, baseado na análise da conversa),
   "suggestions": [
-    { "text": "sugestão 1", "type": "greeting|followup|objection|closing|support" },
+    { "text": "sugestão 1", "type": "situation|problem|implication|need|closing|objection|greeting|followup|support" },
     { "text": "sugestão 2", "type": "..." }
   ]
 }
@@ -174,6 +201,7 @@ Gere sugestões de resposta:`;
       
       const parsed = JSON.parse(jsonStr);
       const suggestions = parsed.suggestions || [];
+      const currentSpinPhase = parsed.current_spin_phase || null;
 
       return new Response(
         JSON.stringify({ 
@@ -183,6 +211,7 @@ Gere sugestões de resposta:`;
             type: s.type || "general",
           })),
           sectorId,
+          currentSpinPhase,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
