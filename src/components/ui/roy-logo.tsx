@@ -1,7 +1,7 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import royLogoLight from "@/assets/roy-logo-light.png";
-import royLogoDark from "@/assets/roy-logo-dark.png";
+import royLogoLight from "@/assets/roy-logo-dark.png"; // Brown logo for light theme
+import royLogoDark from "@/assets/roy-logo-light.png"; // Gold logo for dark theme
 
 interface RoyLogoProps {
   className?: string;
