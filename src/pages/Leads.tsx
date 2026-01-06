@@ -64,6 +64,7 @@ import {
   Users,
   UserCheck,
   MessageSquare,
+  MessageCircle,
   X,
   Clock,
   TrendingUp,
@@ -82,6 +83,7 @@ import { toast } from "sonner";
 import { LeadCustomFieldsManager, LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
 import { CustomField } from "@/components/custom-fields";
 import { LeadImportPreview, ImportLeadRow, ExistingLeadInfo, DuplicateMatchType } from "@/components/leads/LeadImportPreview";
+import { useZappNavigation } from "@/hooks/useZappNavigation";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -138,6 +140,7 @@ export default function Leads() {
     markAsConvertedToDeal,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
+  const { openZappConversation, loading: zappLoading } = useZappNavigation();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
@@ -879,18 +882,58 @@ export default function Leads() {
                       {format(new Date(lead.created_at), "dd/MM/yy", { locale: ptBR })}
                     </div>
 
+                    {/* WhatsApp Button */}
+                    {lead.phone && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-emerald-500/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openZappConversation({
+                            phone: lead.phone,
+                            leadId: lead.id,
+                            name: lead.full_name,
+                          });
+                        }}
+                        disabled={zappLoading}
+                        title="Abrir conversa no RoyZapp"
+                      >
+                        <MessageCircle className="h-4 w-4 text-emerald-600" />
+                      </Button>
+                    )}
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleStatusChange(lead.id, "contacted")}>
+                        {lead.phone && (
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            openZappConversation({
+                              phone: lead.phone,
+                              leadId: lead.id,
+                              name: lead.full_name,
+                            });
+                          }}>
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Conversar no RoyZapp
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusChange(lead.id, "contacted");
+                        }}>
                           <MessageSquare className="h-4 w-4 mr-2" />
                           Marcar Contatado
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(lead.id, "qualified")}>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusChange(lead.id, "qualified");
+                        }}>
                           <UserCheck className="h-4 w-4 mr-2" />
                           Marcar Qualificado
                         </DropdownMenuItem>
@@ -903,13 +946,19 @@ export default function Leads() {
                           Criar Negócio
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => openEditDialog(lead)}>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          openEditDialog(lead);
+                        }}>
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => setDeleteLeadId(lead.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteLeadId(lead.id);
+                          }}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Excluir
