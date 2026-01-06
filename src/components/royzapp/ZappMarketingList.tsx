@@ -64,13 +64,20 @@ export function ZappMarketingList() {
 
       if (error) throw error;
       
-      // Fetch attendance counts for each event
+      // Fetch attendance and confirmed counts for each event
       const eventsWithCounts: MarketingEvent[] = [];
       for (const event of (data || [])) {
-        const { count: attendedCount } = await supabase
-          .from("attendance")
-          .select("*", { count: "exact", head: true })
-          .eq("event_id", event.id);
+        const [attendanceResult, confirmedResult] = await Promise.all([
+          supabase
+            .from("attendance")
+            .select("*", { count: "exact", head: true })
+            .eq("event_id", event.id),
+          supabase
+            .from("event_participants")
+            .select("*", { count: "exact", head: true })
+            .eq("event_id", event.id)
+            .eq("rsvp_status", "confirmed")
+        ]);
 
         eventsWithCounts.push({
           id: event.id,
@@ -84,8 +91,8 @@ export function ZappMarketingList() {
           goal_confirmed: event.goal_confirmed,
           goal_present: event.goal_present,
           public_registration_code: event.public_registration_code,
-          confirmed_count: 0,
-          attended_count: attendedCount || 0,
+          confirmed_count: confirmedResult.count || 0,
+          attended_count: attendanceResult.count || 0,
         });
       }
 
@@ -256,22 +263,18 @@ export function ZappMarketingList() {
                         </div>
                       )}
                       
-                      {/* Progress indicators */}
-                      {(event.goal_confirmed || event.goal_present) && (
-                        <div className="flex items-center gap-3 mt-2 text-[10px]">
-                          {event.goal_confirmed && (
-                            <span className="flex items-center gap-1 text-zapp-text-muted">
-                              <Users className="h-3 w-3" />
-                              {event.confirmed_count}/{event.goal_confirmed} confirmados
-                            </span>
-                          )}
-                          {event.goal_present && (
-                            <span className="flex items-center gap-1 text-zapp-text-muted">
-                              {event.attended_count}/{event.goal_present} presentes
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      {/* Progress indicators - always show confirmed count */}
+                      <div className="flex items-center gap-3 mt-2 text-[10px]">
+                        <span className="flex items-center gap-1 text-zapp-text-muted">
+                          <Users className="h-3 w-3" />
+                          {event.confirmed_count}{event.goal_confirmed ? `/${event.goal_confirmed}` : ''} confirmados
+                        </span>
+                        {event.goal_present ? (
+                          <span className="flex items-center gap-1 text-zapp-text-muted">
+                            {event.attended_count}/{event.goal_present} presentes
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     
                     <ChevronRight className="h-4 w-4 text-zapp-text-muted flex-shrink-0" />
