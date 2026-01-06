@@ -850,6 +850,7 @@ export default function RoyZapp() {
         const payload: Record<string, unknown> = {
           action,
           message: messageContent,
+          sector_id: selectedSectorId,
         };
         
         if (isGroup && groupJid) {
@@ -969,6 +970,7 @@ export default function RoyZapp() {
         media_type: mediaType,
         caption: "",
         file_name: file.name,
+        sector_id: selectedSectorId || "",
       };
       
       if (isGroup && groupJid) {
@@ -1361,6 +1363,7 @@ export default function RoyZapp() {
       const payload: Record<string, string> = {
         action,
         message: contactMessage,
+        sector_id: selectedSectorId || "",
       };
       
       if (isGroup && groupJid) {
