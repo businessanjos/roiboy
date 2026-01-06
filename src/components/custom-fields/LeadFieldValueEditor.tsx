@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Check, X, User } from "lucide-react";
+import { Check, X, User, Instagram } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -93,6 +93,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
           break;
         case "select":
         case "text":
+        case "instagram":
           valueData.value_text = newValue;
           break;
         case "multi_select":
@@ -345,6 +346,39 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
               onChange={(e) => setLocalValue(e.target.value || null)}
               placeholder="Digite..."
             />
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1" onClick={() => saveValue(localValue)} disabled={saving}>
+                Salvar
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // Instagram field
+  if (field.field_type === "instagram") {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+            <FieldValueBadge field={field} value={currentValue} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-3" align="start">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Instagram className="h-4 w-4 text-pink-500" />
+              <Input
+                value={localValue ?? ""}
+                onChange={(e) => setLocalValue(e.target.value || null)}
+                placeholder="@usuario"
+              />
+            </div>
             <div className="flex gap-2">
               <Button size="sm" className="flex-1" onClick={() => saveValue(localValue)} disabled={saving}>
                 Salvar

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Minus, User } from "lucide-react";
+import { Check, X, Minus, User, Instagram } from "lucide-react";
 import { CustomField, FieldOption } from "./CustomFieldsManager";
 
 interface TeamUser {
@@ -172,6 +172,28 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
       <span className={`${textSize} truncate max-w-32`} title={value}>
         {value}
       </span>
+    );
+  }
+
+  // Instagram field
+  if (field.field_type === "instagram") {
+    if (!value) {
+      return <span className={`text-muted-foreground ${textSize}`}>—</span>;
+    }
+    // Remove @ if present and clean the handle
+    const handle = value.replace(/^@/, '').trim();
+    const instagramUrl = `https://instagram.com/${handle}`;
+    return (
+      <a
+        href={instagramUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize}`}
+      >
+        <Instagram className="h-3 w-3" />
+        @{handle}
+      </a>
     );
   }
 
