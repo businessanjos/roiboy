@@ -273,6 +273,7 @@ export function DealDetailSheet({
                 break;
               case "select":
               case "text":
+              case "instagram":
                 valuesMap[v.field_id] = v.value_text;
                 break;
               case "multi_select":
