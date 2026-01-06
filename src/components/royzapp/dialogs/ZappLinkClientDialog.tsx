@@ -26,6 +26,8 @@ interface ClientResult {
   cpf: string | null;
   cnpj: string | null;
   client_products?: { product: { id: string; name: string; color?: string | null } }[];
+  type: "client" | "lead";
+  status?: string;
 }
 
 interface ZappLinkClientDialogProps {
@@ -54,7 +56,7 @@ export function ZappLinkClientDialog({
   const [addPhoneToClient, setAddPhoneToClient] = useState(true);
   const [linking, setLinking] = useState(false);
 
-  // Search clients
+  // Search clients AND leads
   const searchClients = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
       setResults([]);
@@ -66,8 +68,8 @@ export function ZappLinkClientDialog({
       const cleanQuery = query.trim();
       const phoneQuery = cleanQuery.replace(/\D/g, "");
 
-      // Search by name, phone, CPF or CNPJ
-      const { data, error } = await supabase
+      // Search clients
+      const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select(`
           id, full_name, phone_e164, additional_phones, avatar_url, cpf, cnpj,
@@ -81,12 +83,46 @@ export function ZappLinkClientDialog({
           `cpf.ilike.%${phoneQuery}%,` +
           `cnpj.ilike.%${phoneQuery}%`
         )
-        .limit(15);
+        .limit(10);
 
-      if (error) throw error;
-      setResults((data as ClientResult[]) || []);
+      if (clientsError) throw clientsError;
+
+      // Search leads (not converted)
+      const { data: leadsData, error: leadsError } = await supabase
+        .from("leads")
+        .select("id, full_name, phone, email, status")
+        .eq("account_id", accountId)
+        .neq("status", "converted")
+        .or(
+          `full_name.ilike.%${cleanQuery}%,` +
+          `phone.ilike.%${phoneQuery}%,` +
+          `email.ilike.%${cleanQuery}%`
+        )
+        .limit(10);
+
+      if (leadsError) throw leadsError;
+
+      // Combine results - clients first, then leads
+      const clientResults: ClientResult[] = (clientsData || []).map(c => ({
+        ...c,
+        type: "client" as const,
+      }));
+
+      const leadResults: ClientResult[] = (leadsData || []).map(l => ({
+        id: l.id,
+        full_name: l.full_name,
+        phone_e164: l.phone,
+        additional_phones: null,
+        avatar_url: null,
+        cpf: null,
+        cnpj: null,
+        type: "lead" as const,
+        status: l.status,
+      }));
+
+      setResults([...clientResults, ...leadResults]);
     } catch (error) {
-      console.error("Error searching clients:", error);
+      console.error("Error searching:", error);
       setResults([]);
     } finally {
       setLoading(false);
