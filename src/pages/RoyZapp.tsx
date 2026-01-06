@@ -271,6 +271,9 @@ export default function RoyZapp() {
 
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
+  
+  // Close ticket dialog state
+  const [closeTicketDialogOpen, setCloseTicketDialogOpen] = useState(false);
 
   // Fetch AI agents
   useEffect(() => {
@@ -2685,6 +2688,21 @@ export default function RoyZapp() {
           nome_cliente: selectedConversation?.zapp_conversation?.contact_name || (selectedConversation?.conversation?.client as any)?.full_name || '',
           nome_empresa: (selectedConversation?.conversation?.client as any)?.company_name || '',
           nome_vendedor: currentUser?.name || '',
+        }}
+      />
+
+      {/* Close Ticket Dialog */}
+      <ZappCloseTicketDialog
+        open={closeTicketDialogOpen}
+        onOpenChange={setCloseTicketDialogOpen}
+        assignment={selectedConversation!}
+        agentName={currentAgent?.user?.name || currentUser?.name || ""}
+        sectorId={selectedSectorId || ""}
+        departmentName={currentAgent?.department?.name || ""}
+        onSuccess={() => {
+          setCloseTicketDialogOpen(false);
+          setSelectedConversation(null);
+          fetchData();
         }}
       />
     </div>
