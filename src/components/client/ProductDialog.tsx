@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, Package } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface Product {
   id: string;
@@ -37,6 +38,7 @@ export function ProductDialog({
   currentProductIds = [],
   onSuccess,
 }: ProductDialogProps) {
+  const { currentUser } = useCurrentUser();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,21 +79,18 @@ export function ProductDialog({
   };
 
   const handleSave = async () => {
+    if (!currentUser?.account_id) {
+      toast.error("Perfil não encontrado");
+      return;
+    }
+    
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("Usuário não autenticado");
-
-      const { data: userProfile, error: profileError } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("auth_user_id", userData.user.id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-      if (!userProfile?.account_id) throw new Error("Perfil não encontrado");
-
       // Remove all current products
+      await supabase
+        .from("client_products")
+        .delete()
+        .eq("client_id", clientId);
       await supabase
         .from("client_products")
         .delete()
@@ -102,7 +101,7 @@ export function ProductDialog({
         const productInserts = selectedProducts.map((productId) => ({
           client_id: clientId,
           product_id: productId,
-          account_id: userProfile.account_id,
+          account_id: currentUser.account_id,
         }));
 
         const { error } = await supabase
