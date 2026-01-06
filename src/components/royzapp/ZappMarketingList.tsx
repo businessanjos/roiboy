@@ -18,10 +18,15 @@ import {
   ChevronRight,
   Copy,
   Link,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { getEventTypeConfig } from "@/config/eventTypes";
+
+interface ZappMarketingListProps {
+  sectorId?: string;
+}
 
 interface MarketingEvent {
   id: string;
@@ -39,13 +44,17 @@ interface MarketingEvent {
   attended_count: number;
 }
 
-export function ZappMarketingList() {
+export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<"upcoming" | "past">("upcoming");
 
+  // Determinar categoria baseado no setor
+  const eventCategory = sectorId === "operacoes" ? "operation" : "marketing";
+  const isOperationSector = sectorId === "operacoes";
+
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["zapp-marketing-events", session?.user?.id],
+    queryKey: ["zapp-marketing-events", session?.user?.id, sectorId],
     queryFn: async (): Promise<MarketingEvent[]> => {
       const { data: userData } = await supabase
         .from("users")
@@ -59,7 +68,7 @@ export function ZappMarketingList() {
         .from("events")
         .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code")
         .eq("account_id", userData.account_id)
-        .eq("category", "marketing")
+        .eq("category", eventCategory)
         .order("scheduled_at", { ascending: true });
 
       if (error) throw error;
@@ -139,8 +148,14 @@ export function ZappMarketingList() {
       <div className="px-4 py-3 border-b border-zapp-border bg-zapp-bg">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Megaphone className="h-4 w-4 text-zapp-accent" />
-            <span className="font-medium text-zapp-text">Eventos de Marketing</span>
+            {isOperationSector ? (
+              <Briefcase className="h-4 w-4 text-zapp-accent" />
+            ) : (
+              <Megaphone className="h-4 w-4 text-zapp-accent" />
+            )}
+            <span className="font-medium text-zapp-text">
+              {isOperationSector ? "Eventos de Operação" : "Eventos de Marketing"}
+            </span>
           </div>
           <Button 
             size="sm" 

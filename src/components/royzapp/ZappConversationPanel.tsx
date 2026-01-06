@@ -631,8 +631,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "playbook" && (
           <ZappPlaybookList sectorId={sectorId} />
         )}
-        {activeView === "marketing" && (
-          <ZappMarketingList />
+{activeView === "marketing" && (
+                  <ZappMarketingList sectorId={sectorId} />
         )}
       </ScrollArea>
     </div>
