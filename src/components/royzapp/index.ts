@@ -17,3 +17,6 @@ export * from "./ZappAIAgentItem";
 export * from "./ZappAIAgentChat";
 export * from "./ZappSectorSelector";
 export * from "./ZappMarketingList";
+export * from "./ZappCallButton";
+export * from "./ZappCallDialog";
+export * from "./ZappCallHistory";
