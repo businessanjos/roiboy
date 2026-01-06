@@ -492,11 +492,11 @@ export function useZappData(options: UseZappDataOptions = {}) {
         }, HEARTBEAT_INTERVAL_MS);
       }
       
-      // Filter agents by current sector's department
+      // Filter agents by current sector's department (strict - only show agents assigned to this department)
       let filteredAgents = finalAgents;
       if (sectorId && targetDepartmentId) {
         filteredAgents = finalAgents.filter((a: Agent) => 
-          a.department_id === targetDepartmentId || a.department_id === null
+          a.department_id === targetDepartmentId
         );
         console.log(`[ZappData] Filtered agents for sector ${sectorId}: ${filteredAgents.length} of ${finalAgents.length}`);
       }
