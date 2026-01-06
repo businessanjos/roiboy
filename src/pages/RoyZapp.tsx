@@ -2576,9 +2576,54 @@ export default function RoyZapp() {
         agents={agents}
         departments={departments}
         currentAgentId={selectedConversation?.agent_id}
-        onTransfer={() => {
-          // TODO: Implement transfer logic
-          setTransferDialogOpen(false);
+        onTransfer={async () => {
+          if (!selectedConversation || !transferTarget.id) return;
+          
+          try {
+            if (transferTarget.type === "agent") {
+              // Transfer to another agent
+              const { error } = await supabase
+                .from('zapp_conversation_assignments')
+                .update({ 
+                  agent_id: transferTarget.id,
+                  status: 'active' as const,
+                  assigned_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', selectedConversation.id);
+              
+              if (error) throw error;
+              
+              const targetAgent = agents.find(a => a.id === transferTarget.id);
+              toast.success(`Conversa transferida para ${targetAgent?.user?.name || 'atendente'}`);
+            } else {
+              // Transfer to department (put back in queue)
+              const { error } = await supabase
+                .from('zapp_conversation_assignments')
+                .update({ 
+                  agent_id: null,
+                  department_id: transferTarget.id,
+                  status: 'pending' as const,
+                  assigned_at: null,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', selectedConversation.id);
+              
+              if (error) throw error;
+              
+              const targetDept = departments.find(d => d.id === transferTarget.id);
+              toast.success(`Conversa transferida para fila de ${targetDept?.name || 'departamento'}`);
+            }
+            
+            // Clear selection and close dialog
+            setSelectedConversation(null);
+            setTransferDialogOpen(false);
+            setTransferTarget({ type: "agent", id: "" });
+            fetchData();
+          } catch (error) {
+            console.error("[RoyZapp] Error transferring conversation:", error);
+            toast.error("Erro ao transferir conversa");
+          }
         }}
       />
 
