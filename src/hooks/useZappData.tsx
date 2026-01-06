@@ -708,6 +708,51 @@ export function useZappData(options: UseZappDataOptions = {}) {
           debouncedFetchAssignments();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'zapp_messages',
+          filter: `account_id=eq.${currentUser.account_id}`
+        },
+        (payload) => {
+          const newData = payload.new as any;
+          console.log("[ZappData] zapp_messages UPDATE detected:", newData?.id);
+          
+          // CRITICAL SECURITY: Validate account_id matches current user
+          if (newData?.account_id && newData.account_id !== currentUser?.account_id) {
+            console.warn("[ZappData] SECURITY: Ignoring message UPDATE event from different account");
+            return;
+          }
+          
+          // Update the message in local state if it's for media download completion
+          if (newData?.media_download_status && newData?.media_url) {
+            setMessages(prevMessages => 
+              prevMessages.map(msg => 
+                msg.id === newData.id 
+                  ? { 
+                      ...msg, 
+                      media_url: newData.media_url, 
+                      media_download_status: newData.media_download_status 
+                    } 
+                  : msg
+              )
+            );
+          }
+          
+          // Also update delivery status changes
+          if (newData?.delivery_status) {
+            setMessages(prevMessages => 
+              prevMessages.map(msg => 
+                msg.id === newData.id 
+                  ? { ...msg, delivery_status: newData.delivery_status } 
+                  : msg
+              )
+            );
+          }
+        }
+      )
       .subscribe((status) => {
         console.log("[ZappData] Realtime subscription status:", status);
       });
