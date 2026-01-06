@@ -82,13 +82,14 @@ export function ProductDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from("users")
         .select("account_id")
         .eq("auth_user_id", userData.user.id)
-        .single();
+        .maybeSingle();
 
-      if (!userProfile) throw new Error("Perfil não encontrado");
+      if (profileError) throw profileError;
+      if (!userProfile?.account_id) throw new Error("Perfil não encontrado");
 
       // Remove all current products
       await supabase
