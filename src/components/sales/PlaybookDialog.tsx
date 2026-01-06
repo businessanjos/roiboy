@@ -240,6 +240,9 @@ export function PlaybookDialog({
           {item.is_favorite && (
             <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
           )}
+          {item.visibility === 'personal' && (
+            <span className="text-xs text-muted-foreground" title="Apenas você pode ver">🔒</span>
+          )}
         </div>
         {item.text_content && (
           <p className="text-sm text-muted-foreground truncate">
