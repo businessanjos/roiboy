@@ -25,6 +25,7 @@ interface ZappConversationListProps {
   totalQueueConversations: number;
   myUnreadCount: number;
   queueUnreadCount: number;
+  isAdmin?: boolean;
   onSearchChange: (value: string) => void;
   onTabChange: (tab: "mine" | "queue") => void;
   onSelectConversation: (assignment: ConversationAssignment) => void;
@@ -64,6 +65,7 @@ export const ZappConversationList = memo(function ZappConversationList({
   onDeleteConversation,
   onOpenNewConversation,
   getAgentName,
+  isAdmin = false,
 }: ZappConversationListProps) {
   // Filter assignments based on current filters
   const filteredAssignments = useMemo(() => {
@@ -73,9 +75,12 @@ export const ZappConversationList = memo(function ZappConversationList({
       if (isArchived) return false;
       
       // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
-      const matchesTab = inboxTab === "mine" 
-        ? a.agent_id === currentAgent?.id
-        : true;
+      // ADMINS always see all conversations regardless of tab
+      const matchesTab = isAdmin
+        ? true
+        : (inboxTab === "mine" 
+          ? a.agent_id === currentAgent?.id
+          : true);
       
       const contact = getContactInfo(a);
       const matchesSearch = searchQuery === "" ||
@@ -120,7 +125,7 @@ export const ZappConversationList = memo(function ZappConversationList({
       const dateB = new Date(contactB.lastMessageAt).getTime();
       return dateB - dateA;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
 
   return (
     <div className="flex flex-col h-full">
