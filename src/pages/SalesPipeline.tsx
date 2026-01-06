@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useLeads } from "@/hooks/useLeads";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
@@ -12,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -34,11 +36,19 @@ import {
   Target,
   Search,
   MessageSquare,
+  User,
 } from "lucide-react";
 import LeadsTab from "@/components/sales/LeadsTab";
 
+interface SalesUser {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+}
+
 export default function SalesPipeline() {
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const {
     stages,
     deals,
@@ -75,6 +85,27 @@ export default function SalesPipeline() {
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSalesRep, setSelectedSalesRep] = useState<string>('all');
+  const [salesUsers, setSalesUsers] = useState<SalesUser[]>([]);
+
+  // Fetch sales team users
+  useEffect(() => {
+    const fetchSalesUsers = async () => {
+      if (!currentUser?.account_id) return;
+      
+      const { data } = await supabase
+        .from("users")
+        .select("id, name, avatar_url")
+        .eq("account_id", currentUser.account_id)
+        .order("name");
+      
+      if (data) {
+        setSalesUsers(data);
+      }
+    };
+    
+    fetchSalesUsers();
+  }, [currentUser?.account_id]);
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
@@ -87,9 +118,14 @@ export default function SalesPipeline() {
     return Array.from(tagSet).sort();
   }, [deals]);
 
-  // Filter deals by selected tag and search term
+  // Filter deals by selected tag, search term, and sales rep
   const filterDeals = (dealsList: Deal[]) => {
     let filtered = dealsList;
+    
+    // Filter by sales rep
+    if (selectedSalesRep !== 'all') {
+      filtered = filtered.filter(deal => deal.responsible_user_id === selectedSalesRep);
+    }
     
     // Filter by tag
     if (selectedTag !== 'all') {
@@ -330,12 +366,41 @@ export default function SalesPipeline() {
                 </TabsList>
               </Tabs>
 
-              {/* Tag Filter and Search */}
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-muted-foreground" />
+              {/* Filters */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Sales Rep Filter */}
+                <Select value={selectedSalesRep} onValueChange={setSelectedSalesRep}>
+                  <SelectTrigger className="w-[180px] h-9">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Vendedor" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos vendedores</SelectItem>
+                    {salesUsers.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={user.avatar_url || undefined} />
+                            <AvatarFallback className="text-[10px]">
+                              {user.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{user.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Tag Filter */}
                 <Select value={selectedTag} onValueChange={setSelectedTag}>
                   <SelectTrigger className="w-[150px] h-9">
-                    <SelectValue placeholder="Filtrar por tag" />
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Tags" />
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as tags</SelectItem>
@@ -346,11 +411,15 @@ export default function SalesPipeline() {
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedTag !== 'all' && (
+                
+                {(selectedTag !== 'all' || selectedSalesRep !== 'all') && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedTag('all')}
+                    onClick={() => {
+                      setSelectedTag('all');
+                      setSelectedSalesRep('all');
+                    }}
                     className="h-9 px-2"
                   >
                     Limpar
@@ -364,7 +433,7 @@ export default function SalesPipeline() {
                     placeholder="Buscar nome ou telefone..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9 w-[280px]"
+                    className="pl-9 h-9 w-[250px]"
                   />
                 </div>
               </div>
