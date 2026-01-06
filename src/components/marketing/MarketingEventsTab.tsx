@@ -348,7 +348,7 @@ export default function MarketingEventsTab() {
       return;
     }
 
-    const generateCheckinCode = () => {
+    const generateCode = () => {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let code = '';
       for (let i = 0; i < 6; i++) {
@@ -387,8 +387,12 @@ export default function MarketingEventsTab() {
       account_id: accountId,
     };
 
-    if (!editingEvent && modality === "presencial") {
-      eventData.checkin_code = generateCheckinCode();
+    // Add RSVP code for all new events and checkin_code for presencial
+    if (!editingEvent) {
+      eventData.public_registration_code = generateCode();
+      if (modality === "presencial") {
+        eventData.checkin_code = generateCode();
+      }
     }
 
     let eventId: string;
