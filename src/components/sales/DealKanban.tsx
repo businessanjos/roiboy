@@ -34,7 +34,9 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     return deals.filter(deal => 
       deal.title.toLowerCase().includes(term) ||
       deal.contact_name?.toLowerCase().includes(term) ||
-      deal.client?.full_name?.toLowerCase().includes(term)
+      deal.contact_phone?.toLowerCase().includes(term) ||
+      deal.client?.full_name?.toLowerCase().includes(term) ||
+      deal.client?.phone_e164?.toLowerCase().includes(term)
     );
   }, [deals, searchTerm]);
 
