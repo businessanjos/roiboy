@@ -989,11 +989,15 @@ export default function Events() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={event.event_type === "live" ? "default" : "secondary"}>
-                          {event.event_type === "live" ? (
-                            <><Video className="h-3 w-3 mr-1" /> Live</>
-                          ) : (
-                            <><FileText className="h-3 w-3 mr-1" /> Material</>
-                          )}
+                          {event.event_type === "live" && <><Video className="h-3 w-3 mr-1" /> Live / Encontro</>}
+                          {event.event_type === "mentoria" && <><Users className="h-3 w-3 mr-1" /> Mentoria</>}
+                          {event.event_type === "workshop" && <><Monitor className="h-3 w-3 mr-1" /> Workshop</>}
+                          {event.event_type === "masterclass" && <><Video className="h-3 w-3 mr-1" /> Masterclass</>}
+                          {event.event_type === "webinar" && <><Monitor className="h-3 w-3 mr-1" /> Webinar</>}
+                          {event.event_type === "imersao" && <><Calendar className="h-3 w-3 mr-1" /> Imersão</>}
+                          {event.event_type === "plantao" && <><Clock className="h-3 w-3 mr-1" /> Plantão</>}
+                          {event.event_type === "material" && <><FileText className="h-3 w-3 mr-1" /> Material</>}
+                          {!event.event_type && <><FileText className="h-3 w-3 mr-1" /> -</>}
                         </Badge>
                         {event.is_recurring && (
                           <Badge variant="outline" className="ml-1">
