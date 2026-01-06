@@ -2692,19 +2692,21 @@ export default function RoyZapp() {
       />
 
       {/* Close Ticket Dialog */}
-      <ZappCloseTicketDialog
-        open={closeTicketDialogOpen}
-        onOpenChange={setCloseTicketDialogOpen}
-        assignment={selectedConversation!}
-        agentName={currentAgent?.user?.name || currentUser?.name || ""}
-        sectorId={selectedSectorId || ""}
-        departmentName={currentAgent?.department?.name || ""}
-        onSuccess={() => {
-          setCloseTicketDialogOpen(false);
-          setSelectedConversation(null);
-          fetchData();
-        }}
-      />
+      {selectedConversation && (
+        <ZappCloseTicketDialog
+          open={closeTicketDialogOpen}
+          onOpenChange={setCloseTicketDialogOpen}
+          assignment={selectedConversation}
+          agentName={currentAgent?.user?.name || currentUser?.name || ""}
+          sectorId={selectedSectorId || ""}
+          departmentName={currentAgent?.department?.name || ""}
+          onSuccess={() => {
+            setCloseTicketDialogOpen(false);
+            setSelectedConversation(null);
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }
