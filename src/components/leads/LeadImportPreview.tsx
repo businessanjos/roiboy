@@ -27,7 +27,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, Check, Upload, Filter, X, Users } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertTriangle, Check, Upload, X, Users, RefreshCw, Plus, SkipForward, FileKey } from "lucide-react";
+
+export type DuplicateMatchType = "external_id" | "phone" | "email" | "cpf" | "name";
+export type DuplicateAction = "skip" | "update" | "create";
+
+export interface ExistingLeadInfo {
+  id: string;
+  full_name: string;
+  phone?: string;
+  email?: string;
+  external_id?: string;
+}
 
 export interface ImportLeadRow {
   lineNumber: number;
@@ -42,20 +54,24 @@ export interface ImportLeadRow {
   city?: string;
   state?: string;
   revenue_range?: string;
+  external_id?: string;
+  external_source?: string;
   hasError?: boolean;
   errorMessage?: string;
   isDuplicate?: boolean;
   duplicateInfo?: {
-    type: "phone" | "email" | "cpf";
-    existingName: string;
+    type: DuplicateMatchType;
+    matchValue: string;
+    existingLead?: ExistingLeadInfo;
   };
+  duplicateAction?: DuplicateAction;
 }
 
 interface LeadImportPreviewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rows: ImportLeadRow[];
-  onConfirmImport: (selectedRows: ImportLeadRow[], skipDuplicates: boolean) => Promise<void>;
+  onConfirmImport: (selectedRows: ImportLeadRow[]) => Promise<void>;
   importing?: boolean;
 }
 
@@ -67,8 +83,23 @@ const LEAD_SOURCES = [
   { value: "indicacao", label: "Indicação" },
   { value: "evento", label: "Evento" },
   { value: "whatsapp", label: "WhatsApp" },
+  { value: "pipedrive", label: "Pipedrive" },
   { value: "outro", label: "Outro" },
 ];
+
+const DUPLICATE_ACTION_OPTIONS: { value: DuplicateAction; label: string; icon: React.ReactNode }[] = [
+  { value: "skip", label: "Pular", icon: <SkipForward className="h-3 w-3" /> },
+  { value: "update", label: "Atualizar", icon: <RefreshCw className="h-3 w-3" /> },
+  { value: "create", label: "Criar mesmo assim", icon: <Plus className="h-3 w-3" /> },
+];
+
+const MATCH_TYPE_BADGES: Record<DuplicateMatchType, { label: string; className: string }> = {
+  external_id: { label: "ID", className: "bg-blue-100 text-blue-700 border-blue-300" },
+  phone: { label: "Tel", className: "bg-amber-100 text-amber-700 border-amber-300" },
+  email: { label: "Email", className: "bg-orange-100 text-orange-700 border-orange-300" },
+  cpf: { label: "CPF", className: "bg-purple-100 text-purple-700 border-purple-300" },
+  name: { label: "Nome", className: "bg-gray-100 text-gray-700 border-gray-300" },
+};
 
 export function LeadImportPreview({
   open,
@@ -80,21 +111,34 @@ export function LeadImportPreview({
   const [selectedRows, setSelectedRows] = useState<Set<number>>(
     new Set(rows.filter(r => !r.hasError).map(r => r.lineNumber))
   );
-  const [filterMode, setFilterMode] = useState<"all" | "valid" | "errors" | "duplicates">("all");
+  const [filterMode, setFilterMode] = useState<"all" | "new" | "update" | "duplicates" | "errors">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [defaultSource, setDefaultSource] = useState<string>("");
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [defaultDuplicateAction, setDefaultDuplicateAction] = useState<DuplicateAction>("skip");
+  const [rowActions, setRowActions] = useState<Record<number, DuplicateAction>>({});
+
+  // Update row actions when default action changes
+  const getRowAction = (row: ImportLeadRow): DuplicateAction => {
+    if (!row.isDuplicate) return "create";
+    return rowActions[row.lineNumber] ?? row.duplicateAction ?? defaultDuplicateAction;
+  };
+
+  const setRowAction = (lineNumber: number, action: DuplicateAction) => {
+    setRowActions(prev => ({ ...prev, [lineNumber]: action }));
+  };
 
   const filteredRows = useMemo(() => {
     let result = rows;
 
     // Filter by mode
-    if (filterMode === "valid") {
+    if (filterMode === "new") {
       result = result.filter(r => !r.hasError && !r.isDuplicate);
+    } else if (filterMode === "update") {
+      result = result.filter(r => r.isDuplicate && r.duplicateInfo?.type === "external_id");
+    } else if (filterMode === "duplicates") {
+      result = result.filter(r => r.isDuplicate && r.duplicateInfo?.type !== "external_id");
     } else if (filterMode === "errors") {
       result = result.filter(r => r.hasError);
-    } else if (filterMode === "duplicates") {
-      result = result.filter(r => r.isDuplicate);
     }
 
     // Filter by search
@@ -104,16 +148,21 @@ export function LeadImportPreview({
         r =>
           r.full_name?.toLowerCase().includes(term) ||
           r.phone?.includes(term) ||
-          r.email?.toLowerCase().includes(term)
+          r.email?.toLowerCase().includes(term) ||
+          r.external_id?.includes(term)
       );
     }
 
     return result;
   }, [rows, filterMode, searchTerm]);
 
-  const validCount = rows.filter(r => !r.hasError && !r.isDuplicate).length;
-  const errorCount = rows.filter(r => r.hasError).length;
-  const duplicateCount = rows.filter(r => r.isDuplicate).length;
+  const stats = useMemo(() => {
+    const newCount = rows.filter(r => !r.hasError && !r.isDuplicate).length;
+    const updateCount = rows.filter(r => r.isDuplicate && r.duplicateInfo?.type === "external_id").length;
+    const duplicateCount = rows.filter(r => r.isDuplicate && r.duplicateInfo?.type !== "external_id").length;
+    const errorCount = rows.filter(r => r.hasError).length;
+    return { newCount, updateCount, duplicateCount, errorCount };
+  }, [rows]);
 
   const toggleRow = (lineNumber: number) => {
     const newSelected = new Set(selectedRows);
@@ -139,79 +188,99 @@ export function LeadImportPreview({
       .map(r => ({
         ...r,
         source: r.source || defaultSource || undefined,
+        duplicateAction: getRowAction(r),
       }));
-    await onConfirmImport(selectedData, skipDuplicates);
+    await onConfirmImport(selectedData);
+  };
+
+  const getRowStatus = (row: ImportLeadRow) => {
+    if (row.hasError) return "error";
+    if (row.isDuplicate) {
+      if (row.duplicateInfo?.type === "external_id") return "update";
+      return "duplicate";
+    }
+    return "new";
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             Importar Leads
           </DialogTitle>
           <DialogDescription>
-            Revise os dados antes de importar. Linhas com erros não podem ser selecionadas.
+            Revise os dados antes de importar. Duplicatas são detectadas por ID, telefone, email ou nome.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Stats and Filters */}
-        <div className="flex flex-wrap items-center gap-2 py-2 border-b">
-          <Button
-            variant={filterMode === "all" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setFilterMode("all")}
+        {/* Summary Stats */}
+        <div className="grid grid-cols-4 gap-3 py-2">
+          <button
+            onClick={() => setFilterMode(filterMode === "new" ? "all" : "new")}
+            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
+              filterMode === "new" ? "bg-green-50 border-green-300" : "hover:bg-muted/50"
+            }`}
           >
-            <Users className="h-4 w-4 mr-1" />
-            Todos ({rows.length})
-          </Button>
-          <Button
-            variant={filterMode === "valid" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setFilterMode("valid")}
+            <div className="flex items-center gap-1 text-green-600">
+              <Plus className="h-4 w-4" />
+              <span className="text-lg font-bold">{stats.newCount}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">Novos</span>
+          </button>
+          <button
+            onClick={() => setFilterMode(filterMode === "update" ? "all" : "update")}
+            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
+              filterMode === "update" ? "bg-blue-50 border-blue-300" : "hover:bg-muted/50"
+            }`}
           >
-            <Check className="h-4 w-4 mr-1 text-green-500" />
-            Válidos ({validCount})
-          </Button>
-          {errorCount > 0 && (
-            <Button
-              variant={filterMode === "errors" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setFilterMode("errors")}
-            >
-              <X className="h-4 w-4 mr-1 text-red-500" />
-              Com erros ({errorCount})
-            </Button>
-          )}
-          {duplicateCount > 0 && (
-            <Button
-              variant={filterMode === "duplicates" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setFilterMode("duplicates")}
-            >
-              <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />
-              Duplicados ({duplicateCount})
-            </Button>
-          )}
-
-          <div className="flex-1" />
-
-          <Input
-            placeholder="Buscar..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-40 h-8"
-          />
+            <div className="flex items-center gap-1 text-blue-600">
+              <RefreshCw className="h-4 w-4" />
+              <span className="text-lg font-bold">{stats.updateCount}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">Atualizar (ID)</span>
+          </button>
+          <button
+            onClick={() => setFilterMode(filterMode === "duplicates" ? "all" : "duplicates")}
+            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
+              filterMode === "duplicates" ? "bg-amber-50 border-amber-300" : "hover:bg-muted/50"
+            }`}
+          >
+            <div className="flex items-center gap-1 text-amber-600">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-lg font-bold">{stats.duplicateCount}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">Duplicados</span>
+          </button>
+          <button
+            onClick={() => setFilterMode(filterMode === "errors" ? "all" : "errors")}
+            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
+              filterMode === "errors" ? "bg-red-50 border-red-300" : "hover:bg-muted/50"
+            }`}
+          >
+            <div className="flex items-center gap-1 text-red-600">
+              <X className="h-4 w-4" />
+              <span className="text-lg font-bold">{stats.errorCount}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">Erros</span>
+          </button>
         </div>
 
-        {/* Default source selector */}
-        <div className="flex items-center gap-4 py-2">
+        {/* Filters and Options */}
+        <div className="flex flex-wrap items-center gap-4 py-2 border-y">
+          <Input
+            placeholder="Buscar por nome, telefone, email ou ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-64 h-8"
+          />
+
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Origem padrão:</span>
             <Select value={defaultSource} onValueChange={setDefaultSource}>
-              <SelectTrigger className="w-40 h-8">
-                <SelectValue placeholder="Selecionar..." />
+              <SelectTrigger className="w-32 h-8">
+                <SelectValue placeholder="Selecionar" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Nenhuma</SelectItem>
@@ -224,17 +293,32 @@ export function LeadImportPreview({
             </Select>
           </div>
 
-          {duplicateCount > 0 && (
+          {(stats.duplicateCount > 0 || stats.updateCount > 0) && (
             <div className="flex items-center gap-2">
-              <Checkbox
-                id="skip-duplicates"
-                checked={skipDuplicates}
-                onCheckedChange={(c) => setSkipDuplicates(!!c)}
-              />
-              <label htmlFor="skip-duplicates" className="text-sm cursor-pointer">
-                Pular duplicados
-              </label>
+              <span className="text-sm text-muted-foreground">Duplicatas:</span>
+              <Select value={defaultDuplicateAction} onValueChange={(v) => setDefaultDuplicateAction(v as DuplicateAction)}>
+                <SelectTrigger className="w-36 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DUPLICATE_ACTION_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <div className="flex items-center gap-2">
+                        {opt.icon}
+                        {opt.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          )}
+
+          {filterMode !== "all" && (
+            <Button variant="ghost" size="sm" onClick={() => setFilterMode("all")}>
+              <Users className="h-4 w-4 mr-1" />
+              Mostrar todos
+            </Button>
           )}
         </div>
 
@@ -253,9 +337,9 @@ export function LeadImportPreview({
                 <TableHead>Nome</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Origem</TableHead>
-                <TableHead>Cidade/UF</TableHead>
+                <TableHead>ID Ext.</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-36">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -266,68 +350,124 @@ export function LeadImportPreview({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRows.map((row) => (
-                  <TableRow
-                    key={row.lineNumber}
-                    className={
-                      row.hasError
-                        ? "bg-red-50 dark:bg-red-950/30"
-                        : row.isDuplicate
-                        ? "bg-amber-50 dark:bg-amber-950/30"
-                        : ""
-                    }
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedRows.has(row.lineNumber)}
-                        onCheckedChange={() => toggleRow(row.lineNumber)}
-                        disabled={row.hasError}
-                      />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {row.lineNumber}
-                    </TableCell>
-                    <TableCell className="font-medium">{row.full_name}</TableCell>
-                    <TableCell className="text-sm">{row.phone || "-"}</TableCell>
-                    <TableCell className="text-sm">{row.email || "-"}</TableCell>
-                    <TableCell>
-                      {row.source ? (
-                        <Badge variant="outline" className="text-xs">
-                          {LEAD_SOURCES.find(s => s.value === row.source)?.label || row.source}
-                        </Badge>
-                      ) : defaultSource ? (
-                        <Badge variant="outline" className="text-xs opacity-50">
-                          {LEAD_SOURCES.find(s => s.value === defaultSource)?.label}
-                        </Badge>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {row.city && row.state
-                        ? `${row.city}/${row.state}`
-                        : row.city || row.state || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {row.hasError ? (
-                        <Badge variant="destructive" className="text-xs">
-                          <X className="h-3 w-3 mr-1" />
-                          {row.errorMessage || "Erro"}
-                        </Badge>
-                      ) : row.isDuplicate ? (
-                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Duplicado ({row.duplicateInfo?.type})
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs text-green-600 border-green-300">
-                          <Check className="h-3 w-3 mr-1" />
-                          OK
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredRows.map((row) => {
+                  const status = getRowStatus(row);
+                  const action = getRowAction(row);
+                  
+                  return (
+                    <TableRow
+                      key={row.lineNumber}
+                      className={
+                        status === "error"
+                          ? "bg-red-50 dark:bg-red-950/30"
+                          : status === "update"
+                          ? "bg-blue-50 dark:bg-blue-950/30"
+                          : status === "duplicate"
+                          ? "bg-amber-50 dark:bg-amber-950/30"
+                          : ""
+                      }
+                    >
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedRows.has(row.lineNumber)}
+                          onCheckedChange={() => toggleRow(row.lineNumber)}
+                          disabled={row.hasError}
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {row.lineNumber}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <span className="font-medium">{row.full_name}</span>
+                          {row.duplicateInfo?.existingLead && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                    → {row.duplicateInfo.existingLead.full_name}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-xs">
+                                    <div><strong>Lead existente:</strong></div>
+                                    <div>Nome: {row.duplicateInfo.existingLead.full_name}</div>
+                                    {row.duplicateInfo.existingLead.phone && <div>Tel: {row.duplicateInfo.existingLead.phone}</div>}
+                                    {row.duplicateInfo.existingLead.email && <div>Email: {row.duplicateInfo.existingLead.email}</div>}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{row.phone || "-"}</TableCell>
+                      <TableCell className="text-sm truncate max-w-[150px]">{row.email || "-"}</TableCell>
+                      <TableCell className="text-sm">
+                        {row.external_id ? (
+                          <Badge variant="outline" className="text-xs font-mono">
+                            <FileKey className="h-3 w-3 mr-1" />
+                            {row.external_id}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {row.hasError ? (
+                          <Badge variant="destructive" className="text-xs">
+                            <X className="h-3 w-3 mr-1" />
+                            {row.errorMessage || "Erro"}
+                          </Badge>
+                        ) : row.isDuplicate && row.duplicateInfo ? (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${MATCH_TYPE_BADGES[row.duplicateInfo.type].className}`}
+                          >
+                            {row.duplicateInfo.type === "external_id" ? (
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                            ) : (
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                            )}
+                            {MATCH_TYPE_BADGES[row.duplicateInfo.type].label}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                            <Check className="h-3 w-3 mr-1" />
+                            Novo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {row.hasError ? (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        ) : row.isDuplicate ? (
+                          <Select 
+                            value={action} 
+                            onValueChange={(v) => setRowAction(row.lineNumber, v as DuplicateAction)}
+                          >
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DUPLICATE_ACTION_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  <div className="flex items-center gap-2">
+                                    {opt.icon}
+                                    {opt.label}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            <Plus className="h-3 w-3 mr-1" />
+                            Criar
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

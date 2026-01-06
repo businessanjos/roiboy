@@ -4938,6 +4938,8 @@ export type Database = {
           created_at: string
           email: string | null
           emails: Json | null
+          external_id: string | null
+          external_source: string | null
           full_name: string
           id: string
           instagram: string | null
@@ -4991,6 +4993,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           emails?: Json | null
+          external_id?: string | null
+          external_source?: string | null
           full_name: string
           id?: string
           instagram?: string | null
@@ -5044,6 +5048,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           emails?: Json | null
+          external_id?: string | null
+          external_source?: string | null
           full_name?: string
           id?: string
           instagram?: string | null

@@ -81,7 +81,7 @@ import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { toast } from "sonner";
 import { LeadCustomFieldsManager, LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
 import { CustomField } from "@/components/custom-fields";
-import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
+import { LeadImportPreview, ImportLeadRow, ExistingLeadInfo, DuplicateMatchType } from "@/components/leads/LeadImportPreview";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -507,13 +507,13 @@ export default function Leads() {
 
       if (normalizedPhone && existingPhones.has(normalizedPhone)) {
         row.isDuplicate = true;
-        row.duplicateInfo = { type: "phone", existingName: "Telefone já cadastrado" };
+        row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
       } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
         row.isDuplicate = true;
-        row.duplicateInfo = { type: "email", existingName: "Email já cadastrado" };
+        row.duplicateInfo = { type: "email", matchValue: normalizedEmail };
       } else if (normalizedCpf && existingCpfs.has(normalizedCpf)) {
         row.isDuplicate = true;
-        row.duplicateInfo = { type: "cpf", existingName: "CPF já cadastrado" };
+        row.duplicateInfo = { type: "cpf", matchValue: normalizedCpf };
       }
 
       rows.push(row);
@@ -526,12 +526,11 @@ export default function Leads() {
     event.target.value = "";
   };
 
-  const handleConfirmImport = async (selectedRows: ImportLeadRow[], skipDuplicates: boolean) => {
+  const handleConfirmImport = async (selectedRows: ImportLeadRow[]) => {
     setImporting(true);
     try {
-      const rowsToImport = skipDuplicates 
-        ? selectedRows.filter(r => !r.isDuplicate)
-        : selectedRows;
+      // Filter based on duplicateAction
+      const rowsToImport = selectedRows.filter(r => r.duplicateAction !== "skip");
       
       if (rowsToImport.length === 0) {
         toast.error("Nenhum lead para importar");
@@ -539,23 +538,44 @@ export default function Leads() {
       }
 
       let successCount = 0;
+      let updateCount = 0;
+      
       for (const row of rowsToImport) {
         try {
-          await createLead({
-            full_name: row.full_name,
-            phone: row.phone,
-            email: row.email,
-            source: row.source,
-            notes: row.notes,
-            revenue_range: row.revenue_range,
-          });
-          successCount++;
+          if (row.duplicateAction === "update" && row.duplicateInfo?.existingLead?.id) {
+            // Update existing lead
+            await updateLead(row.duplicateInfo.existingLead.id, {
+              phone: row.phone,
+              email: row.email,
+              source: row.source,
+              notes: row.notes,
+              revenue_range: row.revenue_range,
+            });
+            updateCount++;
+          } else {
+            // Create new lead
+            await createLead({
+              full_name: row.full_name,
+              phone: row.phone,
+              email: row.email,
+              source: row.source,
+              notes: row.notes,
+              revenue_range: row.revenue_range,
+              external_id: row.external_id,
+              external_source: row.external_source,
+            });
+            successCount++;
+          }
         } catch (err) {
           console.error("Error importing lead:", err);
         }
       }
 
-      toast.success(`${successCount} leads importados com sucesso!`);
+      const messages = [];
+      if (successCount > 0) messages.push(`${successCount} criados`);
+      if (updateCount > 0) messages.push(`${updateCount} atualizados`);
+      
+      toast.success(`Leads importados: ${messages.join(", ")}!`);
       setImportPreviewOpen(false);
       setImportRows([]);
     } catch (error) {
