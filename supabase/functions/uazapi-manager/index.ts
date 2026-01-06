@@ -1800,7 +1800,7 @@ serve(async (req) => {
         // For images/documents: uses /send/{type} with "file" field
         const isAudio = media_type === "audio";
         
-        console.log(`send_media: isAudio=${isAudio}, media_url=${media_url}, hasToken=${!!savedInstanceToken}`);
+        console.log(`send_media v2: isAudio=${isAudio}, media_url=${media_url}, hasToken=${!!savedInstanceToken}`);
         
         // IMPORTANT: UAZAPI requires OGG or MP3 format for audio
         // WebM is NOT supported by WhatsApp API
