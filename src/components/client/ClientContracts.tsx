@@ -89,6 +89,7 @@ interface Contract {
   status_reason: string | null;
   status_changed_at: string | null;
   contract_type: string;
+  product_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -149,6 +150,9 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Products state
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  
   // ZapSign dialog state
   const [zapSignDialogOpen, setZapSignDialogOpen] = useState(false);
   const [zapSignContractId, setZapSignContractId] = useState<string | undefined>(undefined);
@@ -172,11 +176,22 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     file: null as File | null,
     file_url: "",
     file_name: "",
+    product_id: "",
   });
 
   useEffect(() => {
     fetchContracts();
+    fetchProducts();
   }, [clientId]);
+
+  const fetchProducts = async () => {
+    const { data } = await supabase
+      .from("products")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    setProducts(data || []);
+  };
 
   const fetchContracts = async () => {
     try {
@@ -209,6 +224,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       file: null,
       file_url: "",
       file_name: "",
+      product_id: "",
     });
     setEditingContract(null);
     setRenewingContract(null);
@@ -257,6 +273,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       file: null,
       file_url: "",
       file_name: "",
+      product_id: contract.product_id || "",
     });
     setDialogOpen(true);
   };
@@ -276,6 +293,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       file: null,
       file_url: contract.file_url || "",
       file_name: contract.file_name || "",
+      product_id: contract.product_id || "",
     });
     setDialogOpen(true);
   };
@@ -423,6 +441,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         file_url: fileUrl || null,
         file_name: fileName || null,
         parent_contract_id: renewingContract?.id || null,
+        product_id: formData.product_id || null,
       };
 
       if (editingContract) {
@@ -696,6 +715,26 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     {CONTRACT_TYPES.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Produto</Label>
+                <Select
+                  value={formData.product_id}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, product_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um produto (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum produto</SelectItem>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

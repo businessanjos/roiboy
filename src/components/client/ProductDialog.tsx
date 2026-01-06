@@ -38,7 +38,7 @@ export function ProductDialog({
   currentProductIds = [],
   onSuccess,
 }: ProductDialogProps) {
-  const { currentUser } = useCurrentUser();
+  const { currentUser, loading: userLoading } = useCurrentUser();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,18 +79,18 @@ export function ProductDialog({
   };
 
   const handleSave = async () => {
+    if (userLoading) {
+      toast.info("Aguarde, carregando perfil...");
+      return;
+    }
     if (!currentUser?.account_id) {
-      toast.error("Perfil não encontrado");
+      toast.error("Perfil não encontrado. Recarregue a página.");
       return;
     }
     
     setSaving(true);
     try {
       // Remove all current products
-      await supabase
-        .from("client_products")
-        .delete()
-        .eq("client_id", clientId);
       await supabase
         .from("client_products")
         .delete()
@@ -176,7 +176,7 @@ export function ProductDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving || loading}>
+          <Button onClick={handleSave} disabled={saving || loading || userLoading}>
             {saving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
