@@ -276,22 +276,24 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           
           {/* Audio */}
           {message.media_url && message.media_type === "audio" && (
-            <div className="flex items-center gap-2 mb-1">
-              <div className="flex items-center gap-2 bg-black/20 rounded-full px-3 py-2 min-w-[200px]">
-                <Mic className="h-4 w-4 text-zapp-text-muted" />
-                <audio 
-                  controls 
-                  className="h-8 max-w-[180px]" 
-                  style={{ width: '100%' }}
-                >
-                  <source src={message.media_url} type={message.media_mimetype || "audio/ogg"} />
-                </audio>
-                {message.audio_duration_sec && (
+            <div className="mb-1">
+              <audio 
+                controls 
+                controlsList="nodownload"
+                preload="metadata"
+                className="w-full min-w-[220px] max-w-[300px] h-10"
+                src={message.media_url}
+              >
+                Seu navegador não suporta áudio.
+              </audio>
+              {message.audio_duration_sec && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Mic className="h-3 w-3 text-zapp-text-muted" />
                   <span className="text-[10px] text-zapp-text-muted">
                     {Math.floor(message.audio_duration_sec / 60)}:{String(Math.floor(message.audio_duration_sec % 60)).padStart(2, '0')}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
           
