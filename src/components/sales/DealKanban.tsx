@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -9,11 +9,12 @@ import {
   useSensors,
   closestCorners,
 } from "@dnd-kit/core";
-import { useState } from "react";
 import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealKanbanColumn } from "./DealKanbanColumn";
 import { DealCard } from "./DealCard";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -24,6 +25,18 @@ interface DealKanbanProps {
 
 export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanbanProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter deals by search term
+  const filteredDeals = useMemo(() => {
+    if (!searchTerm.trim()) return deals;
+    const term = searchTerm.toLowerCase().trim();
+    return deals.filter(deal => 
+      deal.title.toLowerCase().includes(term) ||
+      deal.contact_name?.toLowerCase().includes(term) ||
+      deal.client?.full_name?.toLowerCase().includes(term)
+    );
+  }, [deals, searchTerm]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -44,7 +57,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     // Add deals without stage to first stage
     const noStageDealsList: Deal[] = [];
     
-    deals.forEach(deal => {
+    filteredDeals.forEach(deal => {
       if (deal.stage_id && grouped[deal.stage_id]) {
         grouped[deal.stage_id].push(deal);
       } else if (stages.length > 0) {
@@ -58,12 +71,12 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     }
     
     return grouped;
-  }, [stages, deals]);
+  }, [stages, filteredDeals]);
 
   // Calculate conversion rates
   const conversionRates = useMemo(() => {
     const rates: Record<string, number> = {};
-    const totalDeals = deals.length;
+    const totalDeals = filteredDeals.length;
     
     stages.forEach((stage, index) => {
       const dealsInStage = dealsByStage[stage.id]?.length || 0;
@@ -78,7 +91,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     });
     
     return rates;
-  }, [stages, dealsByStage, deals.length]);
+  }, [stages, dealsByStage, filteredDeals.length]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const dealId = event.active.id as string;
@@ -126,32 +139,45 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <ScrollArea className="w-full h-[calc(100vh-220px)]">
-        <div className="flex gap-2 h-full pb-2">
-          {stages.map((stage, index) => (
-            <DealKanbanColumn
-              key={stage.id}
-              stage={stage}
-              deals={dealsByStage[stage.id] || []}
-              onDealClick={onDealClick}
-              conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
-            />
-          ))}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+    <div className="flex flex-col gap-3">
+      {/* Search bar */}
+      <div className="relative max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9 h-9"
+        />
+      </div>
 
-      <DragOverlay>
-        {activeDeal && (
-          <DealCard deal={activeDeal} onClick={() => {}} isDragging />
-        )}
-      </DragOverlay>
-    </DndContext>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <ScrollArea className="w-full h-[calc(100vh-270px)]">
+          <div className="flex gap-2 h-full pb-2">
+            {stages.map((stage, index) => (
+              <DealKanbanColumn
+                key={stage.id}
+                stage={stage}
+                deals={dealsByStage[stage.id] || []}
+                onDealClick={onDealClick}
+                conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
+              />
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+
+        <DragOverlay>
+          {activeDeal && (
+            <DealCard deal={activeDeal} onClick={() => {}} isDragging />
+          )}
+        </DragOverlay>
+      </DndContext>
+    </div>
   );
 }
