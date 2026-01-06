@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -31,6 +32,7 @@ import {
   Tag,
   Users,
   Target,
+  Search,
 } from "lucide-react";
 import LeadsTab from "@/components/sales/LeadsTab";
 
@@ -71,6 +73,7 @@ export default function SalesPipeline() {
   const [activeTab, setActiveTab] = useState('open');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
@@ -83,17 +86,35 @@ export default function SalesPipeline() {
     return Array.from(tagSet).sort();
   }, [deals]);
 
-  // Filter deals by selected tag
-  const filterDealsByTag = (dealsList: Deal[]) => {
-    if (selectedTag === 'all') return dealsList;
-    return dealsList.filter(deal => 
-      deal.tags && Array.isArray(deal.tags) && deal.tags.includes(selectedTag)
-    );
+  // Filter deals by selected tag and search term
+  const filterDeals = (dealsList: Deal[]) => {
+    let filtered = dealsList;
+    
+    // Filter by tag
+    if (selectedTag !== 'all') {
+      filtered = filtered.filter(deal => 
+        deal.tags && Array.isArray(deal.tags) && deal.tags.includes(selectedTag)
+      );
+    }
+    
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(deal => 
+        deal.title.toLowerCase().includes(term) ||
+        deal.contact_name?.toLowerCase().includes(term) ||
+        deal.contact_phone?.toLowerCase().includes(term) ||
+        deal.client?.full_name?.toLowerCase().includes(term) ||
+        deal.client?.phone_e164?.toLowerCase().includes(term)
+      );
+    }
+    
+    return filtered;
   };
 
-  const filteredOpenDeals = filterDealsByTag(openDeals);
-  const filteredWonDeals = filterDealsByTag(wonDeals);
-  const filteredLostDeals = filterDealsByTag(lostDeals);
+  const filteredOpenDeals = filterDeals(openDeals);
+  const filteredWonDeals = filterDeals(wonDeals);
+  const filteredLostDeals = filterDeals(lostDeals);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -308,11 +329,11 @@ export default function SalesPipeline() {
                 </TabsList>
               </Tabs>
 
-              {/* Tag Filter */}
+              {/* Tag Filter and Search */}
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <Select value={selectedTag} onValueChange={setSelectedTag}>
-                  <SelectTrigger className="w-[180px] h-9">
+                  <SelectTrigger className="w-[150px] h-9">
                     <SelectValue placeholder="Filtrar por tag" />
                   </SelectTrigger>
                   <SelectContent>
@@ -334,6 +355,17 @@ export default function SalesPipeline() {
                     Limpar
                   </Button>
                 )}
+                
+                {/* Search bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar nome ou telefone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 h-9 w-[200px]"
+                  />
+                </div>
               </div>
             </div>
 
