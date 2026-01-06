@@ -7321,6 +7321,199 @@ export type Database = {
           },
         ]
       }
+      zapp_call_settings: {
+        Row: {
+          account_id: string
+          auto_log_timeline: boolean | null
+          config: Json | null
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          provider: string
+          record_calls: boolean | null
+          sector_id: string
+          transcribe_calls: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          auto_log_timeline?: boolean | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          provider?: string
+          record_calls?: boolean | null
+          sector_id: string
+          transcribe_calls?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          auto_log_timeline?: boolean | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          provider?: string
+          record_calls?: boolean | null
+          sector_id?: string
+          transcribe_calls?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_call_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_calls: {
+        Row: {
+          account_id: string
+          agent_id: string | null
+          agent_name: string | null
+          answered_at: string | null
+          client_id: string | null
+          contact_name: string | null
+          created_at: string | null
+          deal_id: string | null
+          direction: string
+          duration_seconds: number | null
+          ended_at: string | null
+          external_call_id: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          outcome: string | null
+          phone_e164: string
+          provider: string
+          recording_duration_seconds: number | null
+          recording_url: string | null
+          sector_id: string
+          started_at: string | null
+          status: string
+          transcription: string | null
+          transcription_summary: string | null
+          updated_at: string | null
+          user_id: string | null
+          zapp_conversation_id: string | null
+        }
+        Insert: {
+          account_id: string
+          agent_id?: string | null
+          agent_name?: string | null
+          answered_at?: string | null
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          direction: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          external_call_id?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          outcome?: string | null
+          phone_e164: string
+          provider?: string
+          recording_duration_seconds?: number | null
+          recording_url?: string | null
+          sector_id: string
+          started_at?: string | null
+          status?: string
+          transcription?: string | null
+          transcription_summary?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          zapp_conversation_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          agent_id?: string | null
+          agent_name?: string | null
+          answered_at?: string | null
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          external_call_id?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          outcome?: string | null
+          phone_e164?: string
+          provider?: string
+          recording_duration_seconds?: number | null
+          recording_url?: string | null
+          sector_id?: string
+          started_at?: string | null
+          status?: string
+          transcription?: string | null
+          transcription_summary?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          zapp_conversation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_calls_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_calls_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_calls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_calls_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_calls_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_calls_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_calls_zapp_conversation_id_fkey"
+            columns: ["zapp_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_conversation_assignments: {
         Row: {
           account_id: string
@@ -7480,6 +7673,7 @@ export type Database = {
           client_id: string | null
           contact_name: string | null
           created_at: string
+          deal_id: string | null
           external_thread_id: string | null
           group_jid: string | null
           id: string
@@ -7507,6 +7701,7 @@ export type Database = {
           client_id?: string | null
           contact_name?: string | null
           created_at?: string
+          deal_id?: string | null
           external_thread_id?: string | null
           group_jid?: string | null
           id?: string
@@ -7534,6 +7729,7 @@ export type Database = {
           client_id?: string | null
           contact_name?: string | null
           created_at?: string
+          deal_id?: string | null
           external_thread_id?: string | null
           group_jid?: string | null
           id?: string
@@ -7566,6 +7762,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversations_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
@@ -7976,6 +8179,7 @@ export type Database = {
       cleanup_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
       convert_lead_to_client: { Args: { p_lead_id: string }; Returns: string }
+      format_call_duration: { Args: { seconds: number }; Returns: string }
       generate_checkin_code: { Args: never; Returns: string }
       generate_registration_code: { Args: never; Returns: string }
       get_account_limits: { Args: never; Returns: Json }
