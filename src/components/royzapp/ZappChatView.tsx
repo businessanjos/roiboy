@@ -3,7 +3,9 @@ import { MessageSquare, Clock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput, MentionData } from "./ZappMessageInput";
+import { ZappAIAssistBar } from "./ZappAIAssistBar";
 import { ConversationAssignment, Message } from "./types";
+import { useMessageAssistant } from "@/hooks/useMessageAssistant";
 
 interface ContactInfo {
   name: string;
@@ -30,24 +32,6 @@ interface ReplyingToMessage {
   is_from_client: boolean;
 }
 
-interface ContactInfo {
-  name: string;
-  phone: string;
-  avatar: string | null;
-  clientId: string | null;
-  isClient: boolean;
-  isGroup: boolean;
-  lastMessage: string | null;
-  lastMessagePreview: string;
-  unreadCount: number;
-  lastMessageAt: string;
-  isPinned: boolean;
-  isMuted: boolean;
-  isArchived: boolean;
-  isFavorite: boolean;
-  isBlocked: boolean;
-}
-
 interface ZappChatViewProps {
   selectedConversation: ConversationAssignment | null;
   messages: Message[];
@@ -66,6 +50,10 @@ interface ZappChatViewProps {
   imageInputRef: RefObject<HTMLInputElement>;
   fileInputRef: RefObject<HTMLInputElement>;
   sectorId?: string;
+  // AI Settings
+  spellingEnabled?: boolean;
+  suggestionsEnabled?: boolean;
+  autoLearningEnabled?: boolean;
   // Stats for empty state
   onlineAgents: number;
   totalQueueConversations: number;
@@ -124,6 +112,9 @@ export function ZappChatView({
   imageInputRef,
   fileInputRef,
   sectorId,
+  spellingEnabled = true,
+  suggestionsEnabled = true,
+  autoLearningEnabled = true,
   onlineAgents,
   totalQueueConversations,
   activeConversations,
@@ -159,6 +150,42 @@ export function ZappChatView({
   onToggleSignature,
   onOpenPlaybook,
 }: ZappChatViewProps) {
+  // AI Message Assistant hook
+  const {
+    correction,
+    isCheckingSpelling,
+    applyCorrection,
+    dismissCorrection,
+    suggestions,
+    isLoadingSuggestions,
+    refreshSuggestions,
+    selectSuggestion,
+    sendFeedback,
+  } = useMessageAssistant({
+    messageInput,
+    lastMessages: messages.slice(-10),
+    clientName: contactInfo.name,
+    sectorId: sectorId || "operacoes",
+    conversationId: selectedConversation?.zapp_conversation?.id,
+    spellingEnabled,
+    suggestionsEnabled,
+    autoLearningEnabled,
+  });
+
+  // Handle applying correction
+  const handleApplyCorrection = () => {
+    if (correction) {
+      onMessageChange(correction);
+      applyCorrection();
+    }
+  };
+
+  // Handle selecting a suggestion
+  const handleSelectSuggestion = (suggestion: { id: string; text: string; type: string }) => {
+    onMessageChange(suggestion.text);
+    selectSuggestion(suggestion);
+    messageInputRef.current?.focus();
+  };
   if (!selectedConversation) {
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
@@ -219,6 +246,21 @@ export function ZappChatView({
         isGroup={contactInfo.isGroup}
         onReplyMessage={onReplyMessage}
         onDeleteMessage={onDeleteMessage}
+      />
+
+      {/* AI Assist Bar - above message input */}
+      <ZappAIAssistBar
+        correction={correction}
+        isCheckingSpelling={isCheckingSpelling}
+        onApplyCorrection={handleApplyCorrection}
+        onDismissCorrection={dismissCorrection}
+        suggestions={suggestions}
+        isLoadingSuggestions={isLoadingSuggestions}
+        onSelectSuggestion={handleSelectSuggestion}
+        onRefreshSuggestions={refreshSuggestions}
+        onSendFeedback={sendFeedback}
+        spellingEnabled={spellingEnabled}
+        suggestionsEnabled={suggestionsEnabled}
       />
 
       {/* Message input */}
