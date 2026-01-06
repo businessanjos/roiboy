@@ -19,6 +19,15 @@ interface Suggestion {
   feedbackGiven?: "positive" | "negative";
 }
 
+// SPIN phase labels and colors
+const spinPhaseConfig: Record<string, { label: string; icon: string; color: string }> = {
+  situation: { label: "Situação", icon: "📍", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
+  problem: { label: "Problema", icon: "🔍", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
+  implication: { label: "Implicação", icon: "⚠️", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  need: { label: "Necessidade", icon: "✨", color: "bg-green-500/15 text-green-600 dark:text-green-400" },
+  closing: { label: "Fechamento", icon: "🎯", color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
+};
+
 interface ZappAIAssistBarProps {
   // Correction
   correction: string | null;
@@ -32,6 +41,7 @@ interface ZappAIAssistBarProps {
   onSelectSuggestion: (suggestion: Suggestion) => void;
   onRefreshSuggestions: () => void;
   onSendFeedback: (suggestionId: string, feedback: "positive" | "negative") => void;
+  currentSpinPhase?: string | null;
   
   // Settings
   spellingEnabled: boolean;
@@ -48,6 +58,7 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
   onSelectSuggestion,
   onRefreshSuggestions,
   onSendFeedback,
+  currentSpinPhase,
   spellingEnabled,
   suggestionsEnabled,
 }: ZappAIAssistBarProps) {
@@ -105,6 +116,17 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
             <span className="text-xs text-zapp-text-muted font-medium">
               Sugestões de resposta
             </span>
+            
+            {/* SPIN Phase indicator */}
+            {currentSpinPhase && spinPhaseConfig[currentSpinPhase] && (
+              <span className={cn(
+                "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                spinPhaseConfig[currentSpinPhase].color
+              )}>
+                {spinPhaseConfig[currentSpinPhase].icon} {spinPhaseConfig[currentSpinPhase].label}
+              </span>
+            )}
+            
             {isLoadingSuggestions ? (
               <Loader2 className="h-3 w-3 animate-spin text-zapp-text-muted" />
             ) : (
