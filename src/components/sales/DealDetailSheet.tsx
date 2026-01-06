@@ -55,6 +55,7 @@ import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
 import { DealLeadInfo } from "./DealLeadInfo";
+import { DealTransferDialog } from "./DealTransferDialog";
 
 interface DealActivity {
   id: string;
@@ -163,6 +164,7 @@ export function DealDetailSheet({
   const [eventType, setEventType] = useState("note");
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [changingStage, setChangingStage] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   
   // Lead custom fields
   const [leadCustomFields, setLeadCustomFields] = useState<CustomField[]>([]);
@@ -621,21 +623,36 @@ export function DealDetailSheet({
                   )}
 
                   {/* Responsible User */}
-                  {deal.responsible_user && (
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs text-muted-foreground min-w-[50px]">Resp.</span>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
-                          <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
-                            {getInitials(deal.responsible_user.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{deal.responsible_user.name}</span>
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground min-w-[50px]">Resp.</span>
+                    <div className="flex items-center gap-2 flex-1">
+                      {deal.responsible_user ? (
+                        <>
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
+                            <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                              {getInitials(deal.responsible_user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{deal.responsible_user.name}</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground italic">Sem responsável</span>
+                      )}
                     </div>
-                  )}
+                    {!isClosed && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setTransferDialogOpen(true)}
+                      >
+                        <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
+                        Transferir
+                      </Button>
+                    )}
+                  </div>
 
                   {/* Tags */}
                   {deal.tags && deal.tags.length > 0 && (
@@ -859,6 +876,22 @@ export function DealDetailSheet({
             </div>
           </div>
         </ScrollArea>
+
+        {/* Transfer Dialog */}
+        {currentUser?.account_id && (
+          <DealTransferDialog
+            open={transferDialogOpen}
+            onOpenChange={setTransferDialogOpen}
+            dealId={deal.id}
+            dealTitle={deal.title}
+            currentOwnerId={deal.responsible_user_id}
+            currentOwnerName={deal.responsible_user?.name || null}
+            accountId={currentUser.account_id}
+            onTransferred={() => {
+              fetchActivities();
+            }}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );

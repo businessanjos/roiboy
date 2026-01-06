@@ -250,12 +250,23 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
 
         {/* Header with Title and Client */}
         <div className="flex items-start gap-2">
-          <Avatar className="h-8 w-8 border border-primary/20">
-            <AvatarImage src={avatarUrl || undefined} />
-            <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
-              {getInitials(contactName)}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-8 w-8 border border-primary/20">
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
+                {getInitials(contactName)}
+              </AvatarFallback>
+            </Avatar>
+            {/* Owner avatar overlay */}
+            {deal.responsible_user && (
+              <Avatar className="h-4 w-4 absolute -bottom-0.5 -right-0.5 border border-background ring-1 ring-background">
+                <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
+                <AvatarFallback className="text-[6px] bg-blue-500 text-white font-bold">
+                  {deal.responsible_user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
           <div className="flex-1 min-w-0">
             <h4 className="font-semibold text-xs truncate">{deal.title}</h4>
             <p className="text-[10px] text-muted-foreground truncate">{contactName}</p>
