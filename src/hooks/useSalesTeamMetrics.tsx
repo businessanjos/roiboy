@@ -1,0 +1,268 @@
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+export interface SalesRepMetrics {
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_avatar: string | null;
+  
+  // Call metrics
+  total_calls: number;
+  total_call_duration: number;
+  answered_calls: number;
+  missed_calls: number;
+  
+  // Deal metrics
+  total_deals: number;
+  open_deals: number;
+  pipeline_value: number;
+  won_deals: number;
+  won_value: number;
+  lost_deals: number;
+  conversion_rate: number;
+  
+  // Task metrics
+  total_tasks: number;
+  completed_tasks: number;
+  pending_tasks: number;
+  
+  // Lead metrics
+  assigned_leads: number;
+  converted_leads: number;
+}
+
+interface UseSalesTeamMetricsOptions {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
+  const [metrics, setMetrics] = useState<SalesRepMetrics[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const { startDate, endDate } = options;
+
+  useEffect(() => {
+    fetchMetrics();
+  }, [startDate, endDate]);
+
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get current user's account
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: currentUser } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (!currentUser) return;
+
+      // Build date filters
+      const dateFilter = startDate && endDate ? {
+        start: startDate.toISOString(),
+        end: endDate.toISOString()
+      } : {
+        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
+        end: new Date().toISOString()
+      };
+
+      // Fetch all team users
+      const { data: users } = await supabase
+        .from("users")
+        .select("id, name, email, avatar_url")
+        .eq("account_id", currentUser.account_id);
+
+      if (!users || users.length === 0) {
+        setMetrics([]);
+        return;
+      }
+
+      // Fetch all metrics in parallel
+      const [callsData, dealsData, tasksData, leadsData] = await Promise.all([
+        // Calls
+        supabase
+          .from("zapp_calls")
+          .select("user_id, status, duration_seconds")
+          .eq("account_id", currentUser.account_id)
+          .gte("created_at", dateFilter.start)
+          .lte("created_at", dateFilter.end),
+        
+        // Deals
+        supabase
+          .from("deals")
+          .select("responsible_user_id, status, value")
+          .eq("account_id", currentUser.account_id)
+          .gte("created_at", dateFilter.start)
+          .lte("created_at", dateFilter.end),
+        
+        // Tasks
+        supabase
+          .from("internal_tasks")
+          .select("assigned_to, completed_at")
+          .eq("account_id", currentUser.account_id)
+          .gte("created_at", dateFilter.start)
+          .lte("created_at", dateFilter.end),
+        
+        // Leads
+        supabase
+          .from("leads")
+          .select("responsible_user_id, status")
+          .eq("account_id", currentUser.account_id)
+          .gte("created_at", dateFilter.start)
+          .lte("created_at", dateFilter.end),
+      ]);
+
+      // Process metrics for each user
+      const metricsMap: Record<string, SalesRepMetrics> = {};
+
+      for (const u of users) {
+        metricsMap[u.id] = {
+          user_id: u.id,
+          user_name: u.name || "Sem nome",
+          user_email: u.email || "",
+          user_avatar: u.avatar_url,
+          total_calls: 0,
+          total_call_duration: 0,
+          answered_calls: 0,
+          missed_calls: 0,
+          total_deals: 0,
+          open_deals: 0,
+          pipeline_value: 0,
+          won_deals: 0,
+          won_value: 0,
+          lost_deals: 0,
+          conversion_rate: 0,
+          total_tasks: 0,
+          completed_tasks: 0,
+          pending_tasks: 0,
+          assigned_leads: 0,
+          converted_leads: 0,
+        };
+      }
+
+      // Aggregate calls
+      if (callsData.data) {
+        for (const call of callsData.data) {
+          if (call.user_id && metricsMap[call.user_id]) {
+            metricsMap[call.user_id].total_calls++;
+            metricsMap[call.user_id].total_call_duration += call.duration_seconds || 0;
+            if (call.status === "completed") {
+              metricsMap[call.user_id].answered_calls++;
+            } else if (call.status === "missed" || call.status === "no_answer") {
+              metricsMap[call.user_id].missed_calls++;
+            }
+          }
+        }
+      }
+
+      // Aggregate deals
+      if (dealsData.data) {
+        for (const deal of dealsData.data) {
+          if (deal.responsible_user_id && metricsMap[deal.responsible_user_id]) {
+            metricsMap[deal.responsible_user_id].total_deals++;
+            const value = deal.value || 0;
+            
+            if (deal.status === "open") {
+              metricsMap[deal.responsible_user_id].open_deals++;
+              metricsMap[deal.responsible_user_id].pipeline_value += value;
+            } else if (deal.status === "won") {
+              metricsMap[deal.responsible_user_id].won_deals++;
+              metricsMap[deal.responsible_user_id].won_value += value;
+            } else if (deal.status === "lost") {
+              metricsMap[deal.responsible_user_id].lost_deals++;
+            }
+          }
+        }
+      }
+
+      // Calculate conversion rates
+      for (const userId of Object.keys(metricsMap)) {
+        const m = metricsMap[userId];
+        const closedDeals = m.won_deals + m.lost_deals;
+        m.conversion_rate = closedDeals > 0 ? (m.won_deals / closedDeals) * 100 : 0;
+      }
+
+      // Aggregate tasks
+      if (tasksData.data) {
+        for (const task of tasksData.data) {
+          if (task.assigned_to && metricsMap[task.assigned_to]) {
+            metricsMap[task.assigned_to].total_tasks++;
+            if (task.completed_at) {
+              metricsMap[task.assigned_to].completed_tasks++;
+            } else {
+              metricsMap[task.assigned_to].pending_tasks++;
+            }
+          }
+        }
+      }
+
+      // Aggregate leads
+      if (leadsData.data) {
+        for (const lead of leadsData.data) {
+          if (lead.responsible_user_id && metricsMap[lead.responsible_user_id]) {
+            metricsMap[lead.responsible_user_id].assigned_leads++;
+            if (lead.status === "converted") {
+              metricsMap[lead.responsible_user_id].converted_leads++;
+            }
+          }
+        }
+      }
+
+      // Convert to array and sort by won value
+      const metricsArray = Object.values(metricsMap)
+        .filter(m => m.total_deals > 0 || m.total_calls > 0 || m.total_tasks > 0 || m.assigned_leads > 0)
+        .sort((a, b) => b.won_value - a.won_value);
+
+      setMetrics(metricsArray);
+    } catch (err) {
+      console.error("Error fetching sales team metrics:", err);
+      setError("Erro ao carregar métricas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Totals
+  const totals = useMemo(() => {
+    return metrics.reduce(
+      (acc, m) => ({
+        total_calls: acc.total_calls + m.total_calls,
+        total_call_duration: acc.total_call_duration + m.total_call_duration,
+        total_deals: acc.total_deals + m.total_deals,
+        pipeline_value: acc.pipeline_value + m.pipeline_value,
+        won_deals: acc.won_deals + m.won_deals,
+        won_value: acc.won_value + m.won_value,
+        total_tasks: acc.total_tasks + m.total_tasks,
+        completed_tasks: acc.completed_tasks + m.completed_tasks,
+        assigned_leads: acc.assigned_leads + m.assigned_leads,
+      }),
+      {
+        total_calls: 0,
+        total_call_duration: 0,
+        total_deals: 0,
+        pipeline_value: 0,
+        won_deals: 0,
+        won_value: 0,
+        total_tasks: 0,
+        completed_tasks: 0,
+        assigned_leads: 0,
+      }
+    );
+  }, [metrics]);
+
+  return {
+    metrics,
+    totals,
+    loading,
+    error,
+    refetch: fetchMetrics,
+  };
+}
