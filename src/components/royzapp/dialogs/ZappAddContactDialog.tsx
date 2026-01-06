@@ -155,16 +155,26 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
   
   // Client form
   const [clientForm, setClientForm] = useState({
-    full_name: contactName || "",
-    phone_e164: phone || "",
+    full_name: "",
+    phone_e164: "",
   });
   
   // Lead form
-  const [leadForm, setLeadForm] = useState<LeadFormData>({
-    ...initialLeadForm,
-    full_name: contactName || "",
-    phone: phone || "",
-  });
+  const [leadForm, setLeadForm] = useState<LeadFormData>(initialLeadForm);
+
+  // Update forms when props change and dialog is open
+  useEffect(() => {
+    if (open) {
+      setClientForm({ full_name: contactName || "", phone_e164: phone || "" });
+      setLeadForm(prev => ({
+        ...initialLeadForm,
+        full_name: contactName || "",
+        phone: phone || "",
+      }));
+      setActiveTab("client");
+      setLeadSection("basic");
+    }
+  }, [open, phone, contactName]);
 
   // Fetch address by CEP
   const fetchAddressByCep = async (cep: string, isBusinessAddress: boolean) => {
@@ -224,18 +234,8 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
     }
   };
 
-  // Reset forms when dialog opens
+  // Handle dialog open/close
   const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
-      setClientForm({ full_name: contactName || "", phone_e164: phone || "" });
-      setLeadForm({
-        ...initialLeadForm,
-        full_name: contactName || "",
-        phone: phone || "",
-      });
-      setActiveTab("client");
-      setLeadSection("basic");
-    }
     onOpenChange(isOpen);
   };
 
