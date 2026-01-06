@@ -247,15 +247,6 @@ export default function SalesPipeline() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/roy-zapp?sector=vendas")}
-              className="gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              ROY zAPP
-            </Button>
             {mainTab === 'pipeline' && (
               <>
                 <Button
