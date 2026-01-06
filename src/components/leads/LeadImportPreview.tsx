@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -119,10 +119,13 @@ export function LeadImportPreview({
   onConfirmImport,
   importing = false,
 }: LeadImportPreviewProps) {
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(
-    new Set(rows.filter(r => !r.hasError).map(r => r.lineNumber))
-  );
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [filterMode, setFilterMode] = useState<"all" | "new" | "update" | "duplicates" | "clients" | "errors">("all");
+
+  // Reset selected rows when rows change
+  useEffect(() => {
+    setSelectedRows(new Set(rows.filter(r => !r.hasError).map(r => r.lineNumber)));
+  }, [rows]);
   const [searchTerm, setSearchTerm] = useState("");
   const [defaultSource, setDefaultSource] = useState<string>("");
   const [defaultDuplicateAction, setDefaultDuplicateAction] = useState<DuplicateAction>("skip");
