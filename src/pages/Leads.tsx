@@ -463,10 +463,22 @@ export default function Leads() {
       return;
     }
 
-    // Fetch existing leads for duplicate check
-    const { data: existingLeads } = await supabase
+    // Fetch existing leads for duplicate check (must filter by account_id for RLS)
+    if (!currentUser?.account_id) {
+      toast.error("Erro de autenticação");
+      return;
+    }
+    
+    const { data: existingLeads, error: fetchError } = await supabase
       .from("leads")
-      .select("id, phone, email, cpf, full_name");
+      .select("id, phone, email, cpf, full_name, external_id, external_source")
+      .eq("account_id", currentUser.account_id);
+    
+    if (fetchError) {
+      console.error("Error fetching existing leads:", fetchError);
+      toast.error("Erro ao verificar leads existentes");
+      return;
+    }
 
     const existingPhones = new Set((existingLeads || []).map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
     const existingEmails = new Set((existingLeads || []).map(l => l.email?.toLowerCase()).filter(Boolean));
