@@ -38,7 +38,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ClientZappSheet } from "@/components/client/ClientZappSheet";
@@ -58,9 +58,13 @@ export default function RoyZapp() {
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { hasVendasAccess, hasSectorAccess } = useSectorAccess();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
-  // Sector selection state
-  const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(null);
+  // Get sector from URL if provided
+  const sectorFromUrl = searchParams.get('sector') as SectorId | null;
+  
+  // Sector selection state - initialize from URL if provided
+  const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(sectorFromUrl);
   
   // Use centralized data hook with sector filtering
   const {

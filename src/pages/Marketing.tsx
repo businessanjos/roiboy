@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, CalendarDays, Bell, Users } from 'lucide-react';
+import { Plus, Calendar, CalendarDays, Bell, Users, MessageSquare } from 'lucide-react';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MarketingCalendar, MarketingEventDialog, MarketingEventSheet } from '@/components/marketing';
 import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
@@ -10,6 +11,7 @@ import AttendanceReport from '@/components/events/AttendanceReport';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function Marketing() {
+  const navigate = useNavigate();
   const [year, setYear] = useState(new Date().getFullYear());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -83,12 +85,22 @@ export default function Marketing() {
           <h1 className="text-2xl font-bold">Marketing</h1>
           <p className="text-muted-foreground">Gerencie eventos, campanhas e lembretes de marketing</p>
         </div>
-        {activeTab === 'calendar' && (
-          <Button onClick={() => handleAddEvent()}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Evento
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/roy-zapp?sector=marketing")}
+            className="gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            ROY zAPP
           </Button>
-        )}
+          {activeTab === 'calendar' && (
+            <Button onClick={() => handleAddEvent()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Evento
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
