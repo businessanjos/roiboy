@@ -332,7 +332,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                 >
                   <Clock className="h-2.5 w-2.5" />
                   {nextTaskDate 
-                    ? `Agendado: ${format(new Date(nextTaskDate), "dd/MM 'às' HH:mm", { locale: ptBR })}`
+                    ? `Agendado: ${format(new Date(nextTaskDate), "dd/MM", { locale: ptBR })}`
                     : `${pendingTasks.length} atividade(s) pendente(s)`
                   }
                 </Badge>
@@ -358,7 +358,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                         {task.due_date && (
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Calendar className="h-2.5 w-2.5" />
-                            {format(new Date(task.due_date), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+                            {format(new Date(task.due_date), "dd/MM/yy", { locale: ptBR })}
                           </p>
                         )}
                         {task.assigned_user && (
