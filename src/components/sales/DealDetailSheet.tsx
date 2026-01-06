@@ -70,6 +70,30 @@ interface DealActivity {
   } | null;
 }
 
+interface DealTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  completed_at: string | null;
+  created_at: string;
+  assigned_user?: {
+    name: string;
+    avatar_url: string | null;
+  } | null;
+  custom_status?: {
+    name: string;
+    color: string;
+    is_completed_status: boolean;
+  } | null;
+}
+
+type TimelineItem = 
+  | { type: 'activity'; data: DealActivity; created_at: string }
+  | { type: 'task'; data: DealTask; created_at: string };
+
 interface DealDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -124,6 +148,8 @@ export function DealDetailSheet({
 }: DealDetailSheetProps) {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<DealActivity[]>([]);
+  const [tasks, setTasks] = useState<DealTask[]>([]);
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [newNote, setNewNote] = useState("");
@@ -272,20 +298,64 @@ export function DealDetailSheet({
     if (!deal?.id) return;
     setLoading(true);
     
-    const { data, error } = await supabase
-      .from("deal_activities")
-      .select(`
-        *,
-        user:users(name, avatar_url)
-      `)
-      .eq("deal_id", deal.id)
-      .order("created_at", { ascending: false });
+    // Fetch activities and tasks in parallel
+    const [activitiesResult, tasksResult] = await Promise.all([
+      supabase
+        .from("deal_activities")
+        .select(`
+          *,
+          user:users(name, avatar_url)
+        `)
+        .eq("deal_id", deal.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("internal_tasks")
+        .select(`
+          id,
+          title,
+          description,
+          status,
+          priority,
+          due_date,
+          completed_at,
+          created_at,
+          assigned_user:users!internal_tasks_assigned_to_fkey(name, avatar_url),
+          custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name, color, is_completed_status)
+        `)
+        .eq("deal_id", deal.id)
+        .order("created_at", { ascending: false })
+    ]);
 
-    if (error) {
-      console.error("Error fetching activities:", error);
+    if (activitiesResult.error) {
+      console.error("Error fetching activities:", activitiesResult.error);
     } else {
-      setActivities((data || []) as DealActivity[]);
+      setActivities((activitiesResult.data || []) as DealActivity[]);
     }
+    
+    if (tasksResult.error) {
+      console.error("Error fetching tasks:", tasksResult.error);
+    } else {
+      setTasks((tasksResult.data || []) as DealTask[]);
+    }
+
+    // Merge activities and tasks into timeline
+    const activityItems: TimelineItem[] = (activitiesResult.data || []).map(a => ({
+      type: 'activity' as const,
+      data: a as DealActivity,
+      created_at: a.created_at
+    }));
+    
+    const taskItems: TimelineItem[] = (tasksResult.data || []).map(t => ({
+      type: 'task' as const,
+      data: t as DealTask,
+      created_at: t.created_at
+    }));
+
+    const merged = [...activityItems, ...taskItems].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    setTimelineItems(merged);
     setLoading(false);
   };
 
@@ -668,55 +738,106 @@ export function DealDetailSheet({
                       </div>
                     </div>
 
-                    {/* Activities Timeline */}
+                    {/* Timeline with Activities and Tasks */}
                     <div className="rounded-lg border bg-muted/30 overflow-hidden">
                       {loading ? (
                         <div className="flex items-center justify-center py-6">
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         </div>
-                      ) : activities.length === 0 ? (
+                      ) : timelineItems.length === 0 ? (
                         <div className="text-center py-6 text-muted-foreground text-xs">
                           Nenhuma interação registrada
                         </div>
                       ) : (
                         <div className="max-h-[280px] overflow-y-auto divide-y">
-                          {activities.map((activity) => {
-                            const config = getEventConfig(activity.type);
-                            const Icon = config.icon;
-                            const userName = activity.user?.name || "Sistema";
+                          {timelineItems.map((item) => {
+                            if (item.type === 'activity') {
+                              const activity = item.data;
+                              const config = getEventConfig(activity.type);
+                              const Icon = config.icon;
+                              const userName = activity.user?.name || "Sistema";
 
-                            return (
-                              <div key={activity.id} className="flex gap-2.5 p-3">
-                                <div className={cn(
-                                  "w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0",
-                                  config.bgColor
-                                )}>
-                                  <Icon className="h-3 w-3" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1 text-xs">
-                                    <span className="font-medium">{userName}</span>
-                                    <span className="text-muted-foreground">·</span>
-                                    <span className={cn("font-medium", config.textColor)}>
-                                      {activity.title || config.label}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground ml-auto">
-                                      {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
-                                    </span>
+                              return (
+                                <div key={`activity-${activity.id}`} className="flex gap-2.5 p-3">
+                                  <div className={cn(
+                                    "w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0",
+                                    config.bgColor
+                                  )}>
+                                    <Icon className="h-3 w-3" />
                                   </div>
-                                  {activity.content && (
-                                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                      {activity.content}
-                                    </p>
-                                  )}
-                                  {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                      {activity.old_value} → {activity.new_value}
-                                    </p>
-                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1 text-xs">
+                                      <span className="font-medium">{userName}</span>
+                                      <span className="text-muted-foreground">·</span>
+                                      <span className={cn("font-medium", config.textColor)}>
+                                        {activity.title || config.label}
+                                      </span>
+                                      <span className="text-[10px] text-muted-foreground ml-auto">
+                                        {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
+                                      </span>
+                                    </div>
+                                    {activity.content && (
+                                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                        {activity.content}
+                                      </p>
+                                    )}
+                                    {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        {activity.old_value} → {activity.new_value}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
+                              );
+                            } else {
+                              // Task item
+                              const task = item.data;
+                              const isCompleted = task.custom_status?.is_completed_status || task.completed_at !== null;
+                              const userName = task.assigned_user?.name || "Sem responsável";
+
+                              return (
+                                <div key={`task-${task.id}`} className="flex gap-2.5 p-3">
+                                  <div className={cn(
+                                    "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0",
+                                    isCompleted 
+                                      ? "bg-emerald-500 text-white" 
+                                      : "bg-amber-500 text-white"
+                                  )}>
+                                    <ListTodo className="h-3 w-3" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1 text-xs">
+                                      <span className="font-medium">{userName}</span>
+                                      <span className="text-muted-foreground">·</span>
+                                      <span className={cn("font-medium", isCompleted ? "text-emerald-500" : "text-amber-500")}>
+                                        {isCompleted ? "Concluiu" : "Criou"} atividade
+                                      </span>
+                                      <span className="text-[10px] text-muted-foreground ml-auto">
+                                        {formatDistanceToNow(new Date(task.created_at), { locale: ptBR, addSuffix: true })}
+                                      </span>
+                                    </div>
+                                    <p className={cn(
+                                      "text-xs mt-0.5",
+                                      isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+                                    )}>
+                                      {task.title}
+                                    </p>
+                                    {task.custom_status && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[9px] h-4 px-1 mt-1"
+                                        style={{
+                                          borderColor: task.custom_status.color,
+                                          color: task.custom_status.color,
+                                        }}
+                                      >
+                                        {task.custom_status.name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            }
                           })}
                         </div>
                       )}
