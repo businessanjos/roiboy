@@ -172,19 +172,6 @@ export function FinancialLayout() {
                 items={reportsNavItems} 
                 icon={BarChart3} 
               />
-              
-              <div className="w-px h-6 bg-border mx-2" />
-              
-              {/* ROY zAPP shortcut */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/roy-zapp?sector=financeiro")}
-                className="gap-2 whitespace-nowrap"
-              >
-                <MessageSquare className="h-4 w-4" />
-                ROY zAPP
-              </Button>
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
