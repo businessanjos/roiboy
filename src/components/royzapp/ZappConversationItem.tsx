@@ -14,6 +14,7 @@ import {
   MailOpen,
   Ban,
   Trash2,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,25 @@ const formatTime = (date: string) => {
     return format(d, "EEEE", { locale: ptBR });
   } else {
     return format(d, "dd/MM/yyyy");
+  }
+};
+
+const formatWaitTime = (createdAt: string) => {
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffMinutes < 1) {
+    return "agora";
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes}min`;
+  } else if (diffHours < 24) {
+    return `${diffHours}h`;
+  } else {
+    return `${diffDays}d`;
   }
 };
 
@@ -269,8 +289,18 @@ export const ZappConversationItem = memo(function ZappConversationItem({
           </div>
         </div>
         
-        {/* Third row: Agent + Products */}
+        {/* Third row: Wait time (queue) / Agent + Products */}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {/* Show waiting time for unassigned conversations */}
+          {!assignment.agent_id && assignment.created_at && (
+            <Badge 
+              variant="secondary" 
+              className="bg-amber-500/15 text-amber-600 border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
+            >
+              <Clock className="h-2.5 w-2.5" />
+              Aguardando {formatWaitTime(assignment.created_at)}
+            </Badge>
+          )}
           {assignment.agent_id && (
             <Badge 
               variant="secondary" 
