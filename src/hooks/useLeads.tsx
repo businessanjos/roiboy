@@ -16,6 +16,7 @@ export interface Lead {
   converted_to_client_id: string | null;
   converted_at: string | null;
   tags: string[];
+  revenue_range: string | null;
   created_at: string;
   updated_at: string;
   // Joined

@@ -101,6 +101,14 @@ const LEAD_STATUS = [
   { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
 ];
 
+const REVENUE_RANGES = [
+  { value: "ate_81k", label: "Até R$ 81 mil" },
+  { value: "81k_360k", label: "R$ 81 mil - R$ 360 mil" },
+  { value: "360k_1m", label: "R$ 360 mil - R$ 1 milhão" },
+  { value: "1m_5m", label: "R$ 1 milhão - R$ 5 milhões" },
+  { value: "acima_5m", label: "Acima de R$ 5 milhões" },
+];
+
 export default function Leads() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
@@ -118,6 +126,8 @@ export default function Leads() {
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterRevenueRange, setFilterRevenueRange] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
@@ -539,12 +549,24 @@ export default function Leads() {
     }
   };
 
-  const filteredLeads = leads.filter(
-    (lead) =>
+  const hasActiveFilters = filterSource !== "all" || filterRevenueRange !== "all";
+  
+  const clearFilters = () => {
+    setFilterSource("all");
+    setFilterRevenueRange("all");
+  };
+
+  const filteredLeads = leads.filter((lead) => {
+    const matchesSearch =
       lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone?.includes(searchQuery) ||
-      lead.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      lead.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesSource = filterSource === "all" || lead.source === filterSource;
+    const matchesRevenue = filterRevenueRange === "all" || lead.revenue_range === filterRevenueRange;
+    
+    return matchesSearch && matchesSource && matchesRevenue;
+  });
 
   const getInitials = (name: string) => {
     return name
@@ -641,15 +663,53 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, telefone ou email..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, telefone ou email..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Select value={filterSource} onValueChange={setFilterSource}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Origem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas origens</SelectItem>
+                {LEAD_SOURCES.map((source) => (
+                  <SelectItem key={source.value} value={source.value}>
+                    {source.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={filterRevenueRange} onValueChange={setFilterRevenueRange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Faturamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos faturamentos</SelectItem>
+                {REVENUE_RANGES.map((range) => (
+                  <SelectItem key={range.value} value={range.value}>
+                    {range.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {hasActiveFilters && (
+              <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar filtros">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Leads List */}
