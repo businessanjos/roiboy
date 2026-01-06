@@ -41,6 +41,7 @@ export interface ImportLeadRow {
   instagram?: string;
   city?: string;
   state?: string;
+  revenue_range?: string;
   hasError?: boolean;
   errorMessage?: string;
   isDuplicate?: boolean;
