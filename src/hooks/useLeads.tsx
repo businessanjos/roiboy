@@ -38,6 +38,7 @@ interface CreateLeadData {
   revenue_range?: string;
   external_id?: string;
   external_source?: string;
+  instagram?: string;
 }
 
 interface UpdateLeadData extends Partial<CreateLeadData> {

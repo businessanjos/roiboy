@@ -344,20 +344,45 @@ export default function LeadsTab() {
     const headerLine = lines[0].toLowerCase();
     const headers = headerLine.split(/[;,]/).map(h => h.trim().replace(/"/g, ""));
     
-    const colMap: Record<string, number> = {};
+    // Map column indices - store arrays for multiple columns
+    const colMap: Record<string, number[]> = {
+      full_name: [],
+      phone: [],
+      email: [],
+      source: [],
+      notes: [],
+      instagram: [],
+      revenue_range: [],
+      external_id: [],
+    };
+    
     headers.forEach((h, i) => {
       const normalized = h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      if (normalized.includes("nome")) colMap.full_name = i;
-      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) colMap.phone = i;
-      if (normalized.includes("email") || normalized.includes("e-mail")) colMap.email = i;
-      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte")) colMap.source = i;
-      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note")) colMap.notes = i;
+      if (normalized.includes("nome") && !normalized.includes("razao")) colMap.full_name.push(i);
+      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) colMap.phone.push(i);
+      if (normalized.includes("email") || normalized.includes("e-mail")) colMap.email.push(i);
+      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte") || normalized.includes("lead source")) colMap.source.push(i);
+      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note") || normalized.includes("anotac")) colMap.notes.push(i);
+      if (normalized.includes("instagram") || normalized.includes("insta")) colMap.instagram.push(i);
+      if (normalized.includes("faturamento") || normalized.includes("revenue") || normalized.includes("receita")) colMap.revenue_range.push(i);
+      if ((normalized.includes("id") && !normalized.includes("email")) || normalized.includes("external")) colMap.external_id.push(i);
     });
 
-    if (colMap.full_name === undefined) {
+    if (colMap.full_name.length === 0) {
       toast.error("Coluna 'Nome' não encontrada no CSV");
       return;
     }
+
+    // Helper to get first non-empty value from multiple columns
+    const getFirstValue = (values: string[], indices: number[]): string | undefined => {
+      for (const idx of indices) {
+        const val = values[idx]?.trim();
+        if (val && val !== "N/A" && val !== "-" && val !== "null") {
+          return val;
+        }
+      }
+      return undefined;
+    };
 
     const { data: existingLeads } = await supabase
       .from("leads")
@@ -373,13 +398,21 @@ export default function LeadsTab() {
       
       const values = line.split(/[;,]/).map(v => v.trim().replace(/^"|"$/g, ""));
       
+      const phone = getFirstValue(values, colMap.phone);
+      const email = getFirstValue(values, colMap.email);
+      const source = getFirstValue(values, colMap.source)?.toLowerCase();
+      const instagram = getFirstValue(values, colMap.instagram);
+      
       const row: ImportLeadRow = {
         lineNumber: i,
-        full_name: values[colMap.full_name] || "",
-        phone: colMap.phone !== undefined ? values[colMap.phone] : undefined,
-        email: colMap.email !== undefined ? values[colMap.email] : undefined,
-        source: colMap.source !== undefined ? values[colMap.source]?.toLowerCase() : undefined,
-        notes: colMap.notes !== undefined ? values[colMap.notes] : undefined,
+        full_name: getFirstValue(values, colMap.full_name) || "",
+        phone,
+        email,
+        source,
+        notes: getFirstValue(values, colMap.notes),
+        instagram,
+        revenue_range: getFirstValue(values, colMap.revenue_range),
+        external_id: getFirstValue(values, colMap.external_id),
       };
 
       if (!row.full_name.trim()) {
@@ -422,6 +455,9 @@ export default function LeadsTab() {
           email: row.email,
           source: row.source,
           notes: row.notes,
+          revenue_range: row.revenue_range,
+          external_id: row.external_id,
+          instagram: row.instagram,
         });
         successCount++;
       } catch (error) {
