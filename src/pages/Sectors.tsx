@@ -39,7 +39,7 @@ export default function Sectors() {
 
   // Core 4 areas (Marketing, Vendas, Operações, Finanças)
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro"];
-  const coreSectors = sectors.filter(s => coreAreas.includes(s.id));
+  const coreSectors = coreAreas.map(id => sectors.find(s => s.id === id)!).filter(Boolean);
   const otherSectors = sectors.filter(s => !coreAreas.includes(s.id) && s.id !== "royzapp" && s.id !== "roychat");
   const toolSectors = sectors.filter(s => s.id === "royzapp" || s.id === "roychat");
 
