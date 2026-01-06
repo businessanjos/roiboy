@@ -1750,6 +1750,105 @@ export type Database = {
           },
         ]
       }
+      client_service_history: {
+        Row: {
+          account_id: string
+          agent_id: string | null
+          agent_name: string | null
+          ai_summary: string | null
+          client_id: string | null
+          closed_at: string
+          conversation_assignment_id: string | null
+          created_at: string
+          department_name: string | null
+          duration_minutes: number | null
+          id: string
+          lead_id: string | null
+          messages_count: number | null
+          notes: string | null
+          outcome: string | null
+          sector_id: string | null
+          started_at: string | null
+          summary: string | null
+        }
+        Insert: {
+          account_id: string
+          agent_id?: string | null
+          agent_name?: string | null
+          ai_summary?: string | null
+          client_id?: string | null
+          closed_at?: string
+          conversation_assignment_id?: string | null
+          created_at?: string
+          department_name?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lead_id?: string | null
+          messages_count?: number | null
+          notes?: string | null
+          outcome?: string | null
+          sector_id?: string | null
+          started_at?: string | null
+          summary?: string | null
+        }
+        Update: {
+          account_id?: string
+          agent_id?: string | null
+          agent_name?: string | null
+          ai_summary?: string | null
+          client_id?: string | null
+          closed_at?: string
+          conversation_assignment_id?: string | null
+          created_at?: string
+          department_name?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lead_id?: string | null
+          messages_count?: number | null
+          notes?: string | null
+          outcome?: string | null
+          sector_id?: string | null
+          started_at?: string | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_service_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_service_history_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_service_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_service_history_conversation_assignment_id_fkey"
+            columns: ["conversation_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversation_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_service_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_stage_checklist: {
         Row: {
           account_id: string

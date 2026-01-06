@@ -11,6 +11,7 @@ import {
   Plus,
   AlertTriangle,
   ExternalLink,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ interface ZappChatHeaderProps {
   onOpenRoiDialog: () => void;
   onOpenRiskDialog: () => void;
   onOpenAddClient: () => void;
+  onOpenCloseTicket?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
@@ -57,6 +59,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onOpenRoiDialog,
   onOpenRiskDialog,
   onOpenAddClient,
+  onOpenCloseTicket,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
 
@@ -188,6 +191,19 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        
+        {/* Close ticket button */}
+        {assignment.status !== "closed" && onOpenCloseTicket && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-3 text-xs border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
+            onClick={onOpenCloseTicket}
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Finalizar
+          </Button>
+        )}
         
         <div className="flex items-center">
           <Button

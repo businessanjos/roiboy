@@ -29,6 +29,7 @@ import {
   ZappQuickRepliesDialog,
   ZappAddContactDialog,
   ZappNewConversationDialog,
+  ZappCloseTicketDialog,
 } from "@/components/royzapp/dialogs";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { SectorId, sectors } from "@/config/sectors";
