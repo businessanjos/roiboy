@@ -250,6 +250,9 @@ export function ZappChatView({
         onOpenRiskDialog={onOpenRiskDialog}
         onOpenAddClient={onOpenAddClient}
         onOpenCloseTicket={onOpenCloseTicket}
+        onOpenLinkClient={onOpenLinkClient}
+        onClientLinked={onClientLinked}
+        accountId={accountId}
       />
 
       {/* Messages */}

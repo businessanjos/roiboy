@@ -758,6 +758,127 @@ serve(async (req) => {
           if (newZappConvo) {
             zappConversationId = newZappConvo.id;
             console.log(`Created new zapp_conversation (group: ${isGroupMessage}): ${zappConversationId}`);
+            
+            // ============================================
+            // AUTO-SUGGEST CLIENT LINKS (for direct messages without client)
+            // ============================================
+            if (!clientId && !isGroupMessage && contactName && contactName !== "Desconhecido") {
+              try {
+                console.log(`[SUGGESTION] Searching for client suggestions for "${contactName}" / ${phone}`);
+                
+                const suggestions: { clientId: string; matchType: string; score: number; details: Record<string, unknown> }[] = [];
+                
+                // Split contact name into parts for searching
+                const nameParts = contactName
+                  .split(/[\s\-\/\(\)]+/)
+                  .filter((p: string) => p.length > 2)
+                  .slice(0, 3); // Max 3 parts
+                
+                // Search by name parts
+                for (const part of nameParts) {
+                  const { data: nameMatches } = await supabase
+                    .from("clients")
+                    .select("id, full_name, phone_e164")
+                    .eq("account_id", accountId)
+                    .eq("status", "active")
+                    .ilike("full_name", `%${part}%`)
+                    .limit(5);
+                  
+                  if (nameMatches) {
+                    for (const client of nameMatches) {
+                      // Calculate simple match score based on name similarity
+                      const clientNameLower = (client.full_name || "").toLowerCase();
+                      const contactNameLower = contactName.toLowerCase();
+                      const partLower = part.toLowerCase();
+                      
+                      // Higher score if more name parts match
+                      const matchingParts = nameParts.filter((np: string) => 
+                        clientNameLower.includes(np.toLowerCase())
+                      ).length;
+                      const score = Math.min(0.95, 0.5 + (matchingParts * 0.15));
+                      
+                      if (!suggestions.find(s => s.clientId === client.id)) {
+                        suggestions.push({
+                          clientId: client.id,
+                          matchType: matchingParts > 1 ? "name" : "similar_name",
+                          score,
+                          details: { 
+                            matchedPart: part, 
+                            matchingParts,
+                            contactName,
+                            clientName: client.full_name 
+                          },
+                        });
+                      }
+                    }
+                  }
+                }
+                
+                // Search by partial phone (last 9 digits)
+                if (phone) {
+                  const phoneDigits = phone.replace(/\D/g, "");
+                  const partialPhone = phoneDigits.slice(-9);
+                  
+                  if (partialPhone.length >= 9) {
+                    const { data: phoneMatches } = await supabase
+                      .from("clients")
+                      .select("id, full_name, phone_e164")
+                      .eq("account_id", accountId)
+                      .eq("status", "active")
+                      .ilike("phone_e164", `%${partialPhone}`)
+                      .limit(5);
+                    
+                    if (phoneMatches) {
+                      for (const client of phoneMatches) {
+                        const existing = suggestions.find(s => s.clientId === client.id);
+                        if (existing) {
+                          // Boost score if phone also matches
+                          existing.score = Math.min(0.98, existing.score + 0.2);
+                          existing.matchType = "name";
+                          (existing.details as Record<string, unknown>).phoneMatch = true;
+                        } else {
+                          suggestions.push({
+                            clientId: client.id,
+                            matchType: "partial_phone",
+                            score: 0.7,
+                            details: { 
+                              partialPhone,
+                              contactName,
+                              clientName: client.full_name 
+                            },
+                          });
+                        }
+                      }
+                    }
+                  }
+                }
+                
+                // Save top 3 suggestions
+                const topSuggestions = suggestions
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, 3);
+                
+                if (topSuggestions.length > 0) {
+                  console.log(`[SUGGESTION] Found ${topSuggestions.length} suggestions for conversation ${zappConversationId}`);
+                  
+                  for (const suggestion of topSuggestions) {
+                    await supabase.from("zapp_client_suggestions").insert({
+                      account_id: accountId,
+                      zapp_conversation_id: zappConversationId,
+                      suggested_client_id: suggestion.clientId,
+                      match_type: suggestion.matchType,
+                      match_score: suggestion.score,
+                      match_details: suggestion.details,
+                    }).maybeSingle(); // Ignore conflicts
+                  }
+                } else {
+                  console.log(`[SUGGESTION] No client suggestions found for "${contactName}"`);
+                }
+              } catch (suggestionError) {
+                // Don't fail the webhook for suggestion errors
+                console.error("[SUGGESTION] Error creating suggestions:", suggestionError);
+              }
+            }
           } else if (zappConvoError) {
             console.error("Error creating zapp_conversation:", zappConvoError);
           }
