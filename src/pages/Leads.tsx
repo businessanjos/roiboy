@@ -469,6 +469,7 @@ export default function Leads() {
       return;
     }
     
+    // Fetch existing leads
     const { data: existingLeads, error: fetchError } = await supabase
       .from("leads")
       .select("id, phone, email, cpf, full_name, external_id, external_source")
@@ -480,9 +481,46 @@ export default function Leads() {
       return;
     }
 
+    // Fetch existing active clients
+    const { data: existingClients, error: clientFetchError } = await supabase
+      .from("clients")
+      .select("id, phone_e164, emails, cpf, full_name, status")
+      .eq("account_id", currentUser.account_id)
+      .in("status", ["active"]);
+    
+    if (clientFetchError) {
+      console.error("Error fetching existing clients:", clientFetchError);
+      // Continue without client check
+    }
+
     const existingPhones = new Set((existingLeads || []).map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
     const existingEmails = new Set((existingLeads || []).map(l => l.email?.toLowerCase()).filter(Boolean));
     const existingCpfs = new Set((existingLeads || []).map(l => l.cpf?.replace(/\D/g, "")).filter(Boolean));
+
+    // Build client lookup maps
+    type ClientInfo = { id: string; full_name: string; phone?: string; email?: string; status?: string };
+    const clientByPhone = new Map<string, ClientInfo>();
+    const clientByEmail = new Map<string, ClientInfo>();
+    const clientByCpf = new Map<string, ClientInfo>();
+    
+    (existingClients || []).forEach(c => {
+      const normalizedPhone = c.phone_e164?.replace(/\D/g, "");
+      const emails = c.emails as string[] | null;
+      const primaryEmail = emails?.[0]?.toLowerCase();
+      const normalizedCpf = c.cpf?.replace(/\D/g, "");
+      
+      const clientInfo: ClientInfo = {
+        id: c.id,
+        full_name: c.full_name,
+        phone: c.phone_e164 || undefined,
+        email: primaryEmail,
+        status: c.status || undefined,
+      };
+      
+      if (normalizedPhone) clientByPhone.set(normalizedPhone, clientInfo);
+      if (primaryEmail) clientByEmail.set(primaryEmail, clientInfo);
+      if (normalizedCpf) clientByCpf.set(normalizedCpf, clientInfo);
+    });
 
     const rows: ImportLeadRow[] = [];
     for (let i = 1; i < lines.length; i++) {
@@ -512,20 +550,31 @@ export default function Leads() {
         row.errorMessage = "Nome obrigatório";
       }
 
-      // Check duplicates
+      // Check for matching clients first (higher priority)
       const normalizedPhone = row.phone?.replace(/\D/g, "");
       const normalizedEmail = row.email?.toLowerCase();
       const normalizedCpf = row.cpf?.replace(/\D/g, "");
 
-      if (normalizedPhone && existingPhones.has(normalizedPhone)) {
-        row.isDuplicate = true;
-        row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
-      } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
-        row.isDuplicate = true;
-        row.duplicateInfo = { type: "email", matchValue: normalizedEmail };
-      } else if (normalizedCpf && existingCpfs.has(normalizedCpf)) {
-        row.isDuplicate = true;
-        row.duplicateInfo = { type: "cpf", matchValue: normalizedCpf };
+      const matchedClient = 
+        (normalizedPhone && clientByPhone.get(normalizedPhone)) ||
+        (normalizedEmail && clientByEmail.get(normalizedEmail)) ||
+        (normalizedCpf && clientByCpf.get(normalizedCpf));
+
+      if (matchedClient) {
+        row.isClientMatch = true;
+        row.clientInfo = matchedClient;
+      } else {
+        // Check lead duplicates only if not a client
+        if (normalizedPhone && existingPhones.has(normalizedPhone)) {
+          row.isDuplicate = true;
+          row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
+        } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
+          row.isDuplicate = true;
+          row.duplicateInfo = { type: "email", matchValue: normalizedEmail };
+        } else if (normalizedCpf && existingCpfs.has(normalizedCpf)) {
+          row.isDuplicate = true;
+          row.duplicateInfo = { type: "cpf", matchValue: normalizedCpf };
+        }
       }
 
       rows.push(row);
@@ -541,8 +590,8 @@ export default function Leads() {
   const handleConfirmImport = async (selectedRows: ImportLeadRow[]) => {
     setImporting(true);
     try {
-      // Filter based on duplicateAction
-      const rowsToImport = selectedRows.filter(r => r.duplicateAction !== "skip");
+      // Filter out clients and skipped duplicates
+      const rowsToImport = selectedRows.filter(r => !r.isClientMatch && r.duplicateAction !== "skip");
       
       if (rowsToImport.length === 0) {
         toast.error("Nenhum lead para importar");
