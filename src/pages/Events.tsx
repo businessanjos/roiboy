@@ -72,16 +72,20 @@ import AttendanceReport from "@/components/events/AttendanceReport";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
-interface Attendance {
+interface AttendanceRecord {
   id: string;
-  client_id: string;
+  client_id: string | null;
   join_time: string;
+  type: 'checkin' | 'rsvp';
+  rsvp_status?: string;
+  guest_name?: string | null;
+  guest_phone?: string | null;
   clients: {
     id: string;
     full_name: string;
     phone_e164: string;
     avatar_url: string | null;
-  };
+  } | null;
 }
 
 type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao";
@@ -207,12 +211,14 @@ export default function Events() {
     staleTime: 30000,
   });
 
-  // Fetch attendance for selected event
+  // Fetch attendance and participants for selected event
   const { data: attendance = [], isLoading: loadingAttendance } = useQuery({
     queryKey: ["event-attendance", selectedEventForAttendance?.id],
     queryFn: async () => {
       if (!selectedEventForAttendance?.id) return [];
-      const { data, error } = await supabase
+      
+      // Fetch check-ins (actual attendance)
+      const { data: checkins, error: checkinsError } = await supabase
         .from("attendance")
         .select(`
           id,
@@ -222,8 +228,54 @@ export default function Events() {
         `)
         .eq("event_id", selectedEventForAttendance.id)
         .order("join_time", { ascending: true });
-      if (error) throw error;
-      return (data as Attendance[]) || [];
+      
+      if (checkinsError) throw checkinsError;
+      
+      // Fetch RSVP participants (confirmed registrations)
+      const { data: participants, error: participantsError } = await supabase
+        .from("event_participants")
+        .select(`
+          id,
+          client_id,
+          rsvp_responded_at,
+          rsvp_status,
+          guest_name,
+          guest_phone,
+          clients (id, full_name, phone_e164, avatar_url)
+        `)
+        .eq("event_id", selectedEventForAttendance.id)
+        .in("rsvp_status", ["confirmed", "waitlist"])
+        .order("rsvp_responded_at", { ascending: true });
+      
+      if (participantsError) throw participantsError;
+      
+      // Get client IDs that already have check-ins
+      const checkedInClientIds = new Set(checkins?.map(c => c.client_id).filter(Boolean));
+      
+      // Merge both lists, marking source type
+      const checkinRecords: AttendanceRecord[] = (checkins || []).map(c => ({
+        id: c.id,
+        client_id: c.client_id,
+        join_time: c.join_time,
+        type: 'checkin' as const,
+        clients: c.clients as AttendanceRecord['clients']
+      }));
+      
+      // Add RSVP participants that haven't checked in yet
+      const rsvpRecords: AttendanceRecord[] = (participants || [])
+        .filter(p => !p.client_id || !checkedInClientIds.has(p.client_id))
+        .map(p => ({
+          id: p.id,
+          client_id: p.client_id,
+          join_time: p.rsvp_responded_at,
+          type: 'rsvp' as const,
+          rsvp_status: p.rsvp_status,
+          guest_name: p.guest_name,
+          guest_phone: p.guest_phone,
+          clients: p.clients as AttendanceRecord['clients']
+        }));
+      
+      return [...checkinRecords, ...rsvpRecords];
     },
     enabled: !!selectedEventForAttendance?.id,
   });
@@ -259,12 +311,19 @@ export default function Events() {
   const exportAttendanceCSV = () => {
     if (!selectedEventForAttendance || attendance.length === 0) return;
 
-    const headers = ["Nome", "Telefone", "Hora do Check-in"];
-    const rows = attendance.map((a) => [
-      a.clients.full_name,
-      a.clients.phone_e164,
-      format(new Date(a.join_time), "dd/MM/yyyy HH:mm", { locale: ptBR })
-    ]);
+    const headers = ["Nome", "Telefone", "Status", "Data/Hora"];
+    const rows = attendance.map((a) => {
+      const displayName = a.clients?.full_name || a.guest_name || 'Convidado';
+      const displayPhone = a.clients?.phone_e164 || a.guest_phone || '';
+      const status = a.type === 'checkin' ? 'Presente' : 
+        (a.rsvp_status === 'waitlist' ? 'Lista de espera' : 'Confirmado');
+      return [
+        displayName,
+        displayPhone,
+        status,
+        format(new Date(a.join_time), "dd/MM/yyyy HH:mm", { locale: ptBR })
+      ];
+    });
 
     const csvContent = [headers, ...rows]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
@@ -1256,17 +1315,22 @@ export default function Events() {
             ) : attendance.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-muted-foreground">Nenhum check-in registrado ainda</p>
+                <p className="text-muted-foreground">Nenhum participante registrado ainda</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Compartilhe o QR Code do evento para os participantes confirmarem presença
+                  Compartilhe o link de inscrição ou QR Code do evento
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-sm">
-                    {attendance.length} {attendance.length === 1 ? 'participante' : 'participantes'}
-                  </Badge>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex gap-2">
+                    <Badge variant="secondary" className="text-sm">
+                      {attendance.filter(a => a.type === 'checkin').length} presentes
+                    </Badge>
+                    <Badge variant="outline" className="text-sm">
+                      {attendance.filter(a => a.type === 'rsvp').length} confirmados
+                    </Badge>
+                  </div>
                   <Button variant="outline" size="sm" onClick={exportAttendanceCSV}>
                     <Download className="h-4 w-4 mr-2" />
                     Exportar CSV
@@ -1274,26 +1338,45 @@ export default function Events() {
                 </div>
                 
                 <div className="divide-y max-h-[300px] overflow-y-auto">
-                  {attendance.map((a) => (
-                    <div key={a.id} className="flex items-center gap-3 py-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={a.clients.avatar_url || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {a.clients.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{a.clients.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{a.clients.phone_e164}</p>
+                  {attendance.map((a) => {
+                    const displayName = a.clients?.full_name || a.guest_name || 'Convidado';
+                    const displayPhone = a.clients?.phone_e164 || a.guest_phone || '';
+                    const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+                    
+                    return (
+                      <div key={a.id} className="flex items-center gap-3 py-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={a.clients?.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{displayName}</p>
+                          <p className="text-xs text-muted-foreground">{displayPhone}</p>
+                        </div>
+                        <div className="text-right">
+                          {a.type === 'checkin' ? (
+                            <>
+                              <Badge variant="default" className="text-[10px] px-1.5 py-0">Presente</Badge>
+                              <p className="text-xs font-medium mt-0.5">
+                                {format(new Date(a.join_time), "HH:mm", { locale: ptBR })}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <Badge variant={a.rsvp_status === 'waitlist' ? 'outline' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                                {a.rsvp_status === 'waitlist' ? 'Lista de espera' : 'Confirmado'}
+                              </Badge>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {format(new Date(a.join_time), "dd/MM HH:mm", { locale: ptBR })}
+                              </p>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Check-in</p>
-                        <p className="text-xs font-medium">
-                          {format(new Date(a.join_time), "HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
