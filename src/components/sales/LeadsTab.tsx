@@ -332,22 +332,27 @@ export default function LeadsTab() {
   // Import CSV handling
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) {
-      console.log("Nenhum arquivo selecionado");
-      return;
-    }
+    if (!file) return;
 
-    console.log("Arquivo selecionado:", file.name, file.size);
     const text = await file.text();
-    console.log("Texto do arquivo (primeiros 200 chars):", text.substring(0, 200));
     const lines = text.split("\n").filter(l => l.trim());
     if (lines.length < 2) {
       toast.error("Arquivo CSV vazio ou inválido");
       return;
     }
 
-    const headerLine = lines[0].toLowerCase();
-    const headers = headerLine.split(/[;,]/).map(h => h.trim().replace(/"/g, ""));
+    // Detect delimiter: pipe, semicolon, or comma
+    const firstLine = lines[0];
+    const pipeCount = (firstLine.match(/\|/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    
+    const delimiter = pipeCount > semicolonCount && pipeCount > commaCount 
+      ? "|" 
+      : semicolonCount > commaCount ? ";" : ",";
+    
+    const headerLine = firstLine.toLowerCase();
+    const headers = headerLine.split(delimiter).map(h => h.trim().replace(/"/g, ""));
     
     // Map column indices - store arrays for multiple columns
     const colMap: Record<string, number[]> = {
@@ -374,13 +379,9 @@ export default function LeadsTab() {
     });
 
     if (colMap.full_name.length === 0) {
-      console.log("Headers encontrados:", headers);
-      console.log("ColMap:", colMap);
       toast.error("Coluna 'Nome' não encontrada no CSV");
       return;
     }
-    
-    console.log("Headers mapeados:", colMap);
 
     // Helper to get first non-empty value from multiple columns
     const getFirstValue = (values: string[], indices: number[]): string | undefined => {
@@ -405,7 +406,7 @@ export default function LeadsTab() {
       const line = lines[i];
       if (!line.trim()) continue;
       
-      const values = line.split(/[;,]/).map(v => v.trim().replace(/^"|"$/g, ""));
+      const values = line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
       
       const phone = getFirstValue(values, colMap.phone);
       const email = getFirstValue(values, colMap.email);
@@ -443,11 +444,9 @@ export default function LeadsTab() {
       rows.push(row);
     }
 
-    console.log("Rows parseadas:", rows.length, "Abrindo preview...");
     setImportRows(rows);
     setImportPreviewOpen(true);
     event.target.value = "";
-    console.log("Preview aberto, importPreviewOpen setado para true");
   };
 
   const handleConfirmImport = async (selectedRows: ImportLeadRow[]) => {
