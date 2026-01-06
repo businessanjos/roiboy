@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users } from "lucide-react";
+import { Plus, Trash2, GripVertical, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users, Instagram } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -31,7 +31,7 @@ import { CSS } from "@dnd-kit/utilities";
 export interface LeadCustomField {
   id: string;
   name: string;
-  field_type: "select" | "boolean" | "multi_select" | "number" | "currency" | "text" | "date" | "user";
+  field_type: "select" | "boolean" | "multi_select" | "number" | "currency" | "text" | "date" | "user" | "instagram";
   options: FieldOption[];
   is_required: boolean;
   display_order: number;
@@ -53,6 +53,7 @@ const FIELD_TYPES = [
   { value: "text", label: "Texto", icon: Type },
   { value: "number", label: "Número", icon: Hash },
   { value: "boolean", label: "Sim/Não", icon: ToggleLeft },
+  { value: "instagram", label: "Instagram", icon: Instagram },
 ];
 
 const COLOR_OPTIONS = [
