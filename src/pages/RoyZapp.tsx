@@ -1929,11 +1929,12 @@ export default function RoyZapp() {
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only
+      // Admins can see ALL conversations in "mine" tab (to monitor team)
       // Skip tab filter when viewing archived (show all archived regardless of assignment)
       const matchesTab = filterArchived ? true : (
         inboxTab === "mine" 
-          ? a.agent_id === currentAgent?.id
-          : a.agent_id === null
+          ? (isAdmin || a.agent_id === currentAgent?.id) // Admins see all assigned, others see only their own
+          : a.agent_id === null // Queue always shows only unassigned
       );
       
       const contact = getContactInfo(a);
@@ -1965,7 +1966,7 @@ export default function RoyZapp() {
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesGroups && matchesProduct && matchesTag && matchesAgent;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
 
   // Helper to get agent name by id
   const getAgentName = (agentId: string | null) => {
