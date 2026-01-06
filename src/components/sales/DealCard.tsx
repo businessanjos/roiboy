@@ -258,7 +258,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
               className="text-[10px] px-1.5 py-0 flex items-center gap-1 bg-blue-500/20 text-blue-600"
             >
               <Clock className="h-2.5 w-2.5" />
-              Próxima: {format(new Date(nextTaskDate), "dd/MM 'às' HH:mm", { locale: ptBR })}
+              Agendado: {format(new Date(nextTaskDate), "dd/MM 'às' HH:mm", { locale: ptBR })}
             </Badge>
           </div>
         )}
