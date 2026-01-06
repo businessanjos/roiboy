@@ -27,7 +27,9 @@ import {
   Zap,
   ListTodo,
   Eye,
+  FileText,
 } from "lucide-react";
+import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
@@ -123,6 +125,37 @@ export function ZappCRMPanel({
         .maybeSingle();
       if (error) throw error;
       return data as Lead | null;
+    },
+    enabled: !!conversationLeadId,
+  });
+
+  // Fetch custom fields for leads
+  const { data: customFields = [] } = useQuery({
+    queryKey: ["lead-custom-fields-crm", currentUser?.account_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("custom_fields")
+        .select("id, name, field_type, options, display_order")
+        .eq("account_id", currentUser?.account_id)
+        .eq("show_in_leads", true)
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentUser?.account_id && !!conversationLeadId,
+  });
+
+  // Fetch field values for lead
+  const { data: fieldValues = [], refetch: refetchFieldValues } = useQuery({
+    queryKey: ["lead-field-values-crm", conversationLeadId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_field_values")
+        .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
+        .eq("lead_id", conversationLeadId);
+      if (error) throw error;
+      return data;
     },
     enabled: !!conversationLeadId,
   });
@@ -279,6 +312,24 @@ export function ZappCRMPanel({
     ? format(new Date(pendingTasks[0].due_date), "dd/MM", { locale: ptBR })
     : null;
 
+  // Helper function to get field value
+  const getFieldValue = (fieldId: string) => {
+    const fv = fieldValues.find(v => v.field_id === fieldId);
+    if (!fv) return null;
+    const field = customFields.find(f => f.id === fieldId);
+    if (!field) return null;
+    
+    switch (field.field_type) {
+      case "boolean": return fv.value_boolean;
+      case "number":
+      case "currency": return fv.value_number;
+      case "date": return fv.value_date;
+      case "multi_select":
+      case "user": return fv.value_json;
+      default: return fv.value_text;
+    }
+  };
+
   if (!hasContact) {
     return (
       <div className="flex flex-col h-full">
@@ -348,6 +399,52 @@ export function ZappCRMPanel({
               )}
             </div>
           </Card>
+
+          {/* Custom Fields - visible when there's a lead */}
+          {conversationLeadId && customFields.length > 0 && (
+            <Card className="p-3 bg-zapp-panel border-zapp-border">
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="h-4 w-4 text-zapp-text-muted" />
+                <span className="text-xs font-medium text-zapp-text">
+                  Campos Personalizados
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {customFields.map(field => {
+                  const formattedOptions = Array.isArray(field.options)
+                    ? field.options.map((opt: any) => 
+                        typeof opt === 'string' 
+                          ? { value: opt, label: opt, color: 'gray' }
+                          : opt
+                      )
+                    : [];
+                  
+                  return (
+                    <div key={field.id} className="min-w-0">
+                      <span className="text-[10px] text-zapp-text-muted block mb-1 truncate">
+                        {field.name}
+                      </span>
+                      <LeadFieldValueEditor
+                        field={{
+                          id: field.id,
+                          name: field.name,
+                          field_type: field.field_type as "boolean" | "currency" | "date" | "instagram" | "multi_select" | "number" | "select" | "text" | "user",
+                          options: formattedOptions,
+                          is_required: false,
+                          is_active: true,
+                          display_order: field.display_order,
+                        }}
+                        leadId={conversationLeadId}
+                        accountId={currentUser?.account_id || ""}
+                        currentValue={getFieldValue(field.id)}
+                        onValueChange={() => refetchFieldValues()}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
 
           {isLoading ? (
             <div className="flex justify-center py-6">
