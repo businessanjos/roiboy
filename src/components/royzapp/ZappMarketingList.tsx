@@ -236,20 +236,17 @@ export function ZappMarketingList() {
                           </span>
                         )}
                         {event.address && (
-                          <span className="flex items-center gap-1 truncate">
-                            <MapPin className="h-3 w-3" />
-                            {event.address}
+                          <span className="flex items-center gap-1 truncate max-w-[100px]">
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{event.address}</span>
                           </span>
                         )}
-                      </div>
-                      
-                      {/* RSVP Link */}
-                      {event.public_registration_code && (
-                        <div className="flex items-center gap-2 mt-2">
+                        {/* RSVP Link inline */}
+                        {event.public_registration_code && (
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            className="h-6 text-[10px] px-2 gap-1"
+                            className="h-5 text-[10px] px-1.5 gap-1 text-zapp-accent hover:text-zapp-accent"
                             onClick={(e) => {
                               e.stopPropagation();
                               const link = `${window.location.origin}/inscricao/${event.public_registration_code}`;
@@ -258,10 +255,10 @@ export function ZappMarketingList() {
                             }}
                           >
                             <Link className="h-3 w-3" />
-                            Copiar RSVP
+                            RSVP
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                       
                       {/* Progress indicators - always show confirmed count */}
                       <div className="flex items-center gap-3 mt-2 text-[10px]">
