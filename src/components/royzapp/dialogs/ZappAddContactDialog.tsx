@@ -1,5 +1,6 @@
-import { memo, useState, useEffect } from "react";
-import { UserPlus, TrendingUp, Users, Loader2, Home, Building2, Landmark, User, Briefcase } from "lucide-react";
+import { memo, useState, useEffect, useCallback } from "react";
+import { UserPlus, TrendingUp, Users, Loader2, Home, Building2, Landmark, User, Briefcase, Link2, Search, Phone, Package, Handshake } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { brazilianBanks } from "@/data/brazilian-banks";
+import { toast } from "sonner";
 
 interface LeadFormData {
   full_name: string;
@@ -102,6 +107,18 @@ const initialLeadForm: LeadFormData = {
   instagram: "",
 };
 
+// Types for linked results
+interface LinkResult {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  avatar_url: string | null;
+  type: "client" | "lead" | "deal";
+  status?: string;
+  products?: { id: string; name: string; color?: string }[];
+  stage_name?: string;
+}
+
 interface ZappAddContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -112,6 +129,10 @@ interface ZappAddContactDialogProps {
   onSaveLead: (data: LeadFormData) => Promise<void>;
   savingClient: boolean;
   savingLead: boolean;
+  // Link props
+  accountId?: string;
+  conversationId?: string;
+  onLinked?: () => void;
 }
 
 const LEAD_SOURCES = [
@@ -149,8 +170,11 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
   onSaveLead,
   savingClient,
   savingLead,
+  accountId,
+  conversationId,
+  onLinked,
 }: ZappAddContactDialogProps) {
-  const [activeTab, setActiveTab] = useState<"client" | "lead">("client");
+  const [activeTab, setActiveTab] = useState<"client" | "lead" | "link">("client");
   const [leadSection, setLeadSection] = useState<"basic" | "address" | "bank">("basic");
   
   // Client form
@@ -161,6 +185,192 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
   
   // Lead form
   const [leadForm, setLeadForm] = useState<LeadFormData>(initialLeadForm);
+
+  // Link search state
+  const [linkSearch, setLinkSearch] = useState("");
+  const [linkResults, setLinkResults] = useState<LinkResult[]>([]);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [selectedLink, setSelectedLink] = useState<LinkResult | null>(null);
+  const [addPhoneToLink, setAddPhoneToLink] = useState(true);
+  const [linking, setLinking] = useState(false);
+
+  // Search for clients, leads and deals
+  const searchForLink = useCallback(async (query: string) => {
+    if (!query.trim() || query.length < 2 || !accountId) {
+      setLinkResults([]);
+      return;
+    }
+
+    setLinkLoading(true);
+    try {
+      const cleanQuery = query.trim();
+      const phoneQuery = cleanQuery.replace(/\D/g, "");
+
+      // Search clients
+      const { data: clientsData } = await supabase
+        .from("clients")
+        .select(`
+          id, full_name, phone_e164, avatar_url,
+          client_products(product:products(id, name, color))
+        `)
+        .eq("account_id", accountId)
+        .eq("status", "active")
+        .or(`full_name.ilike.%${cleanQuery}%,phone_e164.ilike.%${phoneQuery}%`)
+        .limit(5);
+
+      // Search leads
+      const { data: leadsData } = await supabase
+        .from("leads")
+        .select("id, full_name, phone, status")
+        .eq("account_id", accountId)
+        .neq("status", "converted")
+        .or(`full_name.ilike.%${cleanQuery}%,phone.ilike.%${phoneQuery}%`)
+        .limit(5);
+
+      // Search deals
+      const { data: dealsData } = await supabase
+        .from("deals")
+        .select(`
+          id, title, value, 
+          lead:leads!deals_lead_id_fkey(id, full_name, phone),
+          stage:deal_stages!deals_stage_id_fkey(name)
+        `)
+        .eq("account_id", accountId)
+        .neq("status", "lost")
+        .neq("status", "won")
+        .ilike("title", `%${cleanQuery}%`)
+        .limit(5);
+
+      // Combine results
+      const results: LinkResult[] = [];
+      
+      (clientsData || []).forEach(c => {
+        results.push({
+          id: c.id,
+          full_name: c.full_name,
+          phone: c.phone_e164,
+          avatar_url: c.avatar_url,
+          type: "client",
+          products: c.client_products?.map((cp: any) => cp.product).filter(Boolean) || [],
+        });
+      });
+
+      (leadsData || []).forEach(l => {
+        results.push({
+          id: l.id,
+          full_name: l.full_name,
+          phone: l.phone,
+          avatar_url: null,
+          type: "lead",
+          status: l.status,
+        });
+      });
+
+      (dealsData || []).forEach(d => {
+        const lead = d.lead as any;
+        results.push({
+          id: d.id,
+          full_name: d.title,
+          phone: lead?.phone || null,
+          avatar_url: null,
+          type: "deal",
+          stage_name: (d.stage as any)?.name,
+        });
+      });
+
+      setLinkResults(results);
+    } catch (error) {
+      console.error("Error searching for link:", error);
+      setLinkResults([]);
+    } finally {
+      setLinkLoading(false);
+    }
+  }, [accountId]);
+
+  // Debounced search
+  useEffect(() => {
+    if (activeTab === "link") {
+      const timer = setTimeout(() => {
+        searchForLink(linkSearch);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [linkSearch, activeTab, searchForLink]);
+
+  // Handle linking
+  const handleLink = async () => {
+    if (!selectedLink || !conversationId || !accountId) return;
+
+    setLinking(true);
+    try {
+      const updateData: Record<string, any> = {};
+      
+      if (selectedLink.type === "client") {
+        updateData.client_id = selectedLink.id;
+        updateData.lead_id = null;
+      } else if (selectedLink.type === "lead") {
+        updateData.lead_id = selectedLink.id;
+        updateData.client_id = null;
+      } else if (selectedLink.type === "deal") {
+        // For deals, we need to get the lead_id from the deal
+        const { data: dealData } = await supabase
+          .from("deals")
+          .select("lead_id")
+          .eq("id", selectedLink.id)
+          .single();
+        
+        if (dealData?.lead_id) {
+          updateData.lead_id = dealData.lead_id;
+          updateData.client_id = null;
+        }
+      }
+
+      // Update conversation
+      const { error: updateError } = await supabase
+        .from("zapp_conversations")
+        .update(updateData)
+        .eq("id", conversationId);
+
+      if (updateError) throw updateError;
+
+      // Optionally add phone to client/lead
+      if (addPhoneToLink && phone) {
+        if (selectedLink.type === "client") {
+          const { data: clientData } = await supabase
+            .from("clients")
+            .select("additional_phones")
+            .eq("id", selectedLink.id)
+            .single();
+          
+          const existingPhones = Array.isArray(clientData?.additional_phones) 
+            ? clientData.additional_phones as string[] 
+            : [];
+          
+          if (!existingPhones.includes(phone)) {
+            await supabase
+              .from("clients")
+              .update({ additional_phones: [...existingPhones, phone] })
+              .eq("id", selectedLink.id);
+          }
+        } else if (selectedLink.type === "lead") {
+          await supabase
+            .from("leads")
+            .update({ phone })
+            .eq("id", selectedLink.id)
+            .is("phone", null);
+        }
+      }
+
+      toast.success("Conversa vinculada com sucesso!");
+      onLinked?.();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error linking:", error);
+      toast.error("Erro ao vincular: " + error.message);
+    } finally {
+      setLinking(false);
+    }
+  };
 
   // Update forms when props change and dialog is open
   useEffect(() => {
@@ -173,6 +383,11 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
       }));
       setActiveTab("client");
       setLeadSection("basic");
+      // Reset link state
+      setLinkSearch(contactName && contactName !== "Desconhecido" ? contactName.split(/[\s\-\/]+/)[0] || "" : "");
+      setLinkResults([]);
+      setSelectedLink(null);
+      setAddPhoneToLink(true);
     }
   }, [open, phone, contactName]);
 
@@ -247,7 +462,8 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
     await onSaveLead(leadForm);
   };
 
-  const saving = savingClient || savingLead;
+  const saving = savingClient || savingLead || linking;
+  const canLink = !!accountId && !!conversationId;
 
   const handleBankSelect = (bankCode: string) => {
     const bank = brazilianBanks.find(b => b.code === bankCode);
@@ -272,8 +488,8 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
         </DialogHeader>
 
         {showLeadOption ? (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "client" | "lead")}>
-            <TabsList className="w-full grid grid-cols-2 bg-zapp-bg-dark">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "client" | "lead" | "link")}>
+            <TabsList className={`w-full grid bg-zapp-bg-dark ${canLink ? "grid-cols-3" : "grid-cols-2"}`}>
               <TabsTrigger 
                 value="client" 
                 className="text-zapp-text data-[state=active]:bg-zapp-accent data-[state=active]:text-white"
@@ -288,6 +504,15 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
                 <TrendingUp className="h-4 w-4 mr-1.5" />
                 Lead
               </TabsTrigger>
+              {canLink && (
+                <TabsTrigger 
+                  value="link" 
+                  className="text-zapp-text data-[state=active]:bg-purple-500 data-[state=active]:text-white"
+                >
+                  <Link2 className="h-4 w-4 mr-1.5" />
+                  Vincular
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="client" className="mt-4 space-y-4">
@@ -758,6 +983,120 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
                 </ScrollArea>
               </Tabs>
             </TabsContent>
+
+            {/* Link Tab Content */}
+            {canLink && (
+              <TabsContent value="link" className="mt-4">
+                <div className="space-y-4">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
+                    <Input
+                      placeholder="Buscar cliente, lead ou negócio..."
+                      value={linkSearch}
+                      onChange={(e) => setLinkSearch(e.target.value)}
+                      className="pl-9 bg-zapp-bg border-zapp-border text-zapp-text"
+                    />
+                  </div>
+
+                  {/* Results */}
+                  <ScrollArea className="h-[300px]">
+                    {linkLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-zapp-text-muted" />
+                      </div>
+                    ) : linkResults.length === 0 ? (
+                      <div className="text-center py-8 text-zapp-text-muted text-sm">
+                        {linkSearch.length >= 2 
+                          ? "Nenhum resultado encontrado" 
+                          : "Digite pelo menos 2 caracteres para buscar"}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {linkResults.map((result) => (
+                          <div
+                            key={`${result.type}-${result.id}`}
+                            onClick={() => setSelectedLink(result)}
+                            className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                              selectedLink?.id === result.id && selectedLink?.type === result.type
+                                ? "border-purple-500 bg-purple-500/10"
+                                : "border-zapp-border bg-zapp-bg hover:bg-zapp-hover"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={result.avatar_url || undefined} />
+                                <AvatarFallback className="bg-zapp-panel text-zapp-text text-xs">
+                                  {result.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-zapp-text truncate">
+                                    {result.full_name}
+                                  </span>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-[10px] px-1.5 py-0 ${
+                                      result.type === "client" 
+                                        ? "border-zapp-accent text-zapp-accent" 
+                                        : result.type === "lead"
+                                        ? "border-blue-500 text-blue-500"
+                                        : "border-amber-500 text-amber-500"
+                                    }`}
+                                  >
+                                    {result.type === "client" ? "Cliente" : result.type === "lead" ? "Lead" : "Negócio"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-zapp-text-muted">
+                                  {result.phone && (
+                                    <span className="flex items-center gap-1">
+                                      <Phone className="h-3 w-3" />
+                                      {result.phone}
+                                    </span>
+                                  )}
+                                  {result.type === "deal" && result.stage_name && (
+                                    <span className="flex items-center gap-1">
+                                      <Handshake className="h-3 w-3" />
+                                      {result.stage_name}
+                                    </span>
+                                  )}
+                                  {result.type === "client" && result.products && result.products.length > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Package className="h-3 w-3" />
+                                      {result.products.map(p => p.name).join(", ")}
+                                    </span>
+                                  )}
+                                  {result.type === "lead" && result.status && (
+                                    <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                      {result.status}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+
+                  {/* Add phone option */}
+                  {selectedLink && phone && (
+                    <div className="flex items-center gap-2 p-3 bg-zapp-bg rounded-lg border border-zapp-border">
+                      <Checkbox
+                        id="add-phone"
+                        checked={addPhoneToLink}
+                        onCheckedChange={(checked) => setAddPhoneToLink(!!checked)}
+                      />
+                      <Label htmlFor="add-phone" className="text-sm text-zapp-text-muted cursor-pointer">
+                        Adicionar telefone {phone} ao {selectedLink.type === "client" ? "cliente" : "lead"}
+                      </Label>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
         ) : (
           <div className="space-y-4 py-2">
@@ -795,7 +1134,25 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
           >
             Cancelar
           </Button>
-          {showLeadOption && activeTab === "lead" ? (
+          {activeTab === "link" ? (
+            <Button
+              onClick={handleLink}
+              disabled={saving || !selectedLink}
+              className="bg-purple-500 hover:bg-purple-600 text-white"
+            >
+              {linking ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  Vinculando...
+                </>
+              ) : (
+                <>
+                  <Link2 className="h-4 w-4 mr-1.5" />
+                  Vincular
+                </>
+              )}
+            </Button>
+          ) : showLeadOption && activeTab === "lead" ? (
             <Button
               onClick={handleSaveLead}
               disabled={saving || !leadForm.full_name.trim()}
