@@ -20,6 +20,7 @@ import {
   UserPlus,
   MessageCircle,
   Crown,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
@@ -121,6 +122,7 @@ export const sectors: Sector[] = [
     navItems: [
       { to: "/pipeline", icon: TrendingUp, label: "Pipeline", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/sales-team", icon: UserCheck, label: "Vendedores", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },

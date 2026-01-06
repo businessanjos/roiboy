@@ -34,10 +34,8 @@ import {
   Target,
   Search,
   MessageSquare,
-  UserCheck,
 } from "lucide-react";
 import LeadsTab from "@/components/sales/LeadsTab";
-import { SalesTeamTab } from "@/components/sales/SalesTeamTab";
 
 export default function SalesPipeline() {
   const navigate = useNavigate();
@@ -75,7 +73,7 @@ export default function SalesPipeline() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline' | 'vendedores'>('pipeline');
+  const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
   const [searchTerm, setSearchTerm] = useState("");
 
   // Extract unique tags from all deals
@@ -287,7 +285,7 @@ export default function SalesPipeline() {
         </div>
 
         {/* Main Tabs */}
-        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline' | 'vendedores')}>
+        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
           <TabsList>
             <TabsTrigger value="prospeccao" className="gap-2">
               <Users className="h-4 w-4" />
@@ -298,10 +296,6 @@ export default function SalesPipeline() {
               <Target className="h-4 w-4" />
               Pipeline
               <Badge variant="secondary">{openDeals.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="vendedores" className="gap-2">
-              <UserCheck className="h-4 w-4" />
-              Vendedores
             </TabsTrigger>
           </TabsList>
 
@@ -412,10 +406,6 @@ export default function SalesPipeline() {
                 />
               </TabsContent>
             </Tabs>
-          </TabsContent>
-
-          <TabsContent value="vendedores" className="mt-4">
-            <SalesTeamTab />
           </TabsContent>
         </Tabs>
       </div>
