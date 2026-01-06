@@ -363,7 +363,7 @@ export default function SalesPipeline() {
                     placeholder="Buscar nome ou telefone..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9 w-[200px]"
+                    className="pl-9 h-9 w-[280px]"
                   />
                 </div>
               </div>
