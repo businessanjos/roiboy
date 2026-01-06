@@ -119,7 +119,7 @@ export function useMessageAssistant({
     };
   }, [messageInput, spellingEnabled, sectorId]);
 
-  // Load suggestions when messages change
+  // Load suggestions when messages change - ONLY when last message is from client
   useEffect(() => {
     if (!suggestionsEnabled || lastMessages.length === 0) {
       console.log("[AI Suggestions] Disabled or no messages");
@@ -133,10 +133,12 @@ export function useMessageAssistant({
       return;
     }
 
-    // Check if there's ANY message from client in the conversation (more flexible)
-    const hasClientMessage = lastMessages.some(m => m.is_from_client);
-    if (!hasClientMessage) {
-      console.log("[AI Suggestions] No client messages found");
+    // CRITICAL: Only suggest replies when the LAST message is from the client
+    // If the last message is from the agent (seller), there's nothing to reply to
+    const lastMessage = lastMessages[lastMessages.length - 1];
+    if (!lastMessage?.is_from_client) {
+      console.log("[AI Suggestions] Last message is from agent, no suggestions needed");
+      setSuggestions([]);
       return;
     }
 

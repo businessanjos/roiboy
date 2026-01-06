@@ -8,6 +8,8 @@ import {
   RefreshCw,
   Loader2,
   Wand2,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -46,6 +48,7 @@ interface ZappAIAssistBarProps {
   // Settings
   spellingEnabled: boolean;
   suggestionsEnabled: boolean;
+  onToggleSuggestions?: () => void;
 }
 
 export const ZappAIAssistBar = memo(function ZappAIAssistBar({
@@ -61,12 +64,14 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
   currentSpinPhase,
   spellingEnabled,
   suggestionsEnabled,
+  onToggleSuggestions,
 }: ZappAIAssistBarProps) {
   const hasCorrection = correction && spellingEnabled;
   const hasSuggestions = suggestions.length > 0 && suggestionsEnabled;
   const isLoading = isCheckingSpelling || isLoadingSuggestions;
 
-  if (!hasCorrection && !hasSuggestions && !isLoading) {
+  // Show the bar if we have corrections, suggestions, loading state, OR if we have a toggle
+  if (!hasCorrection && !hasSuggestions && !isLoading && !onToggleSuggestions) {
     return null;
   }
 
@@ -108,8 +113,8 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
         </div>
       )}
 
-      {/* Suggestions section */}
-      {(hasSuggestions || isLoadingSuggestions) && (
+      {/* Suggestions section - show toggle even when no suggestions */}
+      {(hasSuggestions || isLoadingSuggestions || onToggleSuggestions) && (
         <div className="px-3 py-2">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-zapp-accent" />
@@ -117,8 +122,29 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
               Sugestões de resposta
             </span>
             
+            {/* Toggle button */}
+            {onToggleSuggestions && (
+              <button
+                onClick={onToggleSuggestions}
+                className={cn(
+                  "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full transition-colors",
+                  suggestionsEnabled 
+                    ? "bg-zapp-accent/15 text-zapp-accent hover:bg-zapp-accent/25" 
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                )}
+                title={suggestionsEnabled ? "Desativar sugestões" : "Ativar sugestões"}
+              >
+                {suggestionsEnabled ? (
+                  <ToggleRight className="h-3 w-3" />
+                ) : (
+                  <ToggleLeft className="h-3 w-3" />
+                )}
+                {suggestionsEnabled ? "Ativado" : "Desativado"}
+              </button>
+            )}
+            
             {/* SPIN Phase indicator */}
-            {currentSpinPhase && spinPhaseConfig[currentSpinPhase] && (
+            {suggestionsEnabled && currentSpinPhase && spinPhaseConfig[currentSpinPhase] && (
               <span className={cn(
                 "text-[10px] px-2 py-0.5 rounded-full font-medium",
                 spinPhaseConfig[currentSpinPhase].color
@@ -127,66 +153,76 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
               </span>
             )}
             
-            {isLoadingSuggestions ? (
-              <Loader2 className="h-3 w-3 animate-spin text-zapp-text-muted" />
-            ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onRefreshSuggestions}
-                className="h-5 w-5 p-0 text-zapp-text-muted hover:text-zapp-accent"
-              >
-                <RefreshCw className="h-3 w-3" />
-              </Button>
+            {suggestionsEnabled && (
+              isLoadingSuggestions ? (
+                <Loader2 className="h-3 w-3 animate-spin text-zapp-text-muted" />
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onRefreshSuggestions}
+                  className="h-5 w-5 p-0 text-zapp-text-muted hover:text-zapp-accent"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )
             )}
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion) => (
-              <div
-                key={suggestion.id}
-                className={cn(
-                  "group flex items-center gap-1 bg-zapp-bg rounded-lg border border-zapp-border transition-colors",
-                  suggestion.feedbackGiven === "positive" && "border-green-500/50 bg-green-500/5",
-                  suggestion.feedbackGiven === "negative" && "border-red-500/50 bg-red-500/5"
-                )}
-              >
-                <button
-                  onClick={() => onSelectSuggestion(suggestion)}
-                  className="px-3 py-1.5 text-sm text-zapp-text hover:text-zapp-accent transition-colors text-left max-w-[280px] truncate"
-                  title={suggestion.text}
+          {suggestionsEnabled && suggestions.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion) => (
+                <div
+                  key={suggestion.id}
+                  className={cn(
+                    "group flex items-center gap-1 bg-zapp-bg rounded-lg border border-zapp-border transition-colors",
+                    suggestion.feedbackGiven === "positive" && "border-green-500/50 bg-green-500/5",
+                    suggestion.feedbackGiven === "negative" && "border-red-500/50 bg-red-500/5"
+                  )}
                 >
-                  {suggestion.text}
-                </button>
-                
-                {!suggestion.feedbackGiven ? (
-                  <div className="flex items-center gap-0.5 pr-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => onSendFeedback(suggestion.id, "positive")}
-                      className="p-1 text-zapp-text-muted hover:text-green-500 transition-colors"
-                      title="Boa sugestão"
-                    >
-                      <ThumbsUp className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() => onSendFeedback(suggestion.id, "negative")}
-                      className="p-1 text-zapp-text-muted hover:text-red-500 transition-colors"
-                      title="Sugestão ruim"
-                    >
-                      <ThumbsDown className="h-3 w-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="pr-2">
-                    <Check className={cn(
-                      "h-3 w-3",
-                      suggestion.feedbackGiven === "positive" ? "text-green-500" : "text-red-500"
-                    )} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  <button
+                    onClick={() => onSelectSuggestion(suggestion)}
+                    className="px-3 py-1.5 text-sm text-zapp-text hover:text-zapp-accent transition-colors text-left max-w-[280px] truncate"
+                    title={suggestion.text}
+                  >
+                    {suggestion.text}
+                  </button>
+                  
+                  {!suggestion.feedbackGiven ? (
+                    <div className="flex items-center gap-0.5 pr-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => onSendFeedback(suggestion.id, "positive")}
+                        className="p-1 text-zapp-text-muted hover:text-green-500 transition-colors"
+                        title="Boa sugestão"
+                      >
+                        <ThumbsUp className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => onSendFeedback(suggestion.id, "negative")}
+                        className="p-1 text-zapp-text-muted hover:text-red-500 transition-colors"
+                        title="Sugestão ruim"
+                      >
+                        <ThumbsDown className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="pr-2">
+                      <Check className={cn(
+                        "h-3 w-3",
+                        suggestion.feedbackGiven === "positive" ? "text-green-500" : "text-red-500"
+                      )} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {suggestionsEnabled && suggestions.length === 0 && !isLoadingSuggestions && (
+            <p className="text-xs text-zapp-text-muted">
+              Aguardando mensagem do cliente para sugerir respostas...
+            </p>
+          )}
         </div>
       )}
 

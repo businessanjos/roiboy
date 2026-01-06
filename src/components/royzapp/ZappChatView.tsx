@@ -54,6 +54,7 @@ interface ZappChatViewProps {
   spellingEnabled?: boolean;
   suggestionsEnabled?: boolean;
   autoLearningEnabled?: boolean;
+  onToggleSuggestions?: () => void;
   // Stats for empty state
   onlineAgents: number;
   totalQueueConversations: number;
@@ -149,6 +150,7 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
+  onToggleSuggestions,
 }: ZappChatViewProps) {
   // AI Message Assistant hook
   const {
@@ -263,6 +265,7 @@ export function ZappChatView({
         currentSpinPhase={currentSpinPhase}
         spellingEnabled={spellingEnabled}
         suggestionsEnabled={suggestionsEnabled}
+        onToggleSuggestions={onToggleSuggestions}
       />
 
       {/* Message input */}

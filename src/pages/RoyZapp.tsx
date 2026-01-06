@@ -2427,6 +2427,11 @@ export default function RoyZapp() {
           spellingEnabled={spellingEnabled}
           suggestionsEnabled={suggestionsEnabled}
           autoLearningEnabled={autoLearningEnabled}
+          onToggleSuggestions={() => {
+            const newValue = !suggestionsEnabled;
+            setSuggestionsEnabled(newValue);
+            localStorage.setItem("zapp_suggestions_enabled", String(newValue));
+          }}
           onlineAgents={onlineAgents}
           totalQueueConversations={totalQueueConversations}
           activeConversations={activeConversations}
