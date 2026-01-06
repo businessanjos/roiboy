@@ -38,14 +38,17 @@ import { ZappDepartmentList } from "./ZappDepartmentList";
 import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappPlaybookList } from "./ZappPlaybookList";
 import { ZappMarketingList } from "./ZappMarketingList";
+import { ZappCRMPanel } from "./ZappCRMPanel";
+import { ZappOperationPanel } from "./ZappOperationPanel";
+import { ZappFinancePanel } from "./ZappFinancePanel";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
 import { ZappAIAgentItem, type AIAgent } from "./ZappAIAgentItem";
 
 interface ZappConversationPanelProps {
   currentUser: { name: string; avatar_url: string | null } | null;
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing") => void;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector") => void;
   inboxTab: "mine" | "queue";
   setInboxTab: (tab: "mine" | "queue") => void;
   searchQuery: string;
@@ -592,6 +595,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         setFilterGroups={setFilterGroups}
         onlineAgents={onlineAgents}
         totalQueueConversations={totalQueueConversations}
+        sectorId={sectorId}
       />
 
       {/* Conversation list */}
@@ -705,8 +709,17 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "playbook" && (
           <ZappPlaybookList sectorId={sectorId} />
         )}
-{activeView === "marketing" && (
-                  <ZappMarketingList sectorId={sectorId} />
+        {activeView === "marketing" && (
+          <ZappMarketingList sectorId={sectorId || undefined} />
+        )}
+        {activeView === "sector" && sectorId === "vendas" && (
+          <ZappCRMPanel />
+        )}
+        {activeView === "sector" && sectorId === "operacoes" && (
+          <ZappOperationPanel sectorId={sectorId} />
+        )}
+        {activeView === "sector" && sectorId === "financeiro" && (
+          <ZappFinancePanel sectorId={sectorId} />
         )}
       </ScrollArea>
     </div>

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { MessageSquare, Users, Building2, Tags, Users2, Settings, BookOpen, Megaphone } from "lucide-react";
+import { MessageSquare, Users, Building2, Tags, Users2, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,12 +10,13 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ZappSidebarNavProps {
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing") => void;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector") => void;
   filterGroups: boolean;
   setFilterGroups: (groups: boolean) => void;
   onlineAgents: number;
   totalQueueConversations: number;
+  sectorId?: string | null;
 }
 
 export const ZappSidebarNav = memo(function ZappSidebarNav({
@@ -25,7 +26,30 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   setFilterGroups,
   onlineAgents,
   totalQueueConversations,
+  sectorId,
 }: ZappSidebarNavProps) {
+  // Determine sector-specific icon and label
+  const getSectorIcon = () => {
+    switch (sectorId) {
+      case "vendas": return Briefcase;
+      case "operacoes": return CheckSquare;
+      case "financeiro": return DollarSign;
+      default: return Briefcase;
+    }
+  };
+  
+  const getSectorLabel = () => {
+    switch (sectorId) {
+      case "vendas": return "CRM";
+      case "operacoes": return "Operação";
+      case "financeiro": return "Financeiro";
+      default: return "Setor";
+    }
+  };
+  
+  const SectorIcon = getSectorIcon();
+  const showSectorButton = sectorId && ["vendas", "operacoes", "financeiro"].includes(sectorId);
+  
   return (
     <div className="flex items-center gap-1 px-3 py-2 bg-zapp-bg border-b border-zapp-border">
       <Tooltip>
@@ -128,8 +152,28 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
             <Megaphone className="h-5 w-5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Marketing</TooltipContent>
+        <TooltipContent side="bottom">Eventos</TooltipContent>
       </Tooltip>
+
+      {/* Sector-specific button (CRM, Operação, Financeiro) */}
+      {showSectorButton && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-full h-10 w-10",
+                activeView === "sector" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
+              )}
+              onClick={() => setActiveView("sector")}
+            >
+              <SectorIcon className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{getSectorLabel()}</TooltipContent>
+        </Tooltip>
+      )}
 
       <Tooltip>
         <TooltipTrigger asChild>

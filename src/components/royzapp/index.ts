@@ -21,3 +21,6 @@ export * from "./ZappCallButton";
 export * from "./ZappCallDialog";
 export * from "./ZappCallHistory";
 export * from "./ZappAIAssistBar";
+export * from "./ZappCRMPanel";
+export * from "./ZappOperationPanel";
+export * from "./ZappFinancePanel";
