@@ -1033,10 +1033,10 @@ export default function RoyZapp() {
     setMessages(prev => [...prev, optimisticMessage]);
     
     try {
-      // Upload file to Supabase storage
+      // Upload file to public bucket (UAZAPI needs to access the URL)
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentUser!.account_id}/${Date.now()}.${fileExt}`;
-      const bucket = mediaType === "image" ? "avatars" : "client-followups";
+      const bucket = "zapp-media";
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
@@ -1278,9 +1278,9 @@ export default function RoyZapp() {
     setMessages(prev => [...prev, optimisticMessage]);
     
     try {
-      // Upload audio to Supabase storage
+      // Upload audio to public bucket (UAZAPI needs to access the URL)
       const fileName = `${currentUser!.account_id}/audio_${Date.now()}.webm`;
-      const bucket = "client-followups";
+      const bucket = "zapp-media";
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
