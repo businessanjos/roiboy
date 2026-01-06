@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getEventTypeConfig } from "@/config/eventTypes";
 
 interface MarketingEvent {
   id: string;
@@ -194,10 +195,20 @@ export function ZappMarketingList() {
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium text-sm text-zapp-text truncate">
                           {event.title}
                         </span>
+                        <Badge 
+                          className="text-[10px] px-1.5 py-0"
+                          style={{ 
+                            backgroundColor: `${getEventTypeConfig(event.event_type).defaultColor}20`,
+                            color: getEventTypeConfig(event.event_type).defaultColor,
+                            borderColor: getEventTypeConfig(event.event_type).defaultColor
+                          }}
+                        >
+                          {getEventTypeConfig(event.event_type).label}
+                        </Badge>
                         {getEventStatusBadge(event)}
                       </div>
                       
