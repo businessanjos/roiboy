@@ -25,6 +25,7 @@ interface Task {
   status: string;
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
+  due_time: string | null;
   completed_at: string | null;
   custom_status_id: string | null;
   assigned_to: string | null;
@@ -99,6 +100,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         status,
         priority,
         due_date,
+        due_time,
         completed_at,
         custom_status_id,
         assigned_to,

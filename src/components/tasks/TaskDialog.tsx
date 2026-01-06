@@ -54,6 +54,7 @@ interface Task {
   status: "pending" | "in_progress" | "done" | "overdue" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
+  due_time: string | null;
   client_id: string | null;
   deal_id?: string | null;
   lead_id?: string | null;
@@ -145,25 +146,13 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     initializedForTaskRef.current = currentTaskKey;
     
     if (task) {
-      // Extract time from due_date if it exists and has time component
-      let dueDate = "";
-      let dueTime = "";
-      if (task.due_date) {
-        const dateObj = new Date(task.due_date);
-        dueDate = task.due_date.split("T")[0];
-        const hours = dateObj.getUTCHours().toString().padStart(2, "0");
-        const minutes = dateObj.getUTCMinutes().toString().padStart(2, "0");
-        if (hours !== "00" || minutes !== "00") {
-          dueTime = `${hours}:${minutes}`;
-        }
-      }
       setFormData({
         title: task.title,
         description: task.description || "",
         custom_status_id: task.custom_status_id || "",
         priority: task.priority,
-        due_date: dueDate,
-        due_time: dueTime,
+        due_date: task.due_date || "",
+        due_time: task.due_time ? task.due_time.slice(0, 5) : "",
         client_id: task.client_id || "",
         deal_id: task.deal_id || "",
         lead_id: task.lead_id || "",
@@ -244,15 +233,9 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       const selectedStatus = customStatuses.find(s => s.id === formData.custom_status_id);
       const isCompleted = selectedStatus?.is_completed_status || false;
 
-      // Combine date and time
-      let dueDateTime: string | null = null;
-      if (formData.due_date) {
-        if (formData.due_time) {
-          dueDateTime = `${formData.due_date}T${formData.due_time}:00`;
-        } else {
-          dueDateTime = formData.due_date;
-        }
-      }
+      // Save date and time separately
+      const dueDate = formData.due_date || null;
+      const dueTime = formData.due_time || null;
 
       if (task) {
         const updateData = {
@@ -260,7 +243,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           description: formData.description.trim() || null,
           custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
-          due_date: dueDateTime,
+          due_date: dueDate,
+          due_time: dueTime,
           client_id: formData.client_id || null,
           deal_id: formData.deal_id || null,
           lead_id: formData.lead_id || null,
@@ -292,7 +276,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           description: formData.description.trim() || null,
           custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
-          due_date: dueDateTime,
+          due_date: dueDate,
+          due_time: dueTime,
           client_id: formData.client_id || null,
           deal_id: formData.deal_id || null,
           lead_id: formData.lead_id || null,
