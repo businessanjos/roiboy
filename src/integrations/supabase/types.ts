@@ -7784,6 +7784,67 @@ export type Database = {
           },
         ]
       }
+      zapp_client_suggestions: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          id: string
+          match_details: Json | null
+          match_score: number | null
+          match_type: string
+          status: string | null
+          suggested_client_id: string
+          updated_at: string | null
+          zapp_conversation_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          id?: string
+          match_details?: Json | null
+          match_score?: number | null
+          match_type: string
+          status?: string | null
+          suggested_client_id: string
+          updated_at?: string | null
+          zapp_conversation_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          id?: string
+          match_details?: Json | null
+          match_score?: number | null
+          match_type?: string
+          status?: string | null
+          suggested_client_id?: string
+          updated_at?: string | null
+          zapp_conversation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_client_suggestions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_client_suggestions_suggested_client_id_fkey"
+            columns: ["suggested_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_client_suggestions_zapp_conversation_id_fkey"
+            columns: ["zapp_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_conversation_assignments: {
         Row: {
           account_id: string

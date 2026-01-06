@@ -30,6 +30,7 @@ import {
   ZappAddContactDialog,
   ZappNewConversationDialog,
   ZappCloseTicketDialog,
+  ZappLinkClientDialog,
 } from "@/components/royzapp/dialogs";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { SectorId, sectors } from "@/config/sectors";
@@ -274,6 +275,9 @@ export default function RoyZapp() {
   
   // Close ticket dialog state
   const [closeTicketDialogOpen, setCloseTicketDialogOpen] = useState(false);
+  
+  // Link client dialog state
+  const [linkClientDialogOpen, setLinkClientDialogOpen] = useState(false);
 
   // Fetch AI agents
   useEffect(() => {
@@ -2460,6 +2464,9 @@ export default function RoyZapp() {
           onOpenRoiDialog={() => setRoiDialogOpen(true)}
           onOpenRiskDialog={() => setRiskDialogOpen(true)}
           onOpenAddClient={openAddContactDialog}
+          onOpenLinkClient={() => setLinkClientDialogOpen(true)}
+          onClientLinked={() => fetchData()}
+          accountId={currentUser?.account_id}
           showLeadOption={hasVendasAccess}
           onMessageChange={setMessageInput}
           onSendMessage={sendMessage}
@@ -2705,6 +2712,22 @@ export default function RoyZapp() {
           onSuccess={() => {
             setCloseTicketDialogOpen(false);
             setSelectedConversation(null);
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Link Client Dialog */}
+      {selectedConversation && (
+        <ZappLinkClientDialog
+          open={linkClientDialogOpen}
+          onOpenChange={setLinkClientDialogOpen}
+          conversationId={selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id || ""}
+          conversationPhone={selectedConversation.zapp_conversation?.phone_e164 || ""}
+          contactName={selectedConversation.zapp_conversation?.contact_name || ""}
+          accountId={currentUser?.account_id || ""}
+          onLinked={() => {
+            setLinkClientDialogOpen(false);
             fetchData();
           }}
         />
