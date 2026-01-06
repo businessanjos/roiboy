@@ -26,10 +26,11 @@ interface ZappGroupMentionInputProps {
   onKeyDown?: (e: React.KeyboardEvent) => void;
   disabled?: boolean;
   groupJid: string | null;
+  sectorId?: string;
 }
 
 export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMentionInputProps>(
-  ({ value, onChange, onMentionInsert, placeholder, className, onKeyDown, disabled, groupJid }, ref) => {
+  ({ value, onChange, onMentionInsert, placeholder, className, onKeyDown, disabled, groupJid, sectorId }, ref) => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [participants, setParticipants] = useState<GroupParticipant[]>([]);
     const [filteredParticipants, setFilteredParticipants] = useState<GroupParticipant[]>([]);
@@ -54,10 +55,17 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
             body: { 
               action: "group_participants",
               group_id: groupJid,
+              sector_id: sectorId,
             },
           });
 
-          if (error) throw error;
+          // If there's an error (e.g., WhatsApp not connected), just set empty participants
+          if (error) {
+            console.warn("Could not fetch group participants:", error.message);
+            setParticipants([]);
+            setLoadingParticipants(false);
+            return;
+          }
 
           const rawParticipants = data?.data?.participants || data?.participants || [];
           

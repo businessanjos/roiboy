@@ -65,6 +65,7 @@ interface ZappChatViewProps {
   messageInputRef: RefObject<HTMLInputElement>;
   imageInputRef: RefObject<HTMLInputElement>;
   fileInputRef: RefObject<HTMLInputElement>;
+  sectorId?: string;
   // Stats for empty state
   onlineAgents: number;
   totalQueueConversations: number;
@@ -122,6 +123,7 @@ export function ZappChatView({
   messageInputRef,
   imageInputRef,
   fileInputRef,
+  sectorId,
   onlineAgents,
   totalQueueConversations,
   activeConversations,
@@ -234,6 +236,7 @@ export function ZappChatView({
         fileInputRef={fileInputRef}
         isGroup={contactInfo.isGroup}
         groupJid={selectedConversation?.zapp_conversation?.group_jid || null}
+        sectorId={sectorId}
         onMessageChange={onMessageChange}
         onSendMessage={onSendMessage}
         onKeyPress={onKeyPress}
