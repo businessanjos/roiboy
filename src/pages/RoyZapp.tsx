@@ -2262,20 +2262,12 @@ export default function RoyZapp() {
           soundEnabled={soundEnabled}
           importLimit={importLimit}
           importingConversations={importingConversations}
-          onSelectConversation={async (a) => {
+          onSelectConversation={(a) => {
             setSelectedAIAgent(null); // Clear AI agent when selecting regular conversation
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
               markAsRead(zappConvId);
-            }
-            // Auto-assign to current agent if conversation is unassigned (from queue)
-            if (a.agent_id === null && currentAgent?.id) {
-              try {
-                await assignToMe(a.id);
-              } catch (error) {
-                console.error("Error auto-assigning conversation:", error);
-              }
             }
           }}
           onOpenNewConversationDialog={openNewConversationDialog}
