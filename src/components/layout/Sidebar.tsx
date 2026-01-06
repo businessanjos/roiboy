@@ -340,8 +340,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {/* Plan Info - hide for super admins (unless impersonating) */}
       {showRegularUI && <SidebarPlanInfo collapsed={collapsed} />}
 
-      {/* ROY zAPP Quick Access - show for sectors: vendas, financeiro, marketing */}
-      {currentSector && ["vendas", "financeiro", "marketing"].includes(currentSector.id) && (
+      {/* ROY zAPP Quick Access - show for all sectors except royzapp itself */}
+      {currentSector && currentSector.id !== "royzapp" && (
         <div className="px-3 pb-2">
           <TooltipProvider>
             <Tooltip>
