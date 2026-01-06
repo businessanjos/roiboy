@@ -1809,22 +1809,20 @@ serve(async (req) => {
           console.log('WARNING: WebM format detected. WhatsApp may not accept this format. Converting may be required.');
         }
         
+        // According to UAZAPI docs: /send/media with type: "ptt" for voice messages
+        // Supported types: image, video, document, audio, myaudio, ptt, ptv, sticker
         const mediaEndpoints = isAudio ? [
-          // UAZAPI primary format - try with file field (like successful messages used)
-          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, file: media_url } },
-          // With audio field
-          { url: `/send/audio`, method: "POST", body: { number: cleanPhone, audio: media_url } },
-          // PTT format
-          { url: `/send/ptt`, method: "POST", body: { number: cleanPhone, audio: media_url } },
-          { url: `/sendPTT`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
-          // Chat endpoints
-          { url: `/chat/sendAudio`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
-          { url: `/chat/sendMedia`, method: "POST", body: { phone: cleanPhone, mediaUrl: media_url, type: "audio" } },
+          // PRIMARY: /send/media with type: ptt (voice message) - per UAZAPI v2 docs
+          { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "ptt", file: media_url } },
+          // Alternative: myaudio type
+          { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "myaudio", file: media_url } },
+          // Alternative: audio type (non-voice)
+          { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "audio", file: media_url } },
         ] : [
-          // Image/document endpoints
-          { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, file: media_url, caption: caption || "" } },
-          { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, url: media_url, caption: caption || "" } },
-          { url: `/send/media`, method: "POST", body: { number: cleanPhone, file: media_url, type: media_type, caption: caption || "" } },
+          // For images/videos/documents: /send/media with appropriate type
+          { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: media_type, file: media_url, text: caption || "" } },
+          // Fallback: direct endpoint
+          { url: `/send/${media_type}`, method: "POST", body: { number: cleanPhone, file: media_url, text: caption || "" } },
         ];
 
         for (const endpoint of mediaEndpoints) {
