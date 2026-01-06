@@ -70,6 +70,9 @@ interface ZappChatViewProps {
   onOpenRiskDialog: () => void;
   onOpenAddClient: () => void;
   onOpenCloseTicket?: () => void;
+  onOpenLinkClient?: () => void;
+  onClientLinked?: () => void;
+  accountId?: string;
   showLeadOption?: boolean;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
@@ -130,6 +133,9 @@ export function ZappChatView({
   onOpenRiskDialog,
   onOpenAddClient,
   onOpenCloseTicket,
+  onOpenLinkClient,
+  onClientLinked,
+  accountId,
   showLeadOption = false,
   onMessageChange,
   onSendMessage,

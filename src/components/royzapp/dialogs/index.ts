@@ -11,3 +11,4 @@ export * from "./ZappAddClientDialog";
 export * from "./ZappAddContactDialog";
 export * from "./ZappNewConversationDialog";
 export * from "./ZappCloseTicketDialog";
+export * from "./ZappLinkClientDialog";
