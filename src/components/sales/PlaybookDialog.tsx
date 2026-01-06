@@ -549,7 +549,7 @@ export function PlaybookDialog({
           </div>
 
           {/* Content */}
-          <ScrollArea className="h-[400px] -mx-6 px-6">
+          <ScrollArea className="h-[500px] -mx-6 px-6">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
