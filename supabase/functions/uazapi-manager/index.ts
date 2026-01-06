@@ -1803,14 +1803,15 @@ serve(async (req) => {
         console.log(`send_media: isAudio=${isAudio}, media_url=${media_url}, hasToken=${!!savedInstanceToken}`);
         
         const mediaEndpoints = isAudio ? [
-          // UAZAPI PTT endpoint (voice messages) - this is the correct one!
+          // UAZAPI GO v2 documented format - /chat/sendAudio
+          { url: `/chat/sendAudio`, method: "POST", body: { phone: cleanPhone, audio: media_url, ptt: true } },
+          { url: `/chat/sendAudio`, method: "POST", body: { number: cleanPhone, audio: media_url, ptt: true } },
+          // Alternative: /chat/sendMedia with type=audio
+          { url: `/chat/sendMedia`, method: "POST", body: { phone: cleanPhone, mediaUrl: media_url, type: "audio", ptt: true } },
+          // UAZAPI PTT endpoint
           { url: `/sendPTT`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
-          // Alternative formats
-          { url: `/sendPTT`, method: "POST", body: { number: cleanPhone, audio: media_url } },
-          { url: `/send/ptt`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
-          { url: `/message/audio`, method: "POST", body: { number: cleanPhone, source: media_url, asVoiceNote: true } },
-          // Also try /send/audio with different body formats
-          { url: `/send/audio`, method: "POST", body: { phone: cleanPhone, audio: media_url } },
+          // /send/audio variants
+          { url: `/send/audio`, method: "POST", body: { phone: cleanPhone, audio: media_url, ptt: true } },
           { url: `/send/audio`, method: "POST", body: { number: cleanPhone, audio: media_url, ptt: true } },
         ] : [
           // Image/document endpoints
