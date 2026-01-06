@@ -492,14 +492,23 @@ export function useZappData(options: UseZappDataOptions = {}) {
         }, HEARTBEAT_INTERVAL_MS);
       }
       
-      setAgents(finalAgents);
+      // Filter agents by current sector's department
+      let filteredAgents = finalAgents;
+      if (sectorId && targetDepartmentId) {
+        filteredAgents = finalAgents.filter((a: Agent) => 
+          a.department_id === targetDepartmentId || a.department_id === null
+        );
+        console.log(`[ZappData] Filtered agents for sector ${sectorId}: ${filteredAgents.length} of ${finalAgents.length}`);
+      }
+      
+      setAgents(filteredAgents);
     } catch (error: any) {
       console.error("Error fetching zapp data:", error);
       toast.error("Erro ao carregar dados");
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.account_id, currentUser?.id, updateAgentHeartbeat]);
+  }, [currentUser?.account_id, currentUser?.id, updateAgentHeartbeat, sectorId]);
 
   // Fetch messages - using ref to avoid stale closure issues
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
