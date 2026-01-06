@@ -37,7 +37,10 @@ export default function Sectors() {
     navigate(defaultRoute);
   };
 
-  const mainSectors = sectors.filter(s => s.id !== "royzapp" && s.id !== "roychat");
+  // Core 4 areas (Marketing, Vendas, Operações, Finanças)
+  const coreAreas: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
+  const coreSectors = sectors.filter(s => coreAreas.includes(s.id));
+  const otherSectors = sectors.filter(s => !coreAreas.includes(s.id) && s.id !== "royzapp" && s.id !== "roychat");
   const toolSectors = sectors.filter(s => s.id === "royzapp" || s.id === "roychat");
 
   return (
@@ -56,32 +59,37 @@ export default function Sectors() {
           </p>
         </div>
 
-        {/* Main Sectors Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {mainSectors.map((sector) => (
+        {/* Core 4 Areas - Larger Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+          {coreSectors.map((sector) => (
             <div
               key={sector.id}
               onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
               className={cn(
-                "group relative p-6 rounded-lg border bg-card transition-all duration-200",
+                "group relative p-6 rounded-xl border-2 bg-card transition-all duration-200",
                 sector.comingSoon
                   ? "cursor-not-allowed opacity-50"
-                  : "cursor-pointer hover:border-primary/40 hover:shadow-sm"
+                  : "cursor-pointer hover:shadow-lg hover:scale-[1.02]",
+                // Dynamic border color based on sector
+                sector.id === "operacoes" && "border-amber-500/30 hover:border-amber-500/60",
+                sector.id === "financeiro" && "border-emerald-500/30 hover:border-emerald-500/60",
+                sector.id === "vendas" && "border-blue-500/30 hover:border-blue-500/60",
+                sector.id === "marketing" && "border-purple-500/30 hover:border-purple-500/60"
               )}
             >
               <div className="flex items-start gap-4">
-                {/* Icon */}
+                {/* Icon - Larger for core areas */}
                 <div className={cn(
-                  "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0",
+                  "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0",
                   sector.bgColor
                 )}>
-                  <sector.icon className={cn("h-6 w-6", sector.color)} />
+                  <sector.icon className={cn("h-7 w-7", sector.color)} />
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-medium text-foreground">
+                    <h3 className="text-xl font-semibold text-foreground">
                       {sector.name}
                     </h3>
                     {sector.comingSoon && (
@@ -98,6 +106,51 @@ export default function Sectors() {
             </div>
           ))}
         </div>
+
+        {/* Other Sectors - Smaller Cards */}
+        {otherSectors.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {otherSectors.map((sector) => (
+              <div
+                key={sector.id}
+                onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
+                className={cn(
+                  "group relative p-5 rounded-lg border bg-card/50 transition-all duration-200",
+                  sector.comingSoon
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer hover:border-muted-foreground/30 hover:bg-card"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Icon */}
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                    sector.bgColor
+                  )}>
+                    <sector.icon className={cn("h-5 w-5", sector.color)} />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-base font-medium text-foreground">
+                        {sector.name}
+                      </h3>
+                      {sector.comingSoon && (
+                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                          Em breve
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {sector.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Tools - ROY zAPP & ROY Chat */}
         {toolSectors.length > 0 && (
