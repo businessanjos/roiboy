@@ -21,6 +21,7 @@ import {
   MessageCircle,
   Crown,
   UserCheck,
+  Instagram,
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
@@ -139,6 +140,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/marketing",
     navItems: [
       { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
+      { to: "/social-media", icon: Instagram, label: "Social Media" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
