@@ -36,6 +36,22 @@ export function useSubscriptionStatus(): SubscriptionStatus {
 
     async function checkSubscription() {
       try {
+        // Check if user is super admin first
+        const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", { _user_id: user!.id });
+        
+        if (isSuperAdmin === true) {
+          setStatus({
+            isLoading: false,
+            hasAccess: true,
+            isTrialExpired: false,
+            trialEndsAt: null,
+            subscriptionStatus: "active",
+            daysRemaining: null,
+            paymentMethodConfigured: true,
+          });
+          return;
+        }
+
         const { data: userData } = await supabase
           .from("users")
           .select("account_id")
