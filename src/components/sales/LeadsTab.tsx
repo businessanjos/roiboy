@@ -994,9 +994,9 @@ export default function LeadsTab() {
                     className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => setDetailLead(lead)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Avatar className="h-10 w-10 flex-shrink-0">
                           <AvatarFallback>
                             {lead.full_name
                               .split(" ")
@@ -1006,11 +1006,11 @@ export default function LeadsTab() {
                               .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{lead.full_name}</p>
+                            <p className="font-medium truncate max-w-[180px]">{lead.full_name}</p>
                             {leadDeals.length > 0 && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs flex-shrink-0">
                                 <DollarSign className="h-3 w-3 mr-1" />
                                 {leadDeals.length}
                               </Badge>
@@ -1018,21 +1018,21 @@ export default function LeadsTab() {
                           </div>
                           <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             {lead.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {lead.phone}
+                              <span className="flex items-center gap-1 truncate">
+                                <Phone className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate max-w-[120px]">{lead.phone}</span>
                               </span>
                             )}
                             {lead.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {lead.email}
+                              <span className="flex items-center gap-1 truncate">
+                                <Mail className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate max-w-[150px]">{lead.email}</span>
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Owner badge */}
                         {lead.responsible_user && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
