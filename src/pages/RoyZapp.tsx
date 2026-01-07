@@ -118,6 +118,25 @@ export default function RoyZapp() {
   const [filterTagId, setFilterTagId] = useState<string>("all");
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
+  
+  // Sync selectedConversation when assignments are updated (e.g., after linking to a lead)
+  useEffect(() => {
+    if (selectedConversation && assignments.length > 0) {
+      const updatedAssignment = assignments.find(a => a.id === selectedConversation.id);
+      if (updatedAssignment) {
+        // Check if the linked client has changed (client_id or client data)
+        const currentClientId = selectedConversation.conversation?.client_id;
+        const updatedClientId = updatedAssignment.conversation?.client_id;
+        const currentClientName = selectedConversation.conversation?.client?.full_name;
+        const updatedClientName = updatedAssignment.conversation?.client?.full_name;
+        
+        if (currentClientId !== updatedClientId || currentClientName !== updatedClientName) {
+          setSelectedConversation(updatedAssignment);
+        }
+      }
+    }
+  }, [assignments]);
+  
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
