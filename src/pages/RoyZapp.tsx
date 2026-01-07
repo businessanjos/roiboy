@@ -192,20 +192,53 @@ export default function RoyZapp() {
     try {
       const idField = isLead ? "lead_id" : "client_id";
       
-      // Check if conversation already exists
-      const { data: existingConv } = await supabase
+      // Normalizar telefone para busca consistente
+      const normalizedPhone = contact.phone_e164.startsWith('+') 
+        ? contact.phone_e164 
+        : `+${contact.phone_e164}`;
+      
+      let zappConvId: string | null = null;
+      
+      // PRIORIZAR busca por telefone (constraint real é account_id + phone_e164)
+      const { data: convByPhone } = await supabase
         .from("zapp_conversations")
-        .select("id")
+        .select("id, lead_id, client_id")
         .eq("account_id", currentUser.account_id)
-        .eq(idField, contact.id)
+        .eq("phone_e164", normalizedPhone)
+        .eq("is_group", false)
         .maybeSingle();
       
-      let zappConvId: string;
-      
-      if (existingConv) {
-        zappConvId = existingConv.id;
+      if (convByPhone) {
+        zappConvId = convByPhone.id;
         
-        // Check if assignment exists for current agent
+        // Atualizar lead_id/client_id se não estiver vinculado
+        if (isLead && !convByPhone.lead_id && contact.id) {
+          await supabase
+            .from("zapp_conversations")
+            .update({ lead_id: contact.id, contact_name: contact.full_name })
+            .eq("id", convByPhone.id);
+        } else if (!isLead && !convByPhone.client_id && contact.id) {
+          await supabase
+            .from("zapp_conversations")
+            .update({ client_id: contact.id, contact_name: contact.full_name })
+            .eq("id", convByPhone.id);
+        }
+      } else {
+        // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)
+        const { data: convById } = await supabase
+          .from("zapp_conversations")
+          .select("id")
+          .eq("account_id", currentUser.account_id)
+          .eq(idField, contact.id)
+          .maybeSingle();
+        
+        if (convById) {
+          zappConvId = convById.id;
+        }
+      }
+      
+      if (zappConvId) {
+        // Conversa existe - verificar se tem assignment para o agente atual
         const { data: existingAssignment } = await supabase
           .from("zapp_conversation_assignments")
           .select("id")
@@ -229,17 +262,17 @@ export default function RoyZapp() {
           if (assignmentData) {
             setSelectedConversation(assignmentData);
           }
-          fetchData(); // Update list in background
+          fetchData();
           toast.info("Abrindo conversa existente");
           setCreatingConversation(false);
           return;
         }
-        // If no active assignment for this agent, continue to create one below
+        // Se não tem assignment ativo, continua para criar um abaixo
       } else {
-        // Create new zapp_conversation
+        // Criar nova zapp_conversation
         const baseData = {
           account_id: currentUser.account_id,
-          phone_e164: contact.phone_e164,
+          phone_e164: normalizedPhone,
           contact_name: contact.full_name,
           avatar_url: contact.avatar_url,
           sector_id: "vendas" as SectorId,
@@ -2130,20 +2163,53 @@ export default function RoyZapp() {
       const isLeadMode = selectedSectorId === "vendas";
       const idField = isLeadMode ? "lead_id" : "client_id";
       
-      // Check if conversation already exists for this contact
-      const { data: existingConv } = await supabase
+      // Normalizar telefone para busca consistente
+      const normalizedPhone = contact.phone_e164?.startsWith('+') 
+        ? contact.phone_e164 
+        : `+${contact.phone_e164}`;
+      
+      let zappConvId: string | null = null;
+      
+      // PRIORIZAR busca por telefone (constraint real é account_id + phone_e164)
+      const { data: convByPhone } = await supabase
         .from("zapp_conversations")
-        .select("id")
+        .select("id, lead_id, client_id")
         .eq("account_id", currentUser.account_id)
-        .eq(idField, contact.id)
+        .eq("phone_e164", normalizedPhone)
+        .eq("is_group", false)
         .maybeSingle();
       
-      let zappConvId: string;
-      
-      if (existingConv) {
-        zappConvId = existingConv.id;
+      if (convByPhone) {
+        zappConvId = convByPhone.id;
         
-        // Check if assignment exists for current agent
+        // Atualizar lead_id/client_id se não estiver vinculado
+        if (isLeadMode && !convByPhone.lead_id && contact.id) {
+          await supabase
+            .from("zapp_conversations")
+            .update({ lead_id: contact.id, contact_name: contact.full_name })
+            .eq("id", convByPhone.id);
+        } else if (!isLeadMode && !convByPhone.client_id && contact.id) {
+          await supabase
+            .from("zapp_conversations")
+            .update({ client_id: contact.id, contact_name: contact.full_name })
+            .eq("id", convByPhone.id);
+        }
+      } else {
+        // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)
+        const { data: convById } = await supabase
+          .from("zapp_conversations")
+          .select("id")
+          .eq("account_id", currentUser.account_id)
+          .eq(idField, contact.id)
+          .maybeSingle();
+        
+        if (convById) {
+          zappConvId = convById.id;
+        }
+      }
+      
+      if (zappConvId) {
+        // Conversa existe - verificar se tem assignment para o agente atual
         const { data: existingAssignment } = await supabase
           .from("zapp_conversation_assignments")
           .select("id")
@@ -2167,24 +2233,23 @@ export default function RoyZapp() {
           if (assignmentData) {
             setSelectedConversation(assignmentData);
           }
-          fetchData(); // Update list in background
+          fetchData();
           toast.info("Abrindo conversa existente");
           setNewConversationDialogOpen(false);
           setCreatingConversation(false);
           return;
         }
-        // If no active assignment exists, continue to create one below
+        // Se não tem assignment ativo, continua para criar um abaixo
       } else {
-        // Create new zapp_conversation
+        // Criar nova zapp_conversation
         const baseData = {
           account_id: currentUser.account_id,
-          phone_e164: contact.phone_e164,
+          phone_e164: normalizedPhone,
           contact_name: contact.full_name,
           avatar_url: contact.avatar_url,
           sector_id: selectedSectorId,
         };
         
-        // Vincular a lead ou client conforme o setor
         const insertData = isLeadMode 
           ? { ...baseData, lead_id: contact.id }
           : { ...baseData, client_id: contact.id };
