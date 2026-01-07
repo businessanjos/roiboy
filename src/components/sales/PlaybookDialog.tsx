@@ -437,7 +437,7 @@ export function PlaybookDialog({
           </DialogHeader>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-2 pb-2 border-b">
+          <div className="flex flex-wrap gap-2 pb-2 border-b flex-none">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -481,7 +481,7 @@ export function PlaybookDialog({
 
           {/* New folder input */}
           {showNewFolderInput && (
-            <div className="flex gap-2 py-2">
+            <div className="flex gap-2 py-2 flex-none">
               <Input
                 placeholder={editingFolder ? 'Novo nome da pasta' : 'Nome da pasta'}
                 value={newFolderName}
@@ -538,7 +538,7 @@ export function PlaybookDialog({
           )}
 
           {/* Search */}
-          <div className="relative">
+          <div className="relative flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar no playbook..."
@@ -549,7 +549,7 @@ export function PlaybookDialog({
           </div>
 
           {/* Content */}
-          <ScrollArea className="h-[500px] -mx-6 px-6">
+          <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
