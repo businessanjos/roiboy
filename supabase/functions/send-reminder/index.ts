@@ -216,8 +216,11 @@ serve(async (req) => {
       }
     }
 
-    // UAZAPI config
-    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    // UAZAPI config - ensure HTTPS for security
+    const rawUazapiUrl = Deno.env.get("UAZAPI_URL") || "";
+    const UAZAPI_URL = rawUazapiUrl.startsWith('http://') 
+      ? rawUazapiUrl.replace('http://', 'https://') 
+      : rawUazapiUrl;
 
     // Get Resend API key
     const resendApiKey = Deno.env.get("RESEND_API_KEY");

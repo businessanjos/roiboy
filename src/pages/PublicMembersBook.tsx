@@ -561,7 +561,13 @@ function MemberCard({ member, settings, formatPhone, getInitials }: MemberCardPr
                 )}
                 {settings.show_instagram && member.instagram && (
                   <a 
-                    href={member.instagram.startsWith('http') ? member.instagram : `https://instagram.com/${member.instagram.replace('@', '')}`}
+                    href={
+                      member.instagram.startsWith('https://') 
+                        ? member.instagram 
+                        : member.instagram.startsWith('http://') 
+                          ? member.instagram.replace('http://', 'https://') 
+                          : `https://instagram.com/${member.instagram.replace('@', '')}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center h-9 w-9 rounded-full bg-pink-500/10 text-pink-600 hover:bg-pink-500/20 transition-colors"
