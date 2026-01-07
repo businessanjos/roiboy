@@ -1133,152 +1133,155 @@ export default function Leads() {
             ) : (
               <div className="space-y-2 pr-2">
                 {filteredLeads.map((lead) => (
-              <Card 
-                key={lead.id} 
-                className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => setDetailLead(lead)}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {getInitials(lead.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
+                  <Card 
+                    key={lead.id} 
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => setDetailLead(lead)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 w-full overflow-hidden">
+                        <Avatar className="h-9 w-9 flex-shrink-0">
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {getInitials(lead.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm truncate">{lead.full_name}</span>
-                        {getStatusBadge(lead.status)}
-                        {/* Custom field badges */}
-                        {customFields.slice(0, 2).map(field => {
-                          const value = fieldValues[lead.id]?.[field.id];
-                          if (value === undefined || value === null) return null;
-                          return (
-                            <div key={field.id} onClick={(e) => e.stopPropagation()}>
-                              <LeadFieldValueEditor
-                                field={field}
-                                leadId={lead.id}
-                                accountId={currentUser?.account_id || ""}
-                                currentValue={value}
-                                onValueChange={(fId, nv) => handleFieldValueChange(lead.id, fId, nv)}
-                              />
-                            </div>
-                          );
-                        })}
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <div className="flex items-center gap-1.5 overflow-hidden">
+                            <span className="font-medium text-sm truncate max-w-[150px]">{lead.full_name}</span>
+                            {getStatusBadge(lead.status)}
+                            {/* Custom field badges - limit to 1, hide on small screens */}
+                            {customFields.slice(0, 1).map(field => {
+                              const value = fieldValues[lead.id]?.[field.id];
+                              if (value === undefined || value === null) return null;
+                              return (
+                                <div key={field.id} onClick={(e) => e.stopPropagation()} className="hidden sm:block flex-shrink-0">
+                                  <LeadFieldValueEditor
+                                    field={field}
+                                    leadId={lead.id}
+                                    accountId={currentUser?.account_id || ""}
+                                    currentValue={value}
+                                    onValueChange={(fId, nv) => handleFieldValueChange(lead.id, fId, nv)}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 overflow-hidden">
+                            {lead.phone && (
+                              <span className="flex items-center gap-1 flex-shrink-0">
+                                <Phone className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate max-w-[90px]">{lead.phone}</span>
+                              </span>
+                            )}
+                            {lead.email && (
+                              <span className="hidden md:flex items-center gap-1 truncate max-w-[120px]">
+                                <Mail className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{lead.email}</span>
+                              </span>
+                            )}
+                            {lead.source && (
+                              <Badge variant="outline" className="text-[10px] flex-shrink-0 hidden sm:inline-flex">
+                                {LEAD_SOURCES.find((s) => s.value === lead.source)?.label || lead.source}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground text-right flex-shrink-0 whitespace-nowrap hidden sm:block">
+                          {format(new Date(lead.created_at), "dd/MM/yy", { locale: ptBR })}
+                        </div>
+
+                        {/* Action buttons container */}
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          {/* WhatsApp Button */}
+                          {lead.phone && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 hover:bg-emerald-500/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openZappConversation({
+                                  phone: lead.phone,
+                                  leadId: lead.id,
+                                  name: lead.full_name,
+                                });
+                              }}
+                              disabled={zappLoading}
+                              title="Abrir conversa no RoyZapp"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                            </Button>
+                          )}
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {lead.phone && (
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  openZappConversation({
+                                    phone: lead.phone,
+                                    leadId: lead.id,
+                                    name: lead.full_name,
+                                  });
+                                }}>
+                                  <MessageCircle className="h-4 w-4 mr-2" />
+                                  Conversar no RoyZapp
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(lead.id, "contacted");
+                              }}>
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Marcar Contatado
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(lead.id, "qualified");
+                              }}>
+                                <UserCheck className="h-4 w-4 mr-2" />
+                                Marcar Qualificado
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                openDealDialogForLead(lead);
+                              }}>
+                                <TrendingUp className="h-4 w-4 mr-2" />
+                                Criar Negócio
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(lead);
+                              }}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteLeadId(lead.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        {lead.phone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {lead.phone}
-                          </span>
-                        )}
-                        {lead.email && (
-                          <span className="flex items-center gap-1 truncate">
-                            <Mail className="h-3 w-3" />
-                            {lead.email}
-                          </span>
-                        )}
-                        {lead.source && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {LEAD_SOURCES.find((s) => s.value === lead.source)?.label || lead.source}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-xs text-muted-foreground text-right">
-                      {format(new Date(lead.created_at), "dd/MM/yy", { locale: ptBR })}
-                    </div>
-
-                    {/* WhatsApp Button */}
-                    {lead.phone && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-emerald-500/20"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openZappConversation({
-                            phone: lead.phone,
-                            leadId: lead.id,
-                            name: lead.full_name,
-                          });
-                        }}
-                        disabled={zappLoading}
-                        title="Abrir conversa no RoyZapp"
-                      >
-                        <MessageCircle className="h-4 w-4 text-emerald-600" />
-                      </Button>
-                    )}
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {lead.phone && (
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            openZappConversation({
-                              phone: lead.phone,
-                              leadId: lead.id,
-                              name: lead.full_name,
-                            });
-                          }}>
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            Conversar no RoyZapp
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatusChange(lead.id, "contacted");
-                        }}>
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Marcar Contatado
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatusChange(lead.id, "qualified");
-                        }}>
-                          <UserCheck className="h-4 w-4 mr-2" />
-                          Marcar Qualificado
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          openDealDialogForLead(lead);
-                        }}>
-                          <TrendingUp className="h-4 w-4 mr-2" />
-                          Criar Negócio
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(lead);
-                        }}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteLeadId(lead.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </ScrollArea>
