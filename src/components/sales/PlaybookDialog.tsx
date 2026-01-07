@@ -550,7 +550,7 @@ export function PlaybookDialog({
           </div>
 
           {/* ===== BODY (Scrollable) ===== */}
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea className="flex-1 min-h-0 playbook-scroll">
             <div className="p-6 pt-4 space-y-2">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
@@ -615,8 +615,8 @@ export function PlaybookDialog({
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="lg"
               >
-                <Send className="h-4 w-4 mr-2" />
-                Selecionar e Enviar
+              <Send className="h-4 w-4 mr-2" />
+                Enviar
               </Button>
             </div>
           )}

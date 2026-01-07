@@ -294,4 +294,26 @@
   .animate-confetti {
     animation: confetti 3s ease-out forwards;
   }
+
+  /* Custom scrollbar for playbook modal */
+  .playbook-scroll [data-radix-scroll-area-viewport] {
+    overflow-y: scroll !important;
+  }
+  
+  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 4px;
+  }
+  
+  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
 }
