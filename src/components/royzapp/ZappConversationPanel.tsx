@@ -712,7 +712,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "marketing" && (
           <ZappMarketingList sectorId={sectorId || undefined} />
         )}
-        {activeView === "sector" && (sectorId === "vendas" || currentUser?.role === "mentor") && (
+        {activeView === "sector" && (sectorId === "vendas" || sectorId === "diretoria" || currentUser?.role === "mentor") && (
           <ZappCRMPanel 
             conversationPhone={selectedConversation?.zapp_conversation?.phone_e164 || selectedConversation?.zapp_conversation?.group_jid}
             conversationClientId={selectedConversation?.zapp_conversation?.client_id}
