@@ -67,6 +67,84 @@ const COLOR_OPTIONS = [
   { value: "gray", label: "Cinza", class: "bg-gray-500" },
 ];
 
+// Sortable option item component for reordering options within a field
+function SortableOptionItem({
+  option,
+  index,
+  onUpdate,
+  onRemove,
+  canRemove,
+}: {
+  option: FieldOption;
+  index: number;
+  onUpdate: (index: number, updates: Partial<FieldOption>) => void;
+  onRemove: (index: number) => void;
+  canRemove: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: option.value });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="touch-none cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </button>
+      <Select
+        value={option.color}
+        onValueChange={(color) => onUpdate(index, { color })}
+      >
+        <SelectTrigger className="w-10 h-9 p-0 justify-center border-0 bg-transparent hover:bg-muted">
+          <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-gray-500"}`} />
+        </SelectTrigger>
+        <SelectContent>
+          {COLOR_OPTIONS.map((color) => (
+            <SelectItem key={color.value} value={color.value}>
+              <div className="flex items-center gap-2">
+                <div className={`w-4 h-4 rounded-full ${color.class}`} />
+                {color.label}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Input
+        placeholder="Digite o título da opção"
+        value={option.label}
+        onChange={(e) => onUpdate(index, { label: e.target.value })}
+        className="flex-1 border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
+      />
+      {canRemove && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          onClick={() => onRemove(index)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // Sortable field item component
 function SortableFieldItem({
   field,
@@ -262,6 +340,19 @@ export function LeadCustomFieldsManager({ onFieldsChange, open: externalOpen, on
     }
   };
 
+  const handleOptionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = options.findIndex((o) => o.value === active.id);
+      const newIndex = options.findIndex((o) => o.value === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setOptions(arrayMove(options, oldIndex, newIndex));
+      }
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -441,48 +532,31 @@ export function LeadCustomFieldsManager({ onFieldsChange, open: externalOpen, on
                 <div className="space-y-3">
                   <Label className="text-sm">
                     Opções <span className="text-destructive">*</span>
+                    <span className="text-muted-foreground font-normal ml-2">(arraste para reordenar)</span>
                   </Label>
-                  <div className="space-y-2">
-                    {options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Select
-                          value={option.color}
-                          onValueChange={(color) => updateOption(index, { color })}
-                        >
-                          <SelectTrigger className="w-10 h-9 p-0 justify-center border-0 bg-transparent hover:bg-muted">
-                            <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-gray-500"}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {COLOR_OPTIONS.map((color) => (
-                              <SelectItem key={color.value} value={color.value}>
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-4 h-4 rounded-full ${color.class}`} />
-                                  {color.label}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          placeholder="Digite o título da opção"
-                          value={option.label}
-                          onChange={(e) => updateOption(index, { label: e.target.value })}
-                          className="flex-1 border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
-                        />
-                        {options.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => removeOption(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleOptionDragEnd}
+                  >
+                    <SortableContext
+                      items={options.map(o => o.value)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2">
+                        {options.map((option, index) => (
+                          <SortableOptionItem
+                            key={option.value}
+                            option={option}
+                            index={index}
+                            onUpdate={updateOption}
+                            onRemove={removeOption}
+                            canRemove={options.length > 1}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                   <button
                     type="button"
                     onClick={addOption}
