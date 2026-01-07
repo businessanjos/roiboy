@@ -8374,6 +8374,7 @@ export type Database = {
           sender_name: string | null
           sender_phone: string | null
           sent_at: string
+          transcription: string | null
           zapp_conversation_id: string
         }
         Insert: {
@@ -8396,6 +8397,7 @@ export type Database = {
           sender_name?: string | null
           sender_phone?: string | null
           sent_at?: string
+          transcription?: string | null
           zapp_conversation_id: string
         }
         Update: {
@@ -8418,6 +8420,7 @@ export type Database = {
           sender_name?: string | null
           sender_phone?: string | null
           sent_at?: string
+          transcription?: string | null
           zapp_conversation_id?: string
         }
         Relationships: [

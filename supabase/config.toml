@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.analyze-conversation-patterns]
 verify_jwt = false
+
+[functions.transcribe-audio]
+verify_jwt = false
