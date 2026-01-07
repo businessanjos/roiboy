@@ -424,7 +424,7 @@ export function PlaybookDialog({
           {/* ===== HEADER (Fixed) ===== */}
           <div className="flex-none p-6 pb-4 space-y-4 border-b">
             <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
+              <DialogTitle className="flex items-center justify-between pr-10">
                 <span>Playbook</span>
                 <Button onClick={() => {
                   setEditingItem(null);
@@ -550,7 +550,7 @@ export function PlaybookDialog({
           </div>
 
           {/* ===== BODY (Scrollable) ===== */}
-          <ScrollArea className="flex-1 min-h-0 playbook-scroll">
+          <div className="flex-1 min-h-0 overflow-y-auto playbook-scroll-native">
             <div className="p-6 pt-4 space-y-2">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
@@ -604,7 +604,7 @@ export function PlaybookDialog({
                 </>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* ===== FOOTER (Fixed) ===== */}
           {onUseItem && (

@@ -295,25 +295,27 @@
     animation: confetti 3s ease-out forwards;
   }
 
-  /* Custom scrollbar for playbook modal */
-  .playbook-scroll [data-radix-scroll-area-viewport] {
-    overflow-y: scroll !important;
+  /* Native scrollbar for playbook modal - visible and styled */
+  .playbook-scroll-native {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--muted) / 0.3);
   }
-  
-  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar {
+
+  .playbook-scroll-native::-webkit-scrollbar {
     width: 8px;
   }
-  
-  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary) / 0.3);
+
+  .playbook-scroll-native::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.3);
     border-radius: 4px;
   }
-  
-  .playbook-scroll [data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.5);
+
+  .playbook-scroll-native::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.4);
+    border-radius: 4px;
+  }
+
+  .playbook-scroll-native::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.6);
   }
 }
