@@ -213,6 +213,7 @@ serve(async (req) => {
     let integration = null;
     
     // Method 1: Find by instance name if provided
+    // Using .limit(1) instead of .maybeSingle() to handle multiple integrations sharing same instance
     if (instanceName) {
       const possibleNames = [
         instanceName,
@@ -223,34 +224,37 @@ serve(async (req) => {
       ];
       
       for (const tryName of possibleNames) {
-        const { data: found } = await supabase
+        const { data: results } = await supabase
           .from("integrations")
           .select("account_id, config, sector_id")
           .eq("type", "whatsapp")
           .filter("config->>instance_name", "eq", tryName)
-          .maybeSingle();
+          .order("created_at", { ascending: true })
+          .limit(1);
         
-        if (found) {
-          integration = found;
-          console.log(`Found integration by instance_name: ${tryName}`);
+        if (results && results.length > 0) {
+          integration = results[0];
+          console.log(`Found integration by instance_name: ${tryName}, sector: ${integration.sector_id}`);
           break;
         }
       }
     }
     
     // Method 2: Find by instance_token from payload (more reliable)
+    // Using .limit(1) to handle multiple integrations sharing same token
     const payloadToken = (payload as Record<string, unknown>).token as string | undefined;
     if (!integration && payloadToken) {
-      const { data: found } = await supabase
+      const { data: results } = await supabase
         .from("integrations")
         .select("account_id, config, sector_id")
         .eq("type", "whatsapp")
         .filter("config->>instance_token", "eq", payloadToken)
-        .maybeSingle();
+        .order("created_at", { ascending: true })
+        .limit(1);
       
-      if (found) {
-        integration = found;
-        console.log(`Found integration by instance_token: ${payloadToken?.slice(0, 8)}...`);
+      if (results && results.length > 0) {
+        integration = results[0];
+        console.log(`Found integration by instance_token: ${payloadToken?.slice(0, 8)}..., sector: ${integration.sector_id}`);
       }
     }
     
@@ -258,16 +262,17 @@ serve(async (req) => {
     const instanceOwner = (payload as Record<string, unknown>).instanceOwner as string | undefined;
     if (!integration && instanceOwner) {
       const phoneClean = String(instanceOwner).replace(/\D/g, "");
-      const { data: found } = await supabase
+      const { data: results } = await supabase
         .from("integrations")
         .select("account_id, config, sector_id")
         .eq("type", "whatsapp")
         .filter("config->>phone_number", "eq", phoneClean)
-        .maybeSingle();
+        .order("created_at", { ascending: true })
+        .limit(1);
       
-      if (found) {
-        integration = found;
-        console.log(`Found integration by phone_number: ${phoneClean}`);
+      if (results && results.length > 0) {
+        integration = results[0];
+        console.log(`Found integration by phone_number: ${phoneClean}, sector: ${integration.sector_id}`);
       }
     }
     
