@@ -226,19 +226,24 @@ serve(async (req) => {
     const { action, phone, message, group_id, group_name, participants, groups, sector_id } = payload;
 
     // Build query for existing integration - use sector_id if provided
+    // CRITICAL: Always filter by sector_id for disambiguation
     let integrationQuery = supabase
       .from("integrations")
       .select("config, status, sector_id, id")
       .eq("account_id", accountId)
       .eq("type", "whatsapp");
     
+    // CRITICAL: sector_id can be null for default sector
     if (sector_id) {
       integrationQuery = integrationQuery.eq("sector_id", sector_id);
+    } else {
+      // For default sector, explicitly match null sector_id
+      integrationQuery = integrationQuery.is("sector_id", null);
     }
     
     const { data: existingWhatsapp, error: existingError } = await integrationQuery.maybeSingle();
 
-    console.log(`Existing WhatsApp integration:`, existingWhatsapp ? JSON.stringify(existingWhatsapp) : 'none', existingError?.message || '');
+    console.log(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'}, Integration found:`, existingWhatsapp ? `ID=${existingWhatsapp.id}` : 'none', existingError?.message || '');
 
     // For "create" action, ALWAYS generate a unique instance name if:
     // 1. No existing integration exists, OR
@@ -299,11 +304,14 @@ serve(async (req) => {
     }
     
     // Usar o nome real da instância (pode ter sido atualizado)
-    const instanceName = shouldReuseInstance 
-      ? (actualInstanceName || savedInstanceName)
-      : `roy-${accountId.slice(0, 8)}${uniqueSuffix}`;
+    // CRITICAL: For status/disconnect actions, ALWAYS use saved instance name - never generate new
+    // Only generate new instance name for "create" action when no existing instance
+    const shouldGenerateNewName = action === "create" && !shouldReuseInstance;
+    const instanceName = shouldGenerateNewName
+      ? `roy-${accountId.slice(0, 8)}${uniqueSuffix}`
+      : (actualInstanceName || savedInstanceName || `roy-${accountId.slice(0, 8)}${uniqueSuffix}`);
 
-    console.log(`UAZAPI action: ${action} for account ${accountId}, instance: ${instanceName}, reuse: ${shouldReuseInstance}, hasToken: ${!!savedInstanceToken}`);
+    console.log(`UAZAPI action: ${action} for account ${accountId}, sector: ${sector_id || 'default'}, instance: ${instanceName}, integrationId: ${existingWhatsapp?.id || 'none'}, reuse: ${shouldReuseInstance}, hasToken: ${!!savedInstanceToken}`);
 
     let result: unknown;
 
