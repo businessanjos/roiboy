@@ -590,17 +590,45 @@ export default function Leads() {
       return;
     }
     
-    // Fetch existing leads
-    const { data: existingLeads, error: fetchError } = await supabase
-      .from("leads")
-      .select("id, phone, email, cpf, full_name, external_id, external_source")
-      .eq("account_id", currentUser.account_id);
+    // Fetch ALL existing leads with pagination to avoid 1000 row limit
+    type ExistingLead = { id: string; phone: string | null; email: string | null; cpf: string | null; full_name: string; external_id: string | null; external_source: string | null };
+    const allExistingLeads: ExistingLead[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
     
-    if (fetchError) {
-      console.error("Error fetching existing leads:", fetchError);
-      toast.error("Erro ao verificar leads existentes");
-      return;
+    while (hasMore) {
+      const { data: pageData, error: fetchError } = await supabase
+        .from("leads")
+        .select("id, phone, email, cpf, full_name, external_id, external_source")
+        .eq("account_id", currentUser.account_id)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      
+      if (fetchError) {
+        console.error("Error fetching existing leads:", fetchError);
+        toast.error("Erro ao verificar leads existentes");
+        return;
+      }
+      
+      if (pageData && pageData.length > 0) {
+        allExistingLeads.push(...pageData);
+        hasMore = pageData.length === pageSize;
+        page++;
+      } else {
+        hasMore = false;
+      }
     }
+
+    const existingPhones = new Set(allExistingLeads.map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
+    const existingEmails = new Set(allExistingLeads.map(l => l.email?.toLowerCase()).filter(Boolean));
+    const existingCpfs = new Set(allExistingLeads.map(l => l.cpf?.replace(/\D/g, "")).filter(Boolean));
+    const existingExternalIds = new Set(allExistingLeads.map(l => l.external_id).filter(Boolean));
+    const existingLeadsByExternalId = new Map(allExistingLeads.filter(l => l.external_id).map(l => [l.external_id!, l]));
+    
+    // Track duplicates within the CSV file itself
+    const csvExternalIds = new Set<string>();
+    const csvPhones = new Set<string>();
+    const csvEmails = new Set<string>();
 
     // Fetch existing active clients
     const { data: existingClients, error: clientFetchError } = await supabase
@@ -613,11 +641,6 @@ export default function Leads() {
       console.error("Error fetching existing clients:", clientFetchError);
       // Continue without client check
     }
-
-    const existingPhones = new Set((existingLeads || []).map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
-    const existingEmails = new Set((existingLeads || []).map(l => l.email?.toLowerCase()).filter(Boolean));
-    const existingCpfs = new Set((existingLeads || []).map(l => l.cpf?.replace(/\D/g, "")).filter(Boolean));
-
     // Build client lookup maps
     type ClientInfo = { id: string; full_name: string; phone?: string; email?: string; status?: string };
     const clientByPhone = new Map<string, ClientInfo>();
@@ -756,7 +779,38 @@ export default function Leads() {
         row.clientInfo = matchedClient;
       } else {
         // Check lead duplicates only if not a client
-        if (normalizedPhone && existingPhones.has(normalizedPhone)) {
+        // Check external_id first (for update detection against DB)
+        if (row.external_id && existingExternalIds.has(row.external_id)) {
+          const existingLead = existingLeadsByExternalId.get(row.external_id);
+          row.isDuplicate = true;
+          row.duplicateInfo = { 
+            type: "external_id", 
+            matchValue: row.external_id,
+            existingLead: existingLead ? {
+              id: existingLead.id,
+              full_name: existingLead.full_name,
+              phone: existingLead.phone || undefined,
+              email: existingLead.email || undefined,
+              external_id: existingLead.external_id || undefined,
+            } : undefined
+          };
+        }
+        // Check for duplicates within the CSV file itself
+        else if (row.external_id && csvExternalIds.has(row.external_id)) {
+          row.isDuplicate = true;
+          row.duplicateInfo = { type: "external_id", matchValue: row.external_id };
+          row.errorMessage = "ID duplicado no arquivo";
+        } else if (normalizedPhone && csvPhones.has(normalizedPhone)) {
+          row.isDuplicate = true;
+          row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
+          row.errorMessage = "Telefone duplicado no arquivo";
+        } else if (normalizedEmail && csvEmails.has(normalizedEmail)) {
+          row.isDuplicate = true;
+          row.duplicateInfo = { type: "email", matchValue: normalizedEmail };
+          row.errorMessage = "Email duplicado no arquivo";
+        }
+        // Check against existing database records
+        else if (normalizedPhone && existingPhones.has(normalizedPhone)) {
           row.isDuplicate = true;
           row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
         } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
@@ -766,6 +820,11 @@ export default function Leads() {
           row.isDuplicate = true;
           row.duplicateInfo = { type: "cpf", matchValue: normalizedCpf };
         }
+        
+        // Track for CSV internal duplicate detection
+        if (row.external_id) csvExternalIds.add(row.external_id);
+        if (normalizedPhone) csvPhones.add(normalizedPhone);
+        if (normalizedEmail) csvEmails.add(normalizedEmail);
       }
 
       rows.push(row);
@@ -791,8 +850,18 @@ export default function Leads() {
 
       let successCount = 0;
       let updateCount = 0;
+      let skippedDuplicates = 0;
+      
+      // Track external_ids already imported in this session to avoid duplicates
+      const importedExternalIds = new Set<string>();
       
       for (const row of rowsToImport) {
+        // Skip if this external_id was already imported in this session
+        if (row.external_id && importedExternalIds.has(row.external_id)) {
+          skippedDuplicates++;
+          continue;
+        }
+        
         try {
           // Build the lead data object with all fields
           const leadData = {
@@ -849,18 +918,32 @@ export default function Leads() {
           } else {
             // Create new lead with all fields
             await createLead(leadData);
+            // Track imported external_id
+            if (row.external_id) importedExternalIds.add(row.external_id);
             successCount++;
           }
-        } catch (err) {
-          console.error("Error importing lead:", err);
+        } catch (err: any) {
+          // Check if it's a duplicate key error and skip silently
+          if (err?.message?.includes('duplicate key') || err?.code === '23505') {
+            skippedDuplicates++;
+            if (row.external_id) importedExternalIds.add(row.external_id);
+            console.log("Skipped duplicate:", row.external_id || row.full_name);
+          } else {
+            console.error("Error importing lead:", err);
+          }
         }
       }
 
       const messages = [];
       if (successCount > 0) messages.push(`${successCount} criados`);
       if (updateCount > 0) messages.push(`${updateCount} atualizados`);
+      if (skippedDuplicates > 0) messages.push(`${skippedDuplicates} pulados (duplicatas)`);
       
-      toast.success(`Leads importados: ${messages.join(", ")}!`);
+      if (messages.length > 0) {
+        toast.success(`Leads importados: ${messages.join(", ")}!`);
+      } else {
+        toast.info("Nenhum lead novo para importar");
+      }
       setImportPreviewOpen(false);
       setImportRows([]);
     } catch (error) {
