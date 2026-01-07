@@ -57,41 +57,67 @@ export function DealTransferDialog({
   const [transferReason, setTransferReason] = useState("");
   const [transferring, setTransferring] = useState(false);
 
-  // Fetch team members with access to vendas sector
+  // Fetch team members with access to vendas sector + admins
   useEffect(() => {
     const fetchTeamMembers = async () => {
       if (!open || !accountId) return;
       
       setLoading(true);
       try {
-        // Get users with access to vendas sector
-        const { data: accessData, error: accessError } = await supabase
-          .from("user_sector_access")
-          .select(`
-            user_id,
-            is_active,
-            user:users!user_sector_access_user_id_fkey(
-              id, name, email, avatar_url, role
-            )
-          `)
-          .eq("account_id", accountId)
-          .eq("sector_id", sectorId || "vendas")
-          .eq("is_active", true);
+        // Get users with access to vendas sector AND admins
+        const [accessRes, adminsRes] = await Promise.all([
+          supabase
+            .from("user_sector_access")
+            .select(`
+              user_id,
+              is_active,
+              user:users!user_sector_access_user_id_fkey(
+                id, name, email, avatar_url, role
+              )
+            `)
+            .eq("account_id", accountId)
+            .eq("sector_id", sectorId || "vendas")
+            .eq("is_active", true),
+          supabase
+            .from("users")
+            .select("id, name, email, avatar_url, role")
+            .eq("account_id", accountId)
+            .eq("role", "admin")
+        ]);
 
-        if (accessError) throw accessError;
+        if (accessRes.error) throw accessRes.error;
 
-        const members: TeamMember[] = (accessData || [])
-          .filter((a: any) => a.user && a.user.id !== currentOwnerId)
-          .map((a: any) => ({
-            id: a.user.id,
-            name: a.user.name,
-            email: a.user.email,
-            avatar_url: a.user.avatar_url,
-            role: a.user.role,
-          }));
+        // Use a Map to dedupe users
+        const membersMap = new Map<string, TeamMember>();
+        
+        // Add admins first (excluding current owner)
+        (adminsRes.data || []).forEach((user: any) => {
+          if (user.id !== currentOwnerId) {
+            membersMap.set(user.id, {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              avatar_url: user.avatar_url,
+              role: user.role,
+            });
+          }
+        });
+
+        // Add sector users
+        (accessRes.data || []).forEach((a: any) => {
+          if (a.user && a.user.id !== currentOwnerId && !membersMap.has(a.user.id)) {
+            membersMap.set(a.user.id, {
+              id: a.user.id,
+              name: a.user.name,
+              email: a.user.email,
+              avatar_url: a.user.avatar_url,
+              role: a.user.role,
+            });
+          }
+        });
 
         // Sort by name
-        members.sort((a, b) => a.name.localeCompare(b.name));
+        const members = Array.from(membersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
         setTeamMembers(members);
       } catch (error) {
         console.error("Error fetching team members:", error);
