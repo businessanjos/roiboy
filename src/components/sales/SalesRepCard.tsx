@@ -61,19 +61,19 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
       <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Avatar className="h-12 w-12 flex-shrink-0">
               <AvatarImage src={rep.user_avatar || undefined} />
               <AvatarFallback className="bg-primary/10 text-primary font-medium">
                 {getInitials(rep.user_name)}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <h3 className="font-semibold text-foreground">{rep.user_name}</h3>
-              <p className="text-xs text-muted-foreground">{rep.user_email}</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-foreground truncate">{rep.user_name}</h3>
+              <p className="text-xs text-muted-foreground truncate">{rep.user_email}</p>
             </div>
           </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
         </div>
 
         {/* Metrics Grid */}
@@ -133,9 +133,9 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
           </div>
 
           {/* Tasks */}
-          <div className="bg-muted/50 rounded-lg p-3">
+          <div className="bg-muted/50 rounded-lg p-3 overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="h-4 w-4 text-amber-500" />
+              <CheckCircle2 className="h-4 w-4 text-amber-500 flex-shrink-0" />
               <span className="text-xs font-medium text-muted-foreground">Tarefas</span>
             </div>
             <div className="flex items-baseline gap-1">
@@ -143,7 +143,7 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
               <span className="text-xs text-muted-foreground">/ {rep.total_tasks}</span>
             </div>
             {rep.pending_tasks > 0 && (
-              <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600">
+              <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600 whitespace-nowrap">
                 {rep.pending_tasks} pendentes
               </Badge>
             )}
