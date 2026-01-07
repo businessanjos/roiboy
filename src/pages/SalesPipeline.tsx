@@ -51,6 +51,7 @@ export default function SalesPipeline() {
     totalPipelineValue,
     weightedPipelineValue,
     totalWonValue,
+    fetchDeals,
     createDeal,
     updateDeal,
     moveDeal,
@@ -452,6 +453,7 @@ export default function SalesPipeline() {
         onMarkAsLost={handleMarkAsLost}
         onReopen={handleReopen}
         onStageChange={handleDealMove}
+        onDealUpdated={fetchDeals}
       />
 
       {/* Edit Deal Dialog */}
