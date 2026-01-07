@@ -1909,30 +1909,54 @@ export default function RoyZapp() {
     setNewConversationSearch("");
     setNewConversationDialogOpen(true);
     
-    // Fetch clients
-    const { data } = await supabase
-      .from("clients")
-      .select("id, full_name, phone_e164, avatar_url")
-      .eq("account_id", currentUser.account_id)
-      .eq("status", "active")
-      .order("full_name")
-      .limit(100);
-    
-    setNewConversationClients(data || []);
+    // No setor de Vendas, buscar leads; caso contrário, buscar clientes
+    if (selectedSectorId === "vendas") {
+      const { data } = await supabase
+        .from("leads")
+        .select("id, full_name, phone, email")
+        .eq("account_id", currentUser.account_id)
+        .not("status", "eq", "converted")
+        .order("full_name")
+        .limit(100);
+      
+      // Mapear para o formato esperado
+      const mappedData = (data || []).map(lead => ({
+        id: lead.id,
+        full_name: lead.full_name,
+        phone_e164: lead.phone || "",
+        avatar_url: null,
+      }));
+      
+      setNewConversationClients(mappedData);
+    } else {
+      // Comportamento padrão: buscar clientes
+      const { data } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164, avatar_url")
+        .eq("account_id", currentUser.account_id)
+        .eq("status", "active")
+        .order("full_name")
+        .limit(100);
+      
+      setNewConversationClients(data || []);
+    }
   };
 
-  // Create new conversation with client
-  const createConversationWithClient = async (client: any) => {
+  // Create new conversation with contact (lead or client based on sector)
+  const createConversationWithContact = async (contact: any) => {
     if (!currentUser?.account_id || !currentAgent) return;
     
     setCreatingConversation(true);
     try {
-      // Check if conversation already exists for this client
+      const isLeadMode = selectedSectorId === "vendas";
+      const idField = isLeadMode ? "lead_id" : "client_id";
+      
+      // Check if conversation already exists for this contact
       const { data: existingConv } = await supabase
         .from("zapp_conversations")
         .select("id")
         .eq("account_id", currentUser.account_id)
-        .eq("client_id", client.id)
+        .eq(idField, contact.id)
         .maybeSingle();
       
       let zappConvId: string;
@@ -1961,15 +1985,22 @@ export default function RoyZapp() {
         }
       } else {
         // Create new zapp_conversation
+        const baseData = {
+          account_id: currentUser.account_id,
+          phone_e164: contact.phone_e164,
+          contact_name: contact.full_name,
+          avatar_url: contact.avatar_url,
+          sector_id: selectedSectorId,
+        };
+        
+        // Vincular a lead ou client conforme o setor
+        const insertData = isLeadMode 
+          ? { ...baseData, lead_id: contact.id }
+          : { ...baseData, client_id: contact.id };
+        
         const { data: newConv, error: convError } = await supabase
           .from("zapp_conversations")
-          .insert({
-            account_id: currentUser.account_id,
-            phone_e164: client.phone_e164,
-            contact_name: client.full_name,
-            client_id: client.id,
-            avatar_url: client.avatar_url,
-          })
+          .insert(insertData)
           .select("id")
           .single();
         
@@ -2773,8 +2804,9 @@ export default function RoyZapp() {
         searchQuery={newConversationSearch}
         onSearchChange={setNewConversationSearch}
         clients={filteredNewConversationClients}
-        onSelectClient={createConversationWithClient}
+        onSelectClient={createConversationWithContact}
         creating={creatingConversation}
+        isLeadMode={selectedSectorId === "vendas"}
       />
 
       {/* Playbook Dialog for Chat */}
