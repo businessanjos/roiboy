@@ -44,9 +44,13 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
 
   const { startDate, endDate } = options;
 
+  // Serialize dates to avoid infinite re-renders
+  const startDateStr = startDate?.toISOString() ?? "";
+  const endDateStr = endDate?.toISOString() ?? "";
+
   useEffect(() => {
     fetchMetrics();
-  }, [startDate, endDate]);
+  }, [startDateStr, endDateStr]);
 
   const fetchMetrics = async () => {
     try {
