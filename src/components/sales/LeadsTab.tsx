@@ -535,12 +535,32 @@ export default function LeadsTab() {
       return undefined;
     };
 
-    const { data: existingLeads } = await supabase
-      .from("leads")
-      .select("id, phone, email, full_name");
+    // Fetch ALL existing leads without limit to properly detect duplicates
+    // Use pagination to get all records (Supabase default limit is 1000)
+    const allExistingLeads: Array<{ id: string; phone: string | null; email: string | null; full_name: string; external_id: string | null }> = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const { data: pageData } = await supabase
+        .from("leads")
+        .select("id, phone, email, full_name, external_id")
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      
+      if (pageData && pageData.length > 0) {
+        allExistingLeads.push(...pageData);
+        hasMore = pageData.length === pageSize;
+        page++;
+      } else {
+        hasMore = false;
+      }
+    }
 
-    const existingPhones = new Set((existingLeads || []).map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
-    const existingEmails = new Set((existingLeads || []).map(l => l.email?.toLowerCase()).filter(Boolean));
+    const existingPhones = new Set(allExistingLeads.map(l => l.phone?.replace(/\D/g, "")).filter(Boolean));
+    const existingEmails = new Set(allExistingLeads.map(l => l.email?.toLowerCase()).filter(Boolean));
+    const existingExternalIds = new Set(allExistingLeads.map(l => l.external_id).filter(Boolean));
+    const existingLeadsByExternalId = new Map(allExistingLeads.filter(l => l.external_id).map(l => [l.external_id, l]));
 
     const rows: ImportLeadRow[] = [];
     for (let i = 1; i < lines.length; i++) {
@@ -633,7 +653,22 @@ export default function LeadsTab() {
       const normalizedPhone = row.phone?.replace(/\D/g, "");
       const normalizedEmail = row.email?.toLowerCase();
 
-      if (normalizedPhone && existingPhones.has(normalizedPhone)) {
+      // Check external_id first (for update detection)
+      if (row.external_id && existingExternalIds.has(row.external_id)) {
+        const existingLead = existingLeadsByExternalId.get(row.external_id);
+        row.isDuplicate = true;
+        row.duplicateInfo = { 
+          type: "external_id", 
+          matchValue: row.external_id,
+          existingLead: existingLead ? {
+            id: existingLead.id,
+            full_name: existingLead.full_name,
+            phone: existingLead.phone || undefined,
+            email: existingLead.email || undefined,
+            external_id: existingLead.external_id || undefined,
+          } : undefined
+        };
+      } else if (normalizedPhone && existingPhones.has(normalizedPhone)) {
         row.isDuplicate = true;
         row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
       } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
