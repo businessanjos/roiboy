@@ -143,6 +143,139 @@ export default function RoyZapp() {
       }
     }
   }, [assignments]);
+
+  // Handle URL parameters for auto-selecting or creating conversations
+  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
+  
+  useEffect(() => {
+    if (urlParamsProcessed || loading || !currentUser?.account_id) return;
+    
+    const conversationId = searchParams.get('conversation');
+    const newPhone = searchParams.get('newPhone');
+    const newName = searchParams.get('newName');
+    const leadId = searchParams.get('leadId');
+    const clientId = searchParams.get('clientId');
+    
+    // If conversation ID is provided, select it
+    if (conversationId && assignments.length > 0) {
+      const assignment = assignments.find(a => a.zapp_conversation_id === conversationId);
+      if (assignment) {
+        setSelectedConversation(assignment);
+        setUrlParamsProcessed(true);
+        return;
+      }
+    }
+    
+    // If newPhone is provided and no agent yet (wait for agent to load)
+    if (newPhone && currentAgent && !conversationId) {
+      setUrlParamsProcessed(true);
+      
+      // Create conversation with the lead/client
+      const contact = {
+        id: leadId || clientId || '',
+        full_name: decodeURIComponent(newName || ''),
+        phone_e164: `+${newPhone}`,
+        avatar_url: null,
+      };
+      
+      if (leadId || clientId) {
+        createConversationFromUrl(contact, !!leadId);
+      }
+    }
+  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed]);
+
+  // Helper function to create conversation from URL params
+  const createConversationFromUrl = async (contact: { id: string; full_name: string; phone_e164: string; avatar_url: null }, isLead: boolean) => {
+    if (!currentUser?.account_id || !currentAgent) return;
+    
+    setCreatingConversation(true);
+    try {
+      const idField = isLead ? "lead_id" : "client_id";
+      
+      // Check if conversation already exists
+      const { data: existingConv } = await supabase
+        .from("zapp_conversations")
+        .select("id")
+        .eq("account_id", currentUser.account_id)
+        .eq(idField, contact.id)
+        .maybeSingle();
+      
+      let zappConvId: string;
+      
+      if (existingConv) {
+        zappConvId = existingConv.id;
+        
+        // Check if assignment exists
+        const { data: existingAssignment } = await supabase
+          .from("zapp_conversation_assignments")
+          .select("id")
+          .eq("zapp_conversation_id", zappConvId)
+          .neq("status", "closed")
+          .maybeSingle();
+        
+        if (existingAssignment) {
+          // Just select the existing conversation after data is refetched
+          await fetchData();
+          const assignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
+          if (assignment) {
+            setSelectedConversation(assignment);
+          }
+          toast.info("Conversa já existe");
+          return;
+        }
+      } else {
+        // Create new zapp_conversation
+        const baseData = {
+          account_id: currentUser.account_id,
+          phone_e164: contact.phone_e164,
+          contact_name: contact.full_name,
+          avatar_url: contact.avatar_url,
+          sector_id: "vendas" as SectorId,
+        };
+        
+        const insertData = isLead 
+          ? { ...baseData, lead_id: contact.id }
+          : { ...baseData, client_id: contact.id };
+        
+        const { data: newConv, error: convError } = await supabase
+          .from("zapp_conversations")
+          .insert(insertData)
+          .select("id")
+          .single();
+        
+        if (convError) throw convError;
+        zappConvId = newConv.id;
+      }
+      
+      // Create assignment for current agent
+      const { error: assignError } = await supabase
+        .from("zapp_conversation_assignments")
+        .insert({
+          account_id: currentUser.account_id,
+          zapp_conversation_id: zappConvId,
+          agent_id: currentAgent.id,
+          status: "active",
+        });
+      
+      if (assignError) throw assignError;
+      
+      toast.success("Conversa criada!");
+      await fetchData();
+      
+      // Find and select the new assignment
+      setTimeout(() => {
+        const newAssignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
+        if (newAssignment) {
+          setSelectedConversation(newAssignment);
+        }
+      }, 500);
+    } catch (error) {
+      console.error("Error creating conversation from URL:", error);
+      toast.error("Erro ao criar conversa");
+    } finally {
+      setCreatingConversation(false);
+    }
+  };
   
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
