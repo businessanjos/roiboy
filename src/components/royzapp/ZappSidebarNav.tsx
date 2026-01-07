@@ -17,6 +17,7 @@ interface ZappSidebarNavProps {
   onlineAgents: number;
   totalQueueConversations: number;
   sectorId?: string | null;
+  userRole?: string | null;
 }
 
 export const ZappSidebarNav = memo(function ZappSidebarNav({
@@ -27,9 +28,17 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   onlineAgents,
   totalQueueConversations,
   sectorId,
+  userRole,
 }: ZappSidebarNavProps) {
+  // Mentors always see CRM functionality
+  const isMentor = userRole === "mentor";
+  
   // Determine sector-specific icon and label
   const getSectorIcon = () => {
+    // Mentors always see CRM icon when in non-sales/finance sectors
+    if (isMentor && !["vendas", "financeiro"].includes(sectorId || "")) {
+      return Briefcase;
+    }
     switch (sectorId) {
       case "vendas": return Briefcase;
       case "operacoes": return CheckSquare;
@@ -39,6 +48,10 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   };
   
   const getSectorLabel = () => {
+    // Mentors always see "CRM" label when in non-sales/finance sectors
+    if (isMentor && !["vendas", "financeiro"].includes(sectorId || "")) {
+      return "CRM";
+    }
     switch (sectorId) {
       case "vendas": return "CRM";
       case "operacoes": return "Operação";
@@ -48,7 +61,8 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   };
   
   const SectorIcon = getSectorIcon();
-  const showSectorButton = sectorId && ["vendas", "financeiro"].includes(sectorId);
+  // Show sector button for vendas/financeiro OR if user is mentor
+  const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || isMentor);
   
   return (
     <div className="flex items-center gap-1 px-3 py-2 bg-zapp-bg border-b border-zapp-border">
