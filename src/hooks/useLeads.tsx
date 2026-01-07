@@ -27,7 +27,7 @@ export interface Lead {
   } | null;
 }
 
-interface CreateLeadData {
+export interface CreateLeadData {
   full_name: string;
   phone?: string;
   email?: string;
@@ -39,6 +39,41 @@ interface CreateLeadData {
   external_id?: string;
   external_source?: string;
   instagram?: string;
+  cpf?: string;
+  rg?: string;
+  cnpj?: string;
+  company_name?: string;
+  birth_date?: string;
+  // Residential address
+  zip_code?: string;
+  street?: string;
+  street_number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  // Business address
+  business_zip_code?: string;
+  business_street?: string;
+  business_street_number?: string;
+  business_complement?: string;
+  business_neighborhood?: string;
+  business_city?: string;
+  business_state?: string;
+  business_segment?: string;
+  business_niche?: string;
+  // Banking
+  bank_name?: string;
+  bank_code?: string;
+  bank_agency?: string;
+  bank_account?: string;
+  bank_account_type?: string;
+  pix_key?: string;
+  pix_key_type?: string;
+  // Additional arrays (JSONB)
+  emails?: string[];
+  instagrams?: string[];
+  additional_phones?: { label?: string; number: string }[];
 }
 
 interface UpdateLeadData extends Partial<CreateLeadData> {

@@ -358,23 +358,164 @@ export default function LeadsTab() {
     const colMap: Record<string, number[]> = {
       full_name: [],
       phone: [],
+      phone2: [],
       email: [],
+      email2: [],
       source: [],
       notes: [],
       instagram: [],
+      instagram2: [],
       revenue_range: [],
       external_id: [],
+      cpf: [],
+      rg: [],
+      cnpj: [],
+      company_name: [],
+      birth_date: [],
+      business_segment: [],
+      business_niche: [],
+      // Residential address
+      zip_code: [],
+      street: [],
+      street_number: [],
+      complement: [],
+      neighborhood: [],
+      city: [],
+      state: [],
+      // Business address
+      business_zip_code: [],
+      business_street: [],
+      business_street_number: [],
+      business_complement: [],
+      business_neighborhood: [],
+      business_city: [],
+      business_state: [],
+      // Banking
+      bank_name: [],
+      bank_code: [],
+      bank_agency: [],
+      bank_account: [],
+      bank_account_type: [],
+      pix_key: [],
+      pix_key_type: [],
     };
     
     headers.forEach((h, i) => {
       const normalized = h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      // Basic info
       if (normalized.includes("nome") && !normalized.includes("razao")) colMap.full_name.push(i);
-      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) colMap.phone.push(i);
-      if (normalized.includes("email") || normalized.includes("e-mail")) colMap.email.push(i);
+      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) {
+        if (normalized.includes("2") || normalized.includes("secundario") || normalized.includes("outro")) {
+          colMap.phone2.push(i);
+        } else {
+          colMap.phone.push(i);
+        }
+      }
+      if (normalized.includes("email") || normalized.includes("e-mail")) {
+        if (normalized.includes("2") || normalized.includes("secundario")) {
+          colMap.email2.push(i);
+        } else {
+          colMap.email.push(i);
+        }
+      }
       if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte") || normalized.includes("lead source")) colMap.source.push(i);
       if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note") || normalized.includes("anotac")) colMap.notes.push(i);
-      if (normalized.includes("instagram") || normalized.includes("insta")) colMap.instagram.push(i);
+      
+      // Documents
+      if (normalized.includes("cpf") && !normalized.includes("cnpj")) colMap.cpf.push(i);
+      if (normalized.includes("rg") && !normalized.includes("origem")) colMap.rg.push(i);
+      if (normalized.includes("cnpj")) colMap.cnpj.push(i);
+      
+      // Birth date
+      if (normalized.includes("nascimento") || normalized.includes("birth") || normalized.includes("aniversario")) colMap.birth_date.push(i);
+      
+      // Company/Business
+      if (normalized.includes("empresa") || normalized.includes("company") || normalized.includes("razao social")) colMap.company_name.push(i);
+      if (normalized.includes("segmento") || normalized.includes("segment")) colMap.business_segment.push(i);
+      if (normalized.includes("nicho") || normalized.includes("niche")) colMap.business_niche.push(i);
+      
+      // Social
+      if (normalized.includes("instagram") || normalized.includes("insta")) {
+        if (normalized.includes("2") || normalized.includes("empresa")) {
+          colMap.instagram2.push(i);
+        } else {
+          colMap.instagram.push(i);
+        }
+      }
+      
+      // Revenue
       if (normalized.includes("faturamento") || normalized.includes("revenue") || normalized.includes("receita")) colMap.revenue_range.push(i);
+      
+      // Residential address
+      if (normalized.includes("cep") || normalized.includes("zip") || normalized.includes("codigo postal")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_zip_code.push(i);
+        } else {
+          colMap.zip_code.push(i);
+        }
+      }
+      if ((normalized.includes("rua") || normalized.includes("endereco") || normalized.includes("logradouro") || normalized.includes("street")) && !normalized.includes("numero")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_street.push(i);
+        } else {
+          colMap.street.push(i);
+        }
+      }
+      if (normalized.includes("numero") || normalized.includes("number")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_street_number.push(i);
+        } else {
+          colMap.street_number.push(i);
+        }
+      }
+      if (normalized.includes("complemento") || normalized.includes("complement")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_complement.push(i);
+        } else {
+          colMap.complement.push(i);
+        }
+      }
+      if (normalized.includes("bairro") || normalized.includes("neighborhood")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_neighborhood.push(i);
+        } else {
+          colMap.neighborhood.push(i);
+        }
+      }
+      if (normalized.includes("cidade") || normalized.includes("city")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_city.push(i);
+        } else {
+          colMap.city.push(i);
+        }
+      }
+      if (normalized.includes("estado") || normalized.includes("uf") || normalized.includes("state")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_state.push(i);
+        } else {
+          colMap.state.push(i);
+        }
+      }
+      
+      // Banking
+      if ((normalized.includes("banco") || normalized.includes("bank")) && !normalized.includes("agencia") && !normalized.includes("conta") && !normalized.includes("codigo")) {
+        colMap.bank_name.push(i);
+      }
+      if (normalized.includes("codigo banco") || normalized.includes("bank code") || (normalized.includes("banco") && normalized.includes("codigo"))) {
+        colMap.bank_code.push(i);
+      }
+      if (normalized.includes("agencia") || normalized.includes("agency")) colMap.bank_agency.push(i);
+      if ((normalized.includes("conta") || normalized.includes("account")) && !normalized.includes("tipo")) {
+        colMap.bank_account.push(i);
+      }
+      if ((normalized.includes("tipo") && normalized.includes("conta")) || normalized.includes("account type")) {
+        colMap.bank_account_type.push(i);
+      }
+      if (normalized.includes("pix") && !normalized.includes("tipo")) colMap.pix_key.push(i);
+      if (normalized.includes("tipo") && normalized.includes("pix")) colMap.pix_key_type.push(i);
+      
+      // External ID (Pipedrive)
       if ((normalized.includes("id") && !normalized.includes("email")) || normalized.includes("external")) colMap.external_id.push(i);
     });
 
@@ -413,16 +554,75 @@ export default function LeadsTab() {
       const source = getFirstValue(values, colMap.source)?.toLowerCase();
       const instagram = getFirstValue(values, colMap.instagram);
       
+      // Build emails array if we have multiple email columns
+      const emailsArr: string[] = [];
+      const e1 = getFirstValue(values, colMap.email);
+      const e2 = getFirstValue(values, colMap.email2);
+      if (e1) emailsArr.push(e1);
+      if (e2) emailsArr.push(e2);
+      
+      // Build instagrams array
+      const instagramsArr: string[] = [];
+      const i1 = getFirstValue(values, colMap.instagram);
+      const i2 = getFirstValue(values, colMap.instagram2);
+      if (i1) instagramsArr.push(i1);
+      if (i2) instagramsArr.push(i2);
+      
+      // Build additional_phones array
+      const additionalPhonesArr: { label?: string; number: string }[] = [];
+      const phone2 = getFirstValue(values, colMap.phone2);
+      if (phone2) additionalPhonesArr.push({ label: "Secundário", number: phone2 });
+      
       const row: ImportLeadRow = {
         lineNumber: i,
         full_name: getFirstValue(values, colMap.full_name) || "",
         phone,
         email,
+        emails: emailsArr.length > 1 ? emailsArr : undefined,
         source,
         notes: getFirstValue(values, colMap.notes),
+        // Documents
+        cpf: getFirstValue(values, colMap.cpf),
+        rg: getFirstValue(values, colMap.rg),
+        cnpj: getFirstValue(values, colMap.cnpj),
+        // Company
+        company_name: getFirstValue(values, colMap.company_name),
+        business_segment: getFirstValue(values, colMap.business_segment),
+        business_niche: getFirstValue(values, colMap.business_niche),
+        // Social
         instagram,
+        instagrams: instagramsArr.length > 1 ? instagramsArr : undefined,
+        // Personal
+        birth_date: getFirstValue(values, colMap.birth_date),
         revenue_range: getFirstValue(values, colMap.revenue_range),
         external_id: getFirstValue(values, colMap.external_id),
+        external_source: getFirstValue(values, colMap.external_id) ? "pipedrive" : undefined,
+        // Residential address
+        zip_code: getFirstValue(values, colMap.zip_code),
+        street: getFirstValue(values, colMap.street),
+        street_number: getFirstValue(values, colMap.street_number),
+        complement: getFirstValue(values, colMap.complement),
+        neighborhood: getFirstValue(values, colMap.neighborhood),
+        city: getFirstValue(values, colMap.city),
+        state: getFirstValue(values, colMap.state),
+        // Business address
+        business_zip_code: getFirstValue(values, colMap.business_zip_code),
+        business_street: getFirstValue(values, colMap.business_street),
+        business_street_number: getFirstValue(values, colMap.business_street_number),
+        business_complement: getFirstValue(values, colMap.business_complement),
+        business_neighborhood: getFirstValue(values, colMap.business_neighborhood),
+        business_city: getFirstValue(values, colMap.business_city),
+        business_state: getFirstValue(values, colMap.business_state),
+        // Banking
+        bank_name: getFirstValue(values, colMap.bank_name),
+        bank_code: getFirstValue(values, colMap.bank_code),
+        bank_agency: getFirstValue(values, colMap.bank_agency),
+        bank_account: getFirstValue(values, colMap.bank_account),
+        bank_account_type: getFirstValue(values, colMap.bank_account_type),
+        pix_key: getFirstValue(values, colMap.pix_key),
+        pix_key_type: getFirstValue(values, colMap.pix_key_type),
+        // Additional phones
+        additional_phones: additionalPhonesArr.length > 0 ? additionalPhonesArr : undefined,
       };
 
       if (!row.full_name.trim()) {
@@ -463,11 +663,47 @@ export default function LeadsTab() {
           full_name: row.full_name,
           phone: row.phone,
           email: row.email,
+          emails: row.emails,
           source: row.source,
           notes: row.notes,
+          cpf: row.cpf,
+          rg: row.rg,
+          cnpj: row.cnpj,
+          company_name: row.company_name,
+          instagram: row.instagram,
+          instagrams: row.instagrams,
+          birth_date: row.birth_date,
           revenue_range: row.revenue_range,
           external_id: row.external_id,
-          instagram: row.instagram,
+          external_source: row.external_source,
+          // Residential address
+          zip_code: row.zip_code,
+          street: row.street,
+          street_number: row.street_number,
+          complement: row.complement,
+          neighborhood: row.neighborhood,
+          city: row.city,
+          state: row.state,
+          // Business address
+          business_zip_code: row.business_zip_code,
+          business_street: row.business_street,
+          business_street_number: row.business_street_number,
+          business_complement: row.business_complement,
+          business_neighborhood: row.business_neighborhood,
+          business_city: row.business_city,
+          business_state: row.business_state,
+          business_segment: row.business_segment,
+          business_niche: row.business_niche,
+          // Banking
+          bank_name: row.bank_name,
+          bank_code: row.bank_code,
+          bank_agency: row.bank_agency,
+          bank_account: row.bank_account,
+          bank_account_type: row.bank_account_type,
+          pix_key: row.pix_key,
+          pix_key_type: row.pix_key_type,
+          // Additional arrays
+          additional_phones: row.additional_phones,
         });
         successCount++;
       } catch (error) {
