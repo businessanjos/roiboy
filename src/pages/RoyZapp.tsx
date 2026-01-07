@@ -2106,19 +2106,31 @@ export default function RoyZapp() {
       return;
     }
 
-    const normalizedSearch = searchTerm.replace(/\D/g, ''); // Remove non-numeric for phone search
-    const textSearch = searchTerm.toLowerCase().trim();
+    const trimmedSearch = searchTerm.trim();
+    const normalizedPhone = trimmedSearch.replace(/\D/g, ''); // Apenas dígitos
+    const textSearch = trimmedSearch.toLowerCase();
+    
+    // Detectar se é busca por telefone (começa com + ou é majoritariamente números)
+    const isPhoneSearch = trimmedSearch.startsWith('+') || 
+      (normalizedPhone.length >= 4 && normalizedPhone.length >= trimmedSearch.replace(/[\s\-\(\)]/g, '').length * 0.7);
 
     if (selectedSectorId === "vendas") {
-      // Search leads using correct filter (same as Leads page)
-      const { data } = await supabase
+      // Search leads
+      let query = supabase
         .from("leads")
         .select("id, full_name, phone, email")
         .eq("account_id", currentUser.account_id)
-        .is("converted_to_client_id", null) // Correct filter - not converted
-        .or(`full_name.ilike.%${textSearch}%,phone.ilike.%${normalizedSearch}%,email.ilike.%${textSearch}%`)
-        .order("full_name")
-        .limit(20);
+        .is("converted_to_client_id", null);
+
+      if (isPhoneSearch && normalizedPhone.length >= 4) {
+        // Busca por telefone - usar número normalizado
+        query = query.ilike("phone", `%${normalizedPhone}%`);
+      } else {
+        // Busca por texto - nome, email ou telefone formatado
+        query = query.or(`full_name.ilike.%${textSearch}%,email.ilike.%${textSearch}%,phone.ilike.%${textSearch}%`);
+      }
+
+      const { data } = await query.order("full_name").limit(20);
 
       const mappedData = (data || []).map(lead => ({
         id: lead.id,
@@ -2130,15 +2142,19 @@ export default function RoyZapp() {
       setNewConversationClients(mappedData);
     } else {
       // Search clients
-      const { data } = await supabase
+      let query = supabase
         .from("clients")
         .select("id, full_name, phone_e164, avatar_url")
         .eq("account_id", currentUser.account_id)
-        .eq("status", "active")
-        .or(`full_name.ilike.%${textSearch}%,phone_e164.ilike.%${normalizedSearch}%`)
-        .order("full_name")
-        .limit(20);
+        .eq("status", "active");
 
+      if (isPhoneSearch && normalizedPhone.length >= 4) {
+        query = query.ilike("phone_e164", `%${normalizedPhone}%`);
+      } else {
+        query = query.or(`full_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`);
+      }
+
+      const { data } = await query.order("full_name").limit(20);
       setNewConversationClients(data || []);
     }
   }, [currentUser?.account_id, selectedSectorId]);
