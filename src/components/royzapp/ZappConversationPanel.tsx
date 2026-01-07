@@ -45,7 +45,7 @@ import type { ConversationAssignment, Agent, ZappTag, Department } from "./types
 import { ZappAIAgentItem, type AIAgent } from "./ZappAIAgentItem";
 
 interface ZappConversationPanelProps {
-  currentUser: { name: string; avatar_url: string | null } | null;
+  currentUser: { name: string; avatar_url: string | null; role?: string } | null;
   activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector";
   setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector") => void;
   inboxTab: "mine" | "queue";
@@ -595,6 +595,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         onlineAgents={onlineAgents}
         totalQueueConversations={totalQueueConversations}
         sectorId={sectorId}
+        userRole={currentUser?.role}
       />
 
       {/* Conversation list */}
@@ -711,7 +712,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "marketing" && (
           <ZappMarketingList sectorId={sectorId || undefined} />
         )}
-        {activeView === "sector" && sectorId === "vendas" && (
+        {activeView === "sector" && (sectorId === "vendas" || currentUser?.role === "mentor") && (
           <ZappCRMPanel 
             conversationPhone={selectedConversation?.zapp_conversation?.phone_e164 || selectedConversation?.zapp_conversation?.group_jid}
             conversationClientId={selectedConversation?.zapp_conversation?.client_id}
