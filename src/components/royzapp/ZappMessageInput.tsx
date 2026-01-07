@@ -468,11 +468,18 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 ref={messageInputRef}
                 placeholder="Digite uma mensagem"
                 value={messageInput}
-                onChange={(e) => onMessageChange(e.target.value)}
+                onChange={(e) => {
+                  onMessageChange(e.target.value);
+                  // Auto-resize textarea
+                  const target = e.target;
+                  target.style.height = 'auto';
+                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                }}
                 onKeyDown={onKeyPress}
                 disabled={sendingMessage}
                 rows={1}
-                className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg min-h-10 max-h-32 py-2.5 resize-none"
+                className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg min-h-10 max-h-32 py-2.5 resize-none overflow-y-auto"
+                style={{ height: messageInput ? undefined : 'auto' }}
               />
             )}
             
