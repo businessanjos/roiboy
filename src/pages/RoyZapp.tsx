@@ -238,16 +238,27 @@ export default function RoyZapp() {
       }
       
       if (zappConvId) {
-        // Conversa existe - verificar se tem assignment para o agente atual
+        // Conversa existe - verificar se tem QUALQUER assignment ativo (não apenas do agente atual)
         const { data: existingAssignment } = await supabase
           .from("zapp_conversation_assignments")
-          .select("id")
+          .select("id, agent_id")
           .eq("zapp_conversation_id", zappConvId)
-          .eq("agent_id", currentAgent.id)
           .neq("status", "closed")
           .maybeSingle();
         
         if (existingAssignment) {
+          // Se assignment é de outro agente, assumir a conversa
+          if (existingAssignment.agent_id !== currentAgent.id) {
+            await supabase
+              .from("zapp_conversation_assignments")
+              .update({ 
+                agent_id: currentAgent.id, 
+                assigned_at: new Date().toISOString() 
+              })
+              .eq("id", existingAssignment.id);
+            toast.info("Conversa assumida");
+          }
+          
           // Fetch the assignment directly to avoid stale closure
           const { data: assignmentData } = await supabase
             .from("zapp_conversation_assignments")
@@ -263,7 +274,9 @@ export default function RoyZapp() {
             setSelectedConversation(assignmentData);
           }
           fetchData();
-          toast.info("Abrindo conversa existente");
+          if (existingAssignment.agent_id === currentAgent.id) {
+            toast.info("Abrindo conversa existente");
+          }
           setCreatingConversation(false);
           return;
         }
@@ -2225,16 +2238,27 @@ export default function RoyZapp() {
       }
       
       if (zappConvId) {
-        // Conversa existe - verificar se tem assignment para o agente atual
+        // Conversa existe - verificar se tem QUALQUER assignment ativo (não apenas do agente atual)
         const { data: existingAssignment } = await supabase
           .from("zapp_conversation_assignments")
-          .select("id")
+          .select("id, agent_id")
           .eq("zapp_conversation_id", zappConvId)
-          .eq("agent_id", currentAgent.id)
           .neq("status", "closed")
           .maybeSingle();
         
         if (existingAssignment) {
+          // Se assignment é de outro agente, assumir a conversa
+          if (existingAssignment.agent_id !== currentAgent.id) {
+            await supabase
+              .from("zapp_conversation_assignments")
+              .update({ 
+                agent_id: currentAgent.id, 
+                assigned_at: new Date().toISOString() 
+              })
+              .eq("id", existingAssignment.id);
+            toast.info("Conversa assumida");
+          }
+          
           // Fetch the assignment directly to avoid stale closure
           const { data: assignmentData } = await supabase
             .from("zapp_conversation_assignments")
@@ -2250,7 +2274,9 @@ export default function RoyZapp() {
             setSelectedConversation(assignmentData);
           }
           fetchData();
-          toast.info("Abrindo conversa existente");
+          if (existingAssignment.agent_id === currentAgent.id) {
+            toast.info("Abrindo conversa existente");
+          }
           setNewConversationDialogOpen(false);
           setCreatingConversation(false);
           return;
