@@ -1020,7 +1020,8 @@ serve(async (req) => {
           sendTextIntQuery = sendTextIntQuery.eq("sector_id", sector_id);
         }
         
-        const { data: integration } = await sendTextIntQuery.maybeSingle();
+        const { data: integrations } = await sendTextIntQuery.limit(1);
+        const integration = integrations?.[0] || null;
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         const cleanPhone = phone.replace(/\D/g, "");
