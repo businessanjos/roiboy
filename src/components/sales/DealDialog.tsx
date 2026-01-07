@@ -161,14 +161,21 @@ export function DealDialog({
         .order("full_name")
         .limit(100);
 
-      // Fetch team members with access to vendas sector
-      const teamRes = await supabase
-        .from("user_sector_access")
-        .select(`
-          user:users!user_sector_access_user_id_fkey(id, name, avatar_url)
-        `)
-        .eq("account_id", currentUser.account_id)
-        .eq("sector_id", "vendas");
+      // Fetch team members with access to vendas sector OR admins
+      const [sectorUsersRes, adminsRes] = await Promise.all([
+        supabase
+          .from("user_sector_access")
+          .select(`
+            user:users!user_sector_access_user_id_fkey(id, name, avatar_url)
+          `)
+          .eq("account_id", currentUser.account_id)
+          .eq("sector_id", "vendas"),
+        supabase
+          .from("users")
+          .select("id, name, avatar_url")
+          .eq("account_id", currentUser.account_id)
+          .eq("role", "admin")
+      ]);
 
       let clientList = clientsRes.data || [];
       
@@ -187,13 +194,21 @@ export function DealDialog({
 
       setClients(clientList);
       
-      // Extract unique users from sector access
+      // Extract unique users from sector access + admins
       const usersMap = new Map<string, TeamMember>();
-      (teamRes.data || []).forEach((access: any) => {
+      
+      // Add admins first
+      (adminsRes.data || []).forEach((user: TeamMember) => {
+        usersMap.set(user.id, user);
+      });
+      
+      // Add sector users
+      (sectorUsersRes.data || []).forEach((access: any) => {
         if (access.user && !usersMap.has(access.user.id)) {
           usersMap.set(access.user.id, access.user);
         }
       });
+      
       setTeamMembers(Array.from(usersMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
     };
 
