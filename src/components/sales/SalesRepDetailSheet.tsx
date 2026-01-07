@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import {
   Sheet,
   SheetContent,
@@ -67,7 +67,8 @@ interface Task {
   activity_type?: { name: string; color: string; icon: string } | null;
 }
 
-export function SalesRepDetailSheet({ open, onOpenChange, rep }: SalesRepDetailSheetProps) {
+export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailSheetProps>(
+  function SalesRepDetailSheet({ open, onOpenChange, rep }, ref) {
   const [calls, setCalls] = useState<Call[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -409,4 +410,4 @@ export function SalesRepDetailSheet({ open, onOpenChange, rep }: SalesRepDetailS
       </SheetContent>
     </Sheet>
   );
-}
+});
