@@ -441,8 +441,18 @@ export default function Leads() {
       return;
     }
 
-    const headerLine = lines[0].toLowerCase();
-    const headers = headerLine.split(/[;,]/).map(h => h.trim().replace(/"/g, ""));
+    // Detect delimiter: pipe, semicolon, or comma
+    const firstLine = lines[0];
+    const pipeCount = (firstLine.match(/\|/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    
+    const delimiter = pipeCount > semicolonCount && pipeCount > commaCount 
+      ? "|" 
+      : semicolonCount > commaCount ? ";" : ",";
+
+    const headerLine = firstLine.toLowerCase();
+    const headers = headerLine.split(delimiter).map(h => h.trim().replace(/"/g, ""));
     
     // Map common column names
     const colMap: Record<string, number> = {};
@@ -508,8 +518,14 @@ export default function Leads() {
     
     (existingClients || []).forEach(c => {
       const normalizedPhone = c.phone_e164?.replace(/\D/g, "");
-      const emails = c.emails as string[] | null;
-      const primaryEmail = emails?.[0]?.toLowerCase();
+      // emails can be JSON array or string
+      let primaryEmail: string | undefined;
+      if (c.emails) {
+        const emailsData = Array.isArray(c.emails) ? c.emails : 
+          (typeof c.emails === 'string' ? [c.emails] : []);
+        const firstEmail = emailsData[0];
+        primaryEmail = typeof firstEmail === 'string' ? firstEmail.toLowerCase() : undefined;
+      }
       const normalizedCpf = c.cpf?.replace(/\D/g, "");
       
       const clientInfo: ClientInfo = {
@@ -530,7 +546,7 @@ export default function Leads() {
       const line = lines[i];
       if (!line.trim()) continue;
       
-      const values = line.split(/[;,]/).map(v => v.trim().replace(/^"|"$/g, ""));
+      const values = line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
       
       const row: ImportLeadRow = {
         lineNumber: i,
@@ -719,20 +735,21 @@ export default function Leads() {
               <Settings2 className="h-4 w-4 mr-2" />
               Campos
             </Button>
-            <label>
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-              <Button variant="outline" size="sm" asChild>
-                <span className="cursor-pointer">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar
-                </span>
-              </Button>
-            </label>
+            <input
+              id="csv-upload-leads"
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => document.getElementById('csv-upload-leads')?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
+            </Button>
             <Button onClick={openNewDialog} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Novo Lead
