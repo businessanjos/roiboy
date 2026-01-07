@@ -991,13 +991,13 @@ export default function LeadsTab() {
                 return (
                   <div
                     key={lead.id}
-                    className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                    className="p-2.5 hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => setDetailLead(lead)}
                   >
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <Avatar className="h-9 w-9 flex-shrink-0">
-                        <AvatarFallback className="text-xs">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      {/* Avatar - tamanho fixo menor */}
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className="text-[10px]">
                           {lead.full_name
                             .split(" ")
                             .map((n) => n[0])
@@ -1007,52 +1007,35 @@ export default function LeadsTab() {
                         </AvatarFallback>
                       </Avatar>
                       
-                      {/* Main content - flexible */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium truncate">{lead.full_name}</p>
-                          <Badge className={`${statusInfo.color} text-white text-[10px] px-1.5 py-0`}>
+                      {/* Main content - com overflow hidden */}
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-sm truncate max-w-[140px]">{lead.full_name}</span>
+                          <Badge className={`${statusInfo.color} text-white text-[9px] px-1 py-0 flex-shrink-0`}>
                             {statusInfo.label}
                           </Badge>
                           {leadDeals.length > 0 && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                              <DollarSign className="h-2.5 w-2.5 mr-0.5" />
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 flex-shrink-0">
+                              <DollarSign className="h-2.5 w-2.5" />
                               {leadDeals.length}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
                           {lead.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              <span className="truncate max-w-[100px]">{lead.phone}</span>
-                            </span>
-                          )}
-                          {lead.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              <span className="truncate max-w-[120px]">{lead.email}</span>
-                            </span>
-                          )}
-                          {lead.source && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                              {getSourceLabel(lead.source)}
-                            </Badge>
+                            <span className="truncate max-w-[90px]">{lead.phone}</span>
                           )}
                         </div>
                       </div>
                       
-                      {/* Right side - fixed width actions */}
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <span className="text-[10px] text-muted-foreground hidden sm:block whitespace-nowrap">
-                          {format(new Date(lead.created_at), "dd/MM/yy")}
-                        </span>
+                      {/* Right side - ações com tamanho fixo */}
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
                         {/* WhatsApp Button */}
                         {lead.phone && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 hover:bg-emerald-500/20"
+                            className="h-6 w-6 hover:bg-emerald-500/20"
                             onClick={(e) => {
                               e.stopPropagation();
                               openZappConversation({
@@ -1064,13 +1047,13 @@ export default function LeadsTab() {
                             disabled={zappLoading}
                             title="Abrir conversa no RoyZapp"
                           >
-                            <MessageCircle className="h-4 w-4 text-emerald-600" />
+                            <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
                           </Button>
                         )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
