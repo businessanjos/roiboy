@@ -562,6 +562,11 @@ export default function LeadsTab() {
     const existingExternalIds = new Set(allExistingLeads.map(l => l.external_id).filter(Boolean));
     const existingLeadsByExternalId = new Map(allExistingLeads.filter(l => l.external_id).map(l => [l.external_id, l]));
 
+    // Track duplicates within the CSV file itself
+    const csvExternalIds = new Set<string>();
+    const csvPhones = new Set<string>();
+    const csvEmails = new Set<string>();
+    
     const rows: ImportLeadRow[] = [];
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
@@ -653,7 +658,7 @@ export default function LeadsTab() {
       const normalizedPhone = row.phone?.replace(/\D/g, "");
       const normalizedEmail = row.email?.toLowerCase();
 
-      // Check external_id first (for update detection)
+      // Check external_id first (for update detection against DB)
       if (row.external_id && existingExternalIds.has(row.external_id)) {
         const existingLead = existingLeadsByExternalId.get(row.external_id);
         row.isDuplicate = true;
@@ -668,13 +673,34 @@ export default function LeadsTab() {
             external_id: existingLead.external_id || undefined,
           } : undefined
         };
-      } else if (normalizedPhone && existingPhones.has(normalizedPhone)) {
+      } 
+      // Check for duplicates within the CSV file itself
+      else if (row.external_id && csvExternalIds.has(row.external_id)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "external_id", matchValue: row.external_id };
+        row.errorMessage = "ID duplicado no arquivo";
+      } else if (normalizedPhone && csvPhones.has(normalizedPhone)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
+        row.errorMessage = "Telefone duplicado no arquivo";
+      } else if (normalizedEmail && csvEmails.has(normalizedEmail)) {
+        row.isDuplicate = true;
+        row.duplicateInfo = { type: "email", matchValue: normalizedEmail };
+        row.errorMessage = "Email duplicado no arquivo";
+      }
+      // Check against existing database records
+      else if (normalizedPhone && existingPhones.has(normalizedPhone)) {
         row.isDuplicate = true;
         row.duplicateInfo = { type: "phone", matchValue: normalizedPhone };
       } else if (normalizedEmail && existingEmails.has(normalizedEmail)) {
         row.isDuplicate = true;
         row.duplicateInfo = { type: "email", matchValue: normalizedEmail };
       }
+
+      // Track for CSV internal duplicate detection
+      if (row.external_id) csvExternalIds.add(row.external_id);
+      if (normalizedPhone) csvPhones.add(normalizedPhone);
+      if (normalizedEmail) csvEmails.add(normalizedEmail);
 
       rows.push(row);
     }
@@ -688,10 +714,23 @@ export default function LeadsTab() {
     setImporting(true);
     let successCount = 0;
     let errorCount = 0;
+    let skippedDuplicates = 0;
+    
+    // Track external_ids already imported in this session to avoid duplicates
+    const importedExternalIds = new Set<string>();
 
     for (const row of selectedRows) {
-      if (row.duplicateAction === "skip") continue;
+      if (row.duplicateAction === "skip") {
+        skippedDuplicates++;
+        continue;
+      }
       if (row.hasError) continue;
+      
+      // Skip if this external_id was already imported in this session
+      if (row.external_id && importedExternalIds.has(row.external_id)) {
+        skippedDuplicates++;
+        continue;
+      }
 
       try {
         await createLead({
@@ -740,10 +779,19 @@ export default function LeadsTab() {
           // Additional arrays
           additional_phones: row.additional_phones,
         });
+        
+        // Track imported external_id
+        if (row.external_id) importedExternalIds.add(row.external_id);
         successCount++;
-      } catch (error) {
-        errorCount++;
-        console.error("Error importing lead:", error);
+      } catch (error: any) {
+        // Check if it's a duplicate key error and skip silently
+        if (error?.message?.includes('duplicate key') || error?.code === '23505') {
+          skippedDuplicates++;
+          console.log("Skipped duplicate:", row.external_id || row.full_name);
+        } else {
+          errorCount++;
+          console.error("Error importing lead:", error);
+        }
       }
     }
 
@@ -753,6 +801,9 @@ export default function LeadsTab() {
 
     if (successCount > 0) {
       toast.success(`${successCount} leads importados com sucesso!`);
+    }
+    if (skippedDuplicates > 0) {
+      toast.info(`${skippedDuplicates} leads pulados (duplicatas)`);
     }
     if (errorCount > 0) {
       toast.error(`${errorCount} leads falharam ao importar`);
