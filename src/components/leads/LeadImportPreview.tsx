@@ -330,6 +330,71 @@ export function LeadImportPreview({
           </button>
         </div>
 
+        {/* Quick Selection Buttons */}
+        <div className="flex flex-wrap items-center gap-2 py-2 border-y">
+          <span className="text-sm text-muted-foreground">Selecionar:</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedRows(new Set(rows.filter(r => !r.hasError).map(r => r.lineNumber)))}
+            className="h-7 text-xs"
+          >
+            Todos ({rows.filter(r => !r.hasError).length})
+          </Button>
+          {stats.newCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedRows(new Set(rows.filter(r => !r.hasError && !r.isDuplicate && !r.isClientMatch).map(r => r.lineNumber)))}
+              className="h-7 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Novos ({stats.newCount})
+            </Button>
+          )}
+          {stats.updateCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedRows(new Set(rows.filter(r => r.isDuplicate && r.duplicateInfo?.type === "external_id").map(r => r.lineNumber)))}
+              className="h-7 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Atualizar ({stats.updateCount})
+            </Button>
+          )}
+          {stats.duplicateCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedRows(new Set(rows.filter(r => r.isDuplicate && r.duplicateInfo?.type !== "external_id").map(r => r.lineNumber)))}
+              className="h-7 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+            >
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Duplicados ({stats.duplicateCount})
+            </Button>
+          )}
+          {stats.clientCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedRows(new Set(rows.filter(r => r.isClientMatch).map(r => r.lineNumber)))}
+              className="h-7 text-xs text-cyan-600 border-cyan-300 hover:bg-cyan-50 dark:hover:bg-cyan-950/30"
+            >
+              <UserCheck className="h-3 w-3 mr-1" />
+              Clientes ({stats.clientCount})
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedRows(new Set())}
+            className="h-7 text-xs text-muted-foreground"
+          >
+            Limpar
+          </Button>
+        </div>
+
         {/* Filters and Options */}
         <div className="flex flex-wrap items-center gap-4 py-2 border-y">
           <Input
