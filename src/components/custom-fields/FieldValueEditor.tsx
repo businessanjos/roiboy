@@ -165,7 +165,7 @@ export function FieldValueEditor({ field, clientId, accountId, currentValue, onV
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-48 p-2" align="start">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 max-h-64 overflow-auto">
             {field.options.map((option) => (
               <button
                 key={option.value}
@@ -208,7 +208,7 @@ export function FieldValueEditor({ field, clientId, accountId, currentValue, onV
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-56 p-2" align="start">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 max-h-64 overflow-auto">
             {field.options.map((option) => {
               const isSelected = selectedValues.includes(option.value);
               return (
