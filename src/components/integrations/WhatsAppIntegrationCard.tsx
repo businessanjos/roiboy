@@ -18,13 +18,20 @@ type Integration = Tables<"integrations">;
 interface WhatsAppIntegrationCardProps {
   integrations: Integration[];
   onRefresh: () => void;
+  sectorId?: string | null;
 }
 
 export function WhatsAppIntegrationCard({
   integrations,
   onRefresh,
+  sectorId,
 }: WhatsAppIntegrationCardProps) {
-  const whatsappIntegration = integrations.find((i) => (i.type as string) === "whatsapp");
+  // Find WhatsApp integration - filter by sectorId if provided
+  const whatsappIntegration = integrations.find((i) => {
+    if ((i.type as string) !== "whatsapp") return false;
+    if (sectorId) return i.sector_id === sectorId;
+    return !i.sector_id; // Default sector (null)
+  });
   const config = whatsappIntegration?.config as Record<string, unknown> | null;
   const provider = config?.provider as string | undefined;
   const connectionState = config?.connection_state as string | undefined;
@@ -55,7 +62,7 @@ export function WhatsAppIntegrationCard({
         if (!session?.session?.access_token) return;
 
         const response = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "status" },
+          body: { action: "status", sector_id: sectorId || undefined },
         });
 
         if (response.data?.data?.state === "open" || response.data?.data?.connected) {
@@ -83,7 +90,7 @@ export function WhatsAppIntegrationCard({
 
     try {
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "create" },
+        body: { action: "create", sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -118,7 +125,7 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [onRefresh]);
+  }, [onRefresh, sectorId]);
 
   const handleGetQRCode = useCallback(async () => {
     setLoading(true);
@@ -128,7 +135,7 @@ export function WhatsAppIntegrationCard({
       // Use "create" action which creates instance AND returns QR code
       // This works even if instance already exists (it will just get the QR code)
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "create" },
+        body: { action: "create", sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -158,7 +165,7 @@ export function WhatsAppIntegrationCard({
         setTimeout(async () => {
           try {
             const retryResponse = await supabase.functions.invoke("uazapi-manager", {
-              body: { action: "connect" },
+              body: { action: "connect", sector_id: sectorId || undefined },
             });
             const retryData = retryResponse.data;
             const retryQr = retryData?.base64 || retryData?.qrcode_base64 || retryData?.qr;
@@ -180,7 +187,7 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [onRefresh]);
+  }, [onRefresh, sectorId]);
 
   const handleGeneratePaircode = useCallback(async () => {
     if (!phoneNumber.trim()) {
@@ -193,7 +200,7 @@ export function WhatsAppIntegrationCard({
 
     try {
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "paircode", phone: phoneNumber },
+        body: { action: "paircode", phone: phoneNumber, sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -220,15 +227,16 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [phoneNumber, onRefresh]);
+  }, [phoneNumber, onRefresh, sectorId]);
 
   const handleDisconnect = useCallback(async () => {
     setLoading(true);
     setAction("disconnect");
 
     try {
+      console.log("[WhatsApp] Disconnecting sector:", sectorId, "integration:", whatsappIntegration?.id);
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "disconnect" },
+        body: { action: "disconnect", sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -247,15 +255,16 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [onRefresh]);
+  }, [onRefresh, sectorId, whatsappIntegration?.id]);
 
   const handleCheckStatus = useCallback(async () => {
     setLoading(true);
     setAction("status");
 
     try {
+      console.log("[WhatsApp] Checking status for sector:", sectorId);
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "status" },
+        body: { action: "status", sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -296,7 +305,7 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [onRefresh]);
+  }, [onRefresh, sectorId]);
 
   const lastConnectionUpdate = config?.last_connection_update as string | undefined;
   const lastSeenText = lastConnectionUpdate 

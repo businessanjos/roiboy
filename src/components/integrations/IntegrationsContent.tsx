@@ -290,7 +290,7 @@ export function IntegrationsContent() {
             accountId={accountId} 
             onRefresh={fetchIntegrations} 
           />
-          <WhatsAppIntegrationCard integrations={integrations} onRefresh={fetchIntegrations} />
+          <WhatsAppIntegrationCard integrations={integrations} onRefresh={fetchIntegrations} sectorId={null} />
         </TabsContent>
 
         {/* Zoom Tab */}
