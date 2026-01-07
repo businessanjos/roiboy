@@ -135,6 +135,7 @@ export function PlaybookDialog({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<PlaybookItem | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<PlaybookFolder | null>(null);
+  const [selectedItem, setSelectedItem] = useState<PlaybookItem | null>(null);
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -156,6 +157,11 @@ export function PlaybookDialog({
 
     return result;
   }, [items, filterType, search]);
+
+  // Favorite items for virtual folder
+  const favoriteItems = useMemo(() => {
+    return filteredItems.filter(item => item.is_favorite);
+  }, [filteredItems]);
 
   // Group items by folder
   const groupedItems = useMemo(() => {
@@ -225,122 +231,114 @@ export function PlaybookDialog({
     }
   }, [folderToDelete, deleteFolder]);
 
-  const renderItem = (item: PlaybookItem) => (
-    <div
-      key={item.id}
-      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
-    >
-      <div className={cn('p-2 rounded-lg', contentTypeColors[item.content_type])}>
-        {contentTypeIcons[item.content_type]}
-      </div>
+  const renderItem = (item: PlaybookItem) => {
+    const isSelected = selectedItem?.id === item.id;
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium truncate">{item.name}</span>
-          {item.is_favorite && (
-            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
+    return (
+      <div
+        key={item.id}
+        onClick={() => setSelectedItem(isSelected ? null : item)}
+        className={cn(
+          "flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group cursor-pointer",
+          isSelected && "ring-2 ring-primary border-primary bg-primary/5"
+        )}
+      >
+        <div className={cn('p-2 rounded-lg', contentTypeColors[item.content_type])}>
+          {contentTypeIcons[item.content_type]}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium truncate">{item.name}</span>
+            {item.is_favorite && (
+              <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
+            )}
+            {item.visibility === 'personal' && (
+              <span className="text-xs text-muted-foreground" title="Apenas você pode ver">🔒</span>
+            )}
+          </div>
+          {item.text_content && (
+            <p className="text-sm text-muted-foreground truncate">
+              {item.text_content.slice(0, 60)}...
+            </p>
           )}
-          {item.visibility === 'personal' && (
-            <span className="text-xs text-muted-foreground" title="Apenas você pode ver">🔒</span>
+          {item.media_filename && (
+            <p className="text-sm text-muted-foreground truncate">
+              {item.media_filename}
+            </p>
+          )}
+          {item.usage_count > 0 && (
+            <Badge variant="secondary" className="text-xs mt-1">
+              Usado {item.usage_count}x
+            </Badge>
           )}
         </div>
-        {item.text_content && (
-          <p className="text-sm text-muted-foreground truncate">
-            {item.text_content.slice(0, 60)}...
-          </p>
-        )}
-        {item.media_filename && (
-          <p className="text-sm text-muted-foreground truncate">
-            {item.media_filename}
-          </p>
-        )}
-        {item.usage_count > 0 && (
-          <Badge variant="secondary" className="text-xs mt-1">
-            Usado {item.usage_count}x
-          </Badge>
-        )}
-      </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => toggleFavorite(item)}
-            >
-              {item.is_favorite ? (
-                <StarOff className="h-4 w-4" />
-              ) : (
-                <Star className="h-4 w-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {item.is_favorite ? 'Remover favorito' : 'Favoritar'}
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handleCopyItem(item)}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Copiar</TooltipContent>
-        </Tooltip>
-
-        {onUseItem && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-primary"
-                onClick={() => handleUseItem(item)}
+                className="h-8 w-8"
+                onClick={() => toggleFavorite(item)}
               >
-                <Send className="h-4 w-4" />
+                {item.is_favorite ? (
+                  <StarOff className="h-4 w-4" />
+                ) : (
+                  <Star className="h-4 w-4" />
+                )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Usar</TooltipContent>
+            <TooltipContent>
+              {item.is_favorite ? 'Remover favorito' : 'Favoritar'}
+            </TooltipContent>
           </Tooltip>
-        )}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => {
-              setEditingItem(item);
-              setFormOpen(true);
-            }}>
-              <Edit2 className="h-4 w-4 mr-2" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => {
-                setItemToDelete(item);
-                setDeleteConfirmOpen(true);
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleCopyItem(item)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copiar</TooltipContent>
+          </Tooltip>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                setEditingItem(item);
+                setFormOpen(true);
+              }}>
+                <Edit2 className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => {
+                  setItemToDelete(item);
+                  setDeleteConfirmOpen(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderFolder = (folder: PlaybookFolder) => {
     const folderItems = groupedItems.folderItems[folder.id] || [];
@@ -422,72 +420,93 @@ export function PlaybookDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Playbook</span>
-              <Button onClick={() => {
-                setEditingItem(null);
-                setFormOpen(true);
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Item
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2 pb-2 border-b flex-none">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={filterType === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterType('all')}
-                >
-                  Todos
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden p-0">
+          {/* ===== HEADER (Fixed) ===== */}
+          <div className="flex-none p-6 pb-4 space-y-4 border-b">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>Playbook</span>
+                <Button onClick={() => {
+                  setEditingItem(null);
+                  setFormOpen(true);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Item
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>Todos os itens</TooltipContent>
-            </Tooltip>
+              </DialogTitle>
+            </DialogHeader>
 
-            {(Object.keys(contentTypeIcons) as PlaybookContentType[]).map(type => (
-              <Tooltip key={type}>
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={filterType === type ? 'default' : 'outline'}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setFilterType(type)}
+                    variant={filterType === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFilterType('all')}
                   >
-                    {contentTypeIcons[type]}
+                    Todos
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{contentTypeLabels[type]}</TooltipContent>
+                <TooltipContent>Todos os itens</TooltipContent>
               </Tooltip>
-            ))}
 
-            <div className="flex-1" />
+              {(Object.keys(contentTypeIcons) as PlaybookContentType[]).map(type => (
+                <Tooltip key={type}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={filterType === type ? 'default' : 'outline'}
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setFilterType(type)}
+                    >
+                      {contentTypeIcons[type]}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{contentTypeLabels[type]}</TooltipContent>
+                </Tooltip>
+              ))}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowNewFolderInput(true)}
-            >
-              <Folder className="h-4 w-4 mr-2" />
-              Nova Pasta
-            </Button>
-          </div>
+              <div className="flex-1" />
 
-          {/* New folder input */}
-          {showNewFolderInput && (
-            <div className="flex gap-2 py-2 flex-none">
-              <Input
-                placeholder={editingFolder ? 'Novo nome da pasta' : 'Nome da pasta'}
-                value={newFolderName}
-                onChange={e => setNewFolderName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNewFolderInput(true)}
+              >
+                <Folder className="h-4 w-4 mr-2" />
+                Nova Pasta
+              </Button>
+            </div>
+
+            {/* New folder input */}
+            {showNewFolderInput && (
+              <div className="flex gap-2">
+                <Input
+                  placeholder={editingFolder ? 'Novo nome da pasta' : 'Nome da pasta'}
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      if (editingFolder) {
+                        updateFolder({ id: editingFolder.id, name: newFolderName });
+                        setEditingFolder(null);
+                      } else {
+                        handleCreateFolder();
+                      }
+                      setShowNewFolderInput(false);
+                      setNewFolderName('');
+                    }
+                    if (e.key === 'Escape') {
+                      setShowNewFolderInput(false);
+                      setNewFolderName('');
+                      setEditingFolder(null);
+                    }
+                  }}
+                  autoFocus
+                />
+                <Button
+                  onClick={() => {
                     if (editingFolder) {
                       updateFolder({ id: editingFolder.id, name: newFolderName });
                       setEditingFolder(null);
@@ -496,82 +515,111 @@ export function PlaybookDialog({
                     }
                     setShowNewFolderInput(false);
                     setNewFolderName('');
-                  }
-                  if (e.key === 'Escape') {
+                  }}
+                  disabled={!newFolderName.trim() || isCreatingFolder}
+                >
+                  {isCreatingFolder ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Salvar'
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
                     setShowNewFolderInput(false);
                     setNewFolderName('');
                     setEditingFolder(null);
-                  }
-                }}
-                autoFocus
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar no playbook..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-10"
               />
+            </div>
+          </div>
+
+          {/* ===== BODY (Scrollable) ===== */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-6 pt-4 space-y-2">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredItems.length === 0 && folders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <FileText className="h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Playbook vazio</p>
+                  <p className="text-sm">Crie seu primeiro item para começar</p>
+                </div>
+              ) : (
+                <>
+                  {/* Virtual Favorites Folder - First */}
+                  {favoriteItems.length > 0 && (
+                    <div className="space-y-1">
+                      <div
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-yellow-500/10 border-yellow-500/30 cursor-pointer hover:bg-yellow-500/20 transition-colors"
+                        onClick={() => toggleFolder('__favorites__')}
+                      >
+                        <div className="p-2 rounded-lg bg-yellow-500/20">
+                          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                        </div>
+                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                          {expandedFolders.has('__favorites__') ? (
+                            <ChevronDown className="h-4 w-4 shrink-0" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 shrink-0" />
+                          )}
+                          <span className="font-medium">FAVORITOS</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {favoriteItems.length}
+                          </Badge>
+                        </div>
+                      </div>
+                      {expandedFolders.has('__favorites__') && (
+                        <div className="ml-6 space-y-1">
+                          {favoriteItems.map(renderItem)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Folders */}
+                  {filterType === 'all' || filterType === 'folder' ? (
+                    folders.map(renderFolder)
+                  ) : null}
+
+                  {/* Root items */}
+                  {groupedItems.rootItems.map(renderItem)}
+                </>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* ===== FOOTER (Fixed) ===== */}
+          {onUseItem && (
+            <div className="flex-none p-4 border-t bg-muted/30 flex justify-end">
               <Button
-                onClick={() => {
-                  if (editingFolder) {
-                    updateFolder({ id: editingFolder.id, name: newFolderName });
-                    setEditingFolder(null);
-                  } else {
-                    handleCreateFolder();
-                  }
-                  setShowNewFolderInput(false);
-                  setNewFolderName('');
-                }}
-                disabled={!newFolderName.trim() || isCreatingFolder}
+                onClick={() => selectedItem && handleUseItem(selectedItem)}
+                disabled={!selectedItem}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="lg"
               >
-                {isCreatingFolder ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Salvar'
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowNewFolderInput(false);
-                  setNewFolderName('');
-                  setEditingFolder(null);
-                }}
-              >
-                Cancelar
+                <Send className="h-4 w-4 mr-2" />
+                Selecionar e Enviar
               </Button>
             </div>
           )}
-
-          {/* Search */}
-          <div className="relative flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar no playbook..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Content */}
-          <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredItems.length === 0 && folders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mb-4 opacity-50" />
-                <p className="text-lg font-medium">Playbook vazio</p>
-                <p className="text-sm">Crie seu primeiro item para começar</p>
-              </div>
-            ) : (
-              <div className="space-y-2 py-2">
-                {/* Folders */}
-                {filterType === 'all' || filterType === 'folder' ? (
-                  folders.map(renderFolder)
-                ) : null}
-
-                {/* Root items */}
-                {groupedItems.rootItems.map(renderItem)}
-              </div>
-            )}
-          </ScrollArea>
         </DialogContent>
       </Dialog>
 
