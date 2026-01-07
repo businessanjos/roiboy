@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCheck, Play, Pause, FileText, Download, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { sanitizeHTML, sanitizePlainText } from '@/lib/sanitize';
 
 interface TeamChatMessageProps {
   message: {
@@ -35,8 +36,11 @@ export function TeamChatMessage({ message, isOwn, showAvatar }: TeamChatMessageP
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const formatContent = (content: string) => {
-    // Parse WhatsApp-style formatting
-    let formatted = content;
+    // First, sanitize the raw content to remove any malicious scripts
+    const sanitized = sanitizePlainText(content);
+    
+    // Parse WhatsApp-style formatting on sanitized content
+    let formatted = sanitized;
     
     // Bold: *text*
     formatted = formatted.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
@@ -47,7 +51,11 @@ export function TeamChatMessage({ message, isOwn, showAvatar }: TeamChatMessageP
     // Monospace: ```text```
     formatted = formatted.replace(/```([^`]+)```/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm font-mono">$1</code>');
     
-    return formatted;
+    // Final sanitization to ensure only safe tags remain
+    return sanitizeHTML(formatted, {
+      ALLOWED_TAGS: ['strong', 'em', 'del', 'code'],
+      ALLOWED_ATTR: ['class'],
+    });
   };
 
   const formatDuration = (seconds: number | null) => {

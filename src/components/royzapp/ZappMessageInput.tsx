@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from "react";
+import { memo, useRef, useState, useMemo } from "react";
 import {
   Bold,
   BookOpen,
@@ -21,6 +21,7 @@ import {
   Zap,
   Reply,
 } from "lucide-react";
+import { SECURITY_LIMITS } from "@/lib/security-validators";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -504,7 +505,11 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 ref={messageInputRef}
                 placeholder="Digite uma mensagem (@ para mencionar)"
                 value={messageInput}
-                onChange={onMessageChange}
+                onChange={(value) => {
+                  if (value.length <= SECURITY_LIMITS.MESSAGE_MAX) {
+                    onMessageChange(value);
+                  }
+                }}
                 onKeyDown={onKeyPress}
                 disabled={sendingMessage}
                 groupJid={groupJid}
@@ -512,23 +517,41 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 onMentionInsert={onMentionInsert}
               />
             ) : (
-              <Textarea
-                ref={messageInputRef}
-                placeholder="Digite uma mensagem"
-                value={messageInput}
-                onChange={(e) => {
-                  onMessageChange(e.target.value);
-                  // Auto-resize textarea
-                  const target = e.target;
-                  target.style.height = 'auto';
-                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
-                }}
-                onKeyDown={onKeyPress}
-                disabled={sendingMessage}
-                rows={1}
-                className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg min-h-10 max-h-32 py-2.5 resize-none overflow-y-auto"
-                style={{ height: messageInput ? undefined : 'auto' }}
-              />
+              <div className="flex-1 relative">
+                <Textarea
+                  ref={messageInputRef}
+                  placeholder="Digite uma mensagem"
+                  value={messageInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Enforce character limit
+                    if (value.length <= SECURITY_LIMITS.MESSAGE_MAX) {
+                      onMessageChange(value);
+                    }
+                    // Auto-resize textarea
+                    const target = e.target;
+                    target.style.height = 'auto';
+                    target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                  }}
+                  onKeyDown={onKeyPress}
+                  disabled={sendingMessage}
+                  rows={1}
+                  maxLength={SECURITY_LIMITS.MESSAGE_MAX}
+                  className="flex-1 w-full bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg min-h-10 max-h-32 py-2.5 resize-none overflow-y-auto"
+                  style={{ height: messageInput ? undefined : 'auto' }}
+                />
+                {/* Character count warning */}
+                {messageInput.length > SECURITY_LIMITS.MESSAGE_MAX * 0.8 && (
+                  <span className={cn(
+                    "absolute bottom-1 right-2 text-[10px] pointer-events-none",
+                    messageInput.length > SECURITY_LIMITS.MESSAGE_MAX * 0.95 
+                      ? "text-destructive" 
+                      : "text-zapp-text-muted"
+                  )}>
+                    {messageInput.length.toLocaleString()}/{SECURITY_LIMITS.MESSAGE_MAX.toLocaleString()}
+                  </span>
+                )}
+              </div>
             )}
             
             {messageInput.trim() ? (

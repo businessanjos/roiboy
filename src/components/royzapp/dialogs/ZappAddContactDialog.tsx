@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { brazilianBanks } from "@/data/brazilian-banks";
 import { toast } from "sonner";
+import { sanitizeString, SECURITY_LIMITS } from "@/lib/security-validators";
 
 interface LeadFormData {
   full_name: string;
@@ -455,11 +456,35 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
   };
 
   const handleSaveClient = async () => {
-    await onSaveClient(clientForm);
+    // Sanitize client form data before saving
+    const sanitizedData = {
+      full_name: sanitizeString(clientForm.full_name),
+      phone_e164: clientForm.phone_e164, // Phone is already formatted
+    };
+    await onSaveClient(sanitizedData);
   };
 
   const handleSaveLead = async () => {
-    await onSaveLead(leadForm);
+    // Sanitize lead form data before saving
+    const sanitizedForm: LeadFormData = {
+      ...leadForm,
+      full_name: sanitizeString(leadForm.full_name),
+      email: sanitizeString(leadForm.email),
+      notes: sanitizeString(leadForm.notes),
+      company_name: sanitizeString(leadForm.company_name),
+      business_segment: sanitizeString(leadForm.business_segment),
+      business_niche: sanitizeString(leadForm.business_niche),
+      street: sanitizeString(leadForm.street),
+      complement: sanitizeString(leadForm.complement),
+      neighborhood: sanitizeString(leadForm.neighborhood),
+      city: sanitizeString(leadForm.city),
+      business_street: sanitizeString(leadForm.business_street),
+      business_complement: sanitizeString(leadForm.business_complement),
+      business_neighborhood: sanitizeString(leadForm.business_neighborhood),
+      business_city: sanitizeString(leadForm.business_city),
+      instagram: sanitizeString(leadForm.instagram),
+    };
+    await onSaveLead(sanitizedForm);
   };
 
   const saving = savingClient || savingLead || linking;
