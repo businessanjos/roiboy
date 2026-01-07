@@ -37,6 +37,7 @@ interface UazapiRequest {
   file_name?: string;
   groups?: Array<{ group_jid: string; name: string; participant_count: number }>;
   sector_id?: string;
+  integration_id?: string; // NEW: Target specific integration by ID
 }
 
 // Helper function to configure webhook automatically
@@ -223,27 +224,42 @@ serve(async (req) => {
 
     const accountId = userData.account_id;
     const payload: UazapiRequest = await req.json();
-    const { action, phone, message, group_id, group_name, participants, groups, sector_id } = payload;
+    const { action, phone, message, group_id, group_name, participants, groups, sector_id, integration_id } = payload;
 
-    // Build query for existing integration - use sector_id if provided
-    // CRITICAL: Always filter by sector_id for disambiguation
-    let integrationQuery = supabase
-      .from("integrations")
-      .select("config, status, sector_id, id")
-      .eq("account_id", accountId)
-      .eq("type", "whatsapp");
+    // Build query for existing integration
+    // If integration_id is provided, use it directly for targeting specific integration
+    let existingWhatsapp: { config: unknown; status: string; sector_id: string | null; id: string } | null = null;
     
-    // CRITICAL: sector_id can be null for default sector
-    if (sector_id) {
-      integrationQuery = integrationQuery.eq("sector_id", sector_id);
+    if (integration_id) {
+      // Direct lookup by integration ID
+      const { data } = await supabase
+        .from("integrations")
+        .select("config, status, sector_id, id")
+        .eq("id", integration_id)
+        .eq("account_id", accountId) // Security: ensure it belongs to this account
+        .single();
+      existingWhatsapp = data;
+      console.log(`[UAZAPI] Action: ${action}, Integration by ID: ${integration_id}, Found: ${existingWhatsapp ? 'yes' : 'no'}`);
     } else {
-      // For default sector, explicitly match null sector_id
-      integrationQuery = integrationQuery.is("sector_id", null);
+      // Fallback to sector_id based lookup
+      let integrationQuery = supabase
+        .from("integrations")
+        .select("config, status, sector_id, id")
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp");
+      
+      // CRITICAL: sector_id can be null for default sector
+      if (sector_id) {
+        integrationQuery = integrationQuery.eq("sector_id", sector_id);
+      } else {
+        // For default sector, explicitly match null sector_id
+        integrationQuery = integrationQuery.is("sector_id", null);
+      }
+      
+      const { data, error: existingError } = await integrationQuery.maybeSingle();
+      existingWhatsapp = data;
+      console.log(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'}, Integration found:`, existingWhatsapp ? `ID=${existingWhatsapp.id}` : 'none', existingError?.message || '');
     }
-    
-    const { data: existingWhatsapp, error: existingError } = await integrationQuery.maybeSingle();
-
-    console.log(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'}, Integration found:`, existingWhatsapp ? `ID=${existingWhatsapp.id}` : 'none', existingError?.message || '');
 
     // For "create" action, ALWAYS generate a unique instance name if:
     // 1. No existing integration exists, OR
