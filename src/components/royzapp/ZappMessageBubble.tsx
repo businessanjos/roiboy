@@ -12,7 +12,9 @@ import {
   Loader2,
   Reply,
   Trash2,
+  Sparkles,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Message, getSenderColor } from "./types";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ZappMessageBubbleProps {
   message: Message;
@@ -141,9 +145,14 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   onReply,
   onDelete,
 }: ZappMessageBubbleProps) {
+  const { toast } = useToast();
   const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(
+    message.transcription || null
+  );
   
   const renderedContent = useMemo(() => {
     if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
@@ -171,6 +180,35 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     const hoursDiff = (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60);
     return hoursDiff < 1; // WhatsApp allows delete for ~1 hour
   }, [message.is_from_client, message.created_at]);
+
+  // Handle audio transcription
+  const handleTranscribe = async () => {
+    setIsTranscribing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: { message_id: message.id }
+      });
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      setTranscription(data.transcription);
+      toast({ 
+        title: "Áudio transcrito com sucesso!",
+        description: "A transcrição foi salva automaticamente."
+      });
+    } catch (err) {
+      console.error('Transcription error:', err);
+      toast({ 
+        title: "Erro na transcrição", 
+        description: err instanceof Error ? err.message : "Tente novamente mais tarde",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   return (
     <div>
       {showTimestamp && (
@@ -294,6 +332,46 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                   </span>
                 </div>
               )}
+              
+              {/* Transcription Button - only show if no transcription yet */}
+              {!transcription && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleTranscribe}
+                  disabled={isTranscribing}
+                  className="text-[10px] text-zapp-text-muted hover:text-primary mt-1 h-auto py-1 px-2"
+                >
+                  {isTranscribing ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Transcrevendo...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Transcrever
+                    </>
+                  )}
+                </Button>
+              )}
+              
+              {/* Transcribed Text - shown with smooth animation */}
+              <AnimatePresence>
+                {transcription && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-2 pt-2 border-t border-white/10"
+                  >
+                    <p className="text-xs text-zapp-text-muted/80 italic leading-relaxed">
+                      "{transcription}"
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
           
