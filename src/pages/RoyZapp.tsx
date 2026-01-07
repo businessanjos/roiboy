@@ -1904,43 +1904,67 @@ export default function RoyZapp() {
   };
 
   // Open new conversation dialog
-  const openNewConversationDialog = async () => {
+  const openNewConversationDialog = () => {
     if (!currentUser?.account_id) return;
     setNewConversationSearch("");
+    setNewConversationClients([]);
     setNewConversationDialogOpen(true);
-    
-    // No setor de Vendas, buscar leads; caso contrário, buscar clientes
+  };
+
+  // Dynamic search for leads or clients
+  const searchLeadsOrClients = useCallback(async (searchTerm: string) => {
+    if (!currentUser?.account_id || !searchTerm.trim()) {
+      setNewConversationClients([]);
+      return;
+    }
+
+    const normalizedSearch = searchTerm.replace(/\D/g, ''); // Remove non-numeric for phone search
+    const textSearch = searchTerm.toLowerCase().trim();
+
     if (selectedSectorId === "vendas") {
+      // Search leads using correct filter (same as Leads page)
       const { data } = await supabase
         .from("leads")
         .select("id, full_name, phone, email")
         .eq("account_id", currentUser.account_id)
-        .not("status", "eq", "converted")
+        .is("converted_to_client_id", null) // Correct filter - not converted
+        .or(`full_name.ilike.%${textSearch}%,phone.ilike.%${normalizedSearch}%,email.ilike.%${textSearch}%`)
         .order("full_name")
-        .limit(100);
-      
-      // Mapear para o formato esperado
+        .limit(20);
+
       const mappedData = (data || []).map(lead => ({
         id: lead.id,
         full_name: lead.full_name,
         phone_e164: lead.phone || "",
         avatar_url: null,
       }));
-      
+
       setNewConversationClients(mappedData);
     } else {
-      // Comportamento padrão: buscar clientes
+      // Search clients
       const { data } = await supabase
         .from("clients")
         .select("id, full_name, phone_e164, avatar_url")
         .eq("account_id", currentUser.account_id)
         .eq("status", "active")
+        .or(`full_name.ilike.%${textSearch}%,phone_e164.ilike.%${normalizedSearch}%`)
         .order("full_name")
-        .limit(100);
-      
+        .limit(20);
+
       setNewConversationClients(data || []);
     }
-  };
+  }, [currentUser?.account_id, selectedSectorId]);
+
+  // Debounced search effect
+  useEffect(() => {
+    if (!newConversationDialogOpen) return;
+    
+    const timeoutId = setTimeout(() => {
+      searchLeadsOrClients(newConversationSearch);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [newConversationSearch, newConversationDialogOpen, searchLeadsOrClients]);
 
   // Create new conversation with contact (lead or client based on sector)
   const createConversationWithContact = async (contact: any) => {
@@ -2031,15 +2055,8 @@ export default function RoyZapp() {
     }
   };
 
-  // Filter clients for new conversation dialog
-  const filteredNewConversationClients = useMemo(() => {
-    if (!newConversationSearch.trim()) return newConversationClients;
-    const search = newConversationSearch.toLowerCase();
-    return newConversationClients.filter(c => 
-      c.full_name?.toLowerCase().includes(search) || 
-      c.phone_e164?.includes(search)
-    );
-  }, [newConversationClients, newConversationSearch]);
+  // Clients/leads for new conversation dialog (already filtered by DB search)
+  const filteredNewConversationClients = newConversationClients;
 
 
   // Filtered conversations based on tab (mine vs queue)
