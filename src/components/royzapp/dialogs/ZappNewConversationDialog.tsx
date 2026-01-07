@@ -26,6 +26,7 @@ interface ZappNewConversationDialogProps {
   clients: Client[];
   onSelectClient: (client: Client) => void;
   creating: boolean;
+  isLeadMode?: boolean;
 }
 
 export const ZappNewConversationDialog = memo(function ZappNewConversationDialog({
@@ -36,6 +37,7 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
   clients,
   onSelectClient,
   creating,
+  isLeadMode = false,
 }: ZappNewConversationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,7 +45,7 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
         <DialogHeader>
           <DialogTitle>Nova Conversa</DialogTitle>
           <DialogDescription className="text-[#8696a0]">
-            Busque um cliente para iniciar uma conversa
+            Busque um {isLeadMode ? "lead" : "cliente"} para iniciar uma conversa
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -55,9 +57,9 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
           />
           <ScrollArea className="h-64">
             {searchQuery.trim() === "" ? (
-              <p className="text-center text-[#8696a0] py-8">Digite para buscar clientes</p>
+              <p className="text-center text-[#8696a0] py-8">Digite para buscar {isLeadMode ? "leads" : "clientes"}</p>
             ) : clients.length === 0 ? (
-              <p className="text-center text-[#8696a0] py-8">Nenhum cliente encontrado</p>
+              <p className="text-center text-[#8696a0] py-8">Nenhum {isLeadMode ? "lead" : "cliente"} encontrado</p>
             ) : (
               <div className="space-y-2">
                 {clients.map((client) => (
