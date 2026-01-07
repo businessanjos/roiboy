@@ -64,6 +64,7 @@ const Leads = lazy(() => import("./pages/Leads"));
 const TeamChat = lazy(() => import("./pages/TeamChat"));
 const Marketing = lazy(() => import("./pages/Marketing"));
 const SocialMedia = lazy(() => import("./pages/SocialMedia"));
+const WhatsAppDiagnostics = lazy(() => import("./pages/admin/WhatsAppDiagnostics"));
 // Financial module with sub-routes
 import { FinancialLayout } from "@/components/financial/FinancialLayout";
 const FinancialEntriesPage = lazy(() => import("./pages/financial/FinancialEntriesPage"));
@@ -188,6 +189,7 @@ const App = () => (
                             <Route path="/social-media" element={<SocialMedia />} />
                             <Route path="/team-chat/:chatId" element={<TeamChat />} />
                             <Route path="/admin" element={<Admin />} />
+                            <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>
