@@ -25,25 +25,41 @@ interface WhatsAppIntegrationCardProps {
 export function WhatsAppIntegrationCard({
   integrations,
   onRefresh,
+  sectorId,
 }: WhatsAppIntegrationCardProps) {
-  // Get ALL WhatsApp integrations (not filtered by sector)
+  // Get ALL WhatsApp integrations for listing
   const allWhatsAppIntegrations = integrations.filter((i) => (i.type as string) === "whatsapp");
+  
+  // Get the specific integration for THIS sector (used for connection UI)
+  const currentSectorIntegration = integrations.find((i) => {
+    if ((i.type as string) !== "whatsapp") return false;
+    if (sectorId) return i.sector_id === sectorId;
+    return !i.sector_id; // Default sector (null)
+  });
+  
+  const config = currentSectorIntegration?.config as Record<string, unknown> | null;
+  const connectionState = config?.connection_state as string | undefined;
+  const qrcodeBase64 = config?.qrcode_base64 as string | undefined;
+  const instanceName = config?.instance_name as string | undefined;
+  const savedPaircode = config?.paircode as string | undefined;
+  
+  const isConnected = currentSectorIntegration?.status === "connected" || connectionState === "open";
+  const isPending = connectionState === "pending" || (!isConnected && (qrcodeBase64 || savedPaircode));
   
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<string | null>(null);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [paircode, setPaircode] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(qrcodeBase64 || null);
+  const [paircode, setPaircode] = useState<string | null>(savedPaircode || null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [connectionMethod, setConnectionMethod] = useState<"qrcode" | "paircode">("qrcode");
   const [showConnectionOptions, setShowConnectionOptions] = useState(false);
   const [pollingStatus, setPollingStatus] = useState(false);
   const [connectionSuccess, setConnectionSuccess] = useState(false);
   const [checkingStatusId, setCheckingStatusId] = useState<string | null>(null);
-  const [currentCreatingSectorId, setCurrentCreatingSectorId] = useState<string | null>(null);
 
   // Poll for status updates when pairing code or QR code is shown
   useEffect(() => {
-    if (!qrCode && !paircode) return;
+    if ((!qrCode && !paircode) || isConnected) return;
 
     setPollingStatus(true);
     const interval = setInterval(async () => {
@@ -52,7 +68,7 @@ export function WhatsAppIntegrationCard({
         if (!session?.session?.access_token) return;
 
         const response = await supabase.functions.invoke("uazapi-manager", {
-          body: { action: "status", sector_id: currentCreatingSectorId || undefined },
+          body: { action: "status", sector_id: sectorId || undefined },
         });
 
         if (response.data?.data?.state === "open" || response.data?.data?.connected) {
@@ -80,16 +96,15 @@ export function WhatsAppIntegrationCard({
       clearInterval(interval);
       setPollingStatus(false);
     };
-  }, [qrCode, paircode, onRefresh, currentCreatingSectorId]);
+  }, [qrCode, paircode, isConnected, onRefresh, sectorId]);
 
   const handleCreateInstance = useCallback(async () => {
     setLoading(true);
     setAction("create");
-    setCurrentCreatingSectorId(null);
 
     try {
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "create" },
+        body: { action: "create", sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -124,17 +139,15 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [onRefresh]);
+  }, [onRefresh, sectorId]);
 
   const handleGetQRCode = useCallback(async () => {
     setLoading(true);
     setAction("qrcode");
 
     try {
-      // Use "create" action which creates instance AND returns QR code
-      // This works even if instance already exists (it will just get the QR code)
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "create", sector_id: currentCreatingSectorId || undefined },
+        body: { action: "create", sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -143,7 +156,6 @@ export function WhatsAppIntegrationCard({
 
       const data = response.data;
       
-      // Check for QR code in response - try multiple paths
       const qr = data?.qrcode_base64 ||
                  data?.data?.qrcode_base64 ||
                  data?.data?.base64 ||
@@ -160,11 +172,10 @@ export function WhatsAppIntegrationCard({
       } else {
         console.log("QR Code response:", data);
         toast.info("Instância criada! QR Code será exibido em instantes...");
-        // Retry after a short delay
         setTimeout(async () => {
           try {
             const retryResponse = await supabase.functions.invoke("uazapi-manager", {
-              body: { action: "connect", sector_id: currentCreatingSectorId || undefined },
+              body: { action: "connect", sector_id: sectorId || undefined },
             });
             const retryData = retryResponse.data;
             const retryQr = retryData?.base64 || retryData?.qrcode_base64 || retryData?.qr;
@@ -186,7 +197,7 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [onRefresh, currentCreatingSectorId]);
+  }, [onRefresh, sectorId]);
 
   const handleGeneratePaircode = useCallback(async () => {
     if (!phoneNumber.trim()) {
@@ -199,7 +210,7 @@ export function WhatsAppIntegrationCard({
 
     try {
       const response = await supabase.functions.invoke("uazapi-manager", {
-        body: { action: "paircode", phone: phoneNumber, sector_id: currentCreatingSectorId || undefined },
+        body: { action: "paircode", phone: phoneNumber, sector_id: sectorId || undefined },
       });
 
       if (response.error) {
@@ -226,7 +237,7 @@ export function WhatsAppIntegrationCard({
       setLoading(false);
       setAction(null);
     }
-  }, [phoneNumber, onRefresh, currentCreatingSectorId]);
+  }, [phoneNumber, onRefresh, sectorId]);
 
   const handleCheckStatusById = useCallback(async (integrationId: string) => {
     setCheckingStatusId(integrationId);
@@ -281,6 +292,9 @@ export function WhatsAppIntegrationCard({
         throw new Error(response.error.message);
       }
 
+      setQrCode(null);
+      setPaircode(null);
+      setShowConnectionOptions(false);
       toast.success("WhatsApp desconectado");
       onRefresh();
     } catch (err) {
@@ -290,6 +304,11 @@ export function WhatsAppIntegrationCard({
       setCheckingStatusId(null);
     }
   }, [onRefresh]);
+
+  const lastConnectionUpdate = config?.last_connection_update as string | undefined;
+  const lastSeenText = lastConnectionUpdate 
+    ? formatDistanceToNow(new Date(lastConnectionUpdate), { addSuffix: true, locale: ptBR })
+    : null;
 
   return (
     <>
@@ -343,16 +362,21 @@ export function WhatsAppIntegrationCard({
                 </CardDescription>
               </div>
             </div>
-            <Badge variant={allWhatsAppIntegrations.some(i => i.status === "connected") ? "default" : "outline"} className="gap-1">
-              {allWhatsAppIntegrations.some(i => i.status === "connected") ? (
+            <Badge variant={isConnected ? "default" : isPending ? "secondary" : "outline"} className="gap-1">
+              {isConnected ? (
                 <>
                   <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                  {allWhatsAppIntegrations.filter(i => i.status === "connected").length} ativo(s)
+                  Conectado
+                </>
+              ) : isPending ? (
+                <>
+                  <Clock className="h-3 w-3" />
+                  Aguardando
                 </>
               ) : (
                 <>
                   <XCircle className="h-3 w-3" />
-                  Sem conexões
+                  Desconectado
                 </>
               )}
             </Badge>
@@ -427,7 +451,6 @@ export function WhatsAppIntegrationCard({
                           placeholder="Ex: 5511987654321"
                           value={phoneNumber}
                           onChange={(e) => {
-                            // Remove caracteres não numéricos
                             const cleaned = e.target.value.replace(/\D/g, '');
                             setPhoneNumber(cleaned);
                           }}
@@ -563,7 +586,29 @@ export function WhatsAppIntegrationCard({
             </motion.div>
           )}
 
-          {/* Connections List */}
+          {/* Connection Status for current sector */}
+          {isConnected && (
+            <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <h4 className="font-medium text-green-800 dark:text-green-400">WhatsApp Conectado</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Instância:</span>
+                  <span className="ml-2 font-mono text-xs">{instanceName}</span>
+                </div>
+                {lastSeenText && (
+                  <div>
+                    <span className="text-muted-foreground">Última atualização:</span>
+                    <span className="ml-2">{lastSeenText}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Connections List - All WhatsApp integrations */}
           {allWhatsAppIntegrations.length > 0 && (
             <div className="border rounded-lg divide-y">
               <div className="p-4 bg-muted/30 flex items-center justify-between">
@@ -574,10 +619,11 @@ export function WhatsAppIntegrationCard({
               </div>
               {allWhatsAppIntegrations.map((integration) => {
                 const cfg = integration.config as Record<string, unknown> | null;
-                const instanceName = cfg?.instance_name as string || "Instância sem nome";
+                const intInstanceName = cfg?.instance_name as string || "Instância sem nome";
                 const isIntegrationConnected = integration.status === "connected" || cfg?.connection_state === "open";
                 const createdAt = integration.created_at ? new Date(integration.created_at) : null;
                 const isCheckingThis = checkingStatusId === integration.id;
+                const sectorLabel = integration.sector_id || "Padrão";
                 
                 return (
                   <div key={integration.id} className="p-4 flex items-center justify-between gap-4">
@@ -590,12 +636,13 @@ export function WhatsAppIntegrationCard({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{instanceName}</p>
-                        {createdAt && (
-                          <p className="text-xs text-muted-foreground">
-                            Criado em: {format(createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        )}
+                        <p className="font-medium text-sm truncate">{intInstanceName}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline" className="text-xs py-0">{sectorLabel}</Badge>
+                          {createdAt && (
+                            <span>• {format(createdAt, "dd/MM/yyyy", { locale: ptBR })}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
