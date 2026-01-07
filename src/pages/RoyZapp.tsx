@@ -205,24 +205,29 @@ export default function RoyZapp() {
       if (existingConv) {
         zappConvId = existingConv.id;
         
-        // Check if assignment exists
+        // Check if assignment exists for current agent
         const { data: existingAssignment } = await supabase
           .from("zapp_conversation_assignments")
           .select("id")
           .eq("zapp_conversation_id", zappConvId)
+          .eq("agent_id", currentAgent.id)
           .neq("status", "closed")
           .maybeSingle();
         
         if (existingAssignment) {
           // Just select the existing conversation after data is refetched
           await fetchData();
-          const assignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
-          if (assignment) {
-            setSelectedConversation(assignment);
-          }
-          toast.info("Conversa já existe");
+          setTimeout(() => {
+            const updatedAssignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
+            if (updatedAssignment) {
+              setSelectedConversation(updatedAssignment);
+            }
+          }, 100);
+          toast.info("Abrindo conversa existente");
+          setCreatingConversation(false);
           return;
         }
+        // If no active assignment for this agent, continue to create one below
       } else {
         // Create new zapp_conversation
         const baseData = {
@@ -2121,25 +2126,30 @@ export default function RoyZapp() {
       if (existingConv) {
         zappConvId = existingConv.id;
         
-        // Check if assignment exists
+        // Check if assignment exists for current agent
         const { data: existingAssignment } = await supabase
           .from("zapp_conversation_assignments")
           .select("id")
           .eq("zapp_conversation_id", zappConvId)
+          .eq("agent_id", currentAgent.id)
           .neq("status", "closed")
           .maybeSingle();
         
         if (existingAssignment) {
-          // Just select the existing conversation
-          const assignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
-          if (assignment) {
-            setSelectedConversation(assignment);
-          }
-          toast.info("Conversa já existe");
+          // Refetch data and select the existing conversation
+          await fetchData();
+          setTimeout(() => {
+            const assignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
+            if (assignment) {
+              setSelectedConversation(assignment);
+            }
+          }, 100);
+          toast.info("Abrindo conversa existente");
           setNewConversationDialogOpen(false);
           setCreatingConversation(false);
           return;
         }
+        // If no active assignment exists, continue to create one below
       } else {
         // Create new zapp_conversation
         const baseData = {

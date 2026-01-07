@@ -32,35 +32,13 @@ export function useZappNavigation() {
     setLoading(true);
 
     try {
-      // First, try to find existing conversation
-      let conversationQuery = supabase
-        .from("zapp_conversations")
-        .select("id, sector_id")
-        .eq("account_id", currentUser.account_id)
-        .eq("sector_id", "vendas");
-
-      if (leadId) {
-        conversationQuery = conversationQuery.eq("lead_id", leadId);
-      } else if (clientId) {
-        conversationQuery = conversationQuery.eq("client_id", clientId);
-      } else if (phone) {
-        // Normalize phone for search
-        const normalizedPhone = phone.replace(/\D/g, "");
-        conversationQuery = conversationQuery.ilike("phone_e164", `%${normalizedPhone}%`);
-      }
-
-      const { data: existingConversations } = await conversationQuery.limit(1);
-
-      if (existingConversations && existingConversations.length > 0) {
-        // Navigate to existing conversation
-        navigate(`/roy-zapp?sector=vendas&conversation=${existingConversations[0].id}`);
-        toast.success("Abrindo conversa existente...");
-      } else if (phone) {
-        // Navigate to RoyZapp with phone to start new conversation
+      // Always navigate with the parameters - let RoyZapp handle conversation creation/selection
+      // This ensures proper assignment creation and chat opening regardless of existing conversation state
+      if (phone) {
         const normalizedPhone = phone.replace(/\D/g, "");
         const encodedName = encodeURIComponent(name || "");
         navigate(`/roy-zapp?sector=vendas&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`);
-        toast.info("Abrindo RoyZapp para iniciar conversa...");
+        toast.info("Abrindo RoyZapp...");
       } else {
         toast.error("Nenhum telefone cadastrado para este contato");
       }
