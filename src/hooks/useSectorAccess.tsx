@@ -17,6 +17,18 @@ interface SectorSettings {
 export function useSectorAccess() {
   const { currentUser } = useCurrentUser();
 
+  // Check if user is super_admin
+  const { data: isSuperAdmin = false } = useQuery({
+    queryKey: ["is-super-admin", currentUser?.auth_user_id],
+    queryFn: async () => {
+      if (!currentUser?.auth_user_id) return false;
+      const { data } = await supabase.rpc('is_super_admin', { _user_id: currentUser.auth_user_id });
+      return data === true;
+    },
+    enabled: !!currentUser?.auth_user_id,
+    staleTime: 60000,
+  });
+
   const { data: sectorAccess = [], isLoading } = useQuery({
     queryKey: ["user-sector-access", currentUser?.id],
     queryFn: async () => {
@@ -53,7 +65,12 @@ export function useSectorAccess() {
   });
 
   const hasSectorAccess = (sectorId: SectorId): boolean => {
-    // Admins have access to all sectors
+    // Diretoria sector is ONLY accessible by super_admin
+    if (sectorId === "diretoria") {
+      return isSuperAdmin;
+    }
+    
+    // Admins have access to all other sectors
     if (currentUser?.role === "admin") return true;
     
     return sectorAccess.some((access) => access.sector_id === sectorId);
@@ -76,6 +93,7 @@ export function useSectorAccess() {
     sectorAccess,
     sectorSettings,
     isLoading,
+    isSuperAdmin,
     hasSectorAccess,
     isSectorRoyzappEnabled,
     canAccessSectorRoyzapp,
