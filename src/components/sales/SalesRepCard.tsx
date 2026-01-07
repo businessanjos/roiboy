@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, forwardRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,8 @@ interface SalesRepCardProps {
   onViewDetails: (rep: SalesRepMetrics) => void;
 }
 
-export const SalesRepCard = memo(function SalesRepCard({ rep, onViewDetails }: SalesRepCardProps) {
+export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
+  function SalesRepCard({ rep, onViewDetails }, ref) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -56,7 +57,7 @@ export const SalesRepCard = memo(function SalesRepCard({ rep, onViewDetails }: S
     : 0;
 
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetails(rep)}>
+    <Card ref={ref} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetails(rep)}>
       <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
@@ -168,4 +169,4 @@ export const SalesRepCard = memo(function SalesRepCard({ rep, onViewDetails }: S
       </CardContent>
     </Card>
   );
-});
+}));

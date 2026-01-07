@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,7 +31,8 @@ export function SalesTeamTab() {
   const [selectedRep, setSelectedRep] = useState<SalesRepMetrics | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const getDateRange = () => {
+  // Memoize date range to prevent infinite re-renders
+  const dateRange = useMemo(() => {
     const end = new Date();
     const start = new Date();
     
@@ -51,9 +52,9 @@ export function SalesTeamTab() {
     }
     
     return { startDate: start, endDate: end };
-  };
+  }, [period]);
 
-  const { metrics, totals, loading, refetch } = useSalesTeamMetrics(getDateRange());
+  const { metrics, totals, loading, refetch } = useSalesTeamMetrics(dateRange);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
