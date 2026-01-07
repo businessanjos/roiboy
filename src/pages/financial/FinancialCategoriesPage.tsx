@@ -338,14 +338,14 @@ export default function FinancialCategoriesPage() {
             <div className="space-y-2">
               <Label>Grupo DRE</Label>
               <Select 
-                value={formData.dre_group} 
-                onValueChange={(v) => setFormData({ ...formData, dre_group: v })}
+                value={formData.dre_group || "_none_"} 
+                onValueChange={(v) => setFormData({ ...formData, dre_group: v === "_none_" ? "" : v })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o grupo no DRE" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="_none_">Nenhum</SelectItem>
                   <SelectItem value="gross_revenue">Receita Bruta</SelectItem>
                   <SelectItem value="deductions">(-) Deduções da Receita</SelectItem>
                   <SelectItem value="cogs">(-) CMV/CPV (Custo dos Produtos)</SelectItem>
