@@ -46,7 +46,7 @@ interface ZappChatViewProps {
   audioPreview: { blob: Blob; url: string; duration: number } | null;
   showFormatting: boolean;
   replyingTo: ReplyingToMessage | null;
-  messageInputRef: RefObject<HTMLInputElement>;
+  messageInputRef: RefObject<HTMLTextAreaElement>;
   imageInputRef: RefObject<HTMLInputElement>;
   fileInputRef: RefObject<HTMLInputElement>;
   sectorId?: string;

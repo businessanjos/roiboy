@@ -21,7 +21,7 @@ import {
   Reply,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +55,7 @@ interface ZappMessageInputProps {
   recordingDuration: number;
   audioPreview: { blob: Blob; url: string; duration: number } | null;
   showFormatting: boolean;
-  messageInputRef?: React.RefObject<HTMLInputElement>;
+  messageInputRef?: React.RefObject<HTMLTextAreaElement>;
   imageInputRef?: React.RefObject<HTMLInputElement>;
   fileInputRef?: React.RefObject<HTMLInputElement>;
   isGroup?: boolean;
@@ -464,14 +464,15 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 onMentionInsert={onMentionInsert}
               />
             ) : (
-              <Input
+              <Textarea
                 ref={messageInputRef}
                 placeholder="Digite uma mensagem"
                 value={messageInput}
                 onChange={(e) => onMessageChange(e.target.value)}
                 onKeyDown={onKeyPress}
                 disabled={sendingMessage}
-                className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-10"
+                rows={1}
+                className="flex-1 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg min-h-10 max-h-32 py-2.5 resize-none"
               />
             )}
             

@@ -29,7 +29,7 @@ interface ZappGroupMentionInputProps {
   sectorId?: string;
 }
 
-export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMentionInputProps>(
+export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMentionInputProps>(
   ({ value, onChange, onMentionInsert, placeholder, className, onKeyDown, disabled, groupJid, sectorId }, ref) => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [participants, setParticipants] = useState<GroupParticipant[]>([]);
@@ -39,7 +39,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
     const [mentionStartIndex, setMentionStartIndex] = useState(-1);
     const [loadingParticipants, setLoadingParticipants] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Fetch group participants when groupJid changes
     useEffect(() => {
@@ -216,7 +216,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
 
     return (
       <div ref={containerRef} className="relative w-full flex-1">
-        <input
+        <textarea
           ref={(node) => {
             (inputRef as any).current = node;
             if (typeof ref === "function") {
@@ -225,14 +225,14 @@ export const ZappGroupMentionInput = forwardRef<HTMLInputElement, ZappGroupMenti
               ref.current = node;
             }
           }}
-          type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
+          rows={1}
           className={cn(
-            "flex h-10 w-full rounded-lg border-0 bg-zapp-input px-4 py-2 text-sm text-zapp-text placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex min-h-10 max-h-32 w-full rounded-lg border-0 bg-zapp-input px-4 py-2.5 text-sm text-zapp-text placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none",
             className
           )}
         />
