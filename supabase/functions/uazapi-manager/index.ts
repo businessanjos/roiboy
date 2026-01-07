@@ -722,6 +722,9 @@ serve(async (req) => {
                 instance_name: savedInstanceName || instanceName, // Preserve instance_name from config
                 last_status_check: new Date().toISOString(),
                 connection_state: connectionState,
+                // CRITICAL: Preserve display_name - it's the custom name set by user, never overwrite it
+                display_name: (existingWhatsapp?.config as { display_name?: string })?.display_name,
+                // profile_name comes from WhatsApp API, display_name is user-customized
                 profile_name: profileName || (existingWhatsapp?.config as { profile_name?: string })?.profile_name,
                 profile_pic_url: profilePicUrl || (existingWhatsapp?.config as { profile_pic_url?: string })?.profile_pic_url,
                 phone_number: instanceOwner || (existingWhatsapp?.config as { phone_number?: string })?.phone_number,
