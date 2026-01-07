@@ -147,7 +147,7 @@ export default function RoyZapp() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean; external_message_id?: string | null } | null>(null);
   const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string }[]>([]);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
