@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Navigate, Link, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginSecurity } from "@/hooks/useLoginSecurity";
 import { useSecurityAudit } from "@/hooks/useSecurityAudit";
@@ -15,6 +17,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { PasswordStrength, validatePassword, usePasswordStrength } from "@/components/ui/password-strength";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { RoyLogo } from "@/components/ui/roy-logo";
+import { 
+  loginFormSchema, 
+  signupFormSchema, 
+  LoginFormData, 
+  SignupFormData,
+  SECURITY_LIMITS 
+} from "@/lib/security-validators";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
@@ -31,15 +41,19 @@ export default function Auth() {
   const [resetSent, setResetSent] = useState(false);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
 
-  // Login form state
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  // React Hook Form with Zod validation - Login
+  const loginForm = useForm<LoginFormData>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: { email: "", password: "" },
+    mode: "onBlur",
+  });
 
-  // Signup form state
-  const [signupName, setSignupName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPhone, setSignupPhone] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
+  // React Hook Form with Zod validation - Signup
+  const signupForm = useForm<SignupFormData>({
+    resolver: zodResolver(signupFormSchema),
+    defaultValues: { name: "", email: "", phone: "", password: "" },
+    mode: "onBlur",
+  });
   
   // Post-signup payment state
   const [showPaymentSetup, setShowPaymentSetup] = useState(false);
@@ -71,28 +85,27 @@ export default function Auth() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (data: LoginFormData) => {
     setError(null);
     setIsSubmitting(true);
 
     // Check if account is locked
-    const lockStatus = await checkAccountLock(loginEmail);
+    const lockStatus = await checkAccountLock(data.email);
     if (lockStatus.isLocked) {
       setIsAccountLocked(true);
       setLockoutMinutes(lockStatus.lockoutMinutes);
       setError(`Conta bloqueada temporariamente. Tente novamente em ${lockStatus.lockoutMinutes} minutos.`);
-      logLoginBlocked(loginEmail);
+      logLoginBlocked(data.email);
       setIsSubmitting(false);
       return;
     }
 
     setRemainingAttempts(lockStatus.remainingAttempts);
 
-    const { error } = await signIn(loginEmail, loginPassword);
+    const { error } = await signIn(data.email, data.password);
 
     if (error) {
-      await recordLoginAttempt(loginEmail, false);
+      await recordLoginAttempt(data.email, false);
       logLoginFailure(error.message);
       
       const newRemainingAttempts = remainingAttempts - 1;
@@ -109,7 +122,7 @@ export default function Auth() {
       }
       toast.error("Falha ao fazer login");
     } else {
-      await recordLoginAttempt(loginEmail, true);
+      await recordLoginAttempt(data.email, true);
       logLoginSuccess();
       
       // Register session for active sessions tracking
@@ -132,25 +145,11 @@ export default function Auth() {
     setIsSubmitting(false);
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignup = async (data: SignupFormData) => {
     setError(null);
-
-    if (!signupPhone.trim()) {
-      setError("O telefone é obrigatório.");
-      return;
-    }
-
-    // Validate password strength
-    const passwordValidation = validatePassword(signupPassword);
-    if (!passwordValidation.isValid) {
-      setError(passwordValidation.error);
-      return;
-    }
-
     setIsSubmitting(true);
 
-    const { error } = await signUp(signupEmail, signupPassword, signupName, signupPhone);
+    const { error } = await signUp(data.email, data.password, data.name, data.phone);
 
     if (error) {
       if (error.message.includes("already registered")) {
@@ -161,6 +160,7 @@ export default function Auth() {
       toast.error("Falha ao criar conta");
     } else {
       toast.success("Conta criada com sucesso!");
+      logSignupSuccess();
       // Show payment setup dialog after successful signup
       setShowPaymentSetup(true);
       setPaymentStep("form");
@@ -459,124 +459,169 @@ export default function Auth() {
               )}
 
               <TabsContent value="login" className="mt-0">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      required
-                      disabled={isSubmitting}
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                    <FormField
+                      control={loginForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="seu@email.com"
+                              disabled={isSubmitting}
+                              maxLength={SECURITY_LIMITS.EMAIL_MAX}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="login-password">Senha</Label>
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="px-0 h-auto text-xs text-muted-foreground hover:text-primary"
-                        onClick={() => {
-                          setView("forgot");
-                          setError(null);
-                        }}
-                      >
-                        Esqueceu a senha?
-                      </Button>
-                    </div>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      required
-                      disabled={isSubmitting}
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Senha</FormLabel>
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="px-0 h-auto text-xs text-muted-foreground hover:text-primary"
+                              onClick={() => {
+                                setView("forgot");
+                                setError(null);
+                              }}
+                            >
+                              Esqueceu a senha?
+                            </Button>
+                          </div>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              disabled={isSubmitting}
+                              maxLength={SECURITY_LIMITS.PASSWORD_MAX}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Entrando...
-                      </>
-                    ) : (
-                      "Entrar"
-                    )}
-                  </Button>
-                </form>
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Entrando...
+                        </>
+                      ) : (
+                        "Entrar"
+                      )}
+                    </Button>
+                  </form>
+                </Form>
               </TabsContent>
 
               <TabsContent value="signup" className="mt-0">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nome</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Seu nome"
-                      value={signupName}
-                      onChange={(e) => setSignupName(e.target.value)}
-                      required
-                      disabled={isSubmitting}
+                <Form {...signupForm}>
+                  <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+                    <FormField
+                      control={signupForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder="Seu nome"
+                              disabled={isSubmitting}
+                              maxLength={SECURITY_LIMITS.NAME_MAX}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      required
-                      disabled={isSubmitting}
+                    <FormField
+                      control={signupForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="seu@email.com"
+                              disabled={isSubmitting}
+                              maxLength={SECURITY_LIMITS.EMAIL_MAX}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Telefone</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-phone"
-                        type="tel"
-                        placeholder="(11) 99999-9999"
-                        value={signupPhone}
-                        onChange={(e) => setSignupPhone(e.target.value)}
-                        required
-                        disabled={isSubmitting}
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Crie uma senha forte"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      required
-                      minLength={8}
-                      disabled={isSubmitting}
+                    <FormField
+                      control={signupForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="tel"
+                                placeholder="(11) 99999-9999"
+                                disabled={isSubmitting}
+                                className="pl-9"
+                                maxLength={SECURITY_LIMITS.PHONE_MAX}
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <PasswordStrength password={signupPassword} />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando conta...
-                      </>
-                    ) : (
-                      "Criar conta"
-                    )}
-                  </Button>
-                </form>
+                    <FormField
+                      control={signupForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Senha</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="Crie uma senha forte"
+                              disabled={isSubmitting}
+                              maxLength={SECURITY_LIMITS.PASSWORD_MAX}
+                              {...field}
+                            />
+                          </FormControl>
+                          <PasswordStrength password={field.value} />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Criando conta...
+                        </>
+                      ) : (
+                        "Criar conta"
+                      )}
+                    </Button>
+                  </form>
+                </Form>
               </TabsContent>
             </CardContent>
           </Tabs>
