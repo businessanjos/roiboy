@@ -628,14 +628,14 @@ export default function LeadsTab() {
           </Button>
         )}
         
-        <label htmlFor="csv-upload-tab">
-          <Button variant="outline" size="sm" asChild>
-            <span>
-              <Upload className="h-4 w-4 mr-2" />
-              Importar
-            </span>
-          </Button>
-        </label>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => document.getElementById('csv-upload-tab')?.click()}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Importar
+        </Button>
         <input
           id="csv-upload-tab"
           type="file"
