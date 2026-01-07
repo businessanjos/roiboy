@@ -13,6 +13,7 @@ import {
   Play,
   Plus,
   Send,
+  Smile,
   Square,
   Strikethrough,
   Trash2,
@@ -20,6 +21,7 @@ import {
   Zap,
   Reply,
 } from "lucide-react";
+import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -34,6 +36,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { ZappGroupMentionInput, MentionData } from "./ZappGroupMentionInput";
 import { Message } from "./types";
@@ -126,6 +133,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   const toggleAudioPreview = () => {
     const audio = audioPreviewRef.current;
@@ -138,6 +146,12 @@ export const ZappMessageInput = memo(function ZappMessageInput({
         setIsPlaying(false);
       }
     }
+  };
+
+  const handleEmojiSelect = (emojiData: EmojiClickData) => {
+    onMessageChange(messageInput + emojiData.emoji);
+    setEmojiPickerOpen(false);
+    messageInputRef?.current?.focus();
   };
 
   return (
@@ -254,6 +268,40 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </TooltipTrigger>
           <TooltipContent side="top">Formatação</TooltipContent>
         </Tooltip>
+
+        {/* Emoji Picker */}
+        <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                >
+                  <Smile className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="top">Emoji</TooltipContent>
+          </Tooltip>
+          <PopoverContent 
+            side="top" 
+            align="start" 
+            className="w-auto p-0 border-zapp-border bg-transparent"
+            sideOffset={8}
+          >
+            <EmojiPicker
+              onEmojiClick={handleEmojiSelect}
+              theme={Theme.DARK}
+              searchPlaceholder="Buscar emoji..."
+              width={320}
+              height={400}
+              skinTonesDisabled
+              lazyLoadEmojis
+            />
+          </PopoverContent>
+        </Popover>
         
         {/* Signature toggle button */}
         {hasSignature && (

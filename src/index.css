@@ -318,4 +318,19 @@
   .playbook-scroll-native::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary) / 0.6);
   }
+
+  /* Emoji Picker customization for Zapp dark theme */
+  .EmojiPickerReact {
+    --epr-bg-color: #1a252b !important;
+    --epr-category-label-bg-color: #1a252b !important;
+    --epr-search-input-bg-color: #2a3942 !important;
+    --epr-hover-bg-color: #2a3942 !important;
+    --epr-focus-bg-color: #2a3942 !important;
+    --epr-highlight-color: hsl(var(--primary)) !important;
+    --epr-text-color: #e9edef !important;
+    --epr-search-input-text-color: #e9edef !important;
+    --epr-category-icon-active-color: hsl(var(--primary)) !important;
+    border-radius: 12px !important;
+    border: 1px solid #2a3942 !important;
+  }
 }
