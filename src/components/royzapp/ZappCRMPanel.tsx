@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
-import { format } from "date-fns";
+import { format, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -306,10 +306,30 @@ export function ZappCRMPanel({
 
   const isLoading = leadLoading || dealsLoading;
   const hasContact = conversationLeadId || conversationClientId;
+  // Format task date with relative labels and time
+  const formatTaskDate = (dueDate: string | null, dueTime: string | null): string => {
+    if (!dueDate) return "";
+    const date = new Date(dueDate + "T00:00:00");
+    
+    let dateLabel: string;
+    if (isToday(date)) {
+      dateLabel = "Hoje";
+    } else if (isTomorrow(date)) {
+      dateLabel = "Amanhã";
+    } else {
+      dateLabel = format(date, "dd/MM", { locale: ptBR });
+    }
+    
+    if (dueTime) {
+      const timeLabel = dueTime.slice(0, 5); // "HH:mm"
+      return `${dateLabel} ${timeLabel}`;
+    }
+    return dateLabel;
+  };
 
   // Get next scheduled task date
   const nextTaskDate = pendingTasks[0]?.due_date 
-    ? format(new Date(pendingTasks[0].due_date), "dd/MM", { locale: ptBR })
+    ? formatTaskDate(pendingTasks[0].due_date, pendingTasks[0].due_time)
     : null;
 
   // Helper function to get field value
@@ -567,8 +587,8 @@ export function ZappCRMPanel({
                         />
                         <span className="flex-1 truncate text-zapp-text">{task.title}</span>
                         {task.due_date && (
-                          <span className="text-zapp-text-muted">
-                            {format(new Date(task.due_date), "dd/MM")}
+                          <span className="text-zapp-text-muted whitespace-nowrap">
+                            {formatTaskDate(task.due_date, task.due_time)}
                           </span>
                         )}
                       </div>
