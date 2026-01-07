@@ -1009,7 +1009,9 @@ export default function Leads() {
 
   return (
     <>
-      <div className="p-4 space-y-4">
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Fixed Section */}
+        <div className="flex-shrink-0 p-4 space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
@@ -1117,17 +1119,20 @@ export default function Leads() {
             )}
           </div>
         </div>
+        </div>
 
-        {/* Leads List */}
-        {filteredLeads.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              {searchQuery ? "Nenhum lead encontrado" : "Nenhum lead cadastrado ainda"}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {filteredLeads.map((lead) => (
+        {/* Scrollable Leads List */}
+        <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
+          <ScrollArea className="h-full">
+            {filteredLeads.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  {searchQuery ? "Nenhum lead encontrado" : "Nenhum lead cadastrado ainda"}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2 pr-2">
+                {filteredLeads.map((lead) => (
               <Card 
                 key={lead.id} 
                 className="hover:shadow-md transition-shadow cursor-pointer"
@@ -1274,8 +1279,10 @@ export default function Leads() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        )}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
       </div>
 
       {/* Create/Edit Dialog with Step Flow */}
