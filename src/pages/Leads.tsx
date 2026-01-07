@@ -454,21 +454,129 @@ export default function Leads() {
     const headerLine = firstLine.toLowerCase();
     const headers = headerLine.split(delimiter).map(h => h.trim().replace(/"/g, ""));
     
-    // Map common column names
+    // Map column headers to field names (supports Portuguese, English, Pipedrive formats)
     const colMap: Record<string, number> = {};
     headers.forEach((h, i) => {
       const normalized = h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      if (normalized.includes("nome")) colMap.full_name = i;
-      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) colMap.phone = i;
-      if (normalized.includes("email") || normalized.includes("e-mail")) colMap.email = i;
-      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte") || normalized.includes("lead source")) colMap.source = i;
-      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note") || normalized.includes("anotac")) colMap.notes = i;
-      if (normalized.includes("cpf")) colMap.cpf = i;
-      if (normalized.includes("empresa") || normalized.includes("company") || normalized.includes("razao social")) colMap.company_name = i;
-      if (normalized.includes("instagram") || normalized.includes("insta")) colMap.instagram = i;
-      if (normalized.includes("cidade") || normalized.includes("city")) colMap.city = i;
-      if (normalized.includes("estado") || normalized.includes("uf") || normalized.includes("state")) colMap.state = i;
-      if (normalized.includes("faturamento") || normalized.includes("revenue") || normalized.includes("receita")) colMap.revenue_range = i;
+      // Clean N/A values helper - will be used later
+      
+      // Basic info
+      if (normalized.includes("nome") || normalized.includes("name")) colMap.full_name = colMap.full_name ?? i;
+      if (normalized.includes("telefone") || normalized.includes("phone") || normalized.includes("celular") || normalized.includes("whatsapp")) {
+        // Check if it's a secondary phone
+        if (normalized.includes("2") || normalized.includes("secundario") || normalized.includes("outro")) {
+          colMap.phone2 = colMap.phone2 ?? i;
+        } else {
+          colMap.phone = colMap.phone ?? i;
+        }
+      }
+      if (normalized.includes("email") || normalized.includes("e-mail")) {
+        if (normalized.includes("2") || normalized.includes("secundario")) {
+          colMap.email2 = colMap.email2 ?? i;
+        } else {
+          colMap.email = colMap.email ?? i;
+        }
+      }
+      if (normalized.includes("origem") || normalized.includes("source") || normalized.includes("fonte") || normalized.includes("lead source")) colMap.source = colMap.source ?? i;
+      if (normalized.includes("observ") || normalized.includes("nota") || normalized.includes("note") || normalized.includes("anotac")) colMap.notes = colMap.notes ?? i;
+      
+      // Documents
+      if (normalized.includes("cpf") && !normalized.includes("cnpj")) colMap.cpf = colMap.cpf ?? i;
+      if (normalized.includes("rg") && !normalized.includes("origem")) colMap.rg = colMap.rg ?? i;
+      if (normalized.includes("cnpj")) colMap.cnpj = colMap.cnpj ?? i;
+      
+      // Birth date
+      if (normalized.includes("nascimento") || normalized.includes("birth") || normalized.includes("aniversario")) colMap.birth_date = colMap.birth_date ?? i;
+      
+      // Company/Business
+      if (normalized.includes("empresa") || normalized.includes("company") || normalized.includes("razao social")) colMap.company_name = colMap.company_name ?? i;
+      if (normalized.includes("segmento") || normalized.includes("segment")) colMap.business_segment = colMap.business_segment ?? i;
+      if (normalized.includes("nicho") || normalized.includes("niche")) colMap.business_niche = colMap.business_niche ?? i;
+      
+      // Social
+      if (normalized.includes("instagram") || normalized.includes("insta")) {
+        if (normalized.includes("2") || normalized.includes("empresa")) {
+          colMap.instagram2 = colMap.instagram2 ?? i;
+        } else {
+          colMap.instagram = colMap.instagram ?? i;
+        }
+      }
+      
+      // Revenue
+      if (normalized.includes("faturamento") || normalized.includes("revenue") || normalized.includes("receita")) colMap.revenue_range = colMap.revenue_range ?? i;
+      
+      // Residential address
+      if (normalized.includes("cep") || normalized.includes("zip") || normalized.includes("codigo postal")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_zip_code = colMap.business_zip_code ?? i;
+        } else {
+          colMap.zip_code = colMap.zip_code ?? i;
+        }
+      }
+      if ((normalized.includes("rua") || normalized.includes("endereco") || normalized.includes("logradouro") || normalized.includes("street")) && !normalized.includes("numero")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_street = colMap.business_street ?? i;
+        } else {
+          colMap.street = colMap.street ?? i;
+        }
+      }
+      if (normalized.includes("numero") || normalized.includes("number")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_street_number = colMap.business_street_number ?? i;
+        } else {
+          colMap.street_number = colMap.street_number ?? i;
+        }
+      }
+      if (normalized.includes("complemento") || normalized.includes("complement")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_complement = colMap.business_complement ?? i;
+        } else {
+          colMap.complement = colMap.complement ?? i;
+        }
+      }
+      if (normalized.includes("bairro") || normalized.includes("neighborhood")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_neighborhood = colMap.business_neighborhood ?? i;
+        } else {
+          colMap.neighborhood = colMap.neighborhood ?? i;
+        }
+      }
+      if (normalized.includes("cidade") || normalized.includes("city")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_city = colMap.business_city ?? i;
+        } else {
+          colMap.city = colMap.city ?? i;
+        }
+      }
+      if (normalized.includes("estado") || normalized.includes("uf") || normalized.includes("state")) {
+        if (normalized.includes("comercial") || normalized.includes("empresa") || normalized.includes("business")) {
+          colMap.business_state = colMap.business_state ?? i;
+        } else {
+          colMap.state = colMap.state ?? i;
+        }
+      }
+      
+      // Banking
+      if ((normalized.includes("banco") || normalized.includes("bank")) && !normalized.includes("agencia") && !normalized.includes("conta") && !normalized.includes("codigo")) {
+        colMap.bank_name = colMap.bank_name ?? i;
+      }
+      if (normalized.includes("codigo banco") || normalized.includes("bank code") || (normalized.includes("banco") && normalized.includes("codigo"))) {
+        colMap.bank_code = colMap.bank_code ?? i;
+      }
+      if (normalized.includes("agencia") || normalized.includes("agency")) colMap.bank_agency = colMap.bank_agency ?? i;
+      if ((normalized.includes("conta") || normalized.includes("account")) && !normalized.includes("tipo")) {
+        colMap.bank_account = colMap.bank_account ?? i;
+      }
+      if ((normalized.includes("tipo") && normalized.includes("conta")) || normalized.includes("account type")) {
+        colMap.bank_account_type = colMap.bank_account_type ?? i;
+      }
+      if (normalized.includes("pix") && !normalized.includes("tipo")) colMap.pix_key = colMap.pix_key ?? i;
+      if (normalized.includes("tipo") && normalized.includes("pix")) colMap.pix_key_type = colMap.pix_key_type ?? i;
+      
+      // External ID (Pipedrive)
+      if (normalized.includes("id") && (normalized.includes("pessoa") || normalized.includes("person") || normalized.includes("externo") || normalized.includes("external"))) {
+        colMap.external_id = colMap.external_id ?? i;
+      }
     });
 
     if (colMap.full_name === undefined) {
@@ -541,6 +649,16 @@ export default function Leads() {
       if (normalizedCpf) clientByCpf.set(normalizedCpf, clientInfo);
     });
 
+    // Helper to clean empty/N/A values
+    const cleanValue = (val: string | undefined): string | undefined => {
+      if (!val) return undefined;
+      const cleaned = val.trim();
+      if (!cleaned || cleaned.toLowerCase() === "n/a" || cleaned === "-" || cleaned.toLowerCase() === "null") {
+        return undefined;
+      }
+      return cleaned;
+    };
+
     const rows: ImportLeadRow[] = [];
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
@@ -548,19 +666,73 @@ export default function Leads() {
       
       const values = line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
       
+      // Build emails array if we have multiple email columns
+      const emailsArr: string[] = [];
+      if (colMap.email !== undefined && cleanValue(values[colMap.email])) emailsArr.push(cleanValue(values[colMap.email])!);
+      if (colMap.email2 !== undefined && cleanValue(values[colMap.email2])) emailsArr.push(cleanValue(values[colMap.email2])!);
+      
+      // Build instagrams array if we have multiple instagram columns
+      const instagramsArr: string[] = [];
+      if (colMap.instagram !== undefined && cleanValue(values[colMap.instagram])) instagramsArr.push(cleanValue(values[colMap.instagram])!);
+      if (colMap.instagram2 !== undefined && cleanValue(values[colMap.instagram2])) instagramsArr.push(cleanValue(values[colMap.instagram2])!);
+      
+      // Build additional_phones array
+      const additionalPhonesArr: { label?: string; number: string }[] = [];
+      if (colMap.phone2 !== undefined && cleanValue(values[colMap.phone2])) {
+        additionalPhonesArr.push({ label: "Secundário", number: cleanValue(values[colMap.phone2])! });
+      }
+      
       const row: ImportLeadRow = {
         lineNumber: i,
         full_name: values[colMap.full_name] || "",
-        phone: colMap.phone !== undefined ? values[colMap.phone] : undefined,
-        email: colMap.email !== undefined ? values[colMap.email] : undefined,
-        source: colMap.source !== undefined ? values[colMap.source]?.toLowerCase() : undefined,
-        notes: colMap.notes !== undefined ? values[colMap.notes] : undefined,
-        cpf: colMap.cpf !== undefined ? values[colMap.cpf] : undefined,
-        company_name: colMap.company_name !== undefined ? values[colMap.company_name] : undefined,
-        instagram: colMap.instagram !== undefined ? values[colMap.instagram] : undefined,
-        city: colMap.city !== undefined ? values[colMap.city] : undefined,
-        state: colMap.state !== undefined ? values[colMap.state] : undefined,
+        phone: colMap.phone !== undefined ? cleanValue(values[colMap.phone]) : undefined,
+        email: emailsArr[0],
+        emails: emailsArr.length > 1 ? emailsArr : undefined,
+        source: colMap.source !== undefined ? cleanValue(values[colMap.source])?.toLowerCase() : undefined,
+        notes: colMap.notes !== undefined ? cleanValue(values[colMap.notes]) : undefined,
+        // Documents
+        cpf: colMap.cpf !== undefined ? cleanValue(values[colMap.cpf]) : undefined,
+        rg: colMap.rg !== undefined ? cleanValue(values[colMap.rg]) : undefined,
+        cnpj: colMap.cnpj !== undefined ? cleanValue(values[colMap.cnpj]) : undefined,
+        // Company
+        company_name: colMap.company_name !== undefined ? cleanValue(values[colMap.company_name]) : undefined,
+        business_segment: colMap.business_segment !== undefined ? cleanValue(values[colMap.business_segment]) : undefined,
+        business_niche: colMap.business_niche !== undefined ? cleanValue(values[colMap.business_niche]) : undefined,
+        // Social
+        instagram: instagramsArr[0],
+        instagrams: instagramsArr.length > 1 ? instagramsArr : undefined,
+        // Personal
+        birth_date: colMap.birth_date !== undefined ? cleanValue(values[colMap.birth_date]) : undefined,
         revenue_range: colMap.revenue_range !== undefined ? normalizeRevenueRange(values[colMap.revenue_range]) : undefined,
+        // Residential address
+        zip_code: colMap.zip_code !== undefined ? cleanValue(values[colMap.zip_code]) : undefined,
+        street: colMap.street !== undefined ? cleanValue(values[colMap.street]) : undefined,
+        street_number: colMap.street_number !== undefined ? cleanValue(values[colMap.street_number]) : undefined,
+        complement: colMap.complement !== undefined ? cleanValue(values[colMap.complement]) : undefined,
+        neighborhood: colMap.neighborhood !== undefined ? cleanValue(values[colMap.neighborhood]) : undefined,
+        city: colMap.city !== undefined ? cleanValue(values[colMap.city]) : undefined,
+        state: colMap.state !== undefined ? cleanValue(values[colMap.state]) : undefined,
+        // Business address
+        business_zip_code: colMap.business_zip_code !== undefined ? cleanValue(values[colMap.business_zip_code]) : undefined,
+        business_street: colMap.business_street !== undefined ? cleanValue(values[colMap.business_street]) : undefined,
+        business_street_number: colMap.business_street_number !== undefined ? cleanValue(values[colMap.business_street_number]) : undefined,
+        business_complement: colMap.business_complement !== undefined ? cleanValue(values[colMap.business_complement]) : undefined,
+        business_neighborhood: colMap.business_neighborhood !== undefined ? cleanValue(values[colMap.business_neighborhood]) : undefined,
+        business_city: colMap.business_city !== undefined ? cleanValue(values[colMap.business_city]) : undefined,
+        business_state: colMap.business_state !== undefined ? cleanValue(values[colMap.business_state]) : undefined,
+        // Banking
+        bank_name: colMap.bank_name !== undefined ? cleanValue(values[colMap.bank_name]) : undefined,
+        bank_code: colMap.bank_code !== undefined ? cleanValue(values[colMap.bank_code]) : undefined,
+        bank_agency: colMap.bank_agency !== undefined ? cleanValue(values[colMap.bank_agency]) : undefined,
+        bank_account: colMap.bank_account !== undefined ? cleanValue(values[colMap.bank_account]) : undefined,
+        bank_account_type: colMap.bank_account_type !== undefined ? cleanValue(values[colMap.bank_account_type]) : undefined,
+        pix_key: colMap.pix_key !== undefined ? cleanValue(values[colMap.pix_key]) : undefined,
+        pix_key_type: colMap.pix_key_type !== undefined ? cleanValue(values[colMap.pix_key_type]) : undefined,
+        // External ID
+        external_id: colMap.external_id !== undefined ? cleanValue(values[colMap.external_id]) : undefined,
+        external_source: colMap.external_id !== undefined ? "pipedrive" : undefined,
+        // Additional phones
+        additional_phones: additionalPhonesArr.length > 0 ? additionalPhonesArr : undefined,
       };
 
       // Validate
@@ -622,28 +794,61 @@ export default function Leads() {
       
       for (const row of rowsToImport) {
         try {
+          // Build the lead data object with all fields
+          const leadData = {
+            full_name: row.full_name,
+            phone: row.phone,
+            email: row.email,
+            emails: row.emails,
+            source: row.source,
+            notes: row.notes,
+            cpf: row.cpf,
+            rg: row.rg,
+            cnpj: row.cnpj,
+            company_name: row.company_name,
+            instagram: row.instagram,
+            instagrams: row.instagrams,
+            birth_date: row.birth_date,
+            revenue_range: row.revenue_range,
+            external_id: row.external_id,
+            external_source: row.external_source,
+            // Residential address
+            zip_code: row.zip_code,
+            street: row.street,
+            street_number: row.street_number,
+            complement: row.complement,
+            neighborhood: row.neighborhood,
+            city: row.city,
+            state: row.state,
+            // Business address
+            business_zip_code: row.business_zip_code,
+            business_street: row.business_street,
+            business_street_number: row.business_street_number,
+            business_complement: row.business_complement,
+            business_neighborhood: row.business_neighborhood,
+            business_city: row.business_city,
+            business_state: row.business_state,
+            business_segment: row.business_segment,
+            business_niche: row.business_niche,
+            // Banking
+            bank_name: row.bank_name,
+            bank_code: row.bank_code,
+            bank_agency: row.bank_agency,
+            bank_account: row.bank_account,
+            bank_account_type: row.bank_account_type,
+            pix_key: row.pix_key,
+            pix_key_type: row.pix_key_type,
+            // Additional arrays
+            additional_phones: row.additional_phones,
+          };
+          
           if (row.duplicateAction === "update" && row.duplicateInfo?.existingLead?.id) {
-            // Update existing lead
-            await updateLead(row.duplicateInfo.existingLead.id, {
-              phone: row.phone,
-              email: row.email,
-              source: row.source,
-              notes: row.notes,
-              revenue_range: row.revenue_range,
-            });
+            // Update existing lead with all fields
+            await updateLead(row.duplicateInfo.existingLead.id, leadData);
             updateCount++;
           } else {
-            // Create new lead
-            await createLead({
-              full_name: row.full_name,
-              phone: row.phone,
-              email: row.email,
-              source: row.source,
-              notes: row.notes,
-              revenue_range: row.revenue_range,
-              external_id: row.external_id,
-              external_source: row.external_source,
-            });
+            // Create new lead with all fields
+            await createLead(leadData);
             successCount++;
           }
         } catch (err) {
