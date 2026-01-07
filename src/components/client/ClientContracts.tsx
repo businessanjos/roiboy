@@ -724,14 +724,17 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
               <div className="space-y-2">
                 <Label>Produto</Label>
                 <Select
-                  value={formData.product_id}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, product_id: value }))}
+                  value={formData.product_id || "_none_"}
+                  onValueChange={(value) => setFormData((prev) => ({ 
+                    ...prev, 
+                    product_id: value === "_none_" ? "" : value 
+                  }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um produto (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum produto</SelectItem>
+                    <SelectItem value="_none_">Nenhum produto</SelectItem>
                     {products.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name}
