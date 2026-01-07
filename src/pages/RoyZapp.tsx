@@ -124,13 +124,20 @@ export default function RoyZapp() {
     if (selectedConversation && assignments.length > 0) {
       const updatedAssignment = assignments.find(a => a.id === selectedConversation.id);
       if (updatedAssignment) {
-        // Check if the linked client has changed (client_id or client data)
-        const currentClientId = selectedConversation.conversation?.client_id;
-        const updatedClientId = updatedAssignment.conversation?.client_id;
-        const currentClientName = selectedConversation.conversation?.client?.full_name;
-        const updatedClientName = updatedAssignment.conversation?.client?.full_name;
+        // Check if the linked client OR lead has changed
+        const currentClientId = selectedConversation.zapp_conversation?.client_id;
+        const updatedClientId = updatedAssignment.zapp_conversation?.client_id;
+        const currentLeadId = selectedConversation.zapp_conversation?.lead_id;
+        const updatedLeadId = updatedAssignment.zapp_conversation?.lead_id;
+        const currentClientName = selectedConversation.zapp_conversation?.client?.full_name;
+        const updatedClientName = updatedAssignment.zapp_conversation?.client?.full_name;
+        const currentLeadName = selectedConversation.zapp_conversation?.lead?.full_name;
+        const updatedLeadName = updatedAssignment.zapp_conversation?.lead?.full_name;
         
-        if (currentClientId !== updatedClientId || currentClientName !== updatedClientName) {
+        if (currentClientId !== updatedClientId || 
+            currentLeadId !== updatedLeadId ||
+            currentClientName !== updatedClientName ||
+            currentLeadName !== updatedLeadName) {
           setSelectedConversation(updatedAssignment);
         }
       }
@@ -772,7 +779,7 @@ export default function RoyZapp() {
     const c = assignment.conversation?.client;
     
     return {
-      name: zc?.client?.full_name || zc?.contact_name || c?.full_name || "Contato",
+      name: zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || "Contato",
       phone: zc?.phone_e164 || c?.phone_e164 || "",
       avatar: zc?.client?.avatar_url || zc?.avatar_url || c?.avatar_url || null,
       clientId: zc?.client_id || c?.id || null,

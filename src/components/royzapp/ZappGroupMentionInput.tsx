@@ -226,15 +226,22 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             }
           }}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            onChange(e.target.value);
+            // Auto-resize textarea
+            const target = e.target;
+            target.style.height = 'auto';
+            target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
           className={cn(
-            "flex min-h-10 max-h-32 w-full rounded-lg border-0 bg-zapp-input px-4 py-2.5 text-sm text-zapp-text placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none",
+            "flex min-h-10 max-h-32 w-full rounded-lg border-0 bg-zapp-input px-4 py-2.5 text-sm text-zapp-text placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto",
             className
           )}
+          style={{ height: value ? undefined : 'auto' }}
         />
 
         {/* Suggestions Dropdown */}
