@@ -1,0 +1,365 @@
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Instagram,
+  Plus,
+  Users,
+  Percent,
+  Sparkles,
+  Flame,
+  Eye,
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  ExternalLink,
+  RefreshCw,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSocialMediaData } from '@/hooks/useSocialMediaData';
+import { SocialMediaKPICard } from './SocialMediaKPICard';
+import { PostFormatBadge } from './PostFormatBadge';
+import { PostObjectiveBadge } from './PostObjectiveBadge';
+import { InstagramConnectDialog } from './InstagramConnectDialog';
+import { cn } from '@/lib/utils';
+
+export function SocialMediaTab() {
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  
+  const {
+    profiles,
+    currentProfile,
+    posts,
+    kpis,
+    isLoading,
+    useMockData,
+    selectedProfileId,
+    setSelectedProfileId,
+    createProfile,
+  } = useSocialMediaData();
+
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  };
+
+  const handleConnect = (data: { username: string; accessToken: string }) => {
+    createProfile.mutate(data, {
+      onSuccess: () => setConnectDialogOpen(false),
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-1">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-1">
+      {/* Header with Profile Selector */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Select
+            value={selectedProfileId || currentProfile?.id || ''}
+            onValueChange={setSelectedProfileId}
+          >
+            <SelectTrigger className="w-[240px] bg-card">
+              <div className="flex items-center gap-2">
+                <Instagram className="h-4 w-4 text-pink-500" />
+                <SelectValue placeholder="Selecione um perfil" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {profiles.map((profile) => (
+                <SelectItem key={profile.id} value={profile.id}>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={profile.profile_picture_url || undefined} />
+                      <AvatarFallback className="text-[10px]">
+                        {profile.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    @{profile.username}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {useMockData && (
+            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+              Dados de exemplo
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled
+          >
+            <RefreshCw className="h-4 w-4" />
+            Sincronizar
+          </Button>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-primary hover:bg-primary/90"
+            onClick={() => setConnectDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Conectar Novo Perfil
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SocialMediaKPICard
+          title="Seguidores Totais"
+          value={formatNumber(kpis.totalFollowers)}
+          icon={Users}
+          trend={kpis.followersGrowth}
+          trendLabel="vs. mês anterior"
+          variant="default"
+        />
+        <SocialMediaKPICard
+          title="Engajamento Médio"
+          value={`${kpis.avgEngagement}%`}
+          icon={Percent}
+          variant="success"
+        />
+        <SocialMediaKPICard
+          title="Insight de IA"
+          value=""
+          icon={Sparkles}
+          description={kpis.aiInsight}
+          variant="insight"
+        />
+      </div>
+
+      {/* Posts Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            Análise de Conteúdos
+            <Badge variant="secondary" className="font-normal">
+              {posts.length} posts
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-[100px]">Data</TableHead>
+                  <TableHead className="w-[100px]">Formato</TableHead>
+                  <TableHead className="w-[120px]">Objetivo (IA)</TableHead>
+                  <TableHead className="min-w-[200px]">Conteúdo</TableHead>
+                  <TableHead className="text-right w-[80px]">
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                        <Eye className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Alcance</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="text-right w-[70px]">
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                        <Heart className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Curtidas</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="text-right w-[70px]">
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Comentários</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="text-right w-[70px]">
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                        <Share2 className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Compartilhamentos</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="text-right w-[70px]">
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                        <Bookmark className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Salvamentos</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="text-right w-[90px] font-semibold text-primary">
+                    Engaj. %
+                  </TableHead>
+                  <TableHead className="text-right w-[90px] font-semibold text-primary">
+                    Viral %
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
+                      Nenhum post encontrado para este perfil.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  posts.map((post) => (
+                    <TableRow 
+                      key={post.id}
+                      className={cn(
+                        'group transition-colors',
+                        post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10'
+                      )}
+                    >
+                      <TableCell className="font-medium text-sm">
+                        {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <PostFormatBadge format={post.post_type} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <PostObjectiveBadge 
+                            objective={post.ai_objective} 
+                            confidence={post.ai_objective_confidence}
+                          />
+                          {post.is_trending && (
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Em tendência!
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-start gap-2">
+                          <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
+                            {post.caption || 'Sem legenda'}
+                          </p>
+                          {post.permalink && (
+                            <a
+                              href={post.permalink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </a>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatNumber(post.reach)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatNumber(post.likes)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatNumber(post.comments)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatNumber(post.shares)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatNumber(post.saves)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            'font-semibold',
+                            post.engagement_rate >= 10 
+                              ? 'bg-green-100 text-green-700 border-green-200' 
+                              : post.engagement_rate >= 5
+                              ? 'bg-amber-100 text-amber-700 border-amber-200'
+                              : 'bg-gray-100 text-gray-700 border-gray-200'
+                          )}
+                        >
+                          {post.engagement_rate.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            'font-semibold',
+                            post.virality_rate >= 1.5 
+                              ? 'bg-purple-100 text-purple-700 border-purple-200' 
+                              : 'bg-gray-100 text-gray-700 border-gray-200'
+                          )}
+                        >
+                          {post.virality_rate.toFixed(2)}%
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Connect Dialog */}
+      <InstagramConnectDialog
+        open={connectDialogOpen}
+        onOpenChange={setConnectDialogOpen}
+        onConnect={handleConnect}
+        isLoading={createProfile.isPending}
+      />
+    </div>
+  );
+}

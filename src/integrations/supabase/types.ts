@@ -4567,6 +4567,177 @@ export type Database = {
           },
         ]
       }
+      instagram_credentials: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          profile_id: string
+          token_type: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          profile_id: string
+          token_type?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          profile_id?: string
+          token_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_credentials_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_posts: {
+        Row: {
+          ai_objective: string | null
+          ai_objective_confidence: number | null
+          caption: string | null
+          comments: number | null
+          created_at: string
+          engagement_rate: number | null
+          id: string
+          instagram_id: string | null
+          is_trending: boolean | null
+          likes: number | null
+          permalink: string | null
+          post_type: string
+          posted_at: string
+          profile_id: string
+          reach: number | null
+          saves: number | null
+          shares: number | null
+          thumbnail_url: string | null
+          updated_at: string
+          virality_rate: number | null
+        }
+        Insert: {
+          ai_objective?: string | null
+          ai_objective_confidence?: number | null
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          engagement_rate?: number | null
+          id?: string
+          instagram_id?: string | null
+          is_trending?: boolean | null
+          likes?: number | null
+          permalink?: string | null
+          post_type: string
+          posted_at: string
+          profile_id: string
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          virality_rate?: number | null
+        }
+        Update: {
+          ai_objective?: string | null
+          ai_objective_confidence?: number | null
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          engagement_rate?: number | null
+          id?: string
+          instagram_id?: string | null
+          is_trending?: boolean | null
+          likes?: number | null
+          permalink?: string | null
+          post_type?: string
+          posted_at?: string
+          profile_id?: string
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          virality_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_profiles: {
+        Row: {
+          account_id: string
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          followers_count: number | null
+          followers_previous_count: number | null
+          following_count: number | null
+          id: string
+          is_active: boolean | null
+          last_synced_at: string | null
+          posts_count: number | null
+          profile_picture_url: string | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          account_id: string
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          followers_count?: number | null
+          followers_previous_count?: number | null
+          following_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          posts_count?: number | null
+          profile_picture_url?: string | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          account_id?: string
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          followers_count?: number | null
+          followers_previous_count?: number | null
+          following_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          posts_count?: number | null
+          profile_picture_url?: string | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_profiles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrations: {
         Row: {
           account_id: string
