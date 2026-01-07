@@ -215,14 +215,21 @@ export default function RoyZapp() {
           .maybeSingle();
         
         if (existingAssignment) {
-          // Just select the existing conversation after data is refetched
-          await fetchData();
-          setTimeout(() => {
-            const updatedAssignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
-            if (updatedAssignment) {
-              setSelectedConversation(updatedAssignment);
-            }
-          }, 100);
+          // Fetch the assignment directly to avoid stale closure
+          const { data: assignmentData } = await supabase
+            .from("zapp_conversation_assignments")
+            .select(`
+              *,
+              zapp_conversation:zapp_conversations(*),
+              agent:zapp_agents(*)
+            `)
+            .eq("id", existingAssignment.id)
+            .single();
+          
+          if (assignmentData) {
+            setSelectedConversation(assignmentData);
+          }
+          fetchData(); // Update list in background
           toast.info("Abrindo conversa existente");
           setCreatingConversation(false);
           return;
@@ -265,15 +272,25 @@ export default function RoyZapp() {
       if (assignError) throw assignError;
       
       toast.success("Conversa criada!");
-      await fetchData();
       
-      // Find and select the new assignment
-      setTimeout(() => {
-        const newAssignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
-        if (newAssignment) {
-          setSelectedConversation(newAssignment);
-        }
-      }, 500);
+      // Fetch the new assignment directly to avoid stale closure
+      const { data: newAssignmentData } = await supabase
+        .from("zapp_conversation_assignments")
+        .select(`
+          *,
+          zapp_conversation:zapp_conversations(*),
+          agent:zapp_agents(*)
+        `)
+        .eq("zapp_conversation_id", zappConvId)
+        .eq("agent_id", currentAgent.id)
+        .neq("status", "closed")
+        .single();
+      
+      if (newAssignmentData) {
+        setSelectedConversation(newAssignmentData);
+      }
+      
+      fetchData(); // Update list in background
     } catch (error) {
       console.error("Error creating conversation from URL:", error);
       toast.error("Erro ao criar conversa");
@@ -2136,14 +2153,21 @@ export default function RoyZapp() {
           .maybeSingle();
         
         if (existingAssignment) {
-          // Refetch data and select the existing conversation
-          await fetchData();
-          setTimeout(() => {
-            const assignment = assignments.find(a => a.zapp_conversation_id === zappConvId);
-            if (assignment) {
-              setSelectedConversation(assignment);
-            }
-          }, 100);
+          // Fetch the assignment directly to avoid stale closure
+          const { data: assignmentData } = await supabase
+            .from("zapp_conversation_assignments")
+            .select(`
+              *,
+              zapp_conversation:zapp_conversations(*),
+              agent:zapp_agents(*)
+            `)
+            .eq("id", existingAssignment.id)
+            .single();
+          
+          if (assignmentData) {
+            setSelectedConversation(assignmentData);
+          }
+          fetchData(); // Update list in background
           toast.info("Abrindo conversa existente");
           setNewConversationDialogOpen(false);
           setCreatingConversation(false);
@@ -2189,7 +2213,25 @@ export default function RoyZapp() {
       
       toast.success("Conversa criada!");
       setNewConversationDialogOpen(false);
-      fetchData();
+      
+      // Fetch the new assignment directly to avoid stale closure
+      const { data: newAssignmentData } = await supabase
+        .from("zapp_conversation_assignments")
+        .select(`
+          *,
+          zapp_conversation:zapp_conversations(*),
+          agent:zapp_agents(*)
+        `)
+        .eq("zapp_conversation_id", zappConvId)
+        .eq("agent_id", currentAgent.id)
+        .neq("status", "closed")
+        .single();
+      
+      if (newAssignmentData) {
+        setSelectedConversation(newAssignmentData);
+      }
+      
+      fetchData(); // Update list in background
     } catch (error: any) {
       console.error("Error creating conversation:", error);
       toast.error(error.message || "Erro ao criar conversa");
