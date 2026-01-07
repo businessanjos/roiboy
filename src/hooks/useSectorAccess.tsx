@@ -16,51 +16,56 @@ interface SectorSettings {
 
 export function useSectorAccess() {
   const { currentUser } = useCurrentUser();
-
-  // Check if user is super_admin
-  const { data: isSuperAdmin = false } = useQuery({
-    queryKey: ["is-super-admin", currentUser?.auth_user_id],
-    queryFn: async () => {
-      if (!currentUser?.auth_user_id) return false;
-      const { data } = await supabase.rpc('is_super_admin', { _user_id: currentUser.auth_user_id });
-      return data === true;
-    },
-    enabled: !!currentUser?.auth_user_id,
-    staleTime: 60000,
-  });
+  
+  const userId = currentUser?.id;
+  const authUserId = currentUser?.auth_user_id;
+  const accountId = currentUser?.account_id;
+  const userRole = currentUser?.role;
 
   const { data: sectorAccess = [], isLoading } = useQuery({
-    queryKey: ["user-sector-access", currentUser?.id],
+    queryKey: ["user-sector-access", userId],
     queryFn: async () => {
-      if (!currentUser?.id) return [];
+      if (!userId) return [];
 
       const { data, error } = await supabase
         .from("user_sector_access")
         .select("sector_id, role_in_sector, is_active")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", userId)
         .eq("is_active", true);
 
       if (error) throw error;
       return (data || []) as SectorAccess[];
     },
-    enabled: !!currentUser?.id,
+    enabled: !!userId,
     staleTime: 60000,
   });
 
   const { data: sectorSettings = [] } = useQuery({
-    queryKey: ["sector-settings", currentUser?.account_id],
+    queryKey: ["sector-settings", accountId],
     queryFn: async () => {
-      if (!currentUser?.account_id) return [];
+      if (!accountId) return [];
 
       const { data, error } = await supabase
         .from("sector_settings")
         .select("sector_id, royzapp_enabled")
-        .eq("account_id", currentUser.account_id);
+        .eq("account_id", accountId);
 
       if (error) throw error;
       return (data || []) as SectorSettings[];
     },
-    enabled: !!currentUser?.account_id,
+    enabled: !!accountId,
+    staleTime: 60000,
+  });
+
+  // Check if user is super_admin
+  const { data: isSuperAdmin = false } = useQuery({
+    queryKey: ["is-super-admin", authUserId],
+    queryFn: async () => {
+      if (!authUserId) return false;
+      const { data } = await supabase.rpc('is_super_admin', { _user_id: authUserId });
+      return data === true;
+    },
+    enabled: !!authUserId,
     staleTime: 60000,
   });
 
@@ -71,7 +76,7 @@ export function useSectorAccess() {
     }
     
     // Admins have access to all other sectors
-    if (currentUser?.role === "admin") return true;
+    if (userRole === "admin") return true;
     
     return sectorAccess.some((access) => access.sector_id === sectorId);
   };
