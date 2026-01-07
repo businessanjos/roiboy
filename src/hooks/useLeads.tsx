@@ -93,19 +93,36 @@ export function useLeads() {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select(`
-          *,
-          responsible_user:users!leads_responsible_user_id_fkey(id, name, avatar_url)
-        `)
-        .eq('account_id', currentUser.account_id)
-        .is('converted_to_client_id', null)
-        .order('created_at', { ascending: false });
+      // Fetch all leads with pagination to avoid 1000 row limit
+      const allLeads: any[] = [];
+      const pageSize = 1000;
+      let page = 0;
+      let hasMore = true;
 
-      if (error) throw error;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('leads')
+          .select(`
+            *,
+            responsible_user:users!leads_responsible_user_id_fkey(id, name, avatar_url)
+          `)
+          .eq('account_id', currentUser.account_id)
+          .is('converted_to_client_id', null)
+          .order('created_at', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-      const formattedLeads: Lead[] = (data || []).map(lead => ({
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allLeads.push(...data);
+          hasMore = data.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const formattedLeads: Lead[] = allLeads.map(lead => ({
         ...lead,
         tags: Array.isArray(lead.tags) ? lead.tags as string[] : [],
       }));
