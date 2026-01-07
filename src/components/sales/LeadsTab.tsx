@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal } from "@/hooks/useDeals";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
@@ -846,49 +847,51 @@ export default function LeadsTab() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Users className="h-5 w-5 text-blue-500" />
+    <div className="flex flex-col h-[calc(100vh-220px)]">
+      {/* Fixed Section: Stats + Search */}
+      <div className="flex-shrink-0 space-y-4">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{newLeads.length}</p>
+                  <p className="text-xs text-muted-foreground">Novos</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{newLeads.length}</p>
-                <p className="text-xs text-muted-foreground">Novos</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/10 rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{contactedLeads.length}</p>
+                  <p className="text-xs text-muted-foreground">Contatados</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/10 rounded-lg">
-                <MessageSquare className="h-5 w-5 text-amber-500" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{qualifiedLeads.length}</p>
+                  <p className="text-xs text-muted-foreground">Qualificados</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{contactedLeads.length}</p>
-                <p className="text-xs text-muted-foreground">Contatados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-lg">
-                <UserCheck className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{qualifiedLeads.length}</p>
-                <p className="text-xs text-muted-foreground">Qualificados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Header with search and actions */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -969,11 +972,13 @@ export default function LeadsTab() {
           <Plus className="h-4 w-4 mr-2" />
           Novo Lead
         </Button>
+        </div>
       </div>
 
-      {/* Leads List */}
-      <Card>
-        <CardContent className="p-0">
+      {/* Leads List - Scrollable */}
+      <Card className="flex-1 min-h-0 overflow-hidden mt-4">
+        <ScrollArea className="h-full">
+          <CardContent className="p-0">
           {filteredLeads.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               Nenhum lead encontrado
@@ -1132,7 +1137,8 @@ export default function LeadsTab() {
               })}
             </div>
           )}
-        </CardContent>
+          </CardContent>
+        </ScrollArea>
       </Card>
 
       {/* Lead Dialog */}
