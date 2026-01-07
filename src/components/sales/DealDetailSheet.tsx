@@ -112,6 +112,7 @@ interface DealDetailSheetProps {
   onMarkAsLost: (dealId: string, reason?: string) => Promise<void>;
   onReopen: (dealId: string) => Promise<void>;
   onStageChange: (dealId: string, stageId: string) => Promise<boolean>;
+  onDealUpdated?: () => void;
 }
 
 const EVENT_TYPES = [
@@ -153,6 +154,7 @@ export function DealDetailSheet({
   onMarkAsLost,
   onReopen,
   onStageChange,
+  onDealUpdated,
 }: DealDetailSheetProps) {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<DealActivity[]>([]);
@@ -889,6 +891,7 @@ export function DealDetailSheet({
             accountId={currentUser.account_id}
             onTransferred={() => {
               fetchActivities();
+              onDealUpdated?.();
             }}
           />
         )}
