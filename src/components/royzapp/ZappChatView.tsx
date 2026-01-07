@@ -1,4 +1,4 @@
-import { RefObject } from "react";
+import { RefObject, useMemo } from "react";
 import { MessageSquare, Clock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
@@ -160,6 +160,9 @@ export function ZappChatView({
   onOpenPlaybook,
   onToggleSuggestions,
 }: ZappChatViewProps) {
+  // Memoize last 10 messages to prevent infinite re-renders
+  const lastTenMessages = useMemo(() => messages.slice(-10), [messages]);
+
   // AI Message Assistant hook
   const {
     correction,
@@ -174,7 +177,7 @@ export function ZappChatView({
     currentSpinPhase,
   } = useMessageAssistant({
     messageInput,
-    lastMessages: messages.slice(-10),
+    lastMessages: lastTenMessages,
     clientName: contactInfo.name,
     sectorId: sectorId || "operacoes",
     conversationId: selectedConversation?.zapp_conversation?.id,
