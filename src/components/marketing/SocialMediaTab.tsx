@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Share2,
   Bookmark,
+  Link2,
   ExternalLink,
   RefreshCw,
   Pencil,
@@ -359,6 +360,14 @@ export function SocialMediaTab() {
                       <TooltipContent>Salvamentos</TooltipContent>
                     </Tooltip>
                   </TableHead>
+                  <TableHead className="text-right w-[70px]">
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                        <Link2 className="h-3.5 w-3.5" />
+                      </TooltipTrigger>
+                      <TooltipContent>Cliques no Link</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
                   <TableHead className="text-right w-[90px] font-semibold text-primary">
                     Engaj. %
                   </TableHead>
@@ -371,7 +380,7 @@ export function SocialMediaTab() {
               <TableBody>
                 {filteredPosts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
                       {posts.length === 0 
                         ? 'Nenhum post encontrado para este perfil.'
                         : 'Nenhum post encontrado com os filtros selecionados.'}
@@ -443,7 +452,10 @@ export function SocialMediaTab() {
                         {formatNumber(post.saves)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Badge 
+                        {formatNumber(post.link_clicks || 0)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge
                           variant="outline" 
                           className={cn(
                             'font-semibold',

@@ -35,6 +35,7 @@ export interface InstagramPost {
   comments: number;
   shares: number;
   saves: number;
+  link_clicks: number;
   engagement_rate: number;
   virality_rate: number;
   ai_objective: 'growth' | 'connection' | 'authority' | 'sales' | null;
