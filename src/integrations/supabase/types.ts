@@ -2492,6 +2492,7 @@ export type Database = {
           name: string
           options: Json | null
           show_in_clients: boolean
+          show_in_deals: boolean
           show_in_leads: boolean
           updated_at: string
         }
@@ -2506,6 +2507,7 @@ export type Database = {
           name: string
           options?: Json | null
           show_in_clients?: boolean
+          show_in_deals?: boolean
           show_in_leads?: boolean
           updated_at?: string
         }
@@ -2520,6 +2522,7 @@ export type Database = {
           name?: string
           options?: Json | null
           show_in_clients?: boolean
+          show_in_deals?: boolean
           show_in_leads?: boolean
           updated_at?: string
         }
@@ -2596,6 +2599,70 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_field_values: {
+        Row: {
+          account_id: string
+          created_at: string
+          deal_id: string
+          field_id: string
+          id: string
+          updated_at: string
+          value_boolean: boolean | null
+          value_date: string | null
+          value_json: Json | null
+          value_number: number | null
+          value_text: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          deal_id: string
+          field_id: string
+          id?: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_json?: Json | null
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          deal_id?: string
+          field_id?: string
+          id?: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_json?: Json | null
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_field_values_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_field_values_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "custom_fields"
             referencedColumns: ["id"]
           },
         ]

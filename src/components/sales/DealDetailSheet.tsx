@@ -52,6 +52,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
+import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
 import { DealLeadInfo } from "./DealLeadInfo";
@@ -168,25 +169,20 @@ export function DealDetailSheet({
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   
-  // Lead custom fields
-  const [leadCustomFields, setLeadCustomFields] = useState<CustomField[]>([]);
-  const [leadFieldValues, setLeadFieldValues] = useState<Record<string, any>>({});
+  // Deal custom fields
+  const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
+  const [dealFieldValues, setDealFieldValues] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (deal?.id && open) {
       fetchActivities();
       fetchCurrentUser();
-      if (deal.lead_id) {
-        fetchLeadCustomFields();
-      } else {
-        setLeadCustomFields([]);
-        setLeadFieldValues({});
-      }
+      fetchDealCustomFields();
     }
-  }, [deal?.id, deal?.lead_id, open]);
+  }, [deal?.id, open]);
 
-  const fetchLeadCustomFields = async () => {
-    if (!deal?.lead_id) return;
+  const fetchDealCustomFields = async () => {
+    if (!deal?.id) return;
     
     // Get account_id from auth user
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -208,16 +204,16 @@ export function DealDetailSheet({
     }
 
     try {
-      // Fetch custom fields for leads
+      // Fetch custom fields for deals
       const { data: fields, error: fieldsError } = await supabase
         .from("custom_fields")
-        .select("id, account_id, name, field_type, options, display_order, is_active, is_required, show_in_clients, show_in_leads, created_at, updated_at")
+        .select("id, account_id, name, field_type, options, display_order, is_active, is_required, show_in_clients, show_in_leads, show_in_deals, created_at, updated_at")
         .eq("account_id", accountId)
-        .eq("show_in_leads", true)
+        .eq("show_in_deals", true)
         .eq("is_active", true)
         .order("display_order");
       
-      console.log("[DealDetailSheet] Lead custom fields fetched:", fields?.length || 0, "fields");
+      console.log("[DealDetailSheet] Deal custom fields fetched:", fields?.length || 0, "fields");
       
       if (fieldsError) {
         console.error("Error fetching custom fields:", fieldsError);
@@ -225,8 +221,8 @@ export function DealDetailSheet({
       }
 
       if (!fields || fields.length === 0) {
-        setLeadCustomFields([]);
-        setLeadFieldValues({});
+        setDealCustomFields([]);
+        setDealFieldValues({});
         return;
       }
 
@@ -243,20 +239,21 @@ export function DealDetailSheet({
         is_required: f.is_required,
         show_in_clients: f.show_in_clients,
         show_in_leads: f.show_in_leads,
+        show_in_deals: f.show_in_deals,
         created_at: f.created_at,
         updated_at: f.updated_at,
       }));
-      setLeadCustomFields(formattedFields);
+      setDealCustomFields(formattedFields);
 
-      // Fetch field values for this lead
+      // Fetch field values for this deal
       const { data: values, error: valuesError } = await supabase
-        .from("lead_field_values")
+        .from("deal_field_values")
         .select("*")
-        .eq("lead_id", deal.lead_id);
+        .eq("deal_id", deal.id);
       
-      console.log("[DealDetailSheet] Lead field values fetched:", values?.length || 0, "values for lead", deal.lead_id);
+      console.log("[DealDetailSheet] Deal field values fetched:", values?.length || 0, "values for deal", deal.id);
       if (valuesError) {
-        console.error("[DealDetailSheet] Error fetching lead field values:", valuesError);
+        console.error("[DealDetailSheet] Error fetching deal field values:", valuesError);
       }
 
       if (values) {
@@ -287,11 +284,18 @@ export function DealDetailSheet({
             }
           }
         });
-        setLeadFieldValues(valuesMap);
+        setDealFieldValues(valuesMap);
       }
     } catch (error) {
-      console.error("Error fetching lead custom fields:", error);
+      console.error("Error fetching deal custom fields:", error);
     }
+  };
+
+  const handleDealFieldValueChange = (fieldId: string, newValue: any) => {
+    setDealFieldValues(prev => ({
+      ...prev,
+      [fieldId]: newValue,
+    }));
   };
 
   const fetchCurrentUser = async () => {
@@ -676,25 +680,26 @@ export function DealDetailSheet({
                   )}
                 </div>
 
-                {/* Lead Custom Fields */}
-                {deal.lead_id && leadCustomFields.length > 0 && (
+                {/* Deal Custom Fields - Editable */}
+                {dealCustomFields.length > 0 && (
                   <div className="rounded-lg border p-3">
                     <h4 className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
                       <FileText className="h-3.5 w-3.5" />
                       Campos Personalizados
                     </h4>
                     <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                      {leadCustomFields.map(field => {
-                        const value = leadFieldValues[field.id];
-                        const hasValue = value !== undefined && value !== null && value !== '';
+                      {dealCustomFields.map(field => {
+                        const value = dealFieldValues[field.id];
                         return (
                           <div key={field.id}>
                             <p className="text-[10px] text-muted-foreground mb-0.5">{field.name}</p>
-                            {hasValue ? (
-                              <FieldValueBadge field={field} value={value} />
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground/40">—</span>
-                            )}
+                            <DealFieldValueEditor
+                              field={field}
+                              dealId={deal.id}
+                              accountId={currentUser?.account_id || ""}
+                              currentValue={value}
+                              onValueChange={handleDealFieldValueChange}
+                            />
                           </div>
                         );
                       })}

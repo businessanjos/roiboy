@@ -1608,26 +1608,6 @@ export default function Leads() {
                   )}
                 </div>
 
-                {/* Custom Fields */}
-                {customFields.length > 0 && (
-                  <div className="py-4 border-b">
-                    <h3 className="text-sm font-semibold mb-3">Campos Personalizados</h3>
-                    <div className="grid grid-cols-1 gap-3">
-                      {customFields.map(field => (
-                        <div key={field.id} className="flex items-center justify-between gap-2">
-                          <span className="text-sm text-muted-foreground shrink-0">{field.name}:</span>
-                          <LeadFieldValueEditor
-                            field={field}
-                            leadId={detailLead.id}
-                            accountId={currentUser?.account_id || ""}
-                            currentValue={fieldValues[detailLead.id]?.[field.id]}
-                            onValueChange={(fId, nv) => handleFieldValueChange(detailLead.id, fId, nv)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Deals Section */}
                 {(() => {
