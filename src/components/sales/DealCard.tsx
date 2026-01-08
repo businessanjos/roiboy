@@ -164,10 +164,10 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       .slice(0, 2);
   };
 
-  const contactName = deal.client?.full_name || deal.contact_name || 'Sem contato';
-  const contactEmail = deal.client?.phone_e164 ? null : deal.contact_email;
-  const contactPhone = deal.client?.phone_e164 || deal.contact_phone;
-  const avatarUrl = deal.client?.avatar_url || null;
+  const contactName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato';
+  const contactEmail = deal.client?.phone_e164 ? null : (deal.lead?.email || deal.contact_email);
+  const contactPhone = deal.client?.phone_e164 || deal.lead?.phone || deal.contact_phone;
+  const avatarUrl = deal.client?.avatar_url || deal.lead?.avatar_url || null;
 
   // Check if it's a renewal deal
   const isRenewal = deal.source === 'contract_renewal' || deal.tags?.includes('renovação');

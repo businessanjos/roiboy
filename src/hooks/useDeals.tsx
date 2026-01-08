@@ -46,6 +46,13 @@ export interface Deal {
     phone_e164: string;
     avatar_url: string | null;
   } | null;
+  lead?: {
+    id: string;
+    full_name: string;
+    phone: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  } | null;
   responsible_user?: {
     id: string;
     name: string;
@@ -167,6 +174,7 @@ export function useDeals() {
         .select(`
           *,
           client:clients(id, full_name, phone_e164, avatar_url),
+          lead:leads(id, full_name, phone, email, avatar_url),
           responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
           stage:deal_stages(*)
         `)
@@ -222,6 +230,7 @@ export function useDeals() {
         .select(`
           *,
           client:clients(id, full_name, phone_e164, avatar_url),
+          lead:leads(id, full_name, phone, email, avatar_url),
           responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
           stage:deal_stages(*)
         `)

@@ -537,7 +537,7 @@ function DealListView({
                     <div>
                       <p className="font-medium">{deal.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {deal.client?.full_name || deal.contact_name || 'Sem contato'}
+                        {deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato'}
                       </p>
                     </div>
                   </div>
