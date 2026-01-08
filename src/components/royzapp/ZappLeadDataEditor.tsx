@@ -1,13 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { 
   User, Phone, Mail, Instagram, Building2, MapPin, Landmark,
@@ -67,6 +77,9 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [formData, setFormData] = useState<Partial<Lead>>({});
   const [openSections, setOpenSections] = useState<SectionKey[]>(["contact"]);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   // Fetch lead data
   const { data: lead, isLoading } = useQuery({
@@ -96,6 +109,7 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
       queryClient.invalidateQueries({ queryKey: ["lead-detail-zapp", leadId] });
       toast.success("Dados atualizados!");
       setEditingSection(null);
+      setIsDirty(false);
       onLeadUpdated?.();
     },
     onError: () => {
@@ -119,19 +133,47 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
           [`${prefix}city`]: data.localidade || prev[`${prefix}city` as keyof Lead],
           [`${prefix}state`]: data.uf || prev[`${prefix}state` as keyof Lead],
         }));
+        setIsDirty(true);
       }
     } catch (e) {
       // Silent fail for CEP lookup
     }
   };
 
+  const handleFieldChange = (field: keyof Lead, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
   const startEditing = (section: SectionKey) => {
     if (!lead) return;
+    
+    // If already editing and dirty, show confirmation
+    if (editingSection && isDirty && editingSection !== section) {
+      setPendingAction(() => () => {
+        setFormData(lead);
+        setEditingSection(section);
+        setIsDirty(false);
+      });
+      setShowUnsavedAlert(true);
+      return;
+    }
+    
     setFormData(lead);
     setEditingSection(section);
+    setIsDirty(false);
   };
 
   const cancelEditing = () => {
+    if (isDirty) {
+      setPendingAction(() => () => {
+        setEditingSection(null);
+        setFormData({});
+        setIsDirty(false);
+      });
+      setShowUnsavedAlert(true);
+      return;
+    }
     setEditingSection(null);
     setFormData({});
   };
@@ -164,6 +206,20 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
     updateLead.mutate(updates);
   };
 
+  const handleDiscardChanges = () => {
+    setShowUnsavedAlert(false);
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  };
+
+  const handleSaveAndClose = () => {
+    setShowUnsavedAlert(false);
+    saveSection();
+    setPendingAction(null);
+  };
+
   const toggleSection = (section: SectionKey) => {
     setOpenSections(prev => 
       prev.includes(section) 
@@ -191,14 +247,14 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
     const { type = "text", selectOptions, onBlur } = options || {};
     
     return (
-      <div className="space-y-1">
-        <Label className="text-xs text-zapp-text-muted">{label}</Label>
+      <div className="space-y-0.5">
+        <Label className="text-[10px] text-zapp-text-muted">{label}</Label>
         {type === "select" && selectOptions ? (
           <Select
             value={(formData[field] as string) || ""}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, [field]: value }))}
+            onValueChange={(value) => handleFieldChange(field, value)}
           >
-            <SelectTrigger className="h-8 text-xs bg-zapp-bg border-zapp-border">
+            <SelectTrigger className="h-7 text-xs bg-zapp-bg border-zapp-border">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent>
@@ -216,10 +272,10 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
               if (type === "cnpj") value = formatCNPJ(value);
               if (type === "cep") value = formatCEP(value);
               if (type === "date") value = formatDateBR(value);
-              setFormData(prev => ({ ...prev, [field]: value }));
+              handleFieldChange(field, value);
             }}
             onBlur={onBlur}
-            className="h-8 text-xs bg-zapp-bg border-zapp-border text-zapp-text"
+            className="h-7 text-xs bg-zapp-bg border-zapp-border text-zapp-text"
             placeholder={label}
           />
         )}
@@ -253,207 +309,281 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
   ];
 
   return (
-    <div className="space-y-2">
-      {sections.map(({ key, label, icon: Icon }) => (
-        <Collapsible 
-          key={key} 
-          open={openSections.includes(key)} 
-          onOpenChange={() => toggleSection(key)}
-        >
-          <Card className="bg-zapp-panel border-zapp-border">
-            <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-zapp-accent" />
-                  <span className="text-sm font-medium text-zapp-text">{label}</span>
-                </div>
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-zapp-text-muted transition-transform",
-                  openSections.includes(key) && "rotate-180"
-                )} />
-              </div>
-            </CollapsibleTrigger>
-            
-            <CollapsibleContent>
-              <div className="px-3 pb-3 border-t border-zapp-border pt-2">
-                {editingSection === key ? (
-                  <div className="space-y-3">
-                    {key === "contact" && (
-                      <>
-                        {renderEditField("Nome completo", "full_name")}
-                        {renderEditField("Telefone", "phone")}
-                        {renderEditField("Email", "email")}
-                        {renderEditField("Instagram", "instagram")}
-                      </>
-                    )}
-                    
-                    {key === "personal" && (
-                      <>
-                        {renderEditField("CPF", "cpf", { type: "cpf" })}
-                        {renderEditField("RG", "rg")}
-                        {renderEditField("Data de Nascimento", "birth_date", { 
-                          type: "date",
-                        })}
-                      </>
-                    )}
-                    
-                    {key === "company" && (
-                      <>
-                        {renderEditField("Nome da Empresa", "company_name")}
-                        {renderEditField("CNPJ", "cnpj", { type: "cnpj" })}
-                        {renderEditField("Segmento", "business_segment")}
-                        {renderEditField("Nicho", "business_niche")}
-                      </>
-                    )}
-                    
-                    {key === "address" && (
-                      <>
-                        {renderEditField("CEP", "zip_code", { 
-                          type: "cep",
-                          onBlur: () => formData.zip_code && lookupCEP(formData.zip_code, "")
-                        })}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="col-span-2">{renderEditField("Rua", "street")}</div>
-                          {renderEditField("Nº", "street_number")}
-                        </div>
-                        {renderEditField("Complemento", "complement")}
-                        {renderEditField("Bairro", "neighborhood")}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="col-span-2">{renderEditField("Cidade", "city")}</div>
-                          {renderEditField("UF", "state")}
-                        </div>
-                      </>
-                    )}
-                    
-                    {key === "business_address" && (
-                      <>
-                        {renderEditField("CEP", "business_zip_code", { 
-                          type: "cep",
-                          onBlur: () => formData.business_zip_code && lookupCEP(formData.business_zip_code, "business_")
-                        })}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="col-span-2">{renderEditField("Rua", "business_street")}</div>
-                          {renderEditField("Nº", "business_street_number")}
-                        </div>
-                        {renderEditField("Complemento", "business_complement")}
-                        {renderEditField("Bairro", "business_neighborhood")}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="col-span-2">{renderEditField("Cidade", "business_city")}</div>
-                          {renderEditField("UF", "business_state")}
-                        </div>
-                      </>
-                    )}
-                    
-                    {key === "bank" && (
-                      <>
-                        {renderEditField("Banco", "bank_name", {
-                          type: "select",
-                          selectOptions: brazilianBanks.map(b => ({ value: b.name, label: b.name }))
-                        })}
-                        {renderEditField("Agência", "bank_agency")}
-                        {renderEditField("Conta", "bank_account")}
-                        {renderEditField("Chave PIX", "pix_key")}
-                      </>
-                    )}
-                    
-                    <div className="flex gap-2 pt-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={cancelEditing}
-                        className="flex-1 h-7"
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Cancelar
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={saveSection}
-                        disabled={updateLead.isPending}
-                        className="flex-1 h-7"
-                      >
-                        {updateLead.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <Save className="h-3 w-3 mr-1" />
-                            Salvar
-                          </>
-                        )}
-                      </Button>
+    <>
+      <div className="relative flex flex-col h-full">
+        <ScrollArea className="flex-1 max-h-[60vh] pr-2">
+          <div className="space-y-1.5">
+            {sections.map(({ key, label, icon: Icon }) => (
+              <Collapsible 
+                key={key} 
+                open={openSections.includes(key)} 
+                onOpenChange={() => toggleSection(key)}
+              >
+                <Card className="bg-zapp-panel border-zapp-border">
+                  <CollapsibleTrigger className="w-full">
+                    <div className="flex items-center justify-between p-2.5">
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-3.5 w-3.5 text-zapp-accent" />
+                        <span className="text-xs font-medium text-zapp-text">{label}</span>
+                      </div>
+                      <ChevronDown className={cn(
+                        "h-3.5 w-3.5 text-zapp-text-muted transition-transform",
+                        openSections.includes(key) && "rotate-180"
+                      )} />
                     </div>
-                  </div>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent>
+                    <div className="px-2.5 pb-2.5 border-t border-zapp-border pt-2">
+                      {editingSection === key ? (
+                        <div className="space-y-2">
+                          {key === "contact" && (
+                            <>
+                              {renderEditField("Nome completo", "full_name")}
+                              <div className="grid grid-cols-2 gap-2">
+                                {renderEditField("Telefone", "phone")}
+                                {renderEditField("Email", "email")}
+                              </div>
+                              {renderEditField("Instagram", "instagram")}
+                            </>
+                          )}
+                          
+                          {key === "personal" && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {renderEditField("CPF", "cpf", { type: "cpf" })}
+                              {renderEditField("Nascimento", "birth_date", { type: "date" })}
+                              <div className="col-span-2">
+                                {renderEditField("RG", "rg")}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {key === "company" && (
+                            <>
+                              <div className="grid grid-cols-2 gap-2">
+                                {renderEditField("Empresa", "company_name")}
+                                {renderEditField("CNPJ", "cnpj", { type: "cnpj" })}
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {renderEditField("Segmento", "business_segment")}
+                                {renderEditField("Nicho", "business_niche")}
+                              </div>
+                            </>
+                          )}
+                          
+                          {key === "address" && (
+                            <>
+                              {renderEditField("CEP", "zip_code", { 
+                                type: "cep",
+                                onBlur: () => formData.zip_code && lookupCEP(formData.zip_code, "")
+                              })}
+                              <div className="grid grid-cols-4 gap-2">
+                                <div className="col-span-3">{renderEditField("Rua", "street")}</div>
+                                {renderEditField("Nº", "street_number")}
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {renderEditField("Complemento", "complement")}
+                                {renderEditField("Bairro", "neighborhood")}
+                              </div>
+                              <div className="grid grid-cols-4 gap-2">
+                                <div className="col-span-3">{renderEditField("Cidade", "city")}</div>
+                                {renderEditField("UF", "state")}
+                              </div>
+                            </>
+                          )}
+                          
+                          {key === "business_address" && (
+                            <>
+                              {renderEditField("CEP", "business_zip_code", { 
+                                type: "cep",
+                                onBlur: () => formData.business_zip_code && lookupCEP(formData.business_zip_code, "business_")
+                              })}
+                              <div className="grid grid-cols-4 gap-2">
+                                <div className="col-span-3">{renderEditField("Rua", "business_street")}</div>
+                                {renderEditField("Nº", "business_street_number")}
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {renderEditField("Complemento", "business_complement")}
+                                {renderEditField("Bairro", "business_neighborhood")}
+                              </div>
+                              <div className="grid grid-cols-4 gap-2">
+                                <div className="col-span-3">{renderEditField("Cidade", "business_city")}</div>
+                                {renderEditField("UF", "business_state")}
+                              </div>
+                            </>
+                          )}
+                          
+                          {key === "bank" && (
+                            <>
+                              {renderEditField("Banco", "bank_name", {
+                                type: "select",
+                                selectOptions: brazilianBanks.map(b => ({ value: b.name, label: b.name }))
+                              })}
+                              <div className="grid grid-cols-2 gap-2">
+                                {renderEditField("Agência", "bank_agency")}
+                                {renderEditField("Conta", "bank_account")}
+                              </div>
+                              {renderEditField("Chave PIX", "pix_key")}
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          {key === "contact" && (
+                            <>
+                              {renderField("Nome", lead.full_name)}
+                              <div className="grid grid-cols-2 gap-x-2">
+                                {renderField("Telefone", lead.phone)}
+                                {renderField("Email", lead.email)}
+                              </div>
+                              {lead.instagram && renderField("Instagram", lead.instagram)}
+                            </>
+                          )}
+                          
+                          {key === "personal" && (
+                            <div className="grid grid-cols-2 gap-x-2">
+                              {renderField("CPF", lead.cpf)}
+                              {renderField("Nascimento", lead.birth_date ? parseISOToDateBR(lead.birth_date) : null)}
+                              {renderField("RG", lead.rg)}
+                            </div>
+                          )}
+                          
+                          {key === "company" && (
+                            <>
+                              <div className="grid grid-cols-2 gap-x-2">
+                                {renderField("Empresa", lead.company_name)}
+                                {renderField("CNPJ", lead.cnpj)}
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-2">
+                                {renderField("Segmento", lead.business_segment)}
+                                {lead.business_niche && renderField("Nicho", lead.business_niche)}
+                              </div>
+                            </>
+                          )}
+                          
+                          {key === "address" && (
+                            <>
+                              {renderField("CEP", lead.zip_code)}
+                              {lead.street && renderField("Endereço", `${lead.street}${lead.street_number ? `, ${lead.street_number}` : ""}${lead.complement ? ` - ${lead.complement}` : ""}`)}
+                              <div className="grid grid-cols-2 gap-x-2">
+                                {lead.neighborhood && renderField("Bairro", lead.neighborhood)}
+                                {lead.city && renderField("Cidade", `${lead.city}/${lead.state || ""}`)}
+                              </div>
+                            </>
+                          )}
+                          
+                          {key === "business_address" && (
+                            <>
+                              {renderField("CEP", lead.business_zip_code)}
+                              {lead.business_street && renderField("Endereço", `${lead.business_street}${lead.business_street_number ? `, ${lead.business_street_number}` : ""}${lead.business_complement ? ` - ${lead.business_complement}` : ""}`)}
+                              <div className="grid grid-cols-2 gap-x-2">
+                                {lead.business_neighborhood && renderField("Bairro", lead.business_neighborhood)}
+                                {lead.business_city && renderField("Cidade", `${lead.business_city}/${lead.business_state || ""}`)}
+                              </div>
+                            </>
+                          )}
+                          
+                          {key === "bank" && (
+                            <>
+                              {renderField("Banco", lead.bank_name)}
+                              <div className="grid grid-cols-2 gap-x-2">
+                                {lead.bank_agency && renderField("Agência", lead.bank_agency)}
+                                {lead.bank_account && renderField("Conta", lead.bank_account)}
+                              </div>
+                              {lead.pix_key && renderField("PIX", lead.pix_key)}
+                            </>
+                          )}
+                          
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => startEditing(key)}
+                            className="h-5 text-[10px] mt-1.5 text-zapp-accent hover:text-zapp-accent/80 px-2"
+                          >
+                            <Pencil className="h-2.5 w-2.5 mr-1" />
+                            Editar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            ))}
+          </div>
+        </ScrollArea>
+        
+        {/* Floating save button */}
+        {editingSection && (
+          <div className="sticky bottom-0 bg-zapp-panel border-t border-zapp-border p-2 mt-2 -mx-1 rounded-b-lg">
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={cancelEditing}
+                className="h-7 text-xs"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancelar
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={saveSection}
+                disabled={updateLead.isPending}
+                className="h-7 text-xs bg-zapp-accent hover:bg-zapp-accent/90"
+              >
+                {updateLead.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <div className="space-y-1">
-                    {key === "contact" && (
-                      <>
-                        {renderField("Nome", lead.full_name)}
-                        {renderField("Telefone", lead.phone)}
-                        {renderField("Email", lead.email)}
-                        {lead.instagram && renderField("Instagram", lead.instagram)}
-                      </>
-                    )}
-                    
-                    {key === "personal" && (
-                      <>
-                        {renderField("CPF", lead.cpf)}
-                        {renderField("RG", lead.rg)}
-                        {renderField("Nascimento", lead.birth_date ? parseISOToDateBR(lead.birth_date) : null)}
-                      </>
-                    )}
-                    
-                    {key === "company" && (
-                      <>
-                        {renderField("Empresa", lead.company_name)}
-                        {renderField("CNPJ", lead.cnpj)}
-                        {renderField("Segmento", lead.business_segment)}
-                        {lead.business_niche && renderField("Nicho", lead.business_niche)}
-                      </>
-                    )}
-                    
-                    {key === "address" && (
-                      <>
-                        {renderField("CEP", lead.zip_code)}
-                        {lead.street && renderField("Endereço", `${lead.street}${lead.street_number ? `, ${lead.street_number}` : ""}${lead.complement ? ` - ${lead.complement}` : ""}`)}
-                        {lead.neighborhood && renderField("Bairro", lead.neighborhood)}
-                        {lead.city && renderField("Cidade", `${lead.city}/${lead.state || ""}`)}
-                      </>
-                    )}
-                    
-                    {key === "business_address" && (
-                      <>
-                        {renderField("CEP", lead.business_zip_code)}
-                        {lead.business_street && renderField("Endereço", `${lead.business_street}${lead.business_street_number ? `, ${lead.business_street_number}` : ""}${lead.business_complement ? ` - ${lead.business_complement}` : ""}`)}
-                        {lead.business_neighborhood && renderField("Bairro", lead.business_neighborhood)}
-                        {lead.business_city && renderField("Cidade", `${lead.business_city}/${lead.business_state || ""}`)}
-                      </>
-                    )}
-                    
-                    {key === "bank" && (
-                      <>
-                        {renderField("Banco", lead.bank_name)}
-                        {lead.bank_agency && renderField("Agência", lead.bank_agency)}
-                        {lead.bank_account && renderField("Conta", lead.bank_account)}
-                        {lead.pix_key && renderField("PIX", lead.pix_key)}
-                      </>
-                    )}
-                    
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => startEditing(key)}
-                      className="h-6 text-xs mt-2 text-zapp-accent hover:text-zapp-accent/80"
-                    >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Editar
-                    </Button>
-                  </div>
+                  <>
+                    <Save className="h-3 w-3 mr-1" />
+                    Salvar Alterações
+                  </>
                 )}
-              </div>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      ))}
-    </div>
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Unsaved changes confirmation dialog */}
+      <AlertDialog open={showUnsavedAlert} onOpenChange={setShowUnsavedAlert}>
+        <AlertDialogContent className="bg-zapp-panel border-zapp-border max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zapp-text text-sm">
+              Alterações não salvas
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zapp-text-muted text-xs">
+              Você tem alterações não salvas. Deseja salvar antes de sair?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel 
+              onClick={handleDiscardChanges}
+              className="h-7 text-xs"
+            >
+              Sair sem salvar
+            </AlertDialogCancel>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                setShowUnsavedAlert(false);
+                setPendingAction(null);
+              }}
+              className="h-7 text-xs"
+            >
+              Cancelar
+            </Button>
+            <AlertDialogAction 
+              onClick={handleSaveAndClose}
+              className="h-7 text-xs bg-zapp-accent hover:bg-zapp-accent/90"
+            >
+              Salvar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
