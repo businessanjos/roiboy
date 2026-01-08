@@ -447,7 +447,8 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               {renderedContent}
             </p>
           )}
-          {(!message.content && !message.media_url) && (
+          {/* Only show "unsupported" if there's no content, no media_url, AND no pending/failed media status */}
+          {(!message.content && !message.media_url && !message.media_download_status && !message.media_type) && (
             <p className="text-sm whitespace-pre-wrap break-words opacity-50">
               [Mensagem não suportada]
             </p>
