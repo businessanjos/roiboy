@@ -455,7 +455,7 @@ export function ClientZappSheet({
                 </AvatarFallback>
               </Avatar>
             )}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 pr-8">
               <SheetTitle className="text-zapp-text truncate">
                 {client?.full_name || "Carregando..."}
               </SheetTitle>
