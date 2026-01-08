@@ -494,6 +494,90 @@ export function useSocialMediaData() {
     },
   });
 
+  // Update post mutation
+  const updatePost = useMutation({
+    mutationFn: async ({
+      postId,
+      data,
+    }: {
+      postId: string;
+      data: {
+        permalink: string;
+        post_type: 'reels' | 'carousel' | 'static';
+        ai_objective: 'growth' | 'connection' | 'authority' | 'sales';
+        posted_at: Date;
+        caption: string;
+        reach: number;
+        likes: number;
+        comments: number;
+        shares: number;
+        saves: number;
+      };
+    }) => {
+      // Extract Instagram ID from permalink
+      const instagramIdMatch = data.permalink.match(/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/);
+      const instagramId = instagramIdMatch ? instagramIdMatch[1] : null;
+
+      // Calculate engagement and virality rates
+      const totalEngagement = data.likes + data.comments + data.shares + data.saves;
+      const engagementRate = data.reach > 0 ? (totalEngagement / data.reach) * 100 : 0;
+      const viralityRate = data.reach > 0 ? (data.shares / data.reach) * 100 : 0;
+
+      const { data: post, error } = await supabase
+        .from('instagram_posts')
+        .update({
+          instagram_id: instagramId,
+          permalink: data.permalink,
+          post_type: data.post_type,
+          ai_objective: data.ai_objective,
+          ai_objective_confidence: 100,
+          posted_at: data.posted_at.toISOString(),
+          caption: data.caption || null,
+          reach: data.reach,
+          likes: data.likes,
+          comments: data.comments,
+          shares: data.shares,
+          saves: data.saves,
+          engagement_rate: Math.round(engagementRate * 100) / 100,
+          virality_rate: Math.round(viralityRate * 100) / 100,
+          is_trending: engagementRate >= 12 || viralityRate >= 1.5,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', postId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return post;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
+      toast.success('Post atualizado com sucesso!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar post: ' + error.message);
+    },
+  });
+
+  // Delete post mutation
+  const deletePost = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase
+        .from('instagram_posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
+      toast.success('Post excluído com sucesso!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir post: ' + error.message);
+    },
+  });
+
   return {
     profiles,
     currentProfile,
@@ -505,5 +589,7 @@ export function useSocialMediaData() {
     setSelectedProfileId,
     createProfile,
     createPost,
+    updatePost,
+    deletePost,
   };
 }

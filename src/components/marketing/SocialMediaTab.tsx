@@ -15,6 +15,9 @@ import {
   Bookmark,
   ExternalLink,
   RefreshCw,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,21 +36,32 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useSocialMediaData } from '@/hooks/useSocialMediaData';
+import { useSocialMediaData, InstagramPost } from '@/hooks/useSocialMediaData';
 import { SocialMediaKPICard } from './SocialMediaKPICard';
 import { PostFormatBadge } from './PostFormatBadge';
 import { PostObjectiveBadge } from './PostObjectiveBadge';
 import { InstagramConnectDialog } from './InstagramConnectDialog';
 import { AddPostDialog, PostFormData } from './AddPostDialog';
+import { EditPostDialog, EditPostFormData } from './EditPostDialog';
+import { DeletePostDialog } from './DeletePostDialog';
 import { cn } from '@/lib/utils';
 
 export function SocialMediaTab() {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [addPostDialogOpen, setAddPostDialogOpen] = useState(false);
+  const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
+  const [deletePostDialogOpen, setDeletePostDialogOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   
@@ -62,6 +76,8 @@ export function SocialMediaTab() {
     setSelectedProfileId,
     createProfile,
     createPost,
+    updatePost,
+    deletePost,
   } = useSocialMediaData();
 
   // Filter posts based on selected filters
@@ -91,6 +107,37 @@ export function SocialMediaTab() {
     createPost.mutate(data, {
       onSuccess: () => setAddPostDialogOpen(false),
     });
+  };
+
+  const handleEditPost = (postId: string, data: EditPostFormData) => {
+    updatePost.mutate(
+      { postId, data },
+      {
+        onSuccess: () => {
+          setEditPostDialogOpen(false);
+          setSelectedPost(null);
+        },
+      }
+    );
+  };
+
+  const handleDeletePost = (postId: string) => {
+    deletePost.mutate(postId, {
+      onSuccess: () => {
+        setDeletePostDialogOpen(false);
+        setSelectedPost(null);
+      },
+    });
+  };
+
+  const openEditDialog = (post: InstagramPost) => {
+    setSelectedPost(post);
+    setEditPostDialogOpen(true);
+  };
+
+  const openDeleteDialog = (post: InstagramPost) => {
+    setSelectedPost(post);
+    setDeletePostDialogOpen(true);
   };
 
   if (isLoading) {
@@ -303,12 +350,13 @@ export function SocialMediaTab() {
                   <TableHead className="text-right w-[90px] font-semibold text-primary">
                     Viral %
                   </TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPosts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
                       {posts.length === 0 
                         ? 'Nenhum post encontrado para este perfil.'
                         : 'Nenhum post encontrado com os filtros selecionados.'}
@@ -407,6 +455,32 @@ export function SocialMediaTab() {
                           {post.virality_rate.toFixed(2)}%
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(post)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => openDeleteDialog(post)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -430,6 +504,24 @@ export function SocialMediaTab() {
         onOpenChange={setAddPostDialogOpen}
         onSubmit={handleAddPost}
         isLoading={createPost.isPending}
+      />
+
+      {/* Edit Post Dialog */}
+      <EditPostDialog
+        open={editPostDialogOpen}
+        onOpenChange={setEditPostDialogOpen}
+        onSubmit={handleEditPost}
+        isLoading={updatePost.isPending}
+        post={selectedPost}
+      />
+
+      {/* Delete Post Dialog */}
+      <DeletePostDialog
+        open={deletePostDialogOpen}
+        onOpenChange={setDeletePostDialogOpen}
+        onConfirm={handleDeletePost}
+        isLoading={deletePost.isPending}
+        post={selectedPost}
       />
     </div>
   );
