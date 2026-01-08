@@ -337,6 +337,7 @@ export default function RoyZapp() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
+  const [imagePreview, setImagePreview] = useState<{ file: File; url: string } | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -1109,6 +1110,23 @@ export default function RoyZapp() {
 
   // Send message via UAZAPI
   const sendMessage = async () => {
+    // If there's an image preview, send it instead
+    if (imagePreview && selectedConversation) {
+      const file = imagePreview.file;
+      URL.revokeObjectURL(imagePreview.url);
+      setImagePreview(null);
+      
+      // Create a synthetic event for handleFileSelect
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      const syntheticEvent = {
+        target: { files: dataTransfer.files }
+      } as React.ChangeEvent<HTMLInputElement>;
+      
+      await handleFileSelect(syntheticEvent, "image");
+      return;
+    }
+    
     if (!messageInput.trim() || !selectedConversation) return;
     
     const contactInfo = getContactInfo(selectedConversation);
@@ -2851,6 +2869,8 @@ export default function RoyZapp() {
           isRecording={isRecording}
           recordingDuration={recordingDuration}
           audioPreview={audioPreview}
+          imagePreview={imagePreview}
+          onSetImagePreview={setImagePreview}
           showFormatting={showFormatting}
           messageInputRef={messageInputRef}
           imageInputRef={imageInputRef}
