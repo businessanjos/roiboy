@@ -2892,11 +2892,20 @@ serve(async (req) => {
         // Clean phone number if provided
         const cleanPhone = targetPhone ? targetPhone.replace(/\D/g, "") : "";
         
+        // Extract actual message ID from format "phone:msgId" if needed
+        // Our DB stores: "554388346806:3EB0A21FD5E7E7DF84A6F7"
+        // UAZAPI expects: "3EB0A21FD5E7E7DF84A6F7"
+        let actualMessageId = message_id;
+        if (message_id.includes(':')) {
+          actualMessageId = message_id.split(':').pop() || message_id;
+          console.log(`Extracted message ID: ${actualMessageId} from ${message_id}`);
+        }
+        
         // Try different endpoints for deleting message
         const deleteEndpoints = [
-          { url: `/message/${message_id}/delete`, method: "POST", body: cleanPhone ? { phone: cleanPhone } : {} },
-          { url: `/message/delete`, method: "POST", body: { messageId: message_id, phone: cleanPhone } },
-          { url: `/chat/delete-message`, method: "POST", body: { messageId: message_id, phone: cleanPhone } },
+          { url: `/message/${actualMessageId}/delete`, method: "POST", body: cleanPhone ? { phone: cleanPhone } : {} },
+          { url: `/message/delete`, method: "POST", body: { messageId: actualMessageId, phone: cleanPhone } },
+          { url: `/chat/delete-message`, method: "POST", body: { messageId: actualMessageId, phone: cleanPhone } },
         ];
         
         let deleted = false;

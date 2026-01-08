@@ -1251,7 +1251,7 @@ export default function RoyZapp() {
     // Create optimistic message
     const optimisticMessage: Message = {
       id: tempMessageId,
-      content: mediaType === "image" ? "[Imagem]" : `[Arquivo] ${file.name}`,
+      content: mediaType === "image" ? "" : file.name,
       is_from_client: false,
       created_at: now,
       message_type: mediaType,
@@ -1317,7 +1317,7 @@ export default function RoyZapp() {
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
-          content: mediaType === "image" ? "[Imagem]" : `[Arquivo] ${file.name}`,
+          content: mediaType === "image" ? "" : file.name,
           message_type: mediaType,
           media_url: mediaUrl,
           media_type: mediaType,

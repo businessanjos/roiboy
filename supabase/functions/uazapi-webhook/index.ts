@@ -478,30 +478,30 @@ serve(async (req) => {
           mediaUrl = mediaUrl || msg.imageMessage.url || "";
           mediaMimetype = mediaMimetype || msg.imageMessage.mimetype || "";
           mediaFilename = mediaFilename || msg.imageMessage.fileName || "";
-          content = msg.imageMessage.caption || "[Imagem]";
+          content = msg.imageMessage.caption || "";
         } else if (msg.videoMessage) {
           mediaType = "video";
           mediaUrl = mediaUrl || msg.videoMessage.url || "";
           mediaMimetype = mediaMimetype || msg.videoMessage.mimetype || "";
           mediaFilename = mediaFilename || msg.videoMessage.fileName || "";
-          content = msg.videoMessage.caption || "[Vídeo]";
+          content = msg.videoMessage.caption || "";
         } else if (msg.audioMessage) {
           mediaType = "audio";
           mediaUrl = mediaUrl || msg.audioMessage.url || "";
           mediaMimetype = mediaMimetype || msg.audioMessage.mimetype || "";
           audioDurationSec = msg.audioMessage.seconds || null;
-          content = "[Áudio]";
+          content = "";
         } else if (msg.documentMessage) {
           mediaType = "document";
           mediaUrl = mediaUrl || msg.documentMessage.url || "";
           mediaMimetype = mediaMimetype || msg.documentMessage.mimetype || "";
           mediaFilename = mediaFilename || msg.documentMessage.fileName || "";
-          content = msg.documentMessage.caption || `[Documento: ${mediaFilename}]`;
+          content = msg.documentMessage.caption || "";
         } else if (msg.stickerMessage) {
           mediaType = "sticker";
           mediaUrl = mediaUrl || msg.stickerMessage.url || "";
           mediaMimetype = mediaMimetype || msg.stickerMessage.mimetype || "";
-          content = "[Figurinha]";
+          content = "";
         } else if (typeof msg.content === "object" && msg.content !== null) {
           // UAZAPI format: content is an object with imageMessage, audioMessage, etc.
           const contentObj = msg.content as Record<string, unknown>;
@@ -512,34 +512,34 @@ serve(async (req) => {
             mediaUrl = mediaUrl || String(imgMsg.url || "");
             mediaMimetype = mediaMimetype || String(imgMsg.mimetype || "");
             mediaFilename = mediaFilename || String(imgMsg.fileName || "");
-            content = String(imgMsg.caption || "[Imagem]");
+            content = String(imgMsg.caption || "");
           } else if (contentObj.videoMessage && typeof contentObj.videoMessage === "object") {
             const vidMsg = contentObj.videoMessage as Record<string, unknown>;
             mediaType = "video";
             mediaUrl = mediaUrl || String(vidMsg.url || "");
             mediaMimetype = mediaMimetype || String(vidMsg.mimetype || "");
             mediaFilename = mediaFilename || String(vidMsg.fileName || "");
-            content = String(vidMsg.caption || "[Vídeo]");
+            content = String(vidMsg.caption || "");
           } else if (contentObj.audioMessage && typeof contentObj.audioMessage === "object") {
             const audMsg = contentObj.audioMessage as Record<string, unknown>;
             mediaType = "audio";
             mediaUrl = mediaUrl || String(audMsg.url || "");
             mediaMimetype = mediaMimetype || String(audMsg.mimetype || "");
             audioDurationSec = Number(audMsg.seconds) || null;
-            content = "[Áudio]";
+            content = "";
           } else if (contentObj.documentMessage && typeof contentObj.documentMessage === "object") {
             const docMsg = contentObj.documentMessage as Record<string, unknown>;
             mediaType = "document";
             mediaUrl = mediaUrl || String(docMsg.url || "");
             mediaMimetype = mediaMimetype || String(docMsg.mimetype || "");
             mediaFilename = mediaFilename || String(docMsg.fileName || "");
-            content = String(docMsg.caption || `[Documento: ${mediaFilename}]`);
+            content = String(docMsg.caption || "");
           } else if (contentObj.stickerMessage && typeof contentObj.stickerMessage === "object") {
             const stickerMsg = contentObj.stickerMessage as Record<string, unknown>;
             mediaType = "sticker";
             mediaUrl = mediaUrl || String(stickerMsg.url || "");
             mediaMimetype = mediaMimetype || String(stickerMsg.mimetype || "");
-            content = "[Figurinha]";
+            content = "";
           } else if (contentObj.conversation) {
             content = String(contentObj.conversation);
           } else if (contentObj.extendedTextMessage && typeof contentObj.extendedTextMessage === "object") {
@@ -557,30 +557,8 @@ serve(async (req) => {
           }
         }
         
-        // If we detected a media type but content is just plain text (the caption), 
-        // prefix it or set default if empty
-        if (mediaType) {
-          const mediaLabels: Record<string, string> = {
-            image: "[Imagem]",
-            video: "[Vídeo]",
-            audio: "[Áudio]",
-            document: "[Documento]",
-            sticker: "[Figurinha]",
-          };
-          
-          // If no content, use the label
-          if (!content) {
-            content = mediaLabels[mediaType] || "[Mídia]";
-          } else {
-            // If we have caption-like content but media type is detected, 
-            // make sure to indicate it's a media message
-            if (mediaType === "video" && !content.includes("[Vídeo]")) {
-              content = `🎬 ${content}`;
-            } else if (mediaType === "image" && !content.includes("[Imagem]")) {
-              content = `📷 ${content}`;
-            }
-          }
-        }
+        // Media content: don't add labels, just use caption if available
+        // The UI will show emojis for media types in previews
         
         console.log(`Media info - type: ${mediaType}, url: ${mediaUrl?.substring(0, 50)}..., mimetype: ${mediaMimetype}`);
         
