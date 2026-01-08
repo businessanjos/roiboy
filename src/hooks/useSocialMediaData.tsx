@@ -160,7 +160,7 @@ export function useSocialMediaData() {
 
   // Create profile mutation
   const createProfile = useMutation({
-    mutationFn: async (data: { username: string; accessToken: string }) => {
+    mutationFn: async (data: { username: string; accessToken?: string }) => {
       if (!user?.account_id) throw new Error('User not authenticated');
 
       const { data: profile, error: profileError } = await supabase
@@ -179,25 +179,27 @@ export function useSocialMediaData() {
 
       if (profileError) throw profileError;
 
-      // Store credentials
-      const { error: credError } = await supabase
-        .from('instagram_credentials')
-        .insert({
-          profile_id: profile.id,
-          access_token: data.accessToken,
-        });
+      // Store credentials only if token was provided
+      if (data.accessToken) {
+        const { error: credError } = await supabase
+          .from('instagram_credentials')
+          .insert({
+            profile_id: profile.id,
+            access_token: data.accessToken,
+          });
 
-      if (credError) throw credError;
+        if (credError) throw credError;
+      }
 
       return profile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] });
-      toast.success('Perfil conectado com sucesso!');
+      toast.success('Perfil adicionado com sucesso!');
       setUseMockData(false);
     },
     onError: (error) => {
-      toast.error('Erro ao conectar perfil: ' + error.message);
+      toast.error('Erro ao adicionar perfil: ' + error.message);
     },
   });
 
