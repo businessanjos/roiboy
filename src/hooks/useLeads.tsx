@@ -190,6 +190,16 @@ export function useLeads() {
   const updateLead = async (leadId: string, data: UpdateLeadData): Promise<boolean> => {
     if (!currentUser?.account_id) return false;
 
+    // Optimistic update - atualizar estado local imediatamente
+    const previousLeads = leads;
+    if (data.responsible_user_id !== undefined) {
+      setLeads(prev => prev.map(lead => 
+        lead.id === leadId 
+          ? { ...lead, responsible_user_id: data.responsible_user_id ?? null }
+          : lead
+      ));
+    }
+
     try {
       const { error } = await supabase
         .from('leads')
@@ -199,9 +209,12 @@ export function useLeads() {
 
       if (error) throw error;
 
+      // Refetch para sincronizar dados completos (incluindo responsible_user join)
       await fetchLeads();
       return true;
     } catch (error: any) {
+      // Rollback em caso de erro
+      setLeads(previousLeads);
       console.error('Error updating lead:', error);
       toast({
         title: "Erro ao atualizar lead",
