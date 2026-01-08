@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Trophy,
   XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { 
   formatCPF, 
@@ -142,11 +153,17 @@ export function ClientZappSheet({
   });
   const [creatingDeal, setCreatingDeal] = useState(false);
 
+  // Dirty state for unsaved changes
+  const [isDirty, setIsDirty] = useState(false);
+  const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
+  const initialFormDataRef = useRef<typeof formData | null>(null);
+
   useEffect(() => {
     if (clientId && open) {
       fetchClient();
       fetchDeals();
       fetchStages();
+      setIsDirty(false);
     }
   }, [clientId, open]);
 
@@ -187,7 +204,7 @@ export function ClientZappSheet({
 
       setClient(clientData);
       const emails = clientData.emails;
-      setFormData({
+      const initialData = {
         full_name: clientData.full_name || "",
         phone_e164: formatBrazilianPhone(clientData.phone_e164) || clientData.phone_e164 || "",
         email: emails && emails.length > 0 ? emails[0] : "",
@@ -205,13 +222,42 @@ export function ClientZappSheet({
         city: clientData.city || "",
         state: clientData.state || "",
         zip_code: formatCEP(clientData.zip_code || "") || "",
-      });
+      };
+      setFormData(initialData);
+      initialFormDataRef.current = initialData;
+      setIsDirty(false);
     } catch (error) {
       console.error("Error fetching client:", error);
       toast.error("Erro ao carregar dados do cliente");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFieldChange = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && isDirty) {
+      setShowUnsavedAlert(true);
+    } else {
+      onOpenChange(newOpen);
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    setShowUnsavedAlert(false);
+    setIsDirty(false);
+    onOpenChange(false);
+  };
+
+  const handleSaveAndClose = async () => {
+    await handleSave();
+    setShowUnsavedAlert(false);
+    setIsDirty(false);
+    onOpenChange(false);
   };
 
   const fetchDeals = async () => {
@@ -312,6 +358,8 @@ export function ClientZappSheet({
       if (error) throw error;
 
       toast.success("Cliente atualizado com sucesso!");
+      setIsDirty(false);
+      initialFormDataRef.current = formData;
       onClientUpdated?.();
     } catch (error) {
       console.error("Error updating client:", error);
@@ -395,7 +443,7 @@ export function ClientZappSheet({
   const totalValue = openDeals.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-[380px] sm:w-[460px] bg-zapp-bg border-zapp-border p-0 flex flex-col">
         <SheetHeader className="px-5 py-4 border-b border-zapp-border bg-zapp-panel">
           <div className="flex items-center gap-3">
@@ -445,20 +493,20 @@ export function ClientZappSheet({
 
               <TabsContent value="client" className="flex-1 m-0 overflow-hidden">
                 <ScrollArea className="h-[calc(100vh-260px)]">
-                  <div className="p-5 space-y-5">
+                  <div className="p-4 space-y-4">
                     {/* Basic Info */}
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       <div className="flex items-center gap-2 text-zapp-text font-medium text-sm">
                         <User className="h-4 w-4" />
                         <span>Informações Básicas</span>
                       </div>
                       
-                      <div className="space-y-2.5">
+                      <div className="space-y-2">
                         <div className="space-y-1">
                           <Label className="text-zapp-text-muted text-xs">Nome completo</Label>
                           <Input
                             value={formData.full_name}
-                            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                            onChange={(e) => handleFieldChange("full_name", e.target.value)}
                             className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
                           />
                         </div>
@@ -476,7 +524,7 @@ export function ClientZappSheet({
                             <Label className="text-zapp-text-muted text-xs">E-mail</Label>
                             <Input
                               value={formData.email}
-                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                              onChange={(e) => handleFieldChange("email", e.target.value)}
                               className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
                               type="email"
                             />
@@ -488,7 +536,7 @@ export function ClientZappSheet({
                             <Label className="text-zapp-text-muted text-xs">CPF</Label>
                             <Input
                               value={formData.cpf}
-                              onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
+                              onChange={(e) => handleFieldChange("cpf", formatCPF(e.target.value))}
                               className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
                               maxLength={14}
                             />
@@ -497,7 +545,7 @@ export function ClientZappSheet({
                             <Label className="text-zapp-text-muted text-xs">Nascimento</Label>
                             <Input
                               value={formData.birth_date}
-                              onChange={(e) => setFormData({ ...formData, birth_date: formatDateBR(e.target.value) })}
+                              onChange={(e) => handleFieldChange("birth_date", formatDateBR(e.target.value))}
                               className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
                               placeholder="DD/MM/AAAA"
                               maxLength={10}
@@ -509,7 +557,7 @@ export function ClientZappSheet({
                           <Label className="text-zapp-text-muted text-xs">Instagram</Label>
                           <Input
                             value={formData.instagram}
-                            onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                            onChange={(e) => handleFieldChange("instagram", e.target.value)}
                             className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
                             placeholder="@usuario"
                           />
@@ -520,18 +568,18 @@ export function ClientZappSheet({
                     <Separator className="bg-zapp-border" />
 
                     {/* Company Info */}
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       <div className="flex items-center gap-2 text-zapp-text font-medium text-sm">
                         <Building2 className="h-4 w-4" />
                         <span>Empresa</span>
                       </div>
                       
-                      <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <Label className="text-zapp-text-muted text-xs">Nome da Empresa</Label>
                           <Input
                             value={formData.company_name}
-                            onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                            onChange={(e) => handleFieldChange("company_name", e.target.value)}
                             className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
                           />
                         </div>
@@ -539,7 +587,7 @@ export function ClientZappSheet({
                           <Label className="text-zapp-text-muted text-xs">CNPJ</Label>
                           <Input
                             value={formData.cnpj}
-                            onChange={(e) => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })}
+                            onChange={(e) => handleFieldChange("cnpj", formatCNPJ(e.target.value))}
                             className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
                             maxLength={18}
                           />
@@ -550,7 +598,7 @@ export function ClientZappSheet({
                     <Separator className="bg-zapp-border" />
 
                     {/* Notes */}
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       <div className="flex items-center gap-2 text-zapp-text font-medium text-sm">
                         <FileText className="h-4 w-4" />
                         <span>Observações</span>
@@ -558,7 +606,7 @@ export function ClientZappSheet({
                       
                       <Textarea
                         value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        onChange={(e) => handleFieldChange("notes", e.target.value)}
                         className="bg-zapp-panel border-zapp-border text-zapp-text resize-none"
                         rows={3}
                         placeholder="Notas sobre o cliente..."
@@ -572,7 +620,7 @@ export function ClientZappSheet({
                   <div className="flex gap-2 justify-end">
                     <Button
                       variant="outline"
-                      onClick={() => onOpenChange(false)}
+                      onClick={() => handleOpenChange(false)}
                       className="border-zapp-border text-zapp-text hover:bg-zapp-hover h-9"
                     >
                       Fechar
@@ -580,14 +628,20 @@ export function ClientZappSheet({
                     <Button
                       onClick={handleSave}
                       disabled={saving || !formData.full_name.trim()}
-                      className="bg-zapp-accent hover:bg-zapp-accent-hover text-white h-9"
+                      className={cn(
+                        "h-9 text-white",
+                        isDirty 
+                          ? "bg-amber-600 hover:bg-amber-700" 
+                          : "bg-zapp-accent hover:bg-zapp-accent-hover"
+                      )}
                     >
                       {saving ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <>
+                          {isDirty && <AlertCircle className="h-4 w-4 mr-1.5" />}
                           <Save className="h-4 w-4 mr-1.5" />
-                          Salvar
+                          {isDirty ? "Salvar Alterações" : "Salvar"}
                         </>
                       )}
                     </Button>
@@ -819,6 +873,40 @@ export function ClientZappSheet({
           </div>
         )}
       </SheetContent>
+
+      {/* Alert Dialog for unsaved changes */}
+      <AlertDialog open={showUnsavedAlert} onOpenChange={setShowUnsavedAlert}>
+        <AlertDialogContent className="bg-zapp-panel border-zapp-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zapp-text">Alterações não salvas</AlertDialogTitle>
+            <AlertDialogDescription className="text-zapp-text-muted">
+              Você tem alterações não salvas. Deseja salvar antes de sair?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel 
+              onClick={() => setShowUnsavedAlert(false)}
+              className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={handleDiscardChanges}
+              className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
+            >
+              Sair sem salvar
+            </Button>
+            <AlertDialogAction
+              onClick={handleSaveAndClose}
+              className="bg-zapp-accent hover:bg-zapp-accent-hover text-white"
+            >
+              <Save className="h-4 w-4 mr-1.5" />
+              Salvar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
