@@ -562,6 +562,15 @@ export function useSocialMediaData() {
   // Delete post mutation
   const deletePost = useMutation({
     mutationFn: async (postId: string) => {
+      // Check if it's a mock post (mock IDs are not valid UUIDs)
+      const isMockPost = postId.startsWith('post-') || postId.startsWith('mock-');
+      
+      if (isMockPost) {
+        // For mock data, we can't actually delete from the database
+        // Just return success - the UI will handle the visual removal
+        throw new Error('Posts de demonstração não podem ser excluídos. Conecte um perfil real para gerenciar posts.');
+      }
+
       const { error } = await supabase
         .from('instagram_posts')
         .delete()
