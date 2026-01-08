@@ -1644,10 +1644,10 @@ export default function RoyZapp() {
           },
         });
         
-        if (!error && data?.success) {
+        if (!error && data?.deleted) {
           whatsappDeleted = true;
         } else {
-          console.warn("WhatsApp delete failed, proceeding with local soft delete");
+          console.warn("WhatsApp delete failed or not supported, proceeding with local soft delete");
         }
       }
       
