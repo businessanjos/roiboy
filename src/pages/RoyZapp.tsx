@@ -541,6 +541,25 @@ export default function RoyZapp() {
           fetchMessages(zappConvId);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'zapp_messages',
+          filter: `zapp_conversation_id=eq.${zappConvId}`
+        },
+        (payload) => {
+          console.log("[RoyZapp] Realtime UPDATE received:", payload);
+          const updatedMsg = payload.new as any;
+          // Update message in local state (includes is_deleted changes)
+          setMessages(prev => prev.map(m => 
+            m.id === updatedMsg.id 
+              ? { ...m, ...updatedMsg }
+              : m
+          ));
+        }
+      )
       .subscribe((status) => {
         console.log("[RoyZapp] Realtime subscription status:", status);
       });
@@ -1603,30 +1622,60 @@ export default function RoyZapp() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Handle delete message for everyone
+  // Handle delete message for everyone (soft delete)
   const handleDeleteMessage = async (messageId: string) => {
     if (!selectedConversation) return;
     
+    // Find the message to get the external_message_id
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+    
     try {
-      // Call UAZAPI to delete message
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: {
-          action: "delete_message",
-          message_id: messageId,
-          phone: getContactInfo(selectedConversation).phone,
-          sector_id: selectedSectorId || "",
-        },
-      });
+      // 1. Try to delete on WhatsApp via UAZAPI (using external_message_id)
+      let whatsappDeleted = false;
       
-      if (error) throw error;
+      if (message.external_message_id) {
+        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+          body: {
+            action: "delete_message",
+            message_id: message.external_message_id, // Use WhatsApp message ID!
+            phone: getContactInfo(selectedConversation).phone,
+            sector_id: selectedSectorId || "",
+          },
+        });
+        
+        if (!error && data?.success) {
+          whatsappDeleted = true;
+        } else {
+          console.warn("WhatsApp delete failed, proceeding with local soft delete");
+        }
+      }
       
-      // Remove message from local state
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      // 2. ALWAYS do soft delete locally (even if API fails)
+      const { error: updateError } = await supabase
+        .from("zapp_messages")
+        .update({ 
+          is_deleted: true, 
+          deleted_at: new Date().toISOString(),
+          content: "🚫 Mensagem apagada"
+        })
+        .eq("id", messageId);
       
-      // Delete from database
-      await supabase.from("zapp_messages").delete().eq("id", messageId);
+      if (updateError) throw updateError;
       
-      toast.success("Mensagem apagada para todos");
+      // 3. Update local state
+      setMessages(prev => prev.map(m => 
+        m.id === messageId 
+          ? { ...m, is_deleted: true, content: "🚫 Mensagem apagada" }
+          : m
+      ));
+      
+      toast.success(
+        whatsappDeleted 
+          ? "Mensagem apagada para todos" 
+          : "Mensagem apagada localmente"
+      );
+      
     } catch (error: any) {
       console.error("Error deleting message:", error);
       toast.error(error.message || "Erro ao apagar mensagem");
