@@ -46,6 +46,8 @@ import { cn } from '@/lib/utils';
 
 export function SocialMediaTab() {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [formatFilter, setFormatFilter] = useState<string>('all');
+  const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   
   const {
     profiles,
@@ -58,6 +60,13 @@ export function SocialMediaTab() {
     setSelectedProfileId,
     createProfile,
   } = useSocialMediaData();
+
+  // Filter posts based on selected filters
+  const filteredPosts = posts.filter((post) => {
+    const matchesFormat = formatFilter === 'all' || post.post_type === formatFilter;
+    const matchesObjective = objectiveFilter === 'all' || post.ai_objective === objectiveFilter;
+    return matchesFormat && matchesObjective;
+  });
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
@@ -180,12 +189,43 @@ export function SocialMediaTab() {
       {/* Posts Table */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            Análise de Conteúdos
-            <Badge variant="secondary" className="font-normal">
-              {posts.length} posts
-            </Badge>
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              Análise de Conteúdos
+              <Badge variant="secondary" className="font-normal">
+                {filteredPosts.length} posts
+              </Badge>
+            </CardTitle>
+
+            <div className="flex items-center gap-2">
+              {/* Format Filter */}
+              <Select value={formatFilter} onValueChange={setFormatFilter}>
+                <SelectTrigger className="w-[140px] h-9 bg-card">
+                  <SelectValue placeholder="Formato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos formatos</SelectItem>
+                  <SelectItem value="reels">Reels</SelectItem>
+                  <SelectItem value="carousel">Carrossel</SelectItem>
+                  <SelectItem value="static">Estático</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Objective Filter */}
+              <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
+                <SelectTrigger className="w-[150px] h-9 bg-card">
+                  <SelectValue placeholder="Objetivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos objetivos</SelectItem>
+                  <SelectItem value="growth">Crescimento</SelectItem>
+                  <SelectItem value="connection">Conexão</SelectItem>
+                  <SelectItem value="authority">Autoridade</SelectItem>
+                  <SelectItem value="sales">Vendas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -245,14 +285,16 @@ export function SocialMediaTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {posts.length === 0 ? (
+                {filteredPosts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
-                      Nenhum post encontrado para este perfil.
+                      {posts.length === 0 
+                        ? 'Nenhum post encontrado para este perfil.'
+                        : 'Nenhum post encontrado com os filtros selecionados.'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  posts.map((post) => (
+                  filteredPosts.map((post) => (
                     <TableRow 
                       key={post.id}
                       className={cn(
