@@ -189,6 +189,17 @@ export function SocialMediaTab() {
             </SelectContent>
           </Select>
 
+          {currentProfile && (
+            <a
+              href={`https://instagram.com/${currentProfile.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-pink-500 transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+
           {useMockData && (
             <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
               Dados de exemplo
