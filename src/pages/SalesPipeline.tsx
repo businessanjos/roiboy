@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useLeads } from "@/hooks/useLeads";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
+import { usePermissions } from "@/hooks/usePermissions";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { DealStagesManager } from "@/components/sales/DealStagesManager";
+import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -67,12 +69,14 @@ export default function SalesPipeline() {
   
   const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads();
   const { users: salesUsers } = useSectorUsers({ sectorId: "vendas" });
+  const { isAdmin } = usePermissions();
 
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewDealOpen, setIsNewDealOpen] = useState(false);
   const [isStagesManagerOpen, setIsStagesManagerOpen] = useState(false);
+  const [isFieldsDialogOpen, setIsFieldsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [selectedTag, setSelectedTag] = useState<string>('all');
@@ -266,6 +270,16 @@ export default function SalesPipeline() {
                   <Settings2 className="h-4 w-4 mr-2" />
                   Etapas
                 </Button>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsFieldsDialogOpen(true)}
+                  >
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Campos
+                  </Button>
+                )}
                 <div className="flex items-center border rounded-lg overflow-hidden">
                   <Button
                     variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
@@ -482,6 +496,12 @@ export default function SalesPipeline() {
         onUpdateStage={updateStage}
         onDeleteStage={deleteStage}
         onReorderStages={reorderStages}
+      />
+
+      {/* Custom Fields Manager (Admin only) */}
+      <CustomFieldsManager
+        open={isFieldsDialogOpen}
+        onOpenChange={setIsFieldsDialogOpen}
       />
     </>
   );
