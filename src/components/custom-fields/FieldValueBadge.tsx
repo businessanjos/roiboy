@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Minus, User, Instagram } from "lucide-react";
+import { Check, X, Minus, User, Instagram, MapPin } from "lucide-react";
 import { CustomField, FieldOption } from "./CustomFieldsManager";
 
 interface TeamUser {
@@ -194,6 +194,19 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
         <Instagram className="h-3 w-3" />
         @{handle}
       </a>
+    );
+  }
+
+  // Location field
+  if (field.field_type === "location") {
+    if (!value?.formatted_address) {
+      return <span className={`text-muted-foreground ${textSize}`}>—</span>;
+    }
+    return (
+      <span className={`inline-flex items-center gap-1 ${padding} rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 font-medium ${textSize}`}>
+        <MapPin className="h-3 w-3" />
+        <span className="truncate max-w-40">{value.formatted_address}</span>
+      </span>
     );
   }
 

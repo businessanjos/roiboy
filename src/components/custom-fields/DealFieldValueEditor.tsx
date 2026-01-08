@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Check, X, User, Instagram } from "lucide-react";
+import { Check, X, User, Instagram, MapPin } from "lucide-react";
+import { LocationAutocomplete, LocationValue } from "./LocationAutocomplete";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -98,6 +99,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
           break;
         case "multi_select":
         case "user":
+        case "location":
           valueData.value_json = newValue;
           break;
       }
@@ -388,6 +390,26 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
               </Button>
             </div>
           </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // Location field
+  if (field.field_type === "location") {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+            <FieldValueBadge field={field} value={currentValue} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-3" align="start">
+          <LocationAutocomplete
+            value={currentValue as LocationValue}
+            onChange={(value) => saveValue(value)}
+            disabled={saving}
+          />
         </PopoverContent>
       </Popover>
     );
