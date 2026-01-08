@@ -1,0 +1,323 @@
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { CalendarIcon, Link2, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+interface AddPostDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (data: PostFormData) => void;
+  isLoading: boolean;
+}
+
+export interface PostFormData {
+  permalink: string;
+  post_type: 'reels' | 'carousel' | 'static';
+  ai_objective: 'growth' | 'connection' | 'authority' | 'sales';
+  posted_at: Date;
+  caption: string;
+  reach: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+}
+
+const extractInstagramId = (url: string): string | null => {
+  // Matches patterns like /p/ABC123/ or /reel/ABC123/
+  const match = url.match(/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/);
+  return match ? match[1] : null;
+};
+
+const isValidInstagramUrl = (url: string): boolean => {
+  return /instagram\.com\/(?:p|reel|reels)\/[A-Za-z0-9_-]+/.test(url);
+};
+
+export function AddPostDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  isLoading,
+}: AddPostDialogProps) {
+  const [permalink, setPermalink] = useState('');
+  const [postType, setPostType] = useState<'reels' | 'carousel' | 'static'>('reels');
+  const [objective, setObjective] = useState<'growth' | 'connection' | 'authority' | 'sales'>('growth');
+  const [postedAt, setPostedAt] = useState<Date | undefined>(new Date());
+  const [caption, setCaption] = useState('');
+  const [reach, setReach] = useState('');
+  const [likes, setLikes] = useState('');
+  const [comments, setComments] = useState('');
+  const [shares, setShares] = useState('');
+  const [saves, setSaves] = useState('');
+
+  const handleReset = () => {
+    setPermalink('');
+    setPostType('reels');
+    setObjective('growth');
+    setPostedAt(new Date());
+    setCaption('');
+    setReach('');
+    setLikes('');
+    setComments('');
+    setShares('');
+    setSaves('');
+  };
+
+  const handleClose = () => {
+    handleReset();
+    onOpenChange(false);
+  };
+
+  const handleSubmit = () => {
+    if (!isValidInstagramUrl(permalink)) {
+      return;
+    }
+
+    if (!postedAt) {
+      return;
+    }
+
+    const reachNum = parseInt(reach) || 0;
+    const likesNum = parseInt(likes) || 0;
+    const commentsNum = parseInt(comments) || 0;
+    const sharesNum = parseInt(shares) || 0;
+    const savesNum = parseInt(saves) || 0;
+
+    onSubmit({
+      permalink,
+      post_type: postType,
+      ai_objective: objective,
+      posted_at: postedAt,
+      caption,
+      reach: reachNum,
+      likes: likesNum,
+      comments: commentsNum,
+      shares: sharesNum,
+      saves: savesNum,
+    });
+  };
+
+  const isValid =
+    isValidInstagramUrl(permalink) &&
+    postedAt &&
+    postedAt <= new Date() &&
+    (parseInt(reach) || 0) > 0;
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" />
+            Adicionar Post
+          </DialogTitle>
+          <DialogDescription>
+            Adicione um post manualmente com as métricas do Instagram Insights.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Link do Post */}
+          <div className="space-y-2">
+            <Label htmlFor="permalink">Link do Post *</Label>
+            <div className="relative">
+              <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="permalink"
+                placeholder="https://instagram.com/p/ABC123..."
+                value={permalink}
+                onChange={(e) => setPermalink(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {permalink && !isValidInstagramUrl(permalink) && (
+              <p className="text-sm text-destructive">
+                URL inválida. Use o link de um post ou reel do Instagram.
+              </p>
+            )}
+          </div>
+
+          {/* Formato e Objetivo */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Formato *</Label>
+              <Select value={postType} onValueChange={(v) => setPostType(v as typeof postType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="reels">🎬 Reels</SelectItem>
+                  <SelectItem value="carousel">📸 Carrossel</SelectItem>
+                  <SelectItem value="static">🖼️ Estático</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Objetivo *</Label>
+              <Select value={objective} onValueChange={(v) => setObjective(v as typeof objective)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="growth">📈 Crescimento</SelectItem>
+                  <SelectItem value="connection">💬 Conexão</SelectItem>
+                  <SelectItem value="authority">🎓 Autoridade</SelectItem>
+                  <SelectItem value="sales">💰 Vendas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Data de Publicação */}
+          <div className="space-y-2">
+            <Label>Data de Publicação *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full justify-start text-left font-normal',
+                    !postedAt && 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {postedAt ? format(postedAt, 'PPP', { locale: ptBR }) : 'Selecione uma data'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={postedAt}
+                  onSelect={setPostedAt}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Métricas */}
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Métricas</Label>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="reach" className="text-xs text-muted-foreground">
+                  Alcance *
+                </Label>
+                <Input
+                  id="reach"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={reach}
+                  onChange={(e) => setReach(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="likes" className="text-xs text-muted-foreground">
+                  Curtidas
+                </Label>
+                <Input
+                  id="likes"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={likes}
+                  onChange={(e) => setLikes(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="comments" className="text-xs text-muted-foreground">
+                  Comentários
+                </Label>
+                <Input
+                  id="comments"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="shares" className="text-xs text-muted-foreground">
+                  Compartilhamentos
+                </Label>
+                <Input
+                  id="shares"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={shares}
+                  onChange={(e) => setShares(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="saves" className="text-xs text-muted-foreground">
+                  Salvamentos
+                </Label>
+                <Input
+                  id="saves"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={saves}
+                  onChange={(e) => setSaves(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Legenda */}
+          <div className="space-y-2">
+            <Label htmlFor="caption">Legenda (opcional)</Label>
+            <Textarea
+              id="caption"
+              placeholder="Copie a legenda do post aqui..."
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={!isValid || isLoading}>
+            {isLoading ? 'Adicionando...' : 'Adicionar Post'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

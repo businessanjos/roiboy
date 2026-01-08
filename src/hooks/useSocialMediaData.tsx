@@ -434,6 +434,66 @@ export function useSocialMediaData() {
     },
   });
 
+  // Create post mutation
+  const createPost = useMutation({
+    mutationFn: async (data: {
+      permalink: string;
+      post_type: 'reels' | 'carousel' | 'static';
+      ai_objective: 'growth' | 'connection' | 'authority' | 'sales';
+      posted_at: Date;
+      caption: string;
+      reach: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    }) => {
+      if (!currentProfile) throw new Error('Nenhum perfil selecionado');
+
+      // Extract Instagram ID from permalink
+      const instagramIdMatch = data.permalink.match(/instagram\.com\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/);
+      const instagramId = instagramIdMatch ? instagramIdMatch[1] : null;
+
+      // Calculate engagement and virality rates
+      const totalEngagement = data.likes + data.comments + data.shares + data.saves;
+      const engagementRate = data.reach > 0 ? (totalEngagement / data.reach) * 100 : 0;
+      const viralityRate = data.reach > 0 ? (data.shares / data.reach) * 100 : 0;
+
+      const { data: post, error } = await supabase
+        .from('instagram_posts')
+        .insert({
+          profile_id: currentProfile.id,
+          instagram_id: instagramId,
+          permalink: data.permalink,
+          post_type: data.post_type,
+          ai_objective: data.ai_objective,
+          ai_objective_confidence: 100, // Manual = 100% confidence
+          posted_at: data.posted_at.toISOString(),
+          caption: data.caption || null,
+          reach: data.reach,
+          likes: data.likes,
+          comments: data.comments,
+          shares: data.shares,
+          saves: data.saves,
+          engagement_rate: Math.round(engagementRate * 100) / 100,
+          virality_rate: Math.round(viralityRate * 100) / 100,
+          is_trending: engagementRate >= 12 || viralityRate >= 1.5,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return post;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
+      toast.success('Post adicionado com sucesso!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao adicionar post: ' + error.message);
+    },
+  });
+
   return {
     profiles,
     currentProfile,
@@ -444,5 +504,6 @@ export function useSocialMediaData() {
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
+    createPost,
   };
 }
