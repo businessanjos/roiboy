@@ -49,12 +49,15 @@ import {
   Building2,
   FileText,
   ListTodo,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
+import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
 
@@ -168,10 +171,13 @@ export function DealDetailSheet({
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
   
   // Deal custom fields
   const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
   const [dealFieldValues, setDealFieldValues] = useState<Record<string, any>>({});
+  
+  const { isAdmin } = usePermissions();
 
   useEffect(() => {
     if (deal?.id && open) {
@@ -681,31 +687,52 @@ export function DealDetailSheet({
                 </div>
 
                 {/* Deal Custom Fields - Editable */}
-                {dealCustomFields.length > 0 && (
+                {(dealCustomFields.length > 0 || isAdmin) && (
                   <div className="rounded-lg border p-3">
                     <h4 className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1.5">
                       <FileText className="h-3.5 w-3.5" />
                       Campos Personalizados
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="ml-auto h-5 w-5 -mr-1"
+                          onClick={() => setFieldsConfigOpen(true)}
+                        >
+                          <Settings className="h-3 w-3" />
+                        </Button>
+                      )}
                     </h4>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                      {dealCustomFields.map(field => {
-                        const value = dealFieldValues[field.id];
-                        return (
-                          <div key={field.id}>
-                            <p className="text-[10px] text-muted-foreground mb-0.5">{field.name}</p>
-                            <DealFieldValueEditor
-                              field={field}
-                              dealId={deal.id}
-                              accountId={currentUser?.account_id || ""}
-                              currentValue={value}
-                              onValueChange={handleDealFieldValueChange}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {dealCustomFields.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                        {dealCustomFields.map(field => {
+                          const value = dealFieldValues[field.id];
+                          return (
+                            <div key={field.id}>
+                              <p className="text-[10px] text-muted-foreground mb-0.5">{field.name}</p>
+                              <DealFieldValueEditor
+                                field={field}
+                                dealId={deal.id}
+                                accountId={currentUser?.account_id || ""}
+                                currentValue={value}
+                                onValueChange={handleDealFieldValueChange}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Nenhum campo visível</p>
+                    )}
                   </div>
                 )}
+
+                <DealFieldsConfigDialog
+                  open={fieldsConfigOpen}
+                  onOpenChange={setFieldsConfigOpen}
+                  accountId={currentUser?.account_id || ""}
+                  onSave={() => fetchDealCustomFields()}
+                />
               </div>
 
               {/* Right Column - Tabs for History and Tasks */}
