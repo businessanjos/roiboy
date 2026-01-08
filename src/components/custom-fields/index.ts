@@ -3,3 +3,4 @@ export { FieldValueBadge } from "./FieldValueBadge";
 export { FieldValueEditor } from "./FieldValueEditor";
 export { LeadFieldValueEditor } from "./LeadFieldValueEditor";
 export { LeadCustomFieldsManager, type LeadCustomField } from "./LeadCustomFieldsManager";
+export { DealFieldValueEditor } from "./DealFieldValueEditor";
