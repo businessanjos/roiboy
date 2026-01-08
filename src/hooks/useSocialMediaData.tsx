@@ -158,29 +158,26 @@ export function useSocialMediaData() {
     };
   }, [currentProfile, posts]);
 
-  // Create profile mutation
+  // Create profile mutation - uses edge function to bypass RLS and fetch public data
   const createProfile = useMutation({
     mutationFn: async (data: { username: string; accessToken?: string }) => {
       if (!user?.account_id) throw new Error('User not authenticated');
 
-      const { data: profile, error: profileError } = await supabase
-        .from('instagram_profiles')
-        .insert({
-          account_id: user.account_id,
-          username: data.username.replace('@', ''),
-          display_name: data.username,
-          followers_count: 0,
-          followers_previous_count: 0,
-          following_count: 0,
-          posts_count: 0,
-        })
-        .select()
-        .single();
+      // Call edge function to fetch public profile data and create profile
+      const { data: result, error } = await supabase.functions.invoke('fetch-instagram-profile', {
+        body: {
+          profileInput: data.username,
+          accountId: user.account_id,
+        },
+      });
 
-      if (profileError) throw profileError;
+      if (error) throw new Error(error.message);
+      if (!result?.success) throw new Error(result?.error || 'Erro ao adicionar perfil');
+
+      const profile = result.profile;
 
       // Store credentials only if token was provided
-      if (data.accessToken) {
+      if (data.accessToken && profile?.id) {
         const { error: credError } = await supabase
           .from('instagram_credentials')
           .insert({
@@ -188,7 +185,9 @@ export function useSocialMediaData() {
             access_token: data.accessToken,
           });
 
-        if (credError) throw credError;
+        if (credError) {
+          console.warn('Could not store credentials:', credError);
+        }
       }
 
       return profile;
