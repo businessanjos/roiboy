@@ -1630,13 +1630,9 @@ export default function RoyZapp() {
     const message = messages.find(m => m.id === messageId);
     if (!message) return;
     
-    // Check if this is a temporary ID (optimistic message not yet persisted)
-    const isTemporaryId = messageId.startsWith("temp-");
-    
-    if (isTemporaryId) {
-      // Message not yet saved to database - just remove from local state
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-      toast.success("Mensagem removida");
+    // Failsafe: Temporary IDs should be blocked at UI level, but double-check
+    if (messageId.startsWith("temp-")) {
+      console.warn("Attempted to delete temporary message - button should be disabled");
       return;
     }
     
@@ -1648,7 +1644,7 @@ export default function RoyZapp() {
         const { data, error } = await supabase.functions.invoke("uazapi-manager", {
           body: {
             action: "delete_message",
-            message_id: message.external_message_id, // Use WhatsApp message ID!
+            message_id: message.external_message_id,
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
           },
@@ -1661,24 +1657,28 @@ export default function RoyZapp() {
         }
       }
       
-      // 2. ALWAYS do soft delete locally (even if API fails)
-      const { error: updateError } = await supabase
+      // 2. Soft delete in database - check affected rows
+      const { data: updateData, error: updateError } = await supabase
         .from("zapp_messages")
         .update({ 
           is_deleted: true, 
           deleted_at: new Date().toISOString(),
           content: "🚫 Mensagem apagada"
         })
-        .eq("id", messageId);
+        .eq("id", messageId)
+        .select();
       
       if (updateError) throw updateError;
       
-      // 3. Update local state
-      setMessages(prev => prev.map(m => 
-        m.id === messageId 
-          ? { ...m, is_deleted: true, content: "🚫 Mensagem apagada" }
-          : m
-      ));
+      // Verify rows were actually affected
+      if (!updateData || updateData.length === 0) {
+        console.warn("No rows affected by delete - message may not exist in DB");
+        toast.error("Mensagem não encontrada no banco de dados");
+        return;
+      }
+      
+      // 3. DO NOT update local state - let Realtime propagate the change
+      // The postgres_changes UPDATE event will update the state automatically
       
       toast.success(
         whatsappDeleted 
