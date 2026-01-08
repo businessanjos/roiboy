@@ -16,7 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 interface InstagramConnectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConnect: (data: { username: string; accessToken: string }) => void;
+  onConnect: (data: { username: string; accessToken?: string }) => void;
   isLoading?: boolean;
 }
 
@@ -31,11 +31,11 @@ export function InstagramConnectDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !accessToken.trim()) return;
+    if (!username.trim()) return;
     
     onConnect({
       username: username.trim(),
-      accessToken: accessToken.trim(),
+      accessToken: accessToken.trim() || undefined,
     });
   };
 
@@ -51,10 +51,10 @@ export function InstagramConnectDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Instagram className="h-5 w-5 text-pink-500" />
-            Conectar Perfil do Instagram
+            Adicionar Perfil do Instagram
           </DialogTitle>
           <DialogDescription>
-            Conecte sua conta do Instagram para acompanhar métricas e insights em tempo real.
+            Adicione seu perfil para acompanhar métricas. O token é opcional — sem ele, você preenche os dados manualmente.
           </DialogDescription>
         </DialogHeader>
 
@@ -76,12 +76,12 @@ export function InstagramConnectDialog({
           <div className="space-y-2">
             <Label htmlFor="token" className="flex items-center gap-1.5">
               <Key className="h-3.5 w-3.5" />
-              Access Token
+              Access Token <span className="text-muted-foreground font-normal">(opcional)</span>
             </Label>
             <Input
               id="token"
               type="password"
-              placeholder="Seu token de acesso da API"
+              placeholder="Deixe vazio para modo manual"
               value={accessToken}
               onChange={(e) => setAccessToken(e.target.value)}
               className="bg-background"
@@ -89,19 +89,22 @@ export function InstagramConnectDialog({
           </div>
 
           <Alert className="bg-muted/50">
-            <AlertDescription className="text-xs">
-              <p className="mb-2">
-                Para obter o Access Token, você precisa de uma conta de desenvolvedor Meta.
+            <AlertDescription className="text-xs space-y-2">
+              <p>
+                <strong>Modo Manual:</strong> Sem token, você preenche as métricas dos posts manualmente.
               </p>
-              <a
-                href="https://developers.facebook.com/docs/instagram-basic-display-api"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                Saiba como obter
-                <ExternalLink className="h-3 w-3" />
-              </a>
+              <p>
+                <strong>Modo API:</strong> Com token, futuramente poderemos sincronizar dados automaticamente.{' '}
+                <a
+                  href="https://developers.facebook.com/docs/instagram-basic-display-api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                  Como obter
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
             </AlertDescription>
           </Alert>
 
@@ -116,10 +119,10 @@ export function InstagramConnectDialog({
             </Button>
             <Button
               type="submit"
-              disabled={!username.trim() || !accessToken.trim() || isLoading}
+              disabled={!username.trim() || isLoading}
               className="bg-primary hover:bg-primary/90"
             >
-              {isLoading ? 'Conectando...' : 'Conectar Perfil'}
+              {isLoading ? 'Adicionando...' : 'Adicionar Perfil'}
             </Button>
           </DialogFooter>
         </form>
