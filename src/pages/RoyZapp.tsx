@@ -1630,6 +1630,16 @@ export default function RoyZapp() {
     const message = messages.find(m => m.id === messageId);
     if (!message) return;
     
+    // Check if this is a temporary ID (optimistic message not yet persisted)
+    const isTemporaryId = messageId.startsWith("temp-");
+    
+    if (isTemporaryId) {
+      // Message not yet saved to database - just remove from local state
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      toast.success("Mensagem removida");
+      return;
+    }
+    
     try {
       // 1. Try to delete on WhatsApp via UAZAPI (using external_message_id)
       let whatsappDeleted = false;
