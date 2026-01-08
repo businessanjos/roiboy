@@ -570,15 +570,26 @@ serve(async (req) => {
         // 3. Processing distributed across user requests
         // ============================================
         const mediaKey = contentObj?.mediaKey ? String(contentObj.mediaKey) : null;
-        const isWhatsAppMedia = mediaUrl && mediaType && mediaUrl.includes("whatsapp.net");
         
-        // For WhatsApp media, we save encrypted URL + key for lazy download
+        // Check if this is a VALID WhatsApp media URL (mmg.whatsapp.net for actual media)
+        // Some messages come with invalid URLs like "https://web.whatsapp.net" for stickers
+        const isValidWhatsAppMediaUrl = mediaUrl && mediaType && mediaUrl.includes("mmg.whatsapp.net");
+        const isInvalidMediaUrl = mediaUrl && mediaType && !mediaUrl.includes("mmg.whatsapp.net") && mediaUrl.includes("whatsapp.net");
+        
+        // For valid WhatsApp media, we save encrypted URL + key for lazy download
+        // For invalid URLs (like web.whatsapp.net), mark as failed immediately
         // For already-permanent URLs (non-whatsapp.net), we use them directly
-        const permanentMediaUrl = isWhatsAppMedia ? null : mediaUrl;
-        const encryptedMediaUrl = isWhatsAppMedia ? mediaUrl : null;
+        const permanentMediaUrl = (!mediaUrl || isValidWhatsAppMediaUrl || isInvalidMediaUrl) ? null : mediaUrl;
+        const encryptedMediaUrl = isValidWhatsAppMediaUrl ? mediaUrl : null;
         
-        if (isWhatsAppMedia) {
+        // Determine initial media download status
+        let initialMediaDownloadStatus: string | null = null;
+        if (isValidWhatsAppMediaUrl) {
+          initialMediaDownloadStatus = "pending";
           console.log(`Saving media metadata for lazy download (mediaKey: ${mediaKey ? 'yes' : 'no'})`);
+        } else if (isInvalidMediaUrl) {
+          initialMediaDownloadStatus = "failed";
+          console.log(`Invalid media URL (${mediaUrl?.substring(0, 50)}...), marking as failed`);
         }
         
         const messageId = msg.id || `${Date.now()}`;
@@ -938,9 +949,9 @@ serve(async (req) => {
                   media_filename: mediaFilename || null,
                   audio_duration_sec: audioDurationSec,
                   // Lazy download fields - for WhatsApp media that needs processing
-                  media_encrypted_url: encryptedMediaUrl || null,
+                  media_encrypted_url: encryptedMediaUrl || (isInvalidMediaUrl ? mediaUrl : null),
                   media_key: mediaKey || null,
-                  media_download_status: encryptedMediaUrl ? "pending" : null,
+                  media_download_status: initialMediaDownloadStatus,
                 });
 
               if (zappMsgError) {
