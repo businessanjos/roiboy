@@ -10,12 +10,49 @@ export interface LocationValue {
   place_id?: string;
 }
 
+interface NominatimAddress {
+  road?: string;
+  neighbourhood?: string;
+  suburb?: string;
+  city?: string;
+  city_district?: string;
+  municipality?: string;
+  state?: string;
+  country?: string;
+}
+
 interface NominatimResult {
   place_id: number;
   display_name: string;
   lat: string;
   lon: string;
+  address?: NominatimAddress;
 }
+
+const formatSimpleAddress = (result: NominatimResult): string => {
+  if (!result.address) return result.display_name;
+  
+  const { road, neighbourhood, suburb, city, city_district, municipality, state, country } = result.address;
+  
+  const parts: string[] = [];
+  
+  // Localização específica (rua ou bairro)
+  if (road) parts.push(road);
+  else if (neighbourhood) parts.push(neighbourhood);
+  else if (suburb) parts.push(suburb);
+  
+  // Cidade
+  const cityName = city || city_district || municipality;
+  if (cityName && !parts.includes(cityName)) parts.push(cityName);
+  
+  // Estado
+  if (state && !parts.includes(state)) parts.push(state);
+  
+  // País
+  if (country && !parts.includes(country)) parts.push(country);
+  
+  return parts.length > 0 ? parts.join(", ") : result.display_name;
+};
 
 interface LocationAutocompleteProps {
   value?: LocationValue | null;
@@ -116,13 +153,14 @@ export function LocationAutocomplete({
   }, [query]);
 
   const handleSelect = (suggestion: NominatimResult) => {
+    const simpleAddress = formatSimpleAddress(suggestion);
     const locationValue: LocationValue = {
-      formatted_address: suggestion.display_name,
+      formatted_address: simpleAddress,
       latitude: parseFloat(suggestion.lat),
       longitude: parseFloat(suggestion.lon),
       place_id: suggestion.place_id.toString(),
     };
-    setQuery(suggestion.display_name);
+    setQuery(simpleAddress);
     onChange(locationValue);
     setShowSuggestions(false);
     setSuggestions([]);
@@ -184,7 +222,7 @@ export function LocationAutocomplete({
               )}
             >
               <MapPin className="h-4 w-4 mt-0.5 text-cyan-500 flex-shrink-0" />
-              <span className="line-clamp-2">{suggestion.display_name}</span>
+              <span className="line-clamp-2">{formatSimpleAddress(suggestion)}</span>
             </button>
           ))}
         </div>
