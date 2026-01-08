@@ -47,6 +47,7 @@ export interface PostFormData {
   comments: number;
   shares: number;
   saves: number;
+  link_clicks: number;
 }
 
 const extractInstagramId = (url: string): string | null => {
@@ -75,6 +76,7 @@ export function AddPostDialog({
   const [comments, setComments] = useState('');
   const [shares, setShares] = useState('');
   const [saves, setSaves] = useState('');
+  const [linkClicks, setLinkClicks] = useState('');
 
   const handleReset = () => {
     setPermalink('');
@@ -87,6 +89,7 @@ export function AddPostDialog({
     setComments('');
     setShares('');
     setSaves('');
+    setLinkClicks('');
   };
 
   const handleClose = () => {
@@ -108,6 +111,7 @@ export function AddPostDialog({
     const commentsNum = parseInt(comments) || 0;
     const sharesNum = parseInt(shares) || 0;
     const savesNum = parseInt(saves) || 0;
+    const linkClicksNum = parseInt(linkClicks) || 0;
 
     onSubmit({
       permalink,
@@ -120,6 +124,7 @@ export function AddPostDialog({
       comments: commentsNum,
       shares: sharesNum,
       saves: savesNum,
+      link_clicks: linkClicksNum,
     });
   };
 
@@ -291,6 +296,19 @@ export function AddPostDialog({
                   placeholder="0"
                   value={saves}
                   onChange={(e) => setSaves(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="linkClicks" className="text-xs text-muted-foreground">
+                  Cliques no Link
+                </Label>
+                <Input
+                  id="linkClicks"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={linkClicks}
+                  onChange={(e) => setLinkClicks(e.target.value)}
                 />
               </div>
             </div>

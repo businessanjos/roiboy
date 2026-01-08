@@ -215,6 +215,7 @@ export function useSocialMediaData() {
       comments: number;
       shares: number;
       saves: number;
+      link_clicks: number;
     }) => {
       if (!currentProfile) throw new Error('Nenhum perfil selecionado');
 
@@ -243,6 +244,7 @@ export function useSocialMediaData() {
           comments: data.comments,
           shares: data.shares,
           saves: data.saves,
+          link_clicks: data.link_clicks,
           engagement_rate: Math.round(engagementRate * 100) / 100,
           virality_rate: Math.round(viralityRate * 100) / 100,
           is_trending: engagementRate >= 12 || viralityRate >= 1.5,
