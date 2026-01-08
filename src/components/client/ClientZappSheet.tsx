@@ -493,11 +493,11 @@ export function ClientZappSheet({
 
               <TabsContent value="client" className="flex-1 m-0 overflow-hidden">
                 <ScrollArea className="h-[calc(100vh-260px)]">
-                  <div className="p-4 space-y-4">
+                  <div className="p-3 space-y-3">
                     {/* Basic Info */}
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 text-zapp-text font-medium text-sm">
-                        <User className="h-4 w-4" />
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-zapp-text font-medium text-xs">
+                        <User className="h-3.5 w-3.5" />
                         <span>Informações Básicas</span>
                       </div>
                       
@@ -565,12 +565,12 @@ export function ClientZappSheet({
                       </div>
                     </div>
 
-                    <Separator className="bg-zapp-border" />
+                    <Separator className="bg-zapp-border my-1" />
 
                     {/* Company Info */}
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 text-zapp-text font-medium text-sm">
-                        <Building2 className="h-4 w-4" />
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-zapp-text font-medium text-xs">
+                        <Building2 className="h-3.5 w-3.5" />
                         <span>Empresa</span>
                       </div>
                       
@@ -595,12 +595,12 @@ export function ClientZappSheet({
                       </div>
                     </div>
 
-                    <Separator className="bg-zapp-border" />
+                    <Separator className="bg-zapp-border my-1" />
 
                     {/* Notes */}
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 text-zapp-text font-medium text-sm">
-                        <FileText className="h-4 w-4" />
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-zapp-text font-medium text-xs">
+                        <FileText className="h-3.5 w-3.5" />
                         <span>Observações</span>
                       </div>
                       
