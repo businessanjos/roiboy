@@ -445,7 +445,7 @@ export function ClientZappSheet({
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-[380px] sm:w-[460px] bg-zapp-bg border-zapp-border p-0 flex flex-col">
-        <SheetHeader className="px-5 py-4 bg-zapp-panel">
+        <SheetHeader className="px-5 py-3 bg-zapp-panel relative">
           <div className="flex items-center gap-3">
             {client && (
               <Avatar className="h-10 w-10">
@@ -455,7 +455,7 @@ export function ClientZappSheet({
                 </AvatarFallback>
               </Avatar>
             )}
-            <div className="flex-1 min-w-0 pr-8">
+            <div className="flex-1 min-w-0 pr-10">
               <SheetTitle className="text-zapp-text truncate">
                 {client?.full_name || "Carregando..."}
               </SheetTitle>
@@ -473,7 +473,7 @@ export function ClientZappSheet({
         ) : client ? (
           <>
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "client" | "deals")} className="flex-1 flex flex-col min-h-0">
-              <div className="px-4 py-2 bg-zapp-panel border-b border-zapp-border flex items-center justify-center">
+              <div className="px-4 py-1.5 bg-zapp-panel border-b border-zapp-border flex items-center justify-center">
                 <TabsList className="w-full grid grid-cols-2 bg-zapp-bg-dark">
                   <TabsTrigger value="client" className="text-zapp-text data-[state=active]:bg-zapp-accent data-[state=active]:text-white">
                     <User className="h-4 w-4 mr-1.5" />
@@ -491,8 +491,8 @@ export function ClientZappSheet({
                 </TabsList>
               </div>
 
-              <TabsContent value="client" className="flex-1 m-0 overflow-hidden">
-                <ScrollArea className="h-[calc(100vh-200px)]">
+              <TabsContent value="client" className="flex-1 m-0 flex flex-col overflow-hidden">
+                <ScrollArea className="flex-1">
                   <div className="p-2 space-y-2">
                     {/* Basic Info */}
                     <div className="space-y-1">
