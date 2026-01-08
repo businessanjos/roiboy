@@ -706,6 +706,9 @@ export function ZappCRMPanel({
           clientId={conversationClientId}
           stages={stages}
           onDealUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ["contact-deals-zapp"] });
+            queryClient.invalidateQueries({ queryKey: ["lead-info-zapp", conversationLeadId] });
+            queryClient.invalidateQueries({ queryKey: ["deals"] });
             refetchDeals();
             refetchPendingTasks();
           }}

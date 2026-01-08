@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ export function DealTransferDialog({
   sectorId,
   onTransferred,
 }: DealTransferDialogProps) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,6 +180,13 @@ export function DealTransferDialog({
       });
 
       toast.success(`Negócio transferido para ${selectedMember.name}`);
+      
+      // Invalidar queries relacionadas para atualizar UI imediatamente
+      queryClient.invalidateQueries({ queryKey: ["deal-detail-zapp"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-deals-zapp"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-info-zapp"] });
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      
       onTransferred();
       onOpenChange(false);
     } catch (error: any) {
