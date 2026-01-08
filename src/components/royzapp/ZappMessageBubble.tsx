@@ -164,12 +164,16 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
 
   // Check if message can be deleted (only outbound messages sent less than 1 hour ago)
   const canDelete = useMemo(() => {
+    // Block deletion for temporary messages not yet persisted
+    const isTemporaryId = message.id.startsWith("temp-");
+    if (isTemporaryId) return false;
+    
     if (message.is_from_client) return false; // Only outbound messages
     const sentAt = new Date(message.created_at);
     const now = new Date();
     const hoursDiff = (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60);
     return hoursDiff < 1; // WhatsApp allows delete for ~1 hour
-  }, [message.is_from_client, message.created_at]);
+  }, [message.id, message.is_from_client, message.created_at]);
   
   // Handle deleted messages - show placeholder (AFTER all hooks)
   if (message.is_deleted) {
