@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,8 +34,34 @@ export function LocationAutocomplete({
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<"bottom" | "top">("bottom");
   const debounceRef = useRef<NodeJS.Timeout>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Calculate if dropdown should open up or down based on available space
+  const calculateDropdownPosition = useCallback(() => {
+    if (!inputRef.current) return;
+    
+    const inputRect = inputRef.current.getBoundingClientRect();
+    const dropdownHeight = 240; // max-h-60 = 15rem = 240px
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - inputRect.bottom;
+    const spaceAbove = inputRect.top;
+    
+    if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+      setDropdownPosition("top");
+    } else {
+      setDropdownPosition("bottom");
+    }
+  }, []);
+
+  // Recalculate position when suggestions appear
+  useEffect(() => {
+    if (showSuggestions && suggestions.length > 0) {
+      calculateDropdownPosition();
+    }
+  }, [showSuggestions, suggestions.length, calculateDropdownPosition]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -113,10 +139,14 @@ export function LocationAutocomplete({
       <div className="relative">
         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
+          ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => {
-            if (suggestions.length > 0) setShowSuggestions(true);
+            if (suggestions.length > 0) {
+              setShowSuggestions(true);
+              calculateDropdownPosition();
+            }
           }}
           placeholder={placeholder}
           disabled={disabled}
@@ -137,7 +167,12 @@ export function LocationAutocomplete({
       </div>
 
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-auto">
+        <div 
+          className={cn(
+            "absolute z-50 w-full bg-popover border rounded-md shadow-md max-h-60 overflow-auto",
+            dropdownPosition === "bottom" ? "top-full mt-1" : "bottom-full mb-1"
+          )}
+        >
           {suggestions.map((suggestion) => (
             <button
               key={suggestion.place_id}
@@ -156,7 +191,12 @@ export function LocationAutocomplete({
       )}
 
       {showSuggestions && query.length >= 3 && !loading && suggestions.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md p-3 text-sm text-muted-foreground text-center">
+        <div 
+          className={cn(
+            "absolute z-50 w-full bg-popover border rounded-md shadow-md p-3 text-sm text-muted-foreground text-center",
+            dropdownPosition === "bottom" ? "top-full mt-1" : "bottom-full mb-1"
+          )}
+        >
           Nenhum endereço encontrado
         </div>
       )}
