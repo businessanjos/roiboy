@@ -461,10 +461,15 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   }, [location.hash]);
 
   const fetchCurrentUser = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+    
     const { data } = await supabase
       .from("users")
       .select("id, name, avatar_url, account_id")
+      .eq("auth_user_id", authUser.id)
       .single();
+      
     if (data) {
       setCurrentUser(data);
     }
