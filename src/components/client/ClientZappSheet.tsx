@@ -473,7 +473,7 @@ export function ClientZappSheet({
         ) : client ? (
           <>
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "client" | "deals")} className="flex-1 flex flex-col min-h-0">
-              <div className="px-4 pt-3 bg-zapp-panel border-b border-zapp-border">
+              <div className="px-4 py-2 bg-zapp-panel border-b border-zapp-border flex items-center justify-center">
                 <TabsList className="w-full grid grid-cols-2 bg-zapp-bg-dark">
                   <TabsTrigger value="client" className="text-zapp-text data-[state=active]:bg-zapp-accent data-[state=active]:text-white">
                     <User className="h-4 w-4 mr-1.5" />
