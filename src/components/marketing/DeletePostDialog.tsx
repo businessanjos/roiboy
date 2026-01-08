@@ -26,7 +26,8 @@ export function DeletePostDialog({
   isLoading,
   post,
 }: DeletePostDialogProps) {
-  const handleConfirm = () => {
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (post) {
       onConfirm(post.id);
     }
