@@ -430,7 +430,7 @@ export function DealDetailSheet({
 
   const currentStage = stages.find(s => s.id === deal.stage_id);
   const daysSinceCreation = differenceInDays(new Date(), new Date(deal.created_at));
-  const contactName = deal.client?.full_name || deal.contact_name || 'Sem contato';
+  const contactName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato';
   const isClosed = deal.status !== 'open';
 
   return (
@@ -440,7 +440,7 @@ export function DealDetailSheet({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <Avatar className="h-10 w-10 border border-primary/20">
-                <AvatarImage src={deal.client?.avatar_url || undefined} />
+                <AvatarImage src={deal.client?.avatar_url || deal.lead?.avatar_url || undefined} />
                 <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
                   {getInitials(contactName)}
                 </AvatarFallback>
