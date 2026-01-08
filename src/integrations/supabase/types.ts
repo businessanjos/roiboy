@@ -4674,6 +4674,7 @@ export type Database = {
           ai_objective: string | null
           ai_objective_confidence: number | null
           caption: string | null
+          collaborator: string | null
           comments: number | null
           created_at: string
           engagement_rate: number | null
@@ -4697,6 +4698,7 @@ export type Database = {
           ai_objective?: string | null
           ai_objective_confidence?: number | null
           caption?: string | null
+          collaborator?: string | null
           comments?: number | null
           created_at?: string
           engagement_rate?: number | null
@@ -4720,6 +4722,7 @@ export type Database = {
           ai_objective?: string | null
           ai_objective_confidence?: number | null
           caption?: string | null
+          collaborator?: string | null
           comments?: number | null
           created_at?: string
           engagement_rate?: number | null

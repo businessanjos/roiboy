@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Link2, Plus } from 'lucide-react';
+import { CalendarIcon, Link2, Plus, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -48,6 +48,7 @@ export interface PostFormData {
   shares: number;
   saves: number;
   link_clicks: number;
+  collaborator: string;
 }
 
 const extractInstagramId = (url: string): string | null => {
@@ -77,6 +78,7 @@ export function AddPostDialog({
   const [shares, setShares] = useState('');
   const [saves, setSaves] = useState('');
   const [linkClicks, setLinkClicks] = useState('');
+  const [collaborator, setCollaborator] = useState('');
 
   const handleReset = () => {
     setPermalink('');
@@ -90,6 +92,7 @@ export function AddPostDialog({
     setShares('');
     setSaves('');
     setLinkClicks('');
+    setCollaborator('');
   };
 
   const handleClose = () => {
@@ -125,6 +128,7 @@ export function AddPostDialog({
       shares: sharesNum,
       saves: savesNum,
       link_clicks: linkClicksNum,
+      collaborator: collaborator.trim(),
     });
   };
 
@@ -197,6 +201,21 @@ export function AddPostDialog({
                   <SelectItem value="sales">💰 Vendas</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Colaborador */}
+          <div className="space-y-2">
+            <Label htmlFor="collaborator">Colaborador (opcional)</Label>
+            <div className="relative">
+              <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="collaborator"
+                placeholder="username_colaborador"
+                value={collaborator}
+                onChange={(e) => setCollaborator(e.target.value.replace('@', ''))}
+                className="pl-10"
+              />
             </div>
           </div>
 
