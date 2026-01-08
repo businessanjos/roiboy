@@ -72,6 +72,9 @@ interface ZappMessageInputProps {
   signatureEnabled?: boolean;
   hasSignature?: boolean;
   sectorId?: string;
+  // Image preview props
+  imagePreview?: { file: File; url: string } | null;
+  onSetImagePreview?: (preview: { file: File; url: string } | null) => void;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -114,6 +117,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   signatureEnabled,
   hasSignature,
   sectorId,
+  imagePreview,
+  onSetImagePreview,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -135,6 +140,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const toggleAudioPreview = () => {
     const audio = audioPreviewRef.current;
@@ -153,6 +159,59 @@ export const ZappMessageInput = memo(function ZappMessageInput({
     onMessageChange(messageInput + emojiData.emoji);
     setEmojiPickerOpen(false);
     messageInputRef?.current?.focus();
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    if (!onSetImagePreview) return;
+    
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const previewUrl = URL.createObjectURL(file);
+          onSetImagePreview({ file, url: previewUrl });
+        }
+        break;
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (!onSetImagePreview) return;
+    
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const previewUrl = URL.createObjectURL(file);
+      onSetImagePreview({ file, url: previewUrl });
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const discardImagePreview = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview.url);
+    }
+    onSetImagePreview?.(null);
   };
 
   return (
@@ -250,7 +309,24 @@ export const ZappMessageInput = memo(function ZappMessageInput({
       )}
 
       {/* Message input */}
-      <div className="bg-zapp-panel px-4 py-3 flex items-center gap-2">
+      <div 
+        className={cn(
+          "bg-zapp-panel px-4 py-3 flex items-center gap-2 relative",
+          isDragging && "ring-2 ring-zapp-accent ring-inset"
+        )}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        {/* Drop overlay */}
+        {isDragging && (
+          <div className="absolute inset-0 bg-zapp-accent/10 border-2 border-dashed border-zapp-accent rounded-lg flex items-center justify-center z-50 pointer-events-none">
+            <div className="flex items-center gap-2 text-zapp-accent font-medium">
+              <ImageIcon className="h-5 w-5" />
+              Solte a imagem aqui
+            </div>
+          </div>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
@@ -393,7 +469,51 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </Tooltip>
         )}
         
-        {audioPreview ? (
+        {imagePreview ? (
+          // Image preview UI
+          <div className="flex items-center gap-2 flex-1 bg-zapp-input rounded-lg px-3 py-2">
+            <img 
+              src={imagePreview.url} 
+              alt="Preview" 
+              className="h-12 w-12 object-cover rounded"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-zapp-text truncate">{imagePreview.file.name}</p>
+              <p className="text-xs text-zapp-text-muted">Imagem pronta para envio</p>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  onClick={discardImagePreview}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Descartar</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  onClick={onSendMessage}
+                  disabled={uploadingMedia}
+                >
+                  {uploadingMedia ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Enviar</TooltipContent>
+            </Tooltip>
+          </div>
+        ) : audioPreview ? (
           // Audio preview UI
           <div className="flex items-center gap-2 flex-1 bg-zapp-input rounded-lg px-3 py-2">
             <audio
@@ -534,6 +654,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                     target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
                   }}
                   onKeyDown={onKeyPress}
+                  onPaste={handlePaste}
                   disabled={sendingMessage}
                   rows={1}
                   maxLength={SECURITY_LIMITS.MESSAGE_MAX}
