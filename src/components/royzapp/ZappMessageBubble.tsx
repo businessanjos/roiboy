@@ -154,7 +154,24 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     message.transcription || null
   );
   
-  // Handle deleted messages - show placeholder
+  // All useMemo hooks MUST be called before any early return
+  const renderedContent = useMemo(() => {
+    if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
+      return renderTextWithLinks(message.content);
+    }
+    return null;
+  }, [message.content]);
+
+  // Check if message can be deleted (only outbound messages sent less than 1 hour ago)
+  const canDelete = useMemo(() => {
+    if (message.is_from_client) return false; // Only outbound messages
+    const sentAt = new Date(message.created_at);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60);
+    return hoursDiff < 1; // WhatsApp allows delete for ~1 hour
+  }, [message.is_from_client, message.created_at]);
+  
+  // Handle deleted messages - show placeholder (AFTER all hooks)
   if (message.is_deleted) {
     return (
       <div className={cn(
@@ -168,13 +185,6 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
       </div>
     );
   }
-  
-  const renderedContent = useMemo(() => {
-    if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
-      return renderTextWithLinks(message.content);
-    }
-    return null;
-  }, [message.content]);
 
   const handleDelete = async () => {
     if (!onDelete) return;
@@ -186,15 +196,6 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
       setShowDeleteConfirm(false);
     }
   };
-
-  // Check if message can be deleted (only outbound messages sent less than 1 hour ago)
-  const canDelete = useMemo(() => {
-    if (message.is_from_client) return false; // Only outbound messages
-    const sentAt = new Date(message.created_at);
-    const now = new Date();
-    const hoursDiff = (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60);
-    return hoursDiff < 1; // WhatsApp allows delete for ~1 hour
-  }, [message.is_from_client, message.created_at]);
 
   // Handle audio transcription
   const handleTranscribe = async () => {
