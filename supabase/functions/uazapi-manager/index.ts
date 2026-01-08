@@ -2913,13 +2913,12 @@ serve(async (req) => {
         }
         
         if (!deleted) {
-          return new Response(
-            JSON.stringify({ error: "Não foi possível apagar a mensagem. A API pode não suportar esta função." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          // Return success: false but don't throw error - let frontend do soft delete
+          console.log("All delete endpoints failed, returning soft delete hint");
+          result = { deleted: false, message_id, soft_delete_only: true };
+        } else {
+          result = { deleted: true, message_id, success: true };
         }
-        
-        result = { deleted: true, message_id };
         break;
       }
 
