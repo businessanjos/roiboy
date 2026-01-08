@@ -2857,8 +2857,12 @@ serve(async (req) => {
 
       case "delete_message": {
         // Delete a message for everyone
-        // UAZAPI GO v2 - POST /message/{message_id}/delete
+        // Evolution API v2 - DELETE /chat/deleteMessageForEveryone/{instance}
         const { message_id, phone: targetPhone } = payload;
+        
+        console.log("=== DELETE MESSAGE REQUEST ===");
+        console.log("External Message ID (raw):", message_id);
+        console.log("Target Phone (raw):", targetPhone);
         
         if (!message_id) {
           return new Response(
@@ -2867,7 +2871,7 @@ serve(async (req) => {
           );
         }
 
-        // Get instance token from integration config - filter by sector_id if available
+        // Get instance token AND instance_name from integration config
         let deleteIntQuery = supabase
           .from("integrations")
           .select("config")
@@ -2881,6 +2885,9 @@ serve(async (req) => {
         const { data: integration } = await deleteIntQuery.maybeSingle();
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
+        const deleteInstanceName = (integration?.config as { instance_name?: string })?.instance_name;
+        
+        console.log("Instance Name:", deleteInstanceName);
         
         if (!instanceToken) {
           return new Response(
@@ -2889,23 +2896,49 @@ serve(async (req) => {
           );
         }
         
-        // Clean phone number if provided
+        // Clean phone number and format as remoteJid
         const cleanPhone = targetPhone ? targetPhone.replace(/\D/g, "") : "";
+        const remoteJid = cleanPhone ? `${cleanPhone}@s.whatsapp.net` : "";
+        
+        console.log("Clean Phone:", cleanPhone);
+        console.log("Remote JID:", remoteJid);
         
         // Extract actual message ID from format "phone:msgId" if needed
         // Our DB stores: "554388346806:3EB0A21FD5E7E7DF84A6F7"
-        // UAZAPI expects: "3EB0A21FD5E7E7DF84A6F7"
+        // WhatsApp/Evolution expects: "3EB0A21FD5E7E7DF84A6F7"
         let actualMessageId = message_id;
         if (message_id.includes(':')) {
           actualMessageId = message_id.split(':').pop() || message_id;
-          console.log(`Extracted message ID: ${actualMessageId} from ${message_id}`);
         }
         
+        console.log("Actual Message ID (extracted):", actualMessageId);
+        
         // Try different endpoints for deleting message
+        // Evolution API v2 uses DELETE method with specific payload format
         const deleteEndpoints = [
-          { url: `/message/${actualMessageId}/delete`, method: "POST", body: cleanPhone ? { phone: cleanPhone } : {} },
-          { url: `/message/delete`, method: "POST", body: { messageId: actualMessageId, phone: cleanPhone } },
-          { url: `/chat/delete-message`, method: "POST", body: { messageId: actualMessageId, phone: cleanPhone } },
+          // Evolution API v2 - Primary endpoint
+          { 
+            url: deleteInstanceName ? `/chat/deleteMessageForEveryone/${deleteInstanceName}` : `/chat/deleteMessageForEveryone`, 
+            method: "DELETE", 
+            body: { remoteJid, id: actualMessageId, fromMe: true }
+          },
+          // UAZAPI GO v2 - Alternative format
+          { 
+            url: `/message/delete`, 
+            method: "DELETE", 
+            body: { remoteJid, messageId: actualMessageId, fromMe: true }
+          },
+          // Legacy fallbacks (POST)
+          { 
+            url: `/message/${actualMessageId}/delete`, 
+            method: "POST", 
+            body: { phone: cleanPhone, remoteJid, fromMe: true }
+          },
+          { 
+            url: `/chat/delete-message`, 
+            method: "POST", 
+            body: { messageId: actualMessageId, remoteJid, fromMe: true }
+          },
         ];
         
         let deleted = false;
@@ -2913,8 +2946,9 @@ serve(async (req) => {
           if (deleted) break;
           try {
             console.log(`Trying delete: ${endpoint.method} ${endpoint.url}`);
+            console.log("Payload:", JSON.stringify(endpoint.body, null, 2));
             result = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, endpoint.body);
-            console.log(`Delete successful via ${endpoint.url}`);
+            console.log(`Delete successful via ${endpoint.url}`, result);
             deleted = true;
           } catch (err) {
             console.log(`Delete ${endpoint.url} failed:`, (err as Error).message);
@@ -2922,9 +2956,14 @@ serve(async (req) => {
         }
         
         if (!deleted) {
-          // Return success: false but don't throw error - let frontend do soft delete
-          console.log("All delete endpoints failed, returning soft delete hint");
-          result = { deleted: false, message_id, soft_delete_only: true };
+          console.error("=== ALL DELETE ATTEMPTS FAILED ===");
+          console.error("Tried endpoints:", deleteEndpoints.map(e => `${e.method} ${e.url}`).join(", "));
+          result = { 
+            deleted: false, 
+            message_id, 
+            soft_delete_only: true,
+            error: "Não foi possível deletar no WhatsApp - verifique os logs"
+          };
         } else {
           result = { deleted: true, message_id, success: true };
         }
