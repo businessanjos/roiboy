@@ -614,39 +614,6 @@ export function ClientZappSheet({
                     </div>
                   </div>
                 </ScrollArea>
-
-                {/* Footer - Save button */}
-                <div className="p-2 border-t border-zapp-border bg-zapp-panel">
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleOpenChange(false)}
-                      className="border-zapp-border text-zapp-text hover:bg-zapp-hover h-8 text-sm"
-                    >
-                      Fechar
-                    </Button>
-                    <Button
-                      onClick={handleSave}
-                      disabled={saving || !formData.full_name.trim()}
-                      className={cn(
-                        "h-8 text-white text-sm",
-                        isDirty 
-                          ? "bg-amber-600 hover:bg-amber-700" 
-                          : "bg-zapp-accent hover:bg-zapp-accent-hover"
-                      )}
-                    >
-                      {saving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          {isDirty && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
-                          <Save className="h-3.5 w-3.5 mr-1" />
-                          {isDirty ? "Salvar Alterações" : "Salvar"}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
               </TabsContent>
 
               <TabsContent value="deals" className="flex-1 m-0 overflow-hidden flex flex-col">
@@ -866,6 +833,41 @@ export function ClientZappSheet({
                 </ScrollArea>
               </TabsContent>
             </Tabs>
+
+            {/* Footer - Save button - Fixed at bottom */}
+            {activeTab === "client" && (
+              <div className="p-2 border-t border-zapp-border bg-zapp-panel mt-auto">
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleOpenChange(false)}
+                    className="border-zapp-border text-zapp-text hover:bg-zapp-hover h-8 text-sm"
+                  >
+                    Fechar
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving || !formData.full_name.trim()}
+                    className={cn(
+                      "h-8 text-white text-sm",
+                      isDirty 
+                        ? "bg-amber-600 hover:bg-amber-700" 
+                        : "bg-zapp-accent hover:bg-zapp-accent-hover"
+                    )}
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        {isDirty && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                        <Save className="h-3.5 w-3.5 mr-1" />
+                        {isDirty ? "Salvar Alterações" : "Salvar"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex items-center justify-center flex-1">
