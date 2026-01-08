@@ -445,7 +445,7 @@ export function ClientZappSheet({
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-[380px] sm:w-[460px] bg-zapp-bg border-zapp-border p-0 flex flex-col">
-        <SheetHeader className="px-5 py-4 border-b border-zapp-border bg-zapp-panel">
+        <SheetHeader className="px-5 py-4 bg-zapp-panel">
           <div className="flex items-center gap-3">
             {client && (
               <Avatar className="h-10 w-10">
