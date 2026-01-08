@@ -42,10 +42,12 @@ import { SocialMediaKPICard } from './SocialMediaKPICard';
 import { PostFormatBadge } from './PostFormatBadge';
 import { PostObjectiveBadge } from './PostObjectiveBadge';
 import { InstagramConnectDialog } from './InstagramConnectDialog';
+import { AddPostDialog, PostFormData } from './AddPostDialog';
 import { cn } from '@/lib/utils';
 
 export function SocialMediaTab() {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [addPostDialogOpen, setAddPostDialogOpen] = useState(false);
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   
@@ -59,6 +61,7 @@ export function SocialMediaTab() {
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
+    createPost,
   } = useSocialMediaData();
 
   // Filter posts based on selected filters
@@ -81,6 +84,12 @@ export function SocialMediaTab() {
   const handleConnect = (data: { username: string; accessToken: string }) => {
     createProfile.mutate(data, {
       onSuccess: () => setConnectDialogOpen(false),
+    });
+  };
+
+  const handleAddPost = (data: PostFormData) => {
+    createPost.mutate(data, {
+      onSuccess: () => setAddPostDialogOpen(false),
     });
   };
 
@@ -224,6 +233,18 @@ export function SocialMediaTab() {
                   <SelectItem value="sales">Vendas</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Add Post Button */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 h-9"
+                onClick={() => setAddPostDialogOpen(true)}
+                disabled={!currentProfile}
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -401,6 +422,14 @@ export function SocialMediaTab() {
         onOpenChange={setConnectDialogOpen}
         onConnect={handleConnect}
         isLoading={createProfile.isPending}
+      />
+
+      {/* Add Post Dialog */}
+      <AddPostDialog
+        open={addPostDialogOpen}
+        onOpenChange={setAddPostDialogOpen}
+        onSubmit={handleAddPost}
+        isLoading={createPost.isPending}
       />
     </div>
   );
