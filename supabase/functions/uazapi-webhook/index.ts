@@ -590,17 +590,27 @@ serve(async (req) => {
 
         // For outbound messages in groups, we don't need a phone, just the group identifier
         // For direct outbound messages, we need phone
-        // For inbound messages, we always need phone and content
-        if (direction === "inbound" && (!phone || !content)) {
-          console.log(`Skipping inbound message: no phone (${phone}) or content (${content})`);
-          return new Response(JSON.stringify({ ignored: true, reason: "missing_data" }), { 
+        // For inbound messages, we always need phone and (content OR media)
+        const hasContent = content && content.trim().length > 0;
+        const hasMedia = mediaType && (mediaUrl || encryptedMediaUrl);
+
+        if (direction === "inbound" && !phone) {
+          console.log(`Skipping inbound message: no phone (${phone})`);
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_phone" }), { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+
+        if (direction === "inbound" && !hasContent && !hasMedia) {
+          console.log(`Skipping inbound message: no content and no media (phone: ${phone}, content: "${content}", mediaType: ${mediaType})`);
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_content_and_media" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
         
-        if (direction === "outbound" && !content) {
-          console.log(`Skipping outbound message: no content`);
-          return new Response(JSON.stringify({ ignored: true, reason: "missing_content" }), { 
+        if (direction === "outbound" && !hasContent && !hasMedia) {
+          console.log(`Skipping outbound message: no content and no media`);
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_content_and_media" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
