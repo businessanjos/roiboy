@@ -68,7 +68,6 @@ import {
   X,
   Clock,
   TrendingUp,
-  Settings2,
   Trophy,
   XCircle,
   DollarSign,
@@ -80,7 +79,7 @@ import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { toast } from "sonner";
-import { LeadCustomFieldsManager, LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
+import { LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type FieldOption } from "@/components/custom-fields";
 import { CustomField } from "@/components/custom-fields";
 import { LeadImportPreview, ImportLeadRow, ExistingLeadInfo, DuplicateMatchType } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
@@ -149,7 +148,6 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
-  const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
   
   // Import state
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
@@ -1021,10 +1019,6 @@ export default function Leads() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setFieldsDialogOpen(true)}>
-              <Settings2 className="h-4 w-4 mr-2" />
-              Campos
-            </Button>
             <input
               id="csv-upload-leads"
               type="file"
@@ -1751,20 +1745,6 @@ export default function Leads() {
           return await moveDeal(dealId, stageId);
         }}
       />
-
-      {/* Custom Fields Manager Dialog */}
-      <Dialog open={fieldsDialogOpen} onOpenChange={setFieldsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Campos Personalizados de Leads</DialogTitle>
-          </DialogHeader>
-          <LeadCustomFieldsManager 
-            open={true} 
-            onOpenChange={() => {}} 
-            onFieldsChange={fetchCustomFields}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Import Preview */}
       <LeadImportPreview
