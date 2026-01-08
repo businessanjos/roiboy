@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Instagram, ExternalLink, Key, AtSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Instagram, ExternalLink, Key, Link2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,27 +20,67 @@ interface InstagramConnectDialogProps {
   isLoading?: boolean;
 }
 
+// Extract username from Instagram URL
+function extractUsernameFromUrl(url: string): string | null {
+  const trimmed = url.trim();
+  
+  // If it's already a username (starts with @ or no slashes)
+  if (trimmed.startsWith('@')) {
+    return trimmed.slice(1);
+  }
+  if (!trimmed.includes('/') && !trimmed.includes('.')) {
+    return trimmed;
+  }
+  
+  // Extract from URL patterns
+  const patterns = [
+    /instagram\.com\/([^/?#]+)/i,
+    /instagr\.am\/([^/?#]+)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1] && !['p', 'reel', 'stories', 'explore'].includes(match[1].toLowerCase())) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
 export function InstagramConnectDialog({
   open,
   onOpenChange,
   onConnect,
   isLoading,
 }: InstagramConnectDialogProps) {
-  const [username, setUsername] = useState('');
+  const [profileInput, setProfileInput] = useState('');
+  const [extractedUsername, setExtractedUsername] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState('');
+
+  // Auto-extract username when input changes
+  useEffect(() => {
+    if (profileInput.trim()) {
+      const username = extractUsernameFromUrl(profileInput);
+      setExtractedUsername(username);
+    } else {
+      setExtractedUsername(null);
+    }
+  }, [profileInput]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!extractedUsername) return;
     
     onConnect({
-      username: username.trim(),
+      username: extractedUsername,
       accessToken: accessToken.trim() || undefined,
     });
   };
 
   const handleClose = () => {
-    setUsername('');
+    setProfileInput('');
+    setExtractedUsername(null);
     setAccessToken('');
     onOpenChange(false);
   };
@@ -54,23 +94,37 @@ export function InstagramConnectDialog({
             Adicionar Perfil do Instagram
           </DialogTitle>
           <DialogDescription>
-            Adicione seu perfil para acompanhar métricas. O token é opcional — sem ele, você preenche os dados manualmente.
+            Cole o link do perfil ou digite o nome de usuário para acompanhar as métricas.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username" className="flex items-center gap-1.5">
-              <AtSign className="h-3.5 w-3.5" />
-              Nome de usuário
+            <Label htmlFor="profileInput" className="flex items-center gap-1.5">
+              <Link2 className="h-3.5 w-3.5" />
+              Link ou @ do Perfil
             </Label>
             <Input
-              id="username"
-              placeholder="@seuperfil"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="profileInput"
+              placeholder="https://instagram.com/seuperfil ou @seuperfil"
+              value={profileInput}
+              onChange={(e) => setProfileInput(e.target.value)}
               className="bg-background"
             />
+            {profileInput && (
+              <div className="text-xs">
+                {extractedUsername ? (
+                  <span className="text-green-600 flex items-center gap-1">
+                    <Instagram className="h-3 w-3" />
+                    Perfil detectado: <strong>@{extractedUsername}</strong>
+                  </span>
+                ) : (
+                  <span className="text-amber-600">
+                    Digite um link ou nome de usuário válido
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -119,7 +173,7 @@ export function InstagramConnectDialog({
             </Button>
             <Button
               type="submit"
-              disabled={!username.trim() || isLoading}
+              disabled={!extractedUsername || isLoading}
               className="bg-primary hover:bg-primary/90"
             >
               {isLoading ? 'Adicionando...' : 'Adicionar Perfil'}
