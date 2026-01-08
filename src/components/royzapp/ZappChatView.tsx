@@ -50,6 +50,9 @@ interface ZappChatViewProps {
   imageInputRef: RefObject<HTMLInputElement>;
   fileInputRef: RefObject<HTMLInputElement>;
   sectorId?: string;
+  // Image preview props
+  imagePreview?: { file: File; url: string } | null;
+  onSetImagePreview?: (preview: { file: File; url: string } | null) => void;
   // AI Settings
   spellingEnabled?: boolean;
   suggestionsEnabled?: boolean;
@@ -117,6 +120,8 @@ export function ZappChatView({
   imageInputRef,
   fileInputRef,
   sectorId,
+  imagePreview,
+  onSetImagePreview,
   spellingEnabled = true,
   suggestionsEnabled = true,
   autoLearningEnabled = true,
@@ -299,6 +304,8 @@ export function ZappChatView({
         isGroup={contactInfo.isGroup}
         groupJid={selectedConversation?.zapp_conversation?.group_jid || null}
         sectorId={sectorId}
+        imagePreview={imagePreview}
+        onSetImagePreview={onSetImagePreview}
         onMessageChange={onMessageChange}
         onSendMessage={onSendMessage}
         onKeyPress={onKeyPress}

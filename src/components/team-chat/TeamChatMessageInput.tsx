@@ -13,7 +13,8 @@ import {
   Code,
   Play,
   Pause,
-  Trash2
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -39,6 +40,9 @@ export function TeamChatMessageInput({ onSendMessage, disabled }: TeamChatMessag
   const [audioPreview, setAudioPreview] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,20 +159,90 @@ export function TeamChatMessageInput({ onSendMessage, disabled }: TeamChatMessag
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const discardImage = useCallback(() => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(null);
+    setImageFile(null);
+  }, [imagePreview]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const previewUrl = URL.createObjectURL(file);
+          setImagePreview(previewUrl);
+          setImageFile(file);
+        }
+        break;
+      }
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      setImageFile(file);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     const isImage = file.type.startsWith('image/');
-    onSendMessage({
-      messageType: isImage ? 'image' : 'file',
-      file
-    });
+    if (isImage) {
+      // For images, show preview instead of sending immediately
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      setImageFile(file);
+    } else {
+      // For non-image files, send immediately
+      onSendMessage({
+        messageType: 'file',
+        file
+      });
+    }
     
     e.target.value = '';
   };
 
   const handleSend = () => {
+    // First: check for image preview
+    if (imageFile) {
+      onSendMessage({
+        messageType: 'image',
+        file: imageFile
+      });
+      discardImage();
+      return;
+    }
+
     if (audioBlob) {
       // Create a File from the blob
       const audioFile = new File([audioBlob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
@@ -198,7 +272,48 @@ export function TeamChatMessageInput({ onSendMessage, disabled }: TeamChatMessag
   };
 
   return (
-    <div className="p-4 border-t bg-card">
+    <div 
+      className={cn(
+        "p-4 border-t bg-card relative",
+        isDragging && "ring-2 ring-primary ring-inset"
+      )}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    >
+      {/* Drop overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center z-50 pointer-events-none">
+          <div className="flex items-center gap-2 text-primary font-medium">
+            <ImageIcon className="h-5 w-5" />
+            Solte a imagem aqui
+          </div>
+        </div>
+      )}
+
+      {/* Image preview */}
+      {imagePreview && (
+        <div className="flex items-center gap-2 mb-3 p-3 bg-muted rounded-lg">
+          <img 
+            src={imagePreview} 
+            alt="Preview" 
+            className="h-20 w-20 object-cover rounded"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">Imagem pronta para envio</p>
+            <p className="text-xs text-muted-foreground truncate">{imageFile?.name}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={discardImage}
+            className="h-8 w-8 text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Audio preview */}
       {audioPreview && (
         <div className="flex items-center gap-2 mb-3 p-3 bg-muted rounded-lg">
@@ -259,7 +374,7 @@ export function TeamChatMessageInput({ onSendMessage, disabled }: TeamChatMessag
       )}
 
       {/* Main input area */}
-      {!isRecording && !audioPreview && (
+      {!isRecording && !audioPreview && !imagePreview && (
         <div className="flex gap-2 items-end">
           {/* Formatting buttons */}
           <Popover>
@@ -331,6 +446,7 @@ export function TeamChatMessageInput({ onSendMessage, disabled }: TeamChatMessag
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyPress}
+            onPaste={handlePaste}
             disabled={disabled}
             className="flex-1 min-h-[40px] max-h-[120px] resize-none"
             rows={1}
@@ -366,6 +482,16 @@ export function TeamChatMessageInput({ onSendMessage, disabled }: TeamChatMessag
           <Button onClick={handleSend} disabled={disabled}>
             <Send className="h-4 w-4 mr-2" />
             Enviar áudio
+          </Button>
+        </div>
+      )}
+
+      {/* Send button when image is ready */}
+      {imagePreview && (
+        <div className="flex justify-end">
+          <Button onClick={handleSend} disabled={disabled}>
+            <Send className="h-4 w-4 mr-2" />
+            Enviar imagem
           </Button>
         </div>
       )}
