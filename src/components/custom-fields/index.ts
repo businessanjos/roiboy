@@ -4,3 +4,4 @@ export { FieldValueEditor } from "./FieldValueEditor";
 export { LeadFieldValueEditor } from "./LeadFieldValueEditor";
 export { LeadCustomFieldsManager, type LeadCustomField } from "./LeadCustomFieldsManager";
 export { DealFieldValueEditor } from "./DealFieldValueEditor";
+export { LocationAutocomplete, type LocationValue } from "./LocationAutocomplete";
