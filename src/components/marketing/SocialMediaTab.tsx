@@ -51,6 +51,7 @@ import { SocialMediaKPICard } from './SocialMediaKPICard';
 import { PostFormatBadge } from './PostFormatBadge';
 import { PostObjectiveBadge } from './PostObjectiveBadge';
 import { InstagramConnectDialog } from './InstagramConnectDialog';
+import { InstagramProfileHeader } from './InstagramProfileHeader';
 import { AddPostDialog, PostFormData } from './AddPostDialog';
 import { EditPostDialog, EditPostFormData } from './EditPostDialog';
 import { DeletePostDialog } from './DeletePostDialog';
@@ -159,6 +160,9 @@ export function SocialMediaTab() {
 
   return (
     <div className="space-y-6 p-1">
+      {/* Instagram Profile Header */}
+      <InstagramProfileHeader profile={currentProfile} isLoading={isLoading} />
+
       {/* Header with Profile Selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
