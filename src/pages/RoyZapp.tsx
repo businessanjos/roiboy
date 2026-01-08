@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { ClientZappSheet } from "@/components/client/ClientZappSheet";
 import { PlaybookDialog } from "@/components/sales/PlaybookDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
+import { extractPlaybookVariables } from "@/lib/playbook-variables";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -3106,11 +3107,11 @@ export default function RoyZapp() {
             toast.success("Link da mídia copiado!");
           }
         }}
-        variables={{
-          nome_cliente: selectedConversation?.zapp_conversation?.contact_name || (selectedConversation?.conversation?.client as any)?.full_name || '',
-          nome_empresa: (selectedConversation?.conversation?.client as any)?.company_name || '',
-          nome_vendedor: currentUser?.name || '',
-        }}
+        variables={extractPlaybookVariables({
+          conversation: selectedConversation,
+          currentUser: currentUser,
+          deal: null,
+        })}
       />
 
       {/* Close Ticket Dialog */}
