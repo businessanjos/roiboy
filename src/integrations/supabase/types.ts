@@ -4614,6 +4614,7 @@ export type Database = {
           instagram_id: string | null
           is_trending: boolean | null
           likes: number | null
+          link_clicks: number
           permalink: string | null
           post_type: string
           posted_at: string
@@ -4636,6 +4637,7 @@ export type Database = {
           instagram_id?: string | null
           is_trending?: boolean | null
           likes?: number | null
+          link_clicks?: number
           permalink?: string | null
           post_type: string
           posted_at: string
@@ -4658,6 +4660,7 @@ export type Database = {
           instagram_id?: string | null
           is_trending?: boolean | null
           likes?: number | null
+          link_clicks?: number
           permalink?: string | null
           post_type?: string
           posted_at?: string
