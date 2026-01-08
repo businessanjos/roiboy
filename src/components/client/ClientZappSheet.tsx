@@ -492,123 +492,123 @@ export function ClientZappSheet({
               </div>
 
               <TabsContent value="client" className="flex-1 m-0 overflow-hidden">
-                <ScrollArea className="h-[calc(100vh-260px)]">
-                  <div className="p-3 space-y-3">
+                <ScrollArea className="h-[calc(100vh-200px)]">
+                  <div className="p-2 space-y-2">
                     {/* Basic Info */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-zapp-text font-medium text-xs">
-                        <User className="h-3.5 w-3.5" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1 text-zapp-text font-medium text-xs">
+                        <User className="h-3 w-3" />
                         <span>Informações Básicas</span>
                       </div>
                       
-                      <div className="space-y-2">
-                        <div className="space-y-1">
+                      <div className="space-y-1">
+                        <div className="space-y-0.5">
                           <Label className="text-zapp-text-muted text-xs">Nome completo</Label>
                           <Input
                             value={formData.full_name}
                             onChange={(e) => handleFieldChange("full_name", e.target.value)}
-                            className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
+                            className="bg-zapp-panel border-zapp-border text-zapp-text h-8 text-sm"
                           />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div className="space-y-0.5">
                             <Label className="text-zapp-text-muted text-xs">Telefone</Label>
                             <Input
                               value={formData.phone_e164}
                               disabled
-                              className="bg-zapp-panel border-zapp-border text-zapp-text-muted h-9"
+                              className="bg-zapp-panel border-zapp-border text-zapp-text-muted h-8 text-sm"
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-0.5">
                             <Label className="text-zapp-text-muted text-xs">E-mail</Label>
                             <Input
                               value={formData.email}
                               onChange={(e) => handleFieldChange("email", e.target.value)}
-                              className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
+                              className="bg-zapp-panel border-zapp-border text-zapp-text h-8 text-sm"
                               type="email"
                             />
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div className="space-y-0.5">
                             <Label className="text-zapp-text-muted text-xs">CPF</Label>
                             <Input
                               value={formData.cpf}
                               onChange={(e) => handleFieldChange("cpf", formatCPF(e.target.value))}
-                              className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
+                              className="bg-zapp-panel border-zapp-border text-zapp-text h-8 text-sm"
                               maxLength={14}
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-0.5">
                             <Label className="text-zapp-text-muted text-xs">Nascimento</Label>
                             <Input
                               value={formData.birth_date}
                               onChange={(e) => handleFieldChange("birth_date", formatDateBR(e.target.value))}
-                              className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
+                              className="bg-zapp-panel border-zapp-border text-zapp-text h-8 text-sm"
                               placeholder="DD/MM/AAAA"
                               maxLength={10}
                             />
                           </div>
                         </div>
 
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           <Label className="text-zapp-text-muted text-xs">Instagram</Label>
                           <Input
                             value={formData.instagram}
                             onChange={(e) => handleFieldChange("instagram", e.target.value)}
-                            className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
+                            className="bg-zapp-panel border-zapp-border text-zapp-text h-8 text-sm"
                             placeholder="@usuario"
                           />
                         </div>
                       </div>
                     </div>
 
-                    <Separator className="bg-zapp-border my-1" />
+                    <Separator className="bg-zapp-border" />
 
                     {/* Company Info */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-zapp-text font-medium text-xs">
-                        <Building2 className="h-3.5 w-3.5" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1 text-zapp-text font-medium text-xs">
+                        <Building2 className="h-3 w-3" />
                         <span>Empresa</span>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div className="space-y-0.5">
                           <Label className="text-zapp-text-muted text-xs">Nome da Empresa</Label>
                           <Input
                             value={formData.company_name}
                             onChange={(e) => handleFieldChange("company_name", e.target.value)}
-                            className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
+                            className="bg-zapp-panel border-zapp-border text-zapp-text h-8 text-sm"
                           />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           <Label className="text-zapp-text-muted text-xs">CNPJ</Label>
                           <Input
                             value={formData.cnpj}
                             onChange={(e) => handleFieldChange("cnpj", formatCNPJ(e.target.value))}
-                            className="bg-zapp-panel border-zapp-border text-zapp-text h-9"
+                            className="bg-zapp-panel border-zapp-border text-zapp-text h-8 text-sm"
                             maxLength={18}
                           />
                         </div>
                       </div>
                     </div>
 
-                    <Separator className="bg-zapp-border my-1" />
+                    <Separator className="bg-zapp-border" />
 
                     {/* Notes */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-zapp-text font-medium text-xs">
-                        <FileText className="h-3.5 w-3.5" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1 text-zapp-text font-medium text-xs">
+                        <FileText className="h-3 w-3" />
                         <span>Observações</span>
                       </div>
                       
                       <Textarea
                         value={formData.notes}
                         onChange={(e) => handleFieldChange("notes", e.target.value)}
-                        className="bg-zapp-panel border-zapp-border text-zapp-text resize-none"
-                        rows={3}
+                        className="bg-zapp-panel border-zapp-border text-zapp-text resize-none text-sm"
+                        rows={2}
                         placeholder="Notas sobre o cliente..."
                       />
                     </div>
@@ -616,12 +616,12 @@ export function ClientZappSheet({
                 </ScrollArea>
 
                 {/* Footer - Save button */}
-                <div className="p-4 border-t border-zapp-border bg-zapp-panel">
+                <div className="p-2 border-t border-zapp-border bg-zapp-panel">
                   <div className="flex gap-2 justify-end">
                     <Button
                       variant="outline"
                       onClick={() => handleOpenChange(false)}
-                      className="border-zapp-border text-zapp-text hover:bg-zapp-hover h-9"
+                      className="border-zapp-border text-zapp-text hover:bg-zapp-hover h-8 text-sm"
                     >
                       Fechar
                     </Button>
@@ -629,7 +629,7 @@ export function ClientZappSheet({
                       onClick={handleSave}
                       disabled={saving || !formData.full_name.trim()}
                       className={cn(
-                        "h-9 text-white",
+                        "h-8 text-white text-sm",
                         isDirty 
                           ? "bg-amber-600 hover:bg-amber-700" 
                           : "bg-zapp-accent hover:bg-zapp-accent-hover"
@@ -639,8 +639,8 @@ export function ClientZappSheet({
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <>
-                          {isDirty && <AlertCircle className="h-4 w-4 mr-1.5" />}
-                          <Save className="h-4 w-4 mr-1.5" />
+                          {isDirty && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                          <Save className="h-3.5 w-3.5 mr-1" />
                           {isDirty ? "Salvar Alterações" : "Salvar"}
                         </>
                       )}
