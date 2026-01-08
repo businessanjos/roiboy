@@ -398,15 +398,15 @@ export function PlaybookItemForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {editingItem ? 'Editar Item' : 'Novo Item do Playbook'}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
-          <div className="space-y-4 py-2 pb-4">
+        <div className="flex-1 min-h-0 -mx-6 px-6 overflow-y-auto">
+          <div className="space-y-4 py-2 pb-4 pr-2">
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="name">Nome *</Label>
@@ -831,7 +831,7 @@ export function PlaybookItemForm({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
