@@ -444,7 +444,7 @@ export function ClientZappSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-[380px] sm:w-[460px] max-h-[90vh] bg-zapp-bg border-zapp-border p-0 flex flex-col">
+      <SheetContent className="w-[380px] sm:w-[460px] max-h-[90vh] bg-zapp-bg border-zapp-border p-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-5 py-3 bg-zapp-panel relative">
           <div className="flex items-center gap-3">
             {client && (
@@ -472,7 +472,7 @@ export function ClientZappSheet({
           </div>
         ) : client ? (
           <>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "client" | "deals")} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "client" | "deals")} className="flex-1 flex flex-col min-h-0">
               <div className="px-4 py-1.5 bg-zapp-panel border-b border-zapp-border flex items-center justify-center">
                 <TabsList className="w-full grid grid-cols-2 bg-zapp-bg-dark">
                   <TabsTrigger value="client" className="text-zapp-text data-[state=active]:bg-zapp-accent data-[state=active]:text-white">
@@ -491,8 +491,8 @@ export function ClientZappSheet({
                 </TabsList>
               </div>
 
-              <TabsContent value="client" className="m-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div className="p-2 space-y-2 flex-1 overflow-y-auto">
+              <TabsContent value="client" className="m-0 flex-1 flex flex-col min-h-0">
+                <div className="p-3 space-y-2 flex-1 overflow-y-auto pr-1">
                     {/* Basic Info */}
                     <div className="space-y-1">
                       <div className="flex items-center gap-1 text-zapp-text font-medium text-xs">
@@ -615,7 +615,7 @@ export function ClientZappSheet({
                   </div>
                 
                 {/* Footer - Save button - Fixed at bottom */}
-                <div className="flex-none p-3 border-t border-zapp-border bg-zapp-panel">
+                <div className="shrink-0 p-3 border-t border-zapp-border bg-zapp-panel">
                   <div className="flex gap-2 justify-end">
                     <Button
                       variant="outline"
