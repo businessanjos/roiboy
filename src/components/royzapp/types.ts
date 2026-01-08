@@ -79,6 +79,8 @@ export interface Message {
   media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
   external_message_id?: string | null;
   transcription?: string | null;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
 }
 
 export interface ConversationAssignment {

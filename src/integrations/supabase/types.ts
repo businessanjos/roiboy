@@ -8359,10 +8359,12 @@ export type Database = {
           audio_duration_sec: number | null
           content: string | null
           created_at: string
+          deleted_at: string | null
           delivery_status: string | null
           direction: string
           external_message_id: string | null
           id: string
+          is_deleted: boolean | null
           media_download_status: string | null
           media_encrypted_url: string | null
           media_filename: string | null
@@ -8382,10 +8384,12 @@ export type Database = {
           audio_duration_sec?: number | null
           content?: string | null
           created_at?: string
+          deleted_at?: string | null
           delivery_status?: string | null
           direction: string
           external_message_id?: string | null
           id?: string
+          is_deleted?: boolean | null
           media_download_status?: string | null
           media_encrypted_url?: string | null
           media_filename?: string | null
@@ -8405,10 +8409,12 @@ export type Database = {
           audio_duration_sec?: number | null
           content?: string | null
           created_at?: string
+          deleted_at?: string | null
           delivery_status?: string | null
           direction?: string
           external_message_id?: string | null
           id?: string
+          is_deleted?: boolean | null
           media_download_status?: string | null
           media_encrypted_url?: string | null
           media_filename?: string | null

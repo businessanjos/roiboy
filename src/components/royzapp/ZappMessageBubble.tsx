@@ -154,6 +154,21 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     message.transcription || null
   );
   
+  // Handle deleted messages - show placeholder
+  if (message.is_deleted) {
+    return (
+      <div className={cn(
+        "flex mb-1",
+        message.is_from_client ? "justify-start" : "justify-end"
+      )}>
+        <div className="px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground italic text-sm flex items-center gap-1.5">
+          <span className="text-base">🚫</span>
+          <span>Mensagem apagada</span>
+        </div>
+      </div>
+    );
+  }
+  
   const renderedContent = useMemo(() => {
     if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
       return renderTextWithLinks(message.content);

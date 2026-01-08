@@ -33,6 +33,10 @@ interface Message {
   sender_name?: string | null;
   delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
   media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
+  external_message_id?: string | null;
+  transcription?: string | null;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
 }
 
 const HEARTBEAT_INTERVAL_MS = 60000;
