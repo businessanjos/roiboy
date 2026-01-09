@@ -302,16 +302,14 @@ export function LeadDetailSheet({
               )}
 
               {/* Add Custom Fields Button */}
-              {currentUser?.account_id && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setManagerOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Inserir campos
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setManagerOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Inserir campos
+              </Button>
 
               <Separator />
 
