@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { Check, X, User, Instagram, MapPin } from "lucide-react";
 import { LocationAutocomplete, LocationValue } from "./LocationAutocomplete";
 import { toast } from "sonner";
@@ -175,27 +175,25 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-48 p-2" align="start">
-          <ScrollArea className="max-h-64">
-            <div className="flex flex-col gap-1">
-              {field.options.map((option) => (
-                <button
-                  key={option.value}
-                  className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, currentValue === option.value)}`}
-                  onClick={() => saveValue(option.value)}
-                  disabled={saving}
-                >
-                  {option.label}
-                </button>
-              ))}
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain">
+            {field.options.map((option) => (
               <button
-                className="flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-muted text-muted-foreground"
-                onClick={() => saveValue(null)}
+                key={option.value}
+                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, currentValue === option.value)}`}
+                onClick={() => saveValue(option.value)}
                 disabled={saving}
               >
-                Limpar
+                {option.label}
               </button>
-            </div>
-          </ScrollArea>
+            ))}
+            <button
+              className="flex items-center gap-2 px-3 py-2 rounded text-sm hover:bg-muted text-muted-foreground"
+              onClick={() => saveValue(null)}
+              disabled={saving}
+            >
+              Limpar
+            </button>
+          </div>
         </PopoverContent>
       </Popover>
     );
@@ -220,24 +218,22 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-56 p-2" align="start">
-          <ScrollArea className="max-h-64">
-            <div className="flex flex-col gap-1">
-              {field.options.map((option) => {
-                const isSelected = selectedValues.includes(option.value);
-                return (
-                  <button
-                    key={option.value}
-                    className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, isSelected)}`}
-                    onClick={() => toggleOption(option.value)}
-                    disabled={saving}
-                  >
-                    <Checkbox checked={isSelected} className="pointer-events-none" />
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </ScrollArea>
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain">
+            {field.options.map((option) => {
+              const isSelected = selectedValues.includes(option.value);
+              return (
+                <button
+                  key={option.value}
+                  className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, isSelected)}`}
+                  onClick={() => toggleOption(option.value)}
+                  disabled={saving}
+                >
+                  <Checkbox checked={isSelected} className="pointer-events-none" />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </PopoverContent>
       </Popover>
     );
@@ -262,33 +258,31 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-2" align="start">
-          <ScrollArea className="max-h-64">
-            <div className="flex flex-col gap-1">
-              {teamUsers.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center py-4">
-                  Carregando...
-                </div>
-              ) : (
-                teamUsers.map((user) => {
-                  const isSelected = selectedUserIds.includes(user.id);
-                  return (
-                    <button
-                      key={user.id}
-                      className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
-                        isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }`}
-                      onClick={() => toggleUser(user.id)}
-                      disabled={saving}
-                    >
-                      <Checkbox checked={isSelected} className="pointer-events-none" />
-                      <User className="h-4 w-4" />
-                      <span className="truncate">{user.name}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </ScrollArea>
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain">
+            {teamUsers.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                Carregando...
+              </div>
+            ) : (
+              teamUsers.map((user) => {
+                const isSelected = selectedUserIds.includes(user.id);
+                return (
+                  <button
+                    key={user.id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
+                      isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                    }`}
+                    onClick={() => toggleUser(user.id)}
+                    disabled={saving}
+                  >
+                    <Checkbox checked={isSelected} className="pointer-events-none" />
+                    <User className="h-4 w-4" />
+                    <span className="truncate">{user.name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </PopoverContent>
       </Popover>
     );
