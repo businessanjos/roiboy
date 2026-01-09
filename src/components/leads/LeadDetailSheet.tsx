@@ -29,11 +29,14 @@ import {
   ChevronRight,
   Pencil,
   Plus,
+  Settings,
+  Trash2,
 } from "lucide-react";
 import { LeadTimeline } from "./LeadTimeline";
 import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -76,9 +79,20 @@ interface LeadDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   leadId: string | null;
   onEdit?: (lead: Lead) => void;
+  onDelete?: (leadId: string) => void;
+  onCreateDeal?: (lead: Lead) => void;
+  onDealClick?: (deal: Deal) => void;
 }
 
-export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDetailSheetProps) {
+export function LeadDetailSheet({ 
+  open, 
+  onOpenChange, 
+  leadId, 
+  onEdit,
+  onDelete,
+  onCreateDeal,
+  onDealClick,
+}: LeadDetailSheetProps) {
   const { currentUser } = useCurrentUser();
   const [lead, setLead] = useState<Lead | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -281,13 +295,13 @@ export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDeta
                     </div>
                   )}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="text-muted-foreground h-auto py-1 px-2 text-xs"
+                    className="w-full"
                     onClick={() => setManagerOpen(true)}
                   >
-                    <Plus className="h-3 w-3 mr-1" />
-                    inserir campo
+                    <Settings className="h-4 w-4 mr-2" />
+                    Personalizar Campos
                   </Button>
                 </div>
               )}
@@ -306,6 +320,16 @@ export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDeta
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium">Negócios</p>
+                  {onCreateDeal && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onCreateDeal(lead)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Novo
+                    </Button>
+                  )}
                 </div>
                 {deals.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
@@ -314,7 +338,11 @@ export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDeta
                 ) : (
                   <div className="space-y-2">
                     {deals.map((deal) => (
-                      <Card key={deal.id}>
+                      <Card 
+                        key={deal.id}
+                        className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
+                        onClick={() => onDealClick?.(deal)}
+                      >
                         <CardContent className="p-3">
                           <div className="flex items-center justify-between">
                             <div>
@@ -351,19 +379,34 @@ export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDeta
               </div>
 
               {/* Actions */}
-              {onEdit && (
+              {(onEdit || onDelete) && (
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      onOpenChange(false);
-                      onEdit(lead);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
+                  {onEdit && (
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onEdit(lead);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onDelete(lead.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
