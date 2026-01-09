@@ -60,6 +60,7 @@ import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
+import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
 
 interface DealActivity {
   id: string;
@@ -172,6 +173,7 @@ export function DealDetailSheet({
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
+  const [leadDetailOpen, setLeadDetailOpen] = useState(false);
   
   // Deal custom fields
   const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
@@ -498,8 +500,7 @@ export function DealDetailSheet({
                   ) : deal.lead_id ? (
                     <button
                       onClick={() => {
-                        onOpenChange(false);
-                        navigate(`/leads?lead=${deal.lead_id}`);
+                        setLeadDetailOpen(true);
                       }}
                       className="text-primary hover:underline font-medium"
                     >
@@ -927,6 +928,15 @@ export function DealDetailSheet({
               fetchActivities();
               onDealUpdated?.();
             }}
+          />
+        )}
+        
+        {/* Lead Detail Sheet */}
+        {deal.lead_id && (
+          <LeadDetailSheet
+            open={leadDetailOpen}
+            onOpenChange={setLeadDetailOpen}
+            leadId={deal.lead_id}
           />
         )}
       </SheetContent>
