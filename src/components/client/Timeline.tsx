@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -419,12 +419,17 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
 export function Timeline({ events, className, clientId, clientName: propClientName, onCommentAdded }: TimelineProps) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [showOlder, setShowOlder] = useState(false);
   const [clientName, setClientName] = useState<string>(propClientName || "");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [highlightState, setHighlightState] = useState<"glow" | "fading" | null>(null);
   const location = useLocation();
+  
+  // Refs for hidden file inputs
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -570,6 +575,72 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     }
   };
 
+  // Upload file to Supabase Storage
+  const uploadFile = async (file: File): Promise<{ url: string; name: string; size: number }> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${clientId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("client-followups")
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from("client-followups")
+      .getPublicUrl(fileName);
+
+    return {
+      url: urlData.publicUrl,
+      name: file.name,
+      size: file.size,
+    };
+  };
+
+  // Handle file selection from input
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser || !clientId) return;
+
+    // Validate max file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 10MB.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileData = await uploadFile(file);
+      
+      // Insert into client_followups table
+      const { error } = await supabase
+        .from("client_followups")
+        .insert({
+          account_id: currentUser.account_id!,
+          client_id: clientId,
+          user_id: currentUser.id,
+          type: type,
+          content: null,
+          file_url: fileData.url,
+          file_name: fileData.name,
+          file_size: fileData.size,
+        });
+
+      if (error) throw error;
+      
+      toast.success(type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+      onCommentAdded?.(); // Reload events
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast.error("Erro ao enviar arquivo");
+    } finally {
+      setUploading(false);
+      // Clear input
+      if (type === "image" && imageInputRef.current) imageInputRef.current.value = "";
+      if (type === "file" && fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   // Filter events based on active filters
   // Timeline is now focused on team comments only
   // Messages, ROI and risks have their own dedicated tabs
@@ -611,45 +682,65 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                 onKeyDown={handleKeyDown}
                 className="pr-24"
               />
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      >
-                        <Paperclip className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                {comment.trim() && (
-                  <button
-                    type="button"
-                    onClick={handleSubmitComment}
-                    disabled={submitting}
-                    className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                  >
-                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </button>
-                )}
-              </div>
+            {/* Hidden file inputs */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileSelect(e, "image")}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="*"
+              className="hidden"
+              onChange={(e) => handleFileSelect(e, "file")}
+            />
+            
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {comment.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSubmitComment}
+                  disabled={submitting}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
     );
   }
@@ -711,15 +802,33 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               onKeyDown={handleKeyDown}
               className="pr-24"
             />
+            {/* Hidden file inputs */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileSelect(e, "image")}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="*"
+              className="hidden"
+              onChange={(e) => handleFileSelect(e, "file")}
+            />
+            
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                     >
-                      <Camera className="h-4 w-4" />
+                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
@@ -728,7 +837,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                     >
                       <Paperclip className="h-4 w-4" />
                     </button>
