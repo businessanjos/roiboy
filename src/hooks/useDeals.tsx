@@ -220,6 +220,14 @@ export function useDeals() {
         }
       });
 
+      // Convert empty strings to null for date fields
+      const dateFields = ['expected_close_date'];
+      dateFields.forEach(field => {
+        if (cleanData[field] === '') {
+          cleanData[field] = null;
+        }
+      });
+
       const { data: newDeal, error } = await supabase
         .from('deals')
         .insert({
@@ -282,6 +290,14 @@ export function useDeals() {
       // Convert empty strings to null for UUID fields
       const uuidFields = ['client_id', 'lead_id', 'stage_id', 'responsible_user_id'];
       uuidFields.forEach(field => {
+        if (updateData[field] === '') {
+          updateData[field] = null;
+        }
+      });
+
+      // Convert empty strings to null for date fields
+      const dateFields = ['expected_close_date'];
+      dateFields.forEach(field => {
         if (updateData[field] === '') {
           updateData[field] = null;
         }
