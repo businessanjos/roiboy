@@ -2176,76 +2176,110 @@ export default function RoyZapp() {
     setNewConversationDialogOpen(true);
   };
 
-  // Dynamic search for leads or clients
-  const searchLeadsOrClients = useCallback(async (searchTerm: string) => {
+  // Dynamic search for all contacts (clients, leads, conversations)
+  const searchContacts = useCallback(async (searchTerm: string) => {
     if (!currentUser?.account_id || !searchTerm.trim()) {
       setNewConversationClients([]);
       return;
     }
 
     const trimmedSearch = searchTerm.trim();
-    const normalizedPhone = trimmedSearch.replace(/\D/g, ''); // Apenas dígitos
+    const normalizedPhone = trimmedSearch.replace(/\D/g, '');
     const textSearch = trimmedSearch.toLowerCase();
     
-    // Detectar se é busca por telefone (começa com + ou é majoritariamente números)
     const isPhoneSearch = trimmedSearch.startsWith('+') || 
       (normalizedPhone.length >= 4 && normalizedPhone.length >= trimmedSearch.replace(/[\s\-\(\)]/g, '').length * 0.7);
 
-    if (selectedSectorId === "vendas") {
-      // Search leads
-      let query = supabase
-        .from("leads")
-        .select("id, full_name, phone, email")
-        .eq("account_id", currentUser.account_id)
-        .is("converted_to_client_id", null);
-
-      if (isPhoneSearch && normalizedPhone.length >= 4) {
-        // Busca por telefone - usar número normalizado
-        query = query.ilike("phone", `%${normalizedPhone}%`);
-      } else {
-        // Busca por texto - nome, email ou telefone formatado
-        query = query.or(`full_name.ilike.%${textSearch}%,email.ilike.%${textSearch}%,phone.ilike.%${textSearch}%`);
-      }
-
-      const { data } = await query.order("full_name").limit(20);
-
-      const mappedData = (data || []).map(lead => ({
-        id: lead.id,
-        full_name: lead.full_name,
-        phone_e164: lead.phone || "",
-        avatar_url: null,
-      }));
-
-      setNewConversationClients(mappedData);
-    } else {
-      // Search clients
-      let query = supabase
+    // Search in parallel across all sources
+    const [clientsResult, leadsResult, conversationsResult] = await Promise.all([
+      // 1. Search clients
+      supabase
         .from("clients")
         .select("id, full_name, phone_e164, avatar_url")
         .eq("account_id", currentUser.account_id)
-        .eq("status", "active");
+        .eq("status", "active")
+        .or(isPhoneSearch && normalizedPhone.length >= 4 
+          ? `phone_e164.ilike.%${normalizedPhone}%`
+          : `full_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`)
+        .order("full_name")
+        .limit(10),
+      
+      // 2. Search unconverted leads
+      supabase
+        .from("leads")
+        .select("id, full_name, phone, avatar_url")
+        .eq("account_id", currentUser.account_id)
+        .is("converted_to_client_id", null)
+        .or(isPhoneSearch && normalizedPhone.length >= 4
+          ? `phone.ilike.%${normalizedPhone}%`
+          : `full_name.ilike.%${textSearch}%,phone.ilike.%${textSearch}%`)
+        .order("full_name")
+        .limit(10),
+      
+      // 3. Search existing conversations (WhatsApp contacts)
+      supabase
+        .from("zapp_conversations")
+        .select("id, contact_name, phone_e164, avatar_url, client_id, lead_id")
+        .eq("account_id", currentUser.account_id)
+        .is("is_group", false)
+        .neq("phone_e164", "")
+        .or(isPhoneSearch && normalizedPhone.length >= 4
+          ? `phone_e164.ilike.%${normalizedPhone}%`
+          : `contact_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`)
+        .order("last_message_at", { ascending: false })
+        .limit(10),
+    ]);
 
-      if (isPhoneSearch && normalizedPhone.length >= 4) {
-        query = query.ilike("phone_e164", `%${normalizedPhone}%`);
-      } else {
-        query = query.or(`full_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`);
-      }
+    // Map results with type indicator
+    const clients = (clientsResult.data || []).map(c => ({
+      id: c.id,
+      full_name: c.full_name,
+      phone_e164: c.phone_e164,
+      avatar_url: c.avatar_url,
+      type: 'client' as const,
+    }));
 
-      const { data } = await query.order("full_name").limit(20);
-      setNewConversationClients(data || []);
-    }
-  }, [currentUser?.account_id, selectedSectorId]);
+    const leads = (leadsResult.data || []).map(l => ({
+      id: l.id,
+      full_name: l.full_name,
+      phone_e164: l.phone || "",
+      avatar_url: l.avatar_url,
+      type: 'lead' as const,
+    }));
+
+    // Conversations not linked to client or lead
+    const conversations = (conversationsResult.data || [])
+      .filter(conv => !conv.client_id && !conv.lead_id)
+      .map(conv => ({
+        id: conv.id,
+        full_name: conv.contact_name || "Desconhecido",
+        phone_e164: conv.phone_e164,
+        avatar_url: conv.avatar_url,
+        type: 'conversation' as const,
+      }));
+
+    // Combine results removing phone duplicates
+    const phonesSeen = new Set<string>();
+    const combined = [...clients, ...leads, ...conversations].filter(contact => {
+      const phone = contact.phone_e164?.replace(/\D/g, '');
+      if (!phone || phonesSeen.has(phone)) return false;
+      phonesSeen.add(phone);
+      return true;
+    });
+
+    setNewConversationClients(combined);
+  }, [currentUser?.account_id]);
 
   // Debounced search effect
   useEffect(() => {
     if (!newConversationDialogOpen) return;
     
     const timeoutId = setTimeout(() => {
-      searchLeadsOrClients(newConversationSearch);
+      searchContacts(newConversationSearch);
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [newConversationSearch, newConversationDialogOpen, searchLeadsOrClients]);
+  }, [newConversationSearch, newConversationDialogOpen, searchContacts]);
 
   // Create new conversation with contact (lead or client based on sector)
   const createConversationWithContact = async (contact: any) => {

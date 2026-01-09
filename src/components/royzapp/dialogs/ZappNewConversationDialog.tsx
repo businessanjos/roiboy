@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -11,11 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface Client {
+interface Contact {
   id: string;
   full_name: string;
   phone_e164: string;
   avatar_url: string | null;
+  type?: 'client' | 'lead' | 'conversation';
 }
 
 interface ZappNewConversationDialogProps {
@@ -23,8 +25,8 @@ interface ZappNewConversationDialogProps {
   onOpenChange: (open: boolean) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  clients: Client[];
-  onSelectClient: (client: Client) => void;
+  clients: Contact[];
+  onSelectClient: (client: Contact) => void;
   creating: boolean;
   isLeadMode?: boolean;
 }
@@ -37,7 +39,6 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
   clients,
   onSelectClient,
   creating,
-  isLeadMode = false,
 }: ZappNewConversationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,7 +46,7 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
         <DialogHeader>
           <DialogTitle>Nova Conversa</DialogTitle>
           <DialogDescription className="text-[#8696a0]">
-            Busque um {isLeadMode ? "lead" : "cliente"} para iniciar uma conversa
+            Busque um contato para iniciar uma conversa
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -57,14 +58,14 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
           />
           <ScrollArea className="h-64">
             {searchQuery.trim() === "" ? (
-              <p className="text-center text-[#8696a0] py-8">Digite para buscar {isLeadMode ? "leads" : "clientes"}</p>
+              <p className="text-center text-[#8696a0] py-8">Digite para buscar contatos</p>
             ) : clients.length === 0 ? (
-              <p className="text-center text-[#8696a0] py-8">Nenhum {isLeadMode ? "lead" : "cliente"} encontrado</p>
+              <p className="text-center text-[#8696a0] py-8">Nenhum contato encontrado</p>
             ) : (
               <div className="space-y-2">
                 {clients.map((client) => (
                   <button
-                    key={client.id}
+                    key={`${client.type || 'contact'}-${client.id}`}
                     onClick={() => onSelectClient(client)}
                     disabled={creating}
                     className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#202c33] transition-colors text-left"
@@ -76,7 +77,24 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#e9edef] font-medium truncate">{client.full_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[#e9edef] font-medium truncate">{client.full_name}</p>
+                        {client.type === 'client' && (
+                          <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs shrink-0">
+                            Cliente
+                          </Badge>
+                        )}
+                        {client.type === 'lead' && (
+                          <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs shrink-0">
+                            Lead
+                          </Badge>
+                        )}
+                        {client.type === 'conversation' && (
+                          <Badge variant="outline" className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-xs shrink-0">
+                            Contato
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
                     </div>
                     {creating && <Loader2 className="h-4 w-4 animate-spin text-zapp-accent" />}
