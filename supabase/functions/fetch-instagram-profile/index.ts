@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { profileInput, accountId } = await req.json();
+    const { profileInput, accountId, manualMetrics } = await req.json();
 
     if (!profileInput) {
       return new Response(
@@ -167,15 +167,21 @@ Deno.serve(async (req) => {
 
     console.log('Fetching Instagram profile for:', username);
 
-    // Fetch public profile data
-    const profileData = await fetchInstagramProfile(username);
+    // Fetch public profile data (may return fallback if blocked)
+    const fetchedData = await fetchInstagramProfile(username);
 
-    if (!profileData) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Could not fetch Instagram profile' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Use manual metrics if provided, otherwise use fetched data
+    const profileData = {
+      username: fetchedData?.username || username,
+      display_name: fetchedData?.display_name || username,
+      profile_picture_url: fetchedData?.profile_picture_url || null,
+      followers_count: manualMetrics?.followers_count ?? fetchedData?.followers_count ?? 0,
+      following_count: manualMetrics?.following_count ?? fetchedData?.following_count ?? 0,
+      posts_count: manualMetrics?.posts_count ?? fetchedData?.posts_count ?? 0,
+      bio: manualMetrics?.bio || fetchedData?.bio || null,
+    };
+
+    console.log('Profile data to save:', profileData);
 
     // Initialize Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
