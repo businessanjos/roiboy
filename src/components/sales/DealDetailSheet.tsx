@@ -60,7 +60,6 @@ import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
-import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
 
 interface DealActivity {
   id: string;
@@ -118,8 +117,6 @@ interface DealDetailSheetProps {
   onReopen: (dealId: string) => Promise<void>;
   onStageChange: (dealId: string, stageId: string) => Promise<boolean>;
   onDealUpdated?: () => void;
-  onEditLead?: (lead: any) => void;
-  onDeleteLead?: (leadId: string) => void;
 }
 
 const EVENT_TYPES = [
@@ -162,8 +159,6 @@ export function DealDetailSheet({
   onReopen,
   onStageChange,
   onDealUpdated,
-  onEditLead,
-  onDeleteLead,
 }: DealDetailSheetProps) {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<DealActivity[]>([]);
@@ -177,7 +172,6 @@ export function DealDetailSheet({
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
-  const [leadDetailOpen, setLeadDetailOpen] = useState(false);
   
   // Deal custom fields
   const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
@@ -504,7 +498,7 @@ export function DealDetailSheet({
                   ) : deal.lead_id ? (
                     <button
                       onClick={() => {
-                        setLeadDetailOpen(true);
+                        navigate(`/leads?lead=${deal.lead_id}`);
                       }}
                       className="text-primary hover:underline font-medium"
                     >
@@ -935,26 +929,6 @@ export function DealDetailSheet({
           />
         )}
         
-        {/* Lead Detail Sheet */}
-        {deal.lead_id && (
-          <LeadDetailSheet
-            open={leadDetailOpen}
-            onOpenChange={setLeadDetailOpen}
-            leadId={deal.lead_id}
-            onEdit={onEditLead}
-            onDelete={onDeleteLead}
-            onCreateDeal={(lead) => {
-              setLeadDetailOpen(false);
-              toast.info("Lead já está associado a esta negociação");
-            }}
-            onDealClick={(clickedDeal) => {
-              setLeadDetailOpen(false);
-              // If same deal, just close
-              if (clickedDeal.id === deal.id) return;
-              // Otherwise could navigate to clicked deal
-            }}
-          />
-        )}
       </SheetContent>
     </Sheet>
   );
