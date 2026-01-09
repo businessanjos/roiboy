@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useLeads } from "@/hooks/useLeads";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
@@ -41,7 +42,7 @@ import {
 import LeadsTab from "@/components/sales/LeadsTab";
 
 export default function SalesPipeline() {
-  const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const {
     stages,
     deals,
@@ -213,15 +214,51 @@ export default function SalesPipeline() {
         }
       }
 
-      // Mark deal as won
+      // Mark deal as won (keeps in pipeline with 'won' status)
       await markAsWon(dealId);
       
       setIsDetailOpen(false);
       setSelectedDeal(null);
       
-      // Navigate to contracts page with query params to open new contract dialog
-      if (clientId) {
-        navigate(`/contracts?newContract=true&clientId=${clientId}&dealId=${dealId}&value=${deal.value || 0}`);
+      // Create contract automatically in reconciliation queue
+      if (clientId && currentUser?.account_id) {
+        const today = new Date().toISOString().split('T')[0];
+        const clientName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || "";
+        
+        const contractData = {
+          client_id: clientId,
+          account_id: currentUser.account_id,
+          start_date: today,
+          value: deal.value || 0,
+          contract_type: 'Compra',
+          status: 'active',
+          receivables_generated: false, // Ensures it goes to reconciliation queue
+          notes: `Contrato gerado automaticamente do negócio: ${deal.title}`,
+        };
+
+        const { data: newContract, error: contractError } = await supabase
+          .from("client_contracts")
+          .insert(contractData)
+          .select("id")
+          .single();
+
+        if (contractError) {
+          console.error("Error creating contract:", contractError);
+          toast.error("Negócio ganho, mas houve erro ao criar contrato");
+        } else {
+          // Send notifications to operations and financial teams
+          if (newContract) {
+            await notifyContractCreated({
+              contractId: newContract.id,
+              clientName,
+              contractValue: deal.value || 0,
+              fromDeal: true,
+              createdByUserId: currentUser.id,
+              accountId: currentUser.account_id,
+            });
+          }
+          toast.success("🎉 Negócio ganho! Contrato enviado para a fila de conciliação.");
+        }
       } else {
         toast.success("Negociação marcada como ganha!");
       }
