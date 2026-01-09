@@ -209,12 +209,25 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        "cursor-pointer hover:shadow-lg transition-all bg-card border-border/50",
+        "relative cursor-pointer hover:shadow-lg transition-all bg-card border-border/50",
         isRenewal && "ring-2 ring-amber-500/50 bg-amber-500/5",
         (isDragging || isSortableDragging) && "opacity-50 shadow-xl rotate-1 scale-105"
       )}
       onClick={onClick}
     >
+      {/* Activity Status Indicator - Positioned on right center */}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+        <span className={cn(
+          "h-3 w-3 rounded-full",
+          statusIndicator.bgColor
+        )} />
+        <span className={cn(
+          "text-xs font-medium",
+          statusIndicator.textColor
+        )}>
+          {statusIndicator.label}
+        </span>
+      </div>
     <CardContent className="p-3 space-y-2">
         {/* Renewal Badge */}
         {isRenewal && (
@@ -326,19 +339,6 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                 </span>
               )}
             </Button>
-            {/* Activity Status Indicator */}
-            <div className="flex items-center gap-1.5">
-              <span className={cn(
-                "h-3 w-3 rounded-full",
-                statusIndicator.bgColor
-              )} />
-              <span className={cn(
-                "text-xs font-medium",
-                statusIndicator.textColor
-              )}>
-                {statusIndicator.label}
-              </span>
-            </div>
           </div>
           <span className="text-xs font-bold text-primary">
             {formatCurrency(deal.value)}
