@@ -252,6 +252,18 @@ export function DealDialog({
     }
   }, [deal, stages, form, currentUser?.id]);
 
+  // Auto-assign current user as responsible when creating new deal
+  useEffect(() => {
+    // Only for new deals (not editing)
+    if (!deal && currentUser?.id) {
+      const currentValue = form.getValues("responsible_user_id");
+      // Only set if not already set
+      if (!currentValue) {
+        form.setValue("responsible_user_id", currentUser.id);
+      }
+    }
+  }, [deal, currentUser?.id, form]);
+
   const handleSubmit = async (data: DealFormValues) => {
     setSaving(true);
     try {
