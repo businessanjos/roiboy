@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   Sheet,
   SheetContent,
@@ -27,8 +28,11 @@ import {
   TrendingUp,
   ChevronRight,
   Pencil,
+  Plus,
 } from "lucide-react";
 import { LeadTimeline } from "./LeadTimeline";
+import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
+import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { toast } from "sonner";
 
 const LEAD_SOURCES = [
@@ -75,13 +79,61 @@ interface LeadDetailSheetProps {
 }
 
 export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDetailSheetProps) {
+  const { currentUser } = useCurrentUser();
   const [lead, setLead] = useState<Lead | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [customFields, setCustomFields] = useState<LeadCustomField[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
+  const [managerOpen, setManagerOpen] = useState(false);
+
+  const fetchCustomFields = async () => {
+    const { data } = await supabase
+      .from("custom_fields")
+      .select("*")
+      .eq("is_active", true)
+      .eq("show_in_leads", true)
+      .order("display_order");
+
+    if (data) {
+      const mapped: LeadCustomField[] = data.map(f => ({
+        id: f.id,
+        name: f.name,
+        field_type: f.field_type as LeadCustomField["field_type"],
+        options: (f.options as unknown as { value: string; label: string; color: string }[]) || [],
+        is_required: f.is_required,
+        display_order: f.display_order,
+        is_active: f.is_active,
+        show_in_leads: f.show_in_leads,
+      }));
+      setCustomFields(mapped);
+    }
+  };
+
+  const fetchFieldValues = async (id: string) => {
+    const { data } = await supabase
+      .from("lead_field_values")
+      .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
+      .eq("lead_id", id);
+
+    if (data) {
+      const values: Record<string, any> = {};
+      data.forEach(fv => {
+        values[fv.field_id] = fv.value_text ?? fv.value_number ?? fv.value_boolean ?? fv.value_date ?? fv.value_json;
+      });
+      setFieldValues(values);
+    }
+  };
+
+  const handleFieldValueChange = (fieldId: string, newValue: any) => {
+    setFieldValues(prev => ({ ...prev, [fieldId]: newValue }));
+  };
 
   useEffect(() => {
     if (open && leadId) {
       fetchLeadData();
+      fetchCustomFields();
+      fetchFieldValues(leadId);
     }
   }, [open, leadId]);
 
@@ -211,6 +263,35 @@ export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDeta
                 </div>
               </div>
 
+              {/* Custom Fields Section */}
+              {(customFields.length > 0 || currentUser?.account_id) && (
+                <div className="space-y-3">
+                  {customFields.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {customFields.map(field => (
+                        <LeadFieldValueEditor
+                          key={field.id}
+                          field={field}
+                          leadId={lead.id}
+                          accountId={currentUser?.account_id || ""}
+                          currentValue={fieldValues[field.id]}
+                          onValueChange={handleFieldValueChange}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground h-auto py-1 px-2 text-xs"
+                    onClick={() => setManagerOpen(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    inserir campo
+                  </Button>
+                </div>
+              )}
+
               {/* Notes */}
               {lead.notes && (
                 <div>
@@ -293,6 +374,16 @@ export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDeta
           </div>
         )}
       </SheetContent>
+
+      {/* Custom Fields Manager Dialog */}
+      <LeadCustomFieldsManager
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        onFieldsChange={() => {
+          fetchCustomFields();
+          if (leadId) fetchFieldValues(leadId);
+        }}
+      />
     </Sheet>
   );
 }
