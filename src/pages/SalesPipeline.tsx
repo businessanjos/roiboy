@@ -490,6 +490,20 @@ export default function SalesPipeline() {
         onReopen={handleReopen}
         onStageChange={handleDealMove}
         onDealUpdated={fetchDeals}
+        onEditLead={(lead) => {
+          // Close the deal sheet and trigger lead edit in LeadsTab
+          setIsDetailOpen(false);
+          toast.info("Para editar o lead, acesse a aba Prospecção");
+        }}
+        onDeleteLead={async (leadId) => {
+          // Confirm and delete lead
+          if (confirm("Tem certeza que deseja excluir este lead?")) {
+            await supabase.from("leads").delete().eq("id", leadId);
+            toast.success("Lead excluído");
+            fetchDeals();
+            refetchLeads();
+          }
+        }}
       />
 
       {/* Edit Deal Dialog */}

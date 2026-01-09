@@ -118,6 +118,8 @@ interface DealDetailSheetProps {
   onReopen: (dealId: string) => Promise<void>;
   onStageChange: (dealId: string, stageId: string) => Promise<boolean>;
   onDealUpdated?: () => void;
+  onEditLead?: (lead: any) => void;
+  onDeleteLead?: (leadId: string) => void;
 }
 
 const EVENT_TYPES = [
@@ -160,6 +162,8 @@ export function DealDetailSheet({
   onReopen,
   onStageChange,
   onDealUpdated,
+  onEditLead,
+  onDeleteLead,
 }: DealDetailSheetProps) {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<DealActivity[]>([]);
@@ -937,6 +941,18 @@ export function DealDetailSheet({
             open={leadDetailOpen}
             onOpenChange={setLeadDetailOpen}
             leadId={deal.lead_id}
+            onEdit={onEditLead}
+            onDelete={onDeleteLead}
+            onCreateDeal={(lead) => {
+              setLeadDetailOpen(false);
+              toast.info("Lead já está associado a esta negociação");
+            }}
+            onDealClick={(clickedDeal) => {
+              setLeadDetailOpen(false);
+              // If same deal, just close
+              if (clickedDeal.id === deal.id) return;
+              // Otherwise could navigate to clicked deal
+            }}
           />
         )}
       </SheetContent>
