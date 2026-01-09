@@ -420,7 +420,14 @@ export function LeadDetailSheet({
       {/* Custom Fields Manager Dialog - Outside Sheet to avoid Radix context conflicts */}
       <LeadCustomFieldsManager
         open={managerOpen}
-        onOpenChange={setManagerOpen}
+        onOpenChange={(open) => {
+          setManagerOpen(open);
+          // Quando fecha, re-buscar os dados
+          if (!open && leadId) {
+            fetchCustomFields();
+            fetchFieldValues(leadId);
+          }
+        }}
         onFieldsChange={() => {
           fetchCustomFields();
           if (leadId) fetchFieldValues(leadId);
