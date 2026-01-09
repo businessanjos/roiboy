@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
 import {
   Sheet,
   SheetContent,
@@ -94,6 +95,7 @@ export function LeadDetailSheet({
   onDealClick,
 }: LeadDetailSheetProps) {
   const { currentUser } = useCurrentUser();
+  const { hasVendasAccess } = useSectorAccess();
   const [lead, setLead] = useState<Lead | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -302,15 +304,17 @@ export function LeadDetailSheet({
                   </div>
                 )}
 
-                {/* Add Custom Fields Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setManagerOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Inserir campos
-                </Button>
+                {/* Add Custom Fields Button - Only for users with Vendas access */}
+                {hasVendasAccess && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setManagerOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Inserir campos
+                  </Button>
+                )}
 
                 <Separator />
 
