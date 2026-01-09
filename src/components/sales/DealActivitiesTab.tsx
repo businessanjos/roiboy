@@ -44,6 +44,11 @@ interface Task {
     color: string;
     is_completed_status: boolean;
   } | null;
+  activity_type?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
 }
 
 interface DealActivitiesTabProps {
@@ -109,7 +114,8 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         client_id,
         activity_type_id,
         assigned_user:users!internal_tasks_assigned_to_fkey(id, name, avatar_url),
-        custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status)
+        custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status),
+        activity_type:activity_types!internal_tasks_activity_type_id_fkey(id, name, color)
       `)
       .eq("deal_id", dealId)
       .order("created_at", { ascending: false });
@@ -224,7 +230,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-medium truncate">{task.title}</span>
+                        <span className="text-sm font-medium truncate">{task.activity_type?.name || task.title}</span>
                         <span className={cn("w-1.5 h-1.5 rounded-full", priorityConfig.color)} />
                         {overdue && (
                           <AlertTriangle className="h-3 w-3 text-red-500 flex-shrink-0" />
@@ -284,7 +290,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                   >
                     <Checkbox checked className="mt-0" />
                     <span className="text-xs line-through text-muted-foreground truncate flex-1">
-                      {task.title}
+                      {task.activity_type?.name || task.title}
                     </span>
                     {task.completed_at && (
                       <span className="text-[10px] text-muted-foreground">

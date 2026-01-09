@@ -78,6 +78,11 @@ interface Task {
   clients: Client | null;
   assigned_user: User | null;
   custom_status_id?: string | null;
+  activity_type?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
 }
 
 interface TaskKanbanProps {
@@ -192,7 +197,7 @@ function SortableTaskCard({ task, onEdit, onDelete, statuses }: SortableTaskCard
         
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <p className="font-medium text-sm leading-snug line-clamp-2">{task.title}</p>
+            <p className="font-medium text-sm leading-snug line-clamp-2">{task.activity_type?.name || task.title}</p>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
@@ -453,7 +458,7 @@ export function TaskKanban({ tasks, onEditTask, onDeleteTask, onStatusChange, on
       <DragOverlay>
         {activeTask && (
           <div className="bg-card border rounded-lg p-3 shadow-xl ring-2 ring-primary opacity-90">
-            <p className="font-medium text-sm">{activeTask.title}</p>
+            <p className="font-medium text-sm">{activeTask.activity_type?.name || activeTask.title}</p>
           </div>
         )}
       </DragOverlay>
