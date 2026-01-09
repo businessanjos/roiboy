@@ -67,7 +67,12 @@ const dealSchema = z.object({
   client_id: z.string().optional(),
   contact_name: z.string().optional(),
   contact_phone: z.string().optional(),
-  contact_email: z.string().email("Email inválido").optional().or(z.literal("")),
+  contact_email: z.string()
+    .refine(
+      (val) => !val || val === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+      { message: "Email inválido" }
+    )
+    .optional(),
   stage_id: z.string().optional(),
   value: z.number().min(0).default(0),
   expected_close_date: z.string().optional(),
@@ -349,11 +354,35 @@ export function DealDialog({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <Tabs defaultValue="info">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="info">Informações</TabsTrigger>
-                  <TabsTrigger value="contact">Contato</TabsTrigger>
-                  <TabsTrigger value="details">Detalhes</TabsTrigger>
-                </TabsList>
+                {(() => {
+                  const errors = form.formState.errors;
+                  const hasInfoErrors = !!errors.title || !!errors.stage_id || !!errors.value || !!errors.expected_close_date || !!errors.probability || !!errors.responsible_user_id;
+                  const hasContactErrors = !!errors.client_id || !!errors.contact_name || !!errors.contact_phone || !!errors.contact_email;
+                  const hasDetailsErrors = !!errors.source || !!errors.notes || !!errors.tags;
+                  
+                  return (
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="info" className="relative">
+                        Informações
+                        {hasInfoErrors && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full" />
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger value="contact" className="relative">
+                        Contato
+                        {hasContactErrors && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full" />
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger value="details" className="relative">
+                        Detalhes
+                        {hasDetailsErrors && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full" />
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
+                  );
+                })()}
 
                 <TabsContent value="info" className="space-y-4 mt-4">
                   {/* Title */}
