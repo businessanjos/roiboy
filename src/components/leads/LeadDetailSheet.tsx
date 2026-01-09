@@ -281,13 +281,12 @@ export function LeadDetailSheet({ open, onOpenChange, leadId, onEdit }: LeadDeta
                     </div>
                   )}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="text-muted-foreground h-auto py-1 px-2 text-xs"
                     onClick={() => setManagerOpen(true)}
                   >
-                    <Plus className="h-3 w-3 mr-1" />
-                    inserir campo
+                    <Plus className="h-4 w-4 mr-1" />
+                    Inserir campo
                   </Button>
                 </div>
               )}
