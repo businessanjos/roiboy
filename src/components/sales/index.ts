@@ -3,6 +3,7 @@ export { DealKanbanColumn } from "./DealKanbanColumn";
 export { DealCard } from "./DealCard";
 export { DealDialog } from "./DealDialog";
 export { DealDetailSheet } from "./DealDetailSheet";
+export { DealActivitiesDialog } from "./DealActivitiesDialog";
 export { DealStagesManager } from "./DealStagesManager";
 export { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 export { PlaybookDialog } from "./PlaybookDialog";
