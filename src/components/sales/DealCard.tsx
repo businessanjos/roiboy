@@ -327,13 +327,13 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
               )}
             </Button>
             {/* Activity Status Indicator */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <span className={cn(
-                "h-2 w-2 rounded-full",
+                "h-3 w-3 rounded-full",
                 statusIndicator.bgColor
               )} />
               <span className={cn(
-                "text-[10px] font-medium",
+                "text-xs font-medium",
                 statusIndicator.textColor
               )}>
                 {statusIndicator.label}
