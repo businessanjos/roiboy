@@ -131,7 +131,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Boolean field - simple toggle
   if (field.field_type === "boolean") {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity">
             <FieldValueBadge field={field} value={currentValue} />
@@ -168,14 +168,14 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Select field
   if (field.field_type === "select") {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-48 p-2" align="start">
-          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain">
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
             {field.options.map((option) => (
               <button
                 key={option.value}
@@ -211,14 +211,14 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
     };
 
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-56 p-2" align="start">
-          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain">
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
             {field.options.map((option) => {
               const isSelected = selectedValues.includes(option.value);
               return (
@@ -251,14 +251,14 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
     };
 
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity">
             <FieldValueBadge field={field} value={currentValue} teamUsers={teamUsers.length ? teamUsers : undefined} />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-2" align="start">
-          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain">
+          <div className="flex flex-col gap-1 max-h-64 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
             {teamUsers.length === 0 ? (
               <div className="text-sm text-muted-foreground text-center py-4">
                 Carregando...
@@ -291,7 +291,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Number / Currency field
   if (field.field_type === "number" || field.field_type === "currency") {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
             <FieldValueBadge field={field} value={currentValue} />
@@ -322,7 +322,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Date field
   if (field.field_type === "date") {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
             <FieldValueBadge field={field} value={currentValue} />
@@ -343,7 +343,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Text field
   if (field.field_type === "text") {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-32">
             <FieldValueBadge field={field} value={currentValue} />
@@ -373,7 +373,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Instagram field
   if (field.field_type === "instagram") {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
             <FieldValueBadge field={field} value={currentValue} />
@@ -406,7 +406,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Location field
   if (field.field_type === "location") {
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
             <FieldValueBadge field={field} value={currentValue} />
