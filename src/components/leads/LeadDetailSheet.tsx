@@ -277,8 +277,8 @@ export function LeadDetailSheet({
                 </div>
               </div>
 
-              {/* Custom Fields Section */}
-              {(customFields.length > 0 || currentUser?.account_id) && (
+              {/* Custom Fields Section - Values */}
+              {customFields.length > 0 && (
                 <div className="flex flex-wrap gap-2 items-center">
                   {customFields.map(field => (
                     <LeadFieldValueEditor
@@ -290,15 +290,6 @@ export function LeadDetailSheet({
                       onValueChange={handleFieldValueChange}
                     />
                   ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground h-auto py-1 px-2 text-xs"
-                    onClick={() => setManagerOpen(true)}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Inserir Campo
-                  </Button>
                 </div>
               )}
 
@@ -308,6 +299,18 @@ export function LeadDetailSheet({
                   <p className="text-sm font-medium mb-2">Observações</p>
                   <p className="text-sm text-muted-foreground">{lead.notes}</p>
                 </div>
+              )}
+
+              {/* Add Custom Fields Button */}
+              {currentUser?.account_id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setManagerOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Inserir campos
+                </Button>
               )}
 
               <Separator />
