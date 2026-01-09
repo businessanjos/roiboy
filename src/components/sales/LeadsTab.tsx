@@ -74,6 +74,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
+import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
 import { toast } from "sonner";
 import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
@@ -1345,180 +1346,27 @@ export default function LeadsTab() {
       </Dialog>
 
       {/* Lead Detail Sheet */}
-      <Sheet open={!!detailLead} onOpenChange={(open) => !open && setDetailLead(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          {detailLead && (
-            <>
-              <SheetHeader>
-                <div className="flex items-center justify-between">
-                  <SheetTitle>{detailLead.full_name}</SheetTitle>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={detailLead.status}
-                      onValueChange={(v) => {
-                        handleStatusChange(detailLead.id, v);
-                        setDetailLead({ ...detailLead, status: v });
-                      }}
-                    >
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LEAD_STATUS.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-2 h-2 rounded-full ${s.color}`}
-                              />
-                              {s.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </SheetHeader>
-
-              <div className="mt-6 space-y-6">
-                {/* Contact Info */}
-                <div className="space-y-3">
-                  {detailLead.phone && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{detailLead.phone}</span>
-                    </div>
-                  )}
-                  {detailLead.email && (
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{detailLead.email}</span>
-                    </div>
-                  )}
-                  {detailLead.source && (
-                    <div className="flex items-center gap-3">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      <span>Origem: {getSourceLabel(detailLead.source)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Criado em{" "}
-                      {format(new Date(detailLead.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                        locale: ptBR,
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {detailLead.notes && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Observações</p>
-                    <p className="text-sm text-muted-foreground">
-                      {detailLead.notes}
-                    </p>
-                  </div>
-                )}
-
-                <Separator />
-
-                {/* Deals Section */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium">Negócios</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openDealDialogForLead(detailLead)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Novo
-                    </Button>
-                  </div>
-                  {getLeadDeals(detailLead.id).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum negócio vinculado
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {getLeadDeals(detailLead.id).map((deal) => (
-                        <Card
-                          key={deal.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => {
-                            setSelectedDeal(deal);
-                            setIsDealDetailOpen(true);
-                          }}
-                        >
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {deal.title}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {deal.stage?.name}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {deal.value > 0 && (
-                                  <Badge variant="outline">
-                                    {new Intl.NumberFormat("pt-BR", {
-                                      style: "currency",
-                                      currency: "BRL",
-                                    }).format(deal.value)}
-                                  </Badge>
-                                )}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Timeline */}
-                <div>
-                  <p className="text-sm font-medium mb-3">Histórico</p>
-                  <LeadTimeline leadId={detailLead.id} />
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setDetailLead(null);
-                      openEditDialog(detailLead);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 text-destructive"
-                    onClick={() => {
-                      setDetailLead(null);
-                      setDeleteLeadId(detailLead.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <LeadDetailSheet
+        open={!!detailLead}
+        onOpenChange={(open) => !open && setDetailLead(null)}
+        leadId={detailLead?.id || null}
+        onEdit={(lead) => {
+          setDetailLead(null);
+          openEditDialog(lead as Lead);
+        }}
+        onDelete={(leadId) => {
+          setDetailLead(null);
+          setDeleteLeadId(leadId);
+        }}
+        onCreateDeal={(lead) => {
+          setDetailLead(null);
+          openDealDialogForLead(lead as Lead);
+        }}
+        onDealClick={(deal) => {
+          setSelectedDeal(deal as Deal);
+          setIsDealDetailOpen(true);
+        }}
+      />
 
       {/* Deal Detail Sheet */}
       <DealDetailSheet
