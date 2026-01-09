@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Instagram, ExternalLink, Key, Link2 } from 'lucide-react';
+import { Instagram, ExternalLink, Key, Link2, Users, UserPlus, Grid3X3 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,11 +12,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 
 interface InstagramConnectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConnect: (data: { username: string; accessToken?: string }) => void;
+  onConnect: (data: { 
+    username: string; 
+    accessToken?: string;
+    followers_count?: number;
+    following_count?: number;
+    posts_count?: number;
+    bio?: string;
+  }) => void;
   isLoading?: boolean;
 }
 
@@ -57,6 +65,12 @@ export function InstagramConnectDialog({
   const [profileInput, setProfileInput] = useState('');
   const [extractedUsername, setExtractedUsername] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState('');
+  
+  // Manual metrics
+  const [followersCount, setFollowersCount] = useState('');
+  const [followingCount, setFollowingCount] = useState('');
+  const [postsCount, setPostsCount] = useState('');
+  const [bio, setBio] = useState('');
 
   // Auto-extract username when input changes
   useEffect(() => {
@@ -75,6 +89,10 @@ export function InstagramConnectDialog({
     onConnect({
       username: extractedUsername,
       accessToken: accessToken.trim() || undefined,
+      followers_count: followersCount ? parseInt(followersCount, 10) : undefined,
+      following_count: followingCount ? parseInt(followingCount, 10) : undefined,
+      posts_count: postsCount ? parseInt(postsCount, 10) : undefined,
+      bio: bio.trim() || undefined,
     });
   };
 
@@ -82,12 +100,16 @@ export function InstagramConnectDialog({
     setProfileInput('');
     setExtractedUsername(null);
     setAccessToken('');
+    setFollowersCount('');
+    setFollowingCount('');
+    setPostsCount('');
+    setBio('');
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Instagram className="h-5 w-5 text-pink-500" />
@@ -127,6 +149,73 @@ export function InstagramConnectDialog({
             )}
           </div>
 
+          <Separator />
+
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Métricas do Perfil</Label>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Preencha com os dados atuais do perfil (veja no Instagram)
+            </p>
+            
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="followers" className="text-xs flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Seguidores
+                </Label>
+                <Input
+                  id="followers"
+                  type="number"
+                  placeholder="0"
+                  value={followersCount}
+                  onChange={(e) => setFollowersCount(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="following" className="text-xs flex items-center gap-1">
+                  <UserPlus className="h-3 w-3" />
+                  Seguindo
+                </Label>
+                <Input
+                  id="following"
+                  type="number"
+                  placeholder="0"
+                  value={followingCount}
+                  onChange={(e) => setFollowingCount(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="posts" className="text-xs flex items-center gap-1">
+                  <Grid3X3 className="h-3 w-3" />
+                  Posts
+                </Label>
+                <Input
+                  id="posts"
+                  type="number"
+                  placeholder="0"
+                  value={postsCount}
+                  onChange={(e) => setPostsCount(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="bio" className="text-xs">Bio (opcional)</Label>
+              <Input
+                id="bio"
+                placeholder="Bio do perfil..."
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="space-y-2">
             <Label htmlFor="token" className="flex items-center gap-1.5">
               <Key className="h-3.5 w-3.5" />
@@ -135,7 +224,7 @@ export function InstagramConnectDialog({
             <Input
               id="token"
               type="password"
-              placeholder="Deixe vazio para modo manual"
+              placeholder="Para sincronização automática futura"
               value={accessToken}
               onChange={(e) => setAccessToken(e.target.value)}
               className="bg-background"
@@ -143,22 +232,8 @@ export function InstagramConnectDialog({
           </div>
 
           <Alert className="bg-muted/50">
-            <AlertDescription className="text-xs space-y-2">
-              <p>
-                <strong>Modo Manual:</strong> Sem token, você preenche as métricas dos posts manualmente.
-              </p>
-              <p>
-                <strong>Modo API:</strong> Com token, futuramente poderemos sincronizar dados automaticamente.{' '}
-                <a
-                  href="https://developers.facebook.com/docs/instagram-basic-display-api"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  Como obter
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </p>
+            <AlertDescription className="text-xs">
+              As métricas do perfil são opcionais. Você pode atualizá-las depois clicando no perfil.
             </AlertDescription>
           </Alert>
 

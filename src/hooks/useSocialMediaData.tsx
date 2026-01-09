@@ -161,7 +161,14 @@ export function useSocialMediaData() {
 
   // Create profile mutation - uses edge function to bypass RLS and fetch public data
   const createProfile = useMutation({
-    mutationFn: async (data: { username: string; accessToken?: string }) => {
+    mutationFn: async (data: { 
+      username: string; 
+      accessToken?: string;
+      followers_count?: number;
+      following_count?: number;
+      posts_count?: number;
+      bio?: string;
+    }) => {
       if (!user?.account_id) throw new Error('User not authenticated');
 
       // Call edge function to fetch public profile data and create profile
@@ -169,6 +176,13 @@ export function useSocialMediaData() {
         body: {
           profileInput: data.username,
           accountId: user.account_id,
+          // Pass manual metrics if provided
+          manualMetrics: {
+            followers_count: data.followers_count,
+            following_count: data.following_count,
+            posts_count: data.posts_count,
+            bio: data.bio,
+          },
         },
       });
 
