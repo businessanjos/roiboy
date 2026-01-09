@@ -20,12 +20,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1564,172 +1559,31 @@ export default function Leads() {
       </AlertDialog>
 
       {/* Lead Detail Sheet with Timeline */}
-      <Sheet open={!!detailLead} onOpenChange={(open) => !open && setDetailLead(null)}>
-        <SheetContent className="sm:max-w-md flex flex-col p-0">
-          <SheetHeader className="flex-shrink-0 p-6 pb-0">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {detailLead ? getInitials(detailLead.full_name) : ""}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <span className="block">{detailLead?.full_name}</span>
-                  {detailLead && getStatusBadge(detailLead.status)}
-                </div>
-              </SheetTitle>
-            </div>
-          </SheetHeader>
-
-          {detailLead && (
-            <ScrollArea className="flex-1 px-6">
-              <div className="space-y-4 pb-6">
-                {/* Lead Info */}
-                <div className="space-y-2 pb-4 border-b">
-                  {detailLead.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{detailLead.phone}</span>
-                    </div>
-                  )}
-                  {detailLead.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{detailLead.email}</span>
-                    </div>
-                  )}
-                  {detailLead.source && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <Badge variant="outline" className="text-xs">
-                        {LEAD_SOURCES.find((s) => s.value === detailLead.source)?.label || detailLead.source}
-                      </Badge>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Criado em {format(new Date(detailLead.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-                  </div>
-                  {detailLead.notes && (
-                    <p className="text-sm text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
-                      {detailLead.notes}
-                    </p>
-                  )}
-                </div>
-
-
-                {/* Deals Section */}
-                {(() => {
-                  const leadDeals = getLeadDeals(detailLead.id);
-                  return leadDeals.length > 0 ? (
-                    <div className="py-4 border-b">
-                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        Negócios ({leadDeals.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {leadDeals.map((deal) => {
-                          const stage = stages.find(s => s.id === deal.stage_id);
-                          return (
-                            <div
-                              key={deal.id}
-                              className="p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors"
-                              onClick={() => {
-                                setSelectedDeal(deal);
-                                setIsDealDetailOpen(true);
-                              }}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm truncate">{deal.title}</p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    {stage && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-[10px] px-1.5"
-                                        style={{ 
-                                          borderColor: stage.color,
-                                          color: stage.color,
-                                        }}
-                                      >
-                                        {stage.name}
-                                      </Badge>
-                                    )}
-                                    {deal.status === 'won' && (
-                                      <Badge className="bg-emerald-500 text-[10px] px-1.5 gap-0.5">
-                                        <Trophy className="h-2.5 w-2.5" />
-                                        Ganha
-                                      </Badge>
-                                    )}
-                                    {deal.status === 'lost' && (
-                                      <Badge variant="destructive" className="text-[10px] px-1.5 gap-0.5">
-                                        <XCircle className="h-2.5 w-2.5" />
-                                        Perdida
-                                      </Badge>
-                                    )}
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {formatDistanceToNow(new Date(deal.created_at), { locale: ptBR, addSuffix: true })}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold text-primary">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)}
-                                  </span>
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-
-                {/* Timeline */}
-                <div className="pt-4">
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Jornada de Compra
-                  </h3>
-                  <LeadTimeline leadId={detailLead.id} />
-                </div>
-              </div>
-            </ScrollArea>
-          )}
-
-          {/* Actions - Fixed at bottom */}
-          {detailLead && (
-            <div className="flex-shrink-0 p-6 pt-4 border-t flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  openEditDialog(detailLead);
-                  setDetailLead(null);
-                }}
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  openDealDialogForLead(detailLead);
-                  setDetailLead(null);
-                }}
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Criar Negócio
-              </Button>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <LeadDetailSheet
+        open={!!detailLead}
+        onOpenChange={(open) => !open && setDetailLead(null)}
+        leadId={detailLead?.id || null}
+        onEdit={(lead) => {
+          setDetailLead(null);
+          openEditDialog(lead as Lead);
+        }}
+        onDelete={(leadId) => {
+          setDetailLead(null);
+          setDeleteLeadId(leadId);
+        }}
+        onCreateDeal={(lead) => {
+          setDetailLead(null);
+          openDealDialogForLead(lead as Lead);
+        }}
+        onDealClick={(deal) => {
+          setDetailLead(null);
+          const fullDeal = deals.find(d => d.id === deal.id);
+          if (fullDeal) {
+            setSelectedDeal(fullDeal);
+            setIsDealDetailOpen(true);
+          }
+        }}
+      />
 
       {/* Deal Detail Sheet */}
       <DealDetailSheet
