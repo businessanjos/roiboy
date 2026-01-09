@@ -234,6 +234,8 @@ export function useDeals() {
           ...cleanData,
           account_id: currentUser.account_id,
           tags: data.tags || [],
+          // Auto-assign to current user if no responsible_user_id provided
+          responsible_user_id: cleanData.responsible_user_id ?? currentUser.id,
         })
         .select(`
           *,

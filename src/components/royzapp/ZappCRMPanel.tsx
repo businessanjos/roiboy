@@ -248,6 +248,7 @@ export function ZappCRMPanel({
           lead_id: conversationLeadId || null,
           client_id: conversationClientId || null,
           status: "open",
+          responsible_user_id: currentUser.id,
         });
       if (error) throw error;
     },
