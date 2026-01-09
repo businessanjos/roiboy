@@ -234,7 +234,7 @@ export function SocialMediaDashboard() {
       className={cn('cursor-pointer hover:bg-muted/50 transition-colors select-none', className)}
       onClick={() => handleSort(field)}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 justify-end">
         {children}
         {sortField === field && (
           <span className="text-primary">
