@@ -374,6 +374,30 @@ export function useSocialMediaData() {
     },
   });
 
+  const syncProfiles = useMutation({
+    mutationFn: async () => {
+      if (!user?.account_id) throw new Error('Usuário não autenticado');
+      
+      const { data, error } = await supabase.functions.invoke('sync-instagram-profiles', {
+        body: { accountId: user.account_id },
+      });
+      
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Erro ao sincronizar');
+      
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['instagram-dashboard'] });
+      toast.success(data.message || 'Perfis sincronizados!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao sincronizar: ' + error.message);
+    },
+  });
+
   const refetchData = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] }),
@@ -397,5 +421,6 @@ export function useSocialMediaData() {
     updatePost,
     deletePost,
     refetchData,
+    syncProfiles,
   };
 }
