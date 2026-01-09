@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Sheet,
   SheetContent,
@@ -96,6 +97,10 @@ export function LeadDetailSheet({
 }: LeadDetailSheetProps) {
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
+  const { isAdmin } = usePermissions();
+  
+  // Admins ou usuários com acesso a Vendas podem gerenciar campos personalizados
+  const canManageCustomFields = isAdmin || hasVendasAccess;
   const [lead, setLead] = useState<Lead | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -305,7 +310,7 @@ export function LeadDetailSheet({
                 )}
 
                 {/* Add Custom Fields Button - Only for users with Vendas access */}
-                {hasVendasAccess && (
+                {canManageCustomFields && (
                   <Button
                     variant="outline"
                     size="sm"
