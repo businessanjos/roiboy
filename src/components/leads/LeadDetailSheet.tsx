@@ -287,16 +287,23 @@ export function LeadDetailSheet({
 
                 {/* Custom Fields Section - Values */}
                 {customFields.length > 0 && (
-                  <div className="flex flex-wrap gap-2 items-center">
+                  <div className="space-y-2">
                     {customFields.map(field => (
-                      <LeadFieldValueEditor
+                      <div
                         key={field.id}
-                        field={field}
-                        leadId={lead.id}
-                        accountId={currentUser?.account_id || ""}
-                        currentValue={fieldValues[field.id]}
-                        onValueChange={handleFieldValueChange}
-                      />
+                        className="flex items-center gap-2 p-2 rounded-md border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
+                      >
+                        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                          {field.name}:
+                        </span>
+                        <LeadFieldValueEditor
+                          field={field}
+                          leadId={lead.id}
+                          accountId={currentUser?.account_id || ""}
+                          currentValue={fieldValues[field.id]}
+                          onValueChange={handleFieldValueChange}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
