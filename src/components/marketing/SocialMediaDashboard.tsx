@@ -47,9 +47,10 @@ interface ProfileWithMetrics {
   avg_comments: number;
   avg_engagement: number;
   total_reach: number;
+  avg_link_clicks: number;
 }
 
-type SortField = 'followers' | 'engagement' | 'likes' | 'comments';
+type SortField = 'followers' | 'engagement' | 'likes' | 'comments' | 'link_clicks';
 type SortDirection = 'asc' | 'desc';
 
 export function SocialMediaDashboard() {
@@ -87,7 +88,7 @@ export function SocialMediaDashboard() {
       const profileIds = profiles.map((p) => p.id);
       const { data: posts, error: postsError } = await supabase
         .from('instagram_posts')
-        .select('profile_id, likes, comments, shares, saves, reach, engagement_rate')
+        .select('profile_id, likes, comments, shares, saves, reach, engagement_rate, link_clicks')
         .in('profile_id', profileIds)
         .gte('posted_at', dateRange.startDate.toISOString())
         .lte('posted_at', dateRange.endDate.toISOString());
@@ -103,6 +104,7 @@ export function SocialMediaDashboard() {
         const totalComments = profilePosts.reduce((sum, p) => sum + (p.comments || 0), 0);
         const totalReach = profilePosts.reduce((sum, p) => sum + (p.reach || 0), 0);
         const totalEngagement = profilePosts.reduce((sum, p) => sum + (p.engagement_rate || 0), 0);
+        const totalLinkClicks = profilePosts.reduce((sum, p) => sum + (p.link_clicks || 0), 0);
 
         return {
           id: profile.id,
@@ -117,6 +119,7 @@ export function SocialMediaDashboard() {
           avg_comments: postCount > 0 ? Math.round(totalComments / postCount) : 0,
           avg_engagement: postCount > 0 ? Math.round((totalEngagement / postCount) * 10) / 10 : 0,
           total_reach: totalReach,
+          avg_link_clicks: postCount > 0 ? Math.round(totalLinkClicks / postCount) : 0,
         };
       });
 
@@ -146,6 +149,10 @@ export function SocialMediaDashboard() {
         case 'comments':
           aValue = a.avg_comments;
           bValue = b.avg_comments;
+          break;
+        case 'link_clicks':
+          aValue = a.avg_link_clicks;
+          bValue = b.avg_link_clicks;
           break;
         default:
           aValue = a.followers_count;
@@ -377,6 +384,9 @@ export function SocialMediaDashboard() {
                   <SortableHeader field="comments" className="text-right">
                     Méd. Comentários
                   </SortableHeader>
+                  <SortableHeader field="link_clicks" className="text-right">
+                    Méd. Cliques Link
+                  </SortableHeader>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -423,6 +433,7 @@ export function SocialMediaDashboard() {
                     </TableCell>
                     <TableCell className="text-right">{formatNumber(profile.avg_likes)}</TableCell>
                     <TableCell className="text-right">{formatNumber(profile.avg_comments)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(profile.avg_link_clicks)}</TableCell>
                     <TableCell>
                       <a
                         href={`https://instagram.com/${profile.username}`}
