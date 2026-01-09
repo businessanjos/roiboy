@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -126,6 +126,7 @@ const normalizeRevenueRange = (value: string | undefined): string | undefined =>
 
 export default function Leads() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useCurrentUser();
   const {
     leads,
@@ -243,6 +244,21 @@ export default function Leads() {
       fetchFieldValues();
     }
   }, [leads, fetchFieldValues]);
+
+  // Handle URL query param to open lead detail automatically
+  useEffect(() => {
+    const leadIdFromUrl = searchParams.get('lead');
+    
+    if (leadIdFromUrl && leads.length > 0 && !loading) {
+      const lead = leads.find(l => l.id === leadIdFromUrl);
+      if (lead) {
+        setDetailLead(lead);
+        // Clear the query param after opening
+        searchParams.delete('lead');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, leads, loading, setSearchParams]);
 
   const handleFieldValueChange = (leadId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({
