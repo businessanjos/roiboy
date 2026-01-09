@@ -8,16 +8,16 @@ interface ContentDistributionChartsProps {
 }
 
 const FORMAT_COLORS: Record<string, string> = {
-  reels: 'hsl(var(--chart-1))',
-  carousel: 'hsl(var(--chart-2))',
-  static: 'hsl(var(--chart-3))',
+  reels: '#f97316', // orange-500
+  carousel: '#3b82f6', // blue-500
+  static: '#a855f7', // purple-500
 };
 
 const OBJECTIVE_COLORS: Record<string, string> = {
-  growth: 'hsl(var(--chart-1))',
-  connection: 'hsl(var(--chart-2))',
-  authority: 'hsl(var(--chart-3))',
-  sales: 'hsl(var(--chart-4))',
+  growth: '#22c55e', // green-500
+  connection: '#ec4899', // pink-500
+  authority: '#6366f1', // indigo-500
+  sales: '#eab308', // yellow-500
 };
 
 const FORMAT_LABELS: Record<string, string> = {
