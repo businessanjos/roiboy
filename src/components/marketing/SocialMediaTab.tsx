@@ -19,6 +19,8 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
+  List,
+  PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,6 +59,7 @@ import { InstagramProfileHeader } from './InstagramProfileHeader';
 import { AddPostDialog, PostFormData } from './AddPostDialog';
 import { EditPostDialog, EditPostFormData } from './EditPostDialog';
 import { DeletePostDialog } from './DeletePostDialog';
+import { ContentDistributionCharts } from './ContentDistributionCharts';
 import { cn } from '@/lib/utils';
 
 export function SocialMediaTab() {
@@ -261,263 +265,284 @@ export function SocialMediaTab() {
         />
       </div>
 
-      {/* Posts Table */}
+      {/* Posts Section with Tabs */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              Análise de Conteúdos
-              <Badge variant="secondary" className="font-normal">
-                {filteredPosts.length} posts
-              </Badge>
-            </CardTitle>
+        <Tabs defaultValue="list" className="w-full">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  Análise de Conteúdos
+                  <Badge variant="secondary" className="font-normal">
+                    {filteredPosts.length} posts
+                  </Badge>
+                </CardTitle>
+                <TabsList className="h-8">
+                  <TabsTrigger value="list" className="gap-1.5 text-xs px-3">
+                    <List className="h-3.5 w-3.5" />
+                    Lista
+                  </TabsTrigger>
+                  <TabsTrigger value="charts" className="gap-1.5 text-xs px-3">
+                    <PieChart className="h-3.5 w-3.5" />
+                    Divisão
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-            <div className="flex items-center gap-2">
-              {/* Format Filter */}
-              <Select value={formatFilter} onValueChange={setFormatFilter}>
-                <SelectTrigger className="w-[140px] h-9 bg-card">
-                  <SelectValue placeholder="Formato" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos formatos</SelectItem>
-                  <SelectItem value="reels">Reels</SelectItem>
-                  <SelectItem value="carousel">Carrossel</SelectItem>
-                  <SelectItem value="static">Estático</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                {/* Format Filter */}
+                <Select value={formatFilter} onValueChange={setFormatFilter}>
+                  <SelectTrigger className="w-[140px] h-9 bg-card">
+                    <SelectValue placeholder="Formato" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos formatos</SelectItem>
+                    <SelectItem value="reels">Reels</SelectItem>
+                    <SelectItem value="carousel">Carrossel</SelectItem>
+                    <SelectItem value="static">Estático</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {/* Objective Filter */}
-              <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
-                <SelectTrigger className="w-[150px] h-9 bg-card">
-                  <SelectValue placeholder="Objetivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos objetivos</SelectItem>
-                  <SelectItem value="growth">Crescimento</SelectItem>
-                  <SelectItem value="connection">Conexão</SelectItem>
-                  <SelectItem value="authority">Autoridade</SelectItem>
-                  <SelectItem value="sales">Vendas</SelectItem>
-                </SelectContent>
-              </Select>
+                {/* Objective Filter */}
+                <Select value={objectiveFilter} onValueChange={setObjectiveFilter}>
+                  <SelectTrigger className="w-[150px] h-9 bg-card">
+                    <SelectValue placeholder="Objetivo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos objetivos</SelectItem>
+                    <SelectItem value="growth">Crescimento</SelectItem>
+                    <SelectItem value="connection">Conexão</SelectItem>
+                    <SelectItem value="authority">Autoridade</SelectItem>
+                    <SelectItem value="sales">Vendas</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {/* Add Post Button */}
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-9"
-                onClick={() => setAddPostDialogOpen(true)}
-                disabled={!currentProfile}
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar
-              </Button>
+                {/* Add Post Button */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 h-9"
+                  onClick={() => setAddPostDialogOpen(true)}
+                  disabled={!currentProfile}
+                >
+                  <Plus className="h-4 w-4" />
+                  Adicionar
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="w-[100px]">Data</TableHead>
-                  <TableHead className="w-[100px]">Formato</TableHead>
-                  <TableHead className="w-[120px]">Objetivo (IA)</TableHead>
-                  <TableHead className="min-w-[200px]">Conteúdo</TableHead>
-                  <TableHead className="text-right w-[80px]">
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                        <Eye className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent>Alcance</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="text-right w-[70px]">
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                        <Heart className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent>Curtidas</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="text-right w-[70px]">
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent>Comentários</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="text-right w-[70px]">
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                        <Share2 className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent>Compartilhamentos</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="text-right w-[70px]">
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                        <Bookmark className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent>Salvamentos</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="text-right w-[70px]">
-                    <Tooltip>
-                      <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                        <Link2 className="h-3.5 w-3.5" />
-                      </TooltipTrigger>
-                      <TooltipContent>Cliques no Link</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="text-right w-[90px] font-semibold text-primary">
-                    Engaj. %
-                  </TableHead>
-                  <TableHead className="text-right w-[90px] font-semibold text-primary">
-                    Viral %
-                  </TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPosts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
-                      {posts.length === 0 
-                        ? 'Nenhum post encontrado para este perfil.'
-                        : 'Nenhum post encontrado com os filtros selecionados.'}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredPosts.map((post) => (
-                    <TableRow 
-                      key={post.id}
-                      className={cn(
-                        'group transition-colors',
-                        post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10'
-                      )}
-                    >
-                      <TableCell className="font-medium text-sm">
-                        {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        <PostFormatBadge format={post.post_type} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <PostObjectiveBadge 
-                            objective={post.ai_objective} 
-                            confidence={post.ai_objective_confidence}
-                          />
-                          {post.is_trending && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Em tendência!
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-start gap-2">
-                          <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                            {post.caption || 'Sem legenda'}
-                          </p>
-                          {post.permalink && (
-                            <a
-                              href={post.permalink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                            </a>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatNumber(post.reach)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(post.likes)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(post.comments)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(post.shares)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(post.saves)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber(post.link_clicks || 0)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant="outline" 
-                          className={cn(
-                            'font-semibold',
-                            post.engagement_rate >= 10 
-                              ? 'bg-green-100 text-green-700 border-green-200' 
-                              : post.engagement_rate >= 5
-                              ? 'bg-amber-100 text-amber-700 border-amber-200'
-                              : 'bg-gray-100 text-gray-700 border-gray-200'
-                          )}
-                        >
-                          {post.engagement_rate.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge 
-                          variant="outline" 
-                          className={cn(
-                            'font-semibold',
-                            post.virality_rate >= 1.5 
-                              ? 'bg-purple-100 text-purple-700 border-purple-200' 
-                              : 'bg-gray-100 text-gray-700 border-gray-200'
-                          )}
-                        >
-                          {post.virality_rate.toFixed(2)}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(post)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => openDeleteDialog(post)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+          </CardHeader>
+          
+          <TabsContent value="list" className="mt-0">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="w-[100px]">Data</TableHead>
+                      <TableHead className="w-[100px]">Formato</TableHead>
+                      <TableHead className="w-[120px]">Objetivo (IA)</TableHead>
+                      <TableHead className="min-w-[200px]">Conteúdo</TableHead>
+                      <TableHead className="text-right w-[80px]">
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            <Eye className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Alcance</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
+                      <TableHead className="text-right w-[70px]">
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            <Heart className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Curtidas</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
+                      <TableHead className="text-right w-[70px]">
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Comentários</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
+                      <TableHead className="text-right w-[70px]">
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            <Share2 className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Compartilhamentos</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
+                      <TableHead className="text-right w-[70px]">
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            <Bookmark className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Salvamentos</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
+                      <TableHead className="text-right w-[70px]">
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            <Link2 className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Cliques no Link</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
+                      <TableHead className="text-right w-[90px] font-semibold text-primary">
+                        Engaj. %
+                      </TableHead>
+                      <TableHead className="text-right w-[90px] font-semibold text-primary">
+                        Viral %
+                      </TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPosts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
+                          {posts.length === 0 
+                            ? 'Nenhum post encontrado para este perfil.'
+                            : 'Nenhum post encontrado com os filtros selecionados.'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredPosts.map((post) => (
+                        <TableRow 
+                          key={post.id}
+                          className={cn(
+                            'group transition-colors',
+                            post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10'
+                          )}
+                        >
+                          <TableCell className="font-medium text-sm">
+                            {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell>
+                            <PostFormatBadge format={post.post_type} />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <PostObjectiveBadge 
+                                objective={post.ai_objective} 
+                                confidence={post.ai_objective_confidence}
+                              />
+                              {post.is_trending && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Em tendência!
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-start gap-2">
+                              <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
+                                {post.caption || 'Sem legenda'}
+                              </p>
+                              {post.permalink && (
+                                <a
+                                  href={post.permalink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                </a>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatNumber(post.reach)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(post.likes)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(post.comments)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(post.shares)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(post.saves)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(post.link_clicks || 0)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge
+                              variant="outline" 
+                              className={cn(
+                                'font-medium',
+                                post.engagement_rate >= 5 && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                post.engagement_rate >= 3 && post.engagement_rate < 5 && 'bg-blue-50 text-blue-700 border-blue-200',
+                                post.engagement_rate < 3 && 'bg-gray-50 text-gray-600 border-gray-200'
+                              )}
+                            >
+                              {post.engagement_rate?.toFixed(1)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'font-medium',
+                                post.virality_rate >= 10 && 'bg-purple-50 text-purple-700 border-purple-200',
+                                post.virality_rate >= 5 && post.virality_rate < 10 && 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                                post.virality_rate < 5 && 'bg-gray-50 text-gray-600 border-gray-200'
+                              )}
+                            >
+                              {post.virality_rate?.toFixed(1)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEditDialog(post)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => openDeleteDialog(post)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </TabsContent>
+          
+          <TabsContent value="charts" className="mt-0">
+            <CardContent className="pt-2">
+              <ContentDistributionCharts posts={filteredPosts} />
+            </CardContent>
+          </TabsContent>
+        </Tabs>
       </Card>
 
       {/* Connect Dialog */}
