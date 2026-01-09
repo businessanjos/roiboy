@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal } from "@/hooks/useDeals";
@@ -77,9 +77,6 @@ import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { toast } from "sonner";
 import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
-import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -100,7 +97,6 @@ const LEAD_STATUS = [
 ];
 
 export default function LeadsTab() {
-  const { currentUser } = useCurrentUser();
   const {
     leads,
     loading,
@@ -115,53 +111,6 @@ export default function LeadsTab() {
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
   const { openZappConversation, loading: zappLoading } = useZappNavigation();
   const { users: salesUsers, loading: usersLoading } = useSectorUsers({ sectorId: "vendas" });
-
-  // Custom fields state
-  const [customFieldManagerOpen, setCustomFieldManagerOpen] = useState(false);
-  const [leadCustomFields, setLeadCustomFields] = useState<LeadCustomField[]>([]);
-  const [leadFieldValues, setLeadFieldValues] = useState<Record<string, any>>({});
-
-  const fetchLeadCustomFields = async () => {
-    const { data } = await supabase
-      .from("custom_fields")
-      .select("*")
-      .eq("is_active", true)
-      .eq("show_in_leads", true)
-      .order("display_order");
-
-    if (data) {
-      const mapped: LeadCustomField[] = data.map(f => ({
-        id: f.id,
-        name: f.name,
-        field_type: f.field_type as LeadCustomField["field_type"],
-        options: (f.options as unknown as { value: string; label: string; color: string }[]) || [],
-        is_required: f.is_required,
-        display_order: f.display_order,
-        is_active: f.is_active,
-        show_in_leads: f.show_in_leads,
-      }));
-      setLeadCustomFields(mapped);
-    }
-  };
-
-  const fetchLeadFieldValues = async (leadId: string) => {
-    const { data } = await supabase
-      .from("lead_field_values")
-      .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
-      .eq("lead_id", leadId);
-
-    if (data) {
-      const values: Record<string, any> = {};
-      data.forEach(fv => {
-        values[fv.field_id] = fv.value_text ?? fv.value_number ?? fv.value_boolean ?? fv.value_date ?? fv.value_json;
-      });
-      setLeadFieldValues(values);
-    }
-  };
-
-  const handleLeadFieldValueChange = (fieldId: string, newValue: any) => {
-    setLeadFieldValues(prev => ({ ...prev, [fieldId]: newValue }));
-  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string>("all");
@@ -208,19 +157,6 @@ export default function LeadsTab() {
     notes: "",
     responsible_user_id: "",
   });
-
-  // Fetch custom fields on mount and when detailLead changes
-  React.useEffect(() => {
-    fetchLeadCustomFields();
-  }, []);
-
-  React.useEffect(() => {
-    if (detailLead?.id) {
-      fetchLeadFieldValues(detailLead.id);
-    } else {
-      setLeadFieldValues({});
-    }
-  }, [detailLead?.id]);
 
   const resetForm = () => {
     setFormData({
@@ -1476,34 +1412,6 @@ export default function LeadsTab() {
                   </div>
                 </div>
 
-                {/* Custom Fields Section */}
-                {(leadCustomFields.length > 0 || currentUser?.account_id) && (
-                  <div className="space-y-3">
-                    {leadCustomFields.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {leadCustomFields.map(field => (
-                          <LeadFieldValueEditor
-                            key={field.id}
-                            field={field}
-                            leadId={detailLead.id}
-                            accountId={currentUser?.account_id || ""}
-                            currentValue={leadFieldValues[field.id]}
-                            onValueChange={handleLeadFieldValueChange}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCustomFieldManagerOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Inserir campo
-                    </Button>
-                  </div>
-                )}
-
                 {/* Notes */}
                 {detailLead.notes && (
                   <div>
@@ -1657,16 +1565,6 @@ export default function LeadsTab() {
         rows={importRows}
         onConfirmImport={handleConfirmImport}
         importing={importing}
-      />
-
-      {/* Lead Custom Fields Manager */}
-      <LeadCustomFieldsManager
-        open={customFieldManagerOpen}
-        onOpenChange={setCustomFieldManagerOpen}
-        onFieldsChange={() => {
-          fetchLeadCustomFields();
-          if (detailLead?.id) fetchLeadFieldValues(detailLead.id);
-        }}
       />
     </div>
   );
