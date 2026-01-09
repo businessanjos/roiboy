@@ -374,6 +374,15 @@ export function useSocialMediaData() {
     },
   });
 
+  const refetchData = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] }),
+      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] }),
+      queryClient.invalidateQueries({ queryKey: ['instagram-dashboard'] }),
+    ]);
+    toast.success('Dados atualizados!');
+  };
+
   return {
     profiles,
     currentProfile,
@@ -387,5 +396,6 @@ export function useSocialMediaData() {
     createPost,
     updatePost,
     deletePost,
+    refetchData,
   };
 }
