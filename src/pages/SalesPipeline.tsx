@@ -182,13 +182,35 @@ export default function SalesPipeline() {
           .rpc('convert_lead_to_client', { p_lead_id: deal.lead_id });
         
         if (convertError) {
-          console.error("Error converting lead:", convertError);
-          toast.error("Erro ao converter lead para cliente");
-          return;
+          // Check if lead was already converted
+          if (convertError.message?.includes('já foi convertido')) {
+            // Fetch the already converted client_id from the lead
+            const { data: lead } = await supabase
+              .from('leads')
+              .select('converted_to_client_id')
+              .eq('id', deal.lead_id)
+              .single();
+            
+            if (lead?.converted_to_client_id) {
+              clientId = lead.converted_to_client_id;
+            }
+          } else {
+            console.error("Error converting lead:", convertError);
+            toast.error("Erro ao converter lead para cliente");
+            return;
+          }
+        } else {
+          clientId = convertedClient;
+          toast.success("Lead convertido para cliente!");
         }
         
-        clientId = convertedClient;
-        toast.success("Lead convertido para cliente!");
+        // Update the deal with the client_id to prevent future conversion attempts
+        if (clientId) {
+          await supabase
+            .from('deals')
+            .update({ client_id: clientId })
+            .eq('id', dealId);
+        }
       }
 
       // Mark deal as won
