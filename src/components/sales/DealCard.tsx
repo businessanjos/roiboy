@@ -14,9 +14,10 @@ import { ptBR } from "date-fns/locale";
 import { DealActivitiesDialog } from "./DealActivitiesDialog";
 import { supabase } from "@/integrations/supabase/client";
 
-interface PendingTaskCount {
-  count: number;
+interface ActivityStatus {
+  pendingCount: number;
   hasOverdue: boolean;
+  totalActivities: number;
 }
 
 interface DealCardProps {
@@ -27,13 +28,13 @@ interface DealCardProps {
 
 export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
-  const [pendingTasksInfo, setPendingTasksInfo] = useState<PendingTaskCount>({ count: 0, hasOverdue: false });
+  const [activityStatus, setActivityStatus] = useState<ActivityStatus>({ pendingCount: 0, hasOverdue: false, totalActivities: 0 });
   
   const { openZappConversation, loading: zappLoading } = useZappNavigation();
   
-  // Fetch pending tasks count and overdue status for this deal
+  // Fetch all activities status for this deal
   useEffect(() => {
-    const fetchPendingTasksInfo = async () => {
+    const fetchActivityStatus = async () => {
       const { data, error } = await supabase
         .from("internal_tasks")
         .select(`
@@ -42,12 +43,13 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           completed_at,
           custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)
         `)
-        .eq("deal_id", deal.id)
-        .is("completed_at", null);
+        .eq("deal_id", deal.id);
       
       if (!error && data) {
-        // Filter out completed statuses
-        const pending = data.filter(t => !t.custom_status?.is_completed_status);
+        const totalActivities = data.length;
+        
+        // Filter pending (not completed)
+        const pending = data.filter(t => !t.completed_at && !t.custom_status?.is_completed_status);
         
         // Check for overdue tasks
         const today = startOfDay(new Date());
@@ -57,11 +59,11 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           return isBefore(dueDate, today);
         });
         
-        setPendingTasksInfo({ count: pending.length, hasOverdue });
+        setActivityStatus({ pendingCount: pending.length, hasOverdue, totalActivities });
       }
     };
     
-    fetchPendingTasksInfo();
+    fetchActivityStatus();
     
     // Subscribe to changes
     const channel = supabase
@@ -69,7 +71,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "internal_tasks", filter: `deal_id=eq.${deal.id}` },
-        () => fetchPendingTasksInfo()
+        () => fetchActivityStatus()
       )
       .subscribe();
     
@@ -168,6 +170,36 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   };
 
   const timeBadge = getTimeBadgeStyle();
+
+  // Activity status indicator
+  const getActivityStatusIndicator = () => {
+    // No pending activities = all done (or no activities)
+    if (activityStatus.pendingCount === 0) {
+      return { 
+        bgColor: "bg-emerald-500", 
+        textColor: "text-emerald-600", 
+        label: "Feito" 
+      };
+    }
+    
+    // Has overdue activities
+    if (activityStatus.hasOverdue) {
+      return { 
+        bgColor: "bg-red-500", 
+        textColor: "text-red-600", 
+        label: "Atrasado!" 
+      };
+    }
+    
+    // Has pending but none overdue
+    return { 
+      bgColor: "bg-amber-500", 
+      textColor: "text-amber-600", 
+      label: "A fazer" 
+    };
+  };
+
+  const statusIndicator = getActivityStatusIndicator();
 
   return (
     <>
@@ -273,27 +305,40 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
               size="icon"
               className={cn(
                 "h-5 w-5 relative",
-                pendingTasksInfo.count > 0 ? "hover:bg-primary/10" : "hover:bg-muted"
+                activityStatus.pendingCount > 0 ? "hover:bg-primary/10" : "hover:bg-muted"
               )}
               onClick={(e) => {
                 e.stopPropagation();
                 setActivitiesDialogOpen(true);
               }}
-              title={pendingTasksInfo.count > 0 ? `${pendingTasksInfo.count} atividade(s)` : "Atividades"}
+              title={activityStatus.pendingCount > 0 ? `${activityStatus.pendingCount} atividade(s)` : "Atividades"}
             >
               <ListTodo className={cn(
                 "h-3 w-3",
-                pendingTasksInfo.hasOverdue ? "text-destructive" : pendingTasksInfo.count > 0 ? "text-primary" : "text-muted-foreground"
+                activityStatus.hasOverdue ? "text-destructive" : activityStatus.pendingCount > 0 ? "text-primary" : "text-muted-foreground"
               )} />
-              {pendingTasksInfo.count > 0 && (
+              {activityStatus.pendingCount > 0 && (
                 <span className={cn(
                   "absolute -top-1 -right-1 text-[8px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-bold",
-                  pendingTasksInfo.hasOverdue ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+                  activityStatus.hasOverdue ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
                 )}>
-                  {pendingTasksInfo.count}
+                  {activityStatus.pendingCount}
                 </span>
               )}
             </Button>
+            {/* Activity Status Indicator */}
+            <div className="flex items-center gap-1">
+              <span className={cn(
+                "h-2 w-2 rounded-full",
+                statusIndicator.bgColor
+              )} />
+              <span className={cn(
+                "text-[10px] font-medium",
+                statusIndicator.textColor
+              )}>
+                {statusIndicator.label}
+              </span>
+            </div>
           </div>
           <span className="text-xs font-bold text-primary">
             {formatCurrency(deal.value)}
