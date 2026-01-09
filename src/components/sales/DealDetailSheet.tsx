@@ -703,7 +703,7 @@ export function DealDetailSheet({
                         </Button>
                       )}
                     </h4>
-                    {dealCustomFields.length > 0 ? (
+                    {dealCustomFields.length > 0 && currentUser?.account_id ? (
                       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                         {dealCustomFields.map(field => {
                           const value = dealFieldValues[field.id];
@@ -713,7 +713,7 @@ export function DealDetailSheet({
                               <DealFieldValueEditor
                                 field={field}
                                 dealId={deal.id}
-                                accountId={currentUser?.account_id || ""}
+                                accountId={currentUser.account_id}
                                 currentValue={value}
                                 onValueChange={handleDealFieldValueChange}
                               />
@@ -721,6 +721,8 @@ export function DealDetailSheet({
                           );
                         })}
                       </div>
+                    ) : dealCustomFields.length > 0 ? (
+                      <p className="text-xs text-muted-foreground">Carregando...</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">Nenhum campo visível</p>
                     )}
