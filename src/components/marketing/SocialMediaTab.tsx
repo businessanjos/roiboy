@@ -80,6 +80,7 @@ export function SocialMediaTab() {
     createPost,
     updatePost,
     deletePost,
+    refetchData,
   } = useSocialMediaData();
 
   // Filter posts based on selected filters
@@ -217,7 +218,7 @@ export function SocialMediaTab() {
             variant="outline"
             size="sm"
             className="gap-1.5"
-            disabled
+            onClick={refetchData}
           >
             <RefreshCw className="h-4 w-4" />
             Sincronizar
