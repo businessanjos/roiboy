@@ -81,6 +81,7 @@ export function SocialMediaTab() {
     updatePost,
     deletePost,
     refetchData,
+    syncProfiles,
   } = useSocialMediaData();
 
   // Filter posts based on selected filters
@@ -218,10 +219,11 @@ export function SocialMediaTab() {
             variant="outline"
             size="sm"
             className="gap-1.5"
-            onClick={refetchData}
+            onClick={() => syncProfiles.mutate()}
+            disabled={syncProfiles.isPending || profiles.length === 0}
           >
-            <RefreshCw className="h-4 w-4" />
-            Sincronizar
+            <RefreshCw className={`h-4 w-4 ${syncProfiles.isPending ? 'animate-spin' : ''}`} />
+            {syncProfiles.isPending ? 'Sincronizando...' : 'Sincronizar'}
           </Button>
           <Button
             size="sm"
