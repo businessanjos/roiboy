@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
+  CalendarIcon,
   Instagram,
   Plus,
   Users,
@@ -46,6 +47,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -70,6 +73,8 @@ export function SocialMediaTab() {
   const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   
   const {
     profiles,
@@ -92,7 +97,12 @@ export function SocialMediaTab() {
   const filteredPosts = posts.filter((post) => {
     const matchesFormat = formatFilter === 'all' || post.post_type === formatFilter;
     const matchesObjective = objectiveFilter === 'all' || post.ai_objective === objectiveFilter;
-    return matchesFormat && matchesObjective;
+    
+    const postDate = new Date(post.posted_at);
+    const matchesDateFrom = !dateFrom || !isBefore(postDate, startOfDay(dateFrom));
+    const matchesDateTo = !dateTo || !isAfter(postDate, endOfDay(dateTo));
+    
+    return matchesFormat && matchesObjective && matchesDateFrom && matchesDateTo;
   });
 
   const formatNumber = (num: number): string => {
@@ -289,7 +299,74 @@ export function SocialMediaTab() {
                 </TabsList>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Date From Filter */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[130px] h-9 justify-start text-left font-normal",
+                        !dateFrom && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, "dd/MM/yy") : "De"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      initialFocus
+                      className="pointer-events-auto"
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                {/* Date To Filter */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[130px] h-9 justify-start text-left font-normal",
+                        !dateTo && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, "dd/MM/yy") : "Até"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      initialFocus
+                      className="pointer-events-auto"
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                {/* Clear Date Filters */}
+                {(dateFrom || dateTo) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-2"
+                    onClick={() => {
+                      setDateFrom(undefined);
+                      setDateTo(undefined);
+                    }}
+                  >
+                    Limpar datas
+                  </Button>
+                )}
+
                 {/* Format Filter */}
                 <Select value={formatFilter} onValueChange={setFormatFilter}>
                   <SelectTrigger className="w-[140px] h-9 bg-card">
