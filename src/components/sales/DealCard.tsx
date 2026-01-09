@@ -27,6 +27,12 @@ interface PendingTask {
   due_time: string | null;
   priority: string;
   assigned_to: string | null;
+  activity_type_id?: string | null;
+  activity_type?: {
+    id: string;
+    name: string;
+    color: string;
+  } | null;
   custom_status?: {
     name: string;
     color: string;
@@ -66,6 +72,8 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           due_time,
           priority,
           assigned_to,
+          activity_type_id,
+          activity_type:activity_types(id, name, color),
           custom_status:task_statuses!internal_tasks_custom_status_id_fkey(name, color, is_completed_status),
           assigned_user:users!internal_tasks_assigned_to_fkey(name)
         `)
@@ -392,7 +400,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                   <div key={task.id} className="p-2.5 hover:bg-muted/50 group">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{task.title}</p>
+                        <p className="text-xs font-medium truncate">{task.activity_type?.name || task.title}</p>
                         {task.due_date && (
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Calendar className="h-2.5 w-2.5" />
