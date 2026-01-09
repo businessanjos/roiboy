@@ -208,214 +208,216 @@ export function LeadDetailSheet({
   if (!open) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        {loading ? (
-          <div className="space-y-4 mt-6">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-20 w-full" />
-          </div>
-        ) : lead ? (
-          <>
-            <SheetHeader>
-              <div className="flex items-center justify-between">
-                <SheetTitle>{lead.full_name}</SheetTitle>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={lead.status}
-                    onValueChange={handleStatusChange}
-                  >
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LEAD_STATUS.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${s.color}`} />
-                            {s.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </SheetHeader>
-
-            <div className="mt-6 space-y-6">
-              {/* Contact Info */}
-              <div className="space-y-3">
-                {lead.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{lead.phone}</span>
-                  </div>
-                )}
-                {lead.email && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{lead.email}</span>
-                  </div>
-                )}
-                {lead.source && (
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span>Origem: {getSourceLabel(lead.source)}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Criado em{" "}
-                    {format(new Date(lead.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                      locale: ptBR,
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Custom Fields Section - Values */}
-              {customFields.length > 0 && (
-                <div className="flex flex-wrap gap-2 items-center">
-                  {customFields.map(field => (
-                    <LeadFieldValueEditor
-                      key={field.id}
-                      field={field}
-                      leadId={lead.id}
-                      accountId={currentUser?.account_id || ""}
-                      currentValue={fieldValues[field.id]}
-                      onValueChange={handleFieldValueChange}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Notes */}
-              {lead.notes && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Observações</p>
-                  <p className="text-sm text-muted-foreground">{lead.notes}</p>
-                </div>
-              )}
-
-              {/* Add Custom Fields Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setManagerOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Inserir campos
-              </Button>
-
-              <Separator />
-
-              {/* Deals Section */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium">Negócios</p>
-                  {onCreateDeal && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onCreateDeal(lead)}
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          {loading ? (
+            <div className="space-y-4 mt-6">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : lead ? (
+            <>
+              <SheetHeader>
+                <div className="flex items-center justify-between">
+                  <SheetTitle>{lead.full_name}</SheetTitle>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={lead.status}
+                      onValueChange={handleStatusChange}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Novo
-                    </Button>
-                  )}
-                </div>
-                {deals.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum negócio vinculado
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {deals.map((deal) => (
-                      <Card 
-                        key={deal.id}
-                        className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
-                        onClick={() => onDealClick?.(deal)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-sm">{deal.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {deal.stage?.name}
-                              </p>
-                            </div>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LEAD_STATUS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
                             <div className="flex items-center gap-2">
-                              {deal.value > 0 && (
-                                <Badge variant="outline">
-                                  {new Intl.NumberFormat("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL",
-                                  }).format(deal.value)}
-                                </Badge>
-                              )}
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <div className={`w-2 h-2 rounded-full ${s.color}`} />
+                              {s.label}
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <div className="mt-6 space-y-6">
+                {/* Contact Info */}
+                <div className="space-y-3">
+                  {lead.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{lead.phone}</span>
+                    </div>
+                  )}
+                  {lead.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{lead.email}</span>
+                    </div>
+                  )}
+                  {lead.source && (
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <span>Origem: {getSourceLabel(lead.source)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Criado em{" "}
+                      {format(new Date(lead.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                        locale: ptBR,
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Custom Fields Section - Values */}
+                {customFields.length > 0 && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {customFields.map(field => (
+                      <LeadFieldValueEditor
+                        key={field.id}
+                        field={field}
+                        leadId={lead.id}
+                        accountId={currentUser?.account_id || ""}
+                        currentValue={fieldValues[field.id]}
+                        onValueChange={handleFieldValueChange}
+                      />
                     ))}
                   </div>
                 )}
-              </div>
 
-              <Separator />
+                {/* Notes */}
+                {lead.notes && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Observações</p>
+                    <p className="text-sm text-muted-foreground">{lead.notes}</p>
+                  </div>
+                )}
 
-              {/* Timeline */}
-              <div>
-                <p className="text-sm font-medium mb-3">Histórico</p>
-                <LeadTimeline leadId={lead.id} />
-              </div>
+                {/* Add Custom Fields Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setManagerOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Inserir campos
+                </Button>
 
-              {/* Actions */}
-              {(onEdit || onDelete) && (
-                <div className="flex gap-2">
-                  {onEdit && (
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        onOpenChange(false);
-                        onEdit(lead);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Editar
-                    </Button>
-                  )}
-                  {onDelete && (
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-destructive hover:text-destructive"
-                      onClick={() => {
-                        onOpenChange(false);
-                        onDelete(lead.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </Button>
+                <Separator />
+
+                {/* Deals Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium">Negócios</p>
+                    {onCreateDeal && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onCreateDeal(lead)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Novo
+                      </Button>
+                    )}
+                  </div>
+                  {deals.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum negócio vinculado
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {deals.map((deal) => (
+                        <Card 
+                          key={deal.id}
+                          className={cn(onDealClick && "cursor-pointer hover:bg-muted/50")}
+                          onClick={() => onDealClick?.(deal)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">{deal.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {deal.stage?.name}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {deal.value > 0 && (
+                                  <Badge variant="outline">
+                                    {new Intl.NumberFormat("pt-BR", {
+                                      style: "currency",
+                                      currency: "BRL",
+                                    }).format(deal.value)}
+                                  </Badge>
+                                )}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-40">
-            <p className="text-muted-foreground">Lead não encontrado</p>
-          </div>
-        )}
-      </SheetContent>
 
-      {/* Custom Fields Manager Dialog */}
+                <Separator />
+
+                {/* Timeline */}
+                <div>
+                  <p className="text-sm font-medium mb-3">Histórico</p>
+                  <LeadTimeline leadId={lead.id} />
+                </div>
+
+                {/* Actions */}
+                {(onEdit || onDelete) && (
+                  <div className="flex gap-2">
+                    {onEdit && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          onOpenChange(false);
+                          onEdit(lead);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          onOpenChange(false);
+                          onDelete(lead.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-40">
+              <p className="text-muted-foreground">Lead não encontrado</p>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Custom Fields Manager Dialog - Outside Sheet to avoid Radix context conflicts */}
       <LeadCustomFieldsManager
         open={managerOpen}
         onOpenChange={setManagerOpen}
@@ -424,6 +426,6 @@ export function LeadDetailSheet({
           if (leadId) fetchFieldValues(leadId);
         }}
       />
-    </Sheet>
+    </>
   );
 }
