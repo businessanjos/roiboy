@@ -114,6 +114,11 @@ interface Task {
   leads: Lead | null;
   assigned_user: User | null;
   custom_status_id: string | null;
+  activity_type?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
 }
 
 type SortOption = "priority" | "due_date" | "created_at";
@@ -174,7 +179,8 @@ export default function Tasks() {
           clients:client_id (id, full_name),
           deals:deal_id (id, title),
           leads:lead_id (id, full_name),
-          assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url)
+          assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
+          activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color)
         `)
         .order("created_at", { ascending: false });
 
@@ -498,7 +504,7 @@ export default function Tasks() {
                             "font-medium truncate",
                             isCompleted && "line-through text-muted-foreground"
                           )}>
-                            {task.title}
+                            {task.activity_type?.name || task.title}
                           </p>
                           {task.description && (
                             <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-[300px]">

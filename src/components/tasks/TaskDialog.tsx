@@ -213,10 +213,14 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   };
 
   const handleSubmit = async () => {
-    if (!formData.title.trim()) {
-      toast.error("Preencha o título da tarefa");
+    if (!formData.activity_type_id) {
+      toast.error("Selecione o tipo de atividade");
       return;
     }
+    
+    // Get activity type name to use as title
+    const selectedActivityType = activityTypes.find(t => t.id === formData.activity_type_id);
+    const taskTitle = selectedActivityType?.name || "Atividade";
 
     if (!formData.assigned_to) {
       toast.error("Selecione o responsável");
@@ -241,7 +245,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
 
       if (task) {
         const updateData = {
-          title: formData.title.trim(),
+          title: taskTitle,
           description: formData.description.trim() || null,
           custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
@@ -266,7 +270,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           action: isCompleted ? "complete" : "update",
           entityType: "task",
           entityId: task.id,
-          entityName: formData.title.trim(),
+          entityName: taskTitle,
           details: { custom_status_id: formData.custom_status_id, priority: formData.priority, activity_type_id: formData.activity_type_id }
         });
         
@@ -274,7 +278,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       } else {
         const insertData = {
           account_id: currentUser.account_id,
-          title: formData.title.trim(),
+          title: taskTitle,
           description: formData.description.trim() || null,
           custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
@@ -299,7 +303,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           action: "create",
           entityType: "task",
           entityId: newTask.id,
-          entityName: formData.title.trim(),
+          entityName: taskTitle,
           details: { custom_status_id: formData.custom_status_id, priority: formData.priority, client_id: formData.client_id || null }
         });
         
@@ -328,13 +332,28 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         </DialogHeader>
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="task-title">Título *</Label>
-            <Input
-              id="task-title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="O que precisa ser feito?"
-            />
+            <Label>Tipo de Atividade *</Label>
+            <Select
+              value={formData.activity_type_id}
+              onValueChange={(value) => setFormData({ ...formData, activity_type_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo de atividade" />
+              </SelectTrigger>
+              <SelectContent>
+                {activityTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: type.color }}
+                      />
+                      {type.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -450,33 +469,6 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </Select>
           </div>
 
-          {activityTypes.length > 0 && (
-            <div className="space-y-2">
-              <Label>Tipo de Atividade</Label>
-              <Select
-                value={formData.activity_type_id}
-                onValueChange={(value) => setFormData({ ...formData, activity_type_id: value === "none" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem tipo</SelectItem>
-                  {activityTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      <div className="flex items-center gap-2">
-                        <span 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: type.color }}
-                        />
-                        {type.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">

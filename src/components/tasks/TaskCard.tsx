@@ -54,6 +54,11 @@ interface Task {
   created_at: string;
   clients?: Client | null;
   assigned_user?: User | null;
+  activity_type?: {
+    id: string;
+    name: string;
+    color: string | null;
+  } | null;
 }
 
 interface TaskCardProps {
@@ -146,7 +151,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
               "font-medium leading-tight",
               (isCompleted || isCancelled) && "line-through text-muted-foreground"
             )}>
-              {task.title}
+              {task.activity_type?.name || task.title}
             </p>
             {task.description && (
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">

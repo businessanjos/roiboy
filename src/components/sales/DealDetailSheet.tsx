@@ -885,7 +885,7 @@ export function DealDetailSheet({
                                       "text-xs mt-0.5",
                                       isCompleted ? "text-muted-foreground line-through" : "text-foreground"
                                     )}>
-                                      {task.title}
+                                      {task.activity_type?.name || task.title}
                                     </p>
                                     {task.due_date && (
                                       <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
