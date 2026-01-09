@@ -279,29 +279,25 @@ export function LeadDetailSheet({
 
               {/* Custom Fields Section */}
               {(customFields.length > 0 || currentUser?.account_id) && (
-                <div className="space-y-3">
-                  {customFields.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {customFields.map(field => (
-                        <LeadFieldValueEditor
-                          key={field.id}
-                          field={field}
-                          leadId={lead.id}
-                          accountId={currentUser?.account_id || ""}
-                          currentValue={fieldValues[field.id]}
-                          onValueChange={handleFieldValueChange}
-                        />
-                      ))}
-                    </div>
-                  )}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {customFields.map(field => (
+                    <LeadFieldValueEditor
+                      key={field.id}
+                      field={field}
+                      leadId={lead.id}
+                      accountId={currentUser?.account_id || ""}
+                      currentValue={fieldValues[field.id]}
+                      onValueChange={handleFieldValueChange}
+                    />
+                  ))}
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="w-full"
+                    className="text-muted-foreground h-auto py-1 px-2 text-xs"
                     onClick={() => setManagerOpen(true)}
                   >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Personalizar Campos
+                    <Plus className="h-3 w-3 mr-1" />
+                    Inserir Campo
                   </Button>
                 </div>
               )}
