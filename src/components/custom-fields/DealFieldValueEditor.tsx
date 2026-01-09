@@ -67,6 +67,13 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   };
 
   const saveValue = async (newValue: any) => {
+    // Validate accountId before saving
+    if (!accountId || accountId.length < 36) {
+      console.error("[DealFieldValueEditor] Invalid accountId:", accountId);
+      toast.error("Erro: Usuário não carregado. Aguarde e tente novamente.");
+      return;
+    }
+
     setSaving(true);
     try {
       // Determine which value column to use
