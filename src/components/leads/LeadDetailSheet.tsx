@@ -287,13 +287,13 @@ export function LeadDetailSheet({
 
                 {/* Custom Fields Section - Values */}
                 {customFields.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {customFields.map(field => (
                       <div
                         key={field.id}
-                        className="flex items-center gap-2 p-2 rounded-md border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors text-xs"
                       >
-                        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                        <span className="font-medium text-muted-foreground whitespace-nowrap">
                           {field.name}:
                         </span>
                         <LeadFieldValueEditor
