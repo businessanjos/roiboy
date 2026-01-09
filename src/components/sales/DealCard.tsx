@@ -170,6 +170,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   const timeBadge = getTimeBadgeStyle();
 
   return (
+    <>
     <Card
       ref={setNodeRef}
       style={style}
@@ -335,13 +336,14 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           </div>
         )}
       </CardContent>
-
-      <DealActivitiesDialog
-        open={activitiesDialogOpen}
-        onOpenChange={setActivitiesDialogOpen}
-        dealId={deal.id}
-        leadId={deal.lead_id || undefined}
-      />
     </Card>
+
+    <DealActivitiesDialog
+      open={activitiesDialogOpen}
+      onOpenChange={setActivitiesDialogOpen}
+      dealId={deal.id}
+      leadId={deal.lead_id || undefined}
+    />
+  </>
   );
 }
