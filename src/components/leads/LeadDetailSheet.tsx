@@ -227,29 +227,27 @@ export function LeadDetailSheet({
             </div>
           ) : lead ? (
             <>
-              <SheetHeader>
-                <div className="flex items-center justify-between">
-                  <SheetTitle>{lead.full_name}</SheetTitle>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={lead.status}
-                      onValueChange={handleStatusChange}
-                    >
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LEAD_STATUS.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${s.color}`} />
-                              {s.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <SheetHeader className="pr-8">
+                <div className="flex items-start justify-between gap-4">
+                  <SheetTitle className="pt-1">{lead.full_name}</SheetTitle>
+                  <Select
+                    value={lead.status}
+                    onValueChange={handleStatusChange}
+                  >
+                    <SelectTrigger className="w-[140px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEAD_STATUS.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${s.color}`} />
+                            {s.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </SheetHeader>
 
