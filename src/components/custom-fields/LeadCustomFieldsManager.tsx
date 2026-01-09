@@ -618,12 +618,21 @@ export function LeadCustomFieldsManager({ onFieldsChange, open: externalOpen, on
     </div>
   );
 
-  // If externally controlled, just render the content
+  // If externally controlled, render Dialog with external open/onOpenChange
   if (isControlled) {
-    return content;
+    return (
+      <Dialog open={managerOpen} onOpenChange={setManagerOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Campos Personalizados de Leads</DialogTitle>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+    );
   }
 
-  // Otherwise wrap in a Dialog
+  // Otherwise wrap in a Dialog with trigger button
   return (
     <Dialog open={managerOpen} onOpenChange={setManagerOpen}>
       <DialogTrigger asChild>
