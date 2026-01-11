@@ -6892,6 +6892,7 @@ export type Database = {
           account_id: string
           created_at: string
           id: string
+          pin_hash: string | null
           royzapp_enabled: boolean | null
           sector_id: string
           updated_at: string
@@ -6900,6 +6901,7 @@ export type Database = {
           account_id: string
           created_at?: string
           id?: string
+          pin_hash?: string | null
           royzapp_enabled?: boolean | null
           sector_id: string
           updated_at?: string
@@ -6908,6 +6910,7 @@ export type Database = {
           account_id?: string
           created_at?: string
           id?: string
+          pin_hash?: string | null
           royzapp_enabled?: boolean | null
           sector_id?: string
           updated_at?: string

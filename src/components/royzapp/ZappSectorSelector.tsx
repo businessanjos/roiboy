@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft } from "lucide-react";
+import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft, Lock } from "lucide-react";
 import { SectorId, sectors } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -10,6 +10,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { ZappPinDialog } from "./dialogs/ZappPinDialog";
 
 // Setores que têm WhatsApp configurável
 const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing", "diretoria"];
@@ -34,6 +35,12 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
   
   const [sectorStatuses, setSectorStatuses] = useState<WhatsAppSectorStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Estado para PIN do setor Diretoria
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [pendingSectorId, setPendingSectorId] = useState<SectorId | null>(null);
+  const [pinVerifiedSectors, setPinVerifiedSectors] = useState<Set<SectorId>>(new Set());
+  const [sectorPinRequired, setSectorPinRequired] = useState<Record<string, boolean>>({});
 
   // Buscar status de conexão WhatsApp e contagem de mensagens por setor
   useEffect(() => {
@@ -97,6 +104,19 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
         });
 
         setSectorStatuses(statuses);
+        
+        // Buscar quais setores têm PIN configurado
+        const { data: sectorSettings } = await supabase
+          .from("sector_settings")
+          .select("sector_id, pin_hash")
+          .in("sector_id", WHATSAPP_SECTOR_IDS);
+        
+        const pinRequired: Record<string, boolean> = {};
+        (sectorSettings || []).forEach((setting: any) => {
+          pinRequired[setting.sector_id] = !!setting.pin_hash;
+        });
+        setSectorPinRequired(pinRequired);
+        
       } catch (error) {
         console.error("Error fetching sector statuses:", error);
       } finally {
@@ -120,6 +140,33 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
 
   const getStatusForSector = (sectorId: SectorId) => {
     return sectorStatuses.find(s => s.sectorId === sectorId);
+  };
+
+  // Handler para clique no setor - verifica se precisa de PIN
+  const handleSectorClick = (sectorId: SectorId) => {
+    // Verificar se o setor requer PIN e ainda não foi verificado nesta sessão
+    if (sectorPinRequired[sectorId] && !pinVerifiedSectors.has(sectorId)) {
+      setPendingSectorId(sectorId);
+      setShowPinDialog(true);
+      return;
+    }
+    
+    onSelectSector(sectorId);
+  };
+
+  // Callback quando o PIN é verificado com sucesso
+  const handlePinSuccess = () => {
+    if (pendingSectorId) {
+      // Marcar setor como verificado nesta sessão
+      setPinVerifiedSectors(prev => new Set([...prev, pendingSectorId]));
+      onSelectSector(pendingSectorId);
+      setPendingSectorId(null);
+    }
+  };
+
+  // Verificar se setor requer PIN (para exibir ícone de cadeado)
+  const sectorRequiresPin = (sectorId: SectorId) => {
+    return sectorPinRequired[sectorId] && !pinVerifiedSectors.has(sectorId);
   };
 
   if (permissionsLoading || accessLoading || loading) {
@@ -181,8 +228,17 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                   "cursor-pointer transition-all hover:shadow-lg hover:border-primary/50",
                   "group relative overflow-hidden"
                 )}
-                onClick={() => onSelectSector(sectorId)}
+                onClick={() => handleSectorClick(sectorId)}
               >
+                {/* PIN lock badge */}
+                {sectorRequiresPin(sectorId) && (
+                  <div className="absolute top-3 left-3">
+                    <div className="p-1 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                      <Lock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                    </div>
+                  </div>
+                )}
+                
                 {/* Unread badge */}
                 {status && status.unreadCount > 0 && (
                   <div className="absolute top-3 right-3">
@@ -234,6 +290,15 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           })}
         </div>
       </div>
+      
+      {/* PIN Dialog */}
+      <ZappPinDialog
+        open={showPinDialog}
+        onOpenChange={setShowPinDialog}
+        sectorId={pendingSectorId || ""}
+        sectorName={pendingSectorId ? getSectorInfo(pendingSectorId)?.name || "Setor" : "Setor"}
+        onSuccess={handlePinSuccess}
+      />
     </div>
   );
 }
