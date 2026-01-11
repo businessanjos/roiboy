@@ -8,6 +8,7 @@ import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessM
 import { TeamManager } from "@/components/settings/TeamManager";
 import { ActivityTypesManager } from "@/components/sales";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 
 export default function Settings() {
   const { hasVendasAccess } = useSectorAccess();
@@ -57,6 +58,7 @@ export default function Settings() {
 
         <TabsContent value="sectors" className="space-y-4">
           <UserSectorAccessManager />
+          <SectorPinSettings />
         </TabsContent>
 
         {hasVendasAccess && (
