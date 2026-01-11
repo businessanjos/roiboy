@@ -160,29 +160,85 @@ export function ZappCRMPanel({
     enabled: !!conversationLeadId,
   });
 
-  // Fetch deals for this lead/client
+  // Fetch deals for this lead/client with fallback by phone
   const { data: deals = [], isLoading: dealsLoading, refetch: refetchDeals } = useQuery({
-    queryKey: ["contact-deals-zapp", conversationLeadId, conversationClientId],
+    queryKey: ["contact-deals-zapp", conversationLeadId, conversationClientId, conversationPhone, currentUser?.account_id],
     queryFn: async () => {
-      let query = supabase
-        .from("deals")
-        .select("id, title, value, stage_id, status, created_at")
-        .neq("status", "lost")
-        .order("created_at", { ascending: false });
+      if (!currentUser?.account_id) return [];
 
-      if (conversationLeadId) {
-        query = query.eq("lead_id", conversationLeadId);
-      } else if (conversationClientId) {
-        query = query.eq("client_id", conversationClientId);
-      } else {
-        return [];
+      // First try direct lookup by lead_id or client_id
+      if (conversationLeadId || conversationClientId) {
+        let query = supabase
+          .from("deals")
+          .select("id, title, value, stage_id, status, created_at")
+          .neq("status", "lost")
+          .order("created_at", { ascending: false });
+
+        if (conversationLeadId) {
+          query = query.eq("lead_id", conversationLeadId);
+        } else if (conversationClientId) {
+          query = query.eq("client_id", conversationClientId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        // If found, return the deals
+        if (data && data.length > 0) {
+          return data as Deal[];
+        }
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Deal[];
+      // Fallback: search by phone if no deals found and we have a phone
+      if (conversationPhone) {
+        // Find all leads with the same phone number in this account
+        const { data: similarLeads } = await supabase
+          .from("leads")
+          .select("id")
+          .eq("account_id", currentUser.account_id)
+          .eq("phone", conversationPhone);
+
+        if (similarLeads && similarLeads.length > 0) {
+          const leadIds = similarLeads.map(l => l.id);
+          const { data: dealsByPhone, error: dealsError } = await supabase
+            .from("deals")
+            .select("id, title, value, stage_id, status, created_at")
+            .in("lead_id", leadIds)
+            .neq("status", "lost")
+            .order("created_at", { ascending: false });
+
+          if (dealsError) throw dealsError;
+          if (dealsByPhone && dealsByPhone.length > 0) {
+            return dealsByPhone as Deal[];
+          }
+        }
+
+        // Also check clients with the same phone
+        const { data: similarClients } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("account_id", currentUser.account_id)
+          .eq("phone_e164", conversationPhone);
+
+        if (similarClients && similarClients.length > 0) {
+          const clientIds = similarClients.map(c => c.id);
+          const { data: dealsByClient, error: dealsError } = await supabase
+            .from("deals")
+            .select("id, title, value, stage_id, status, created_at")
+            .in("client_id", clientIds)
+            .neq("status", "lost")
+            .order("created_at", { ascending: false });
+
+          if (dealsError) throw dealsError;
+          if (dealsByClient && dealsByClient.length > 0) {
+            return dealsByClient as Deal[];
+          }
+        }
+      }
+
+      return [];
     },
-    enabled: !!(conversationLeadId || conversationClientId),
+    enabled: !!(conversationLeadId || conversationClientId || conversationPhone) && !!currentUser?.account_id,
   });
 
   const activeDeal = deals.find(d => d.status === "open");
