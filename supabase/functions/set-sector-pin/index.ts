@@ -58,6 +58,23 @@ serve(async (req) => {
       );
     }
 
+    // Buscar account_id do usuário
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("account_id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+    if (userError || !userData?.account_id) {
+      console.error("Error fetching user account:", userError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Conta do usuário não encontrada" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const accountId = userData.account_id;
+
     const { sector_id, pin } = await req.json();
 
     if (!sector_id) {
@@ -72,7 +89,8 @@ serve(async (req) => {
       const { error: updateError } = await supabase
         .from("sector_settings")
         .update({ pin_hash: null })
-        .eq("sector_id", sector_id);
+        .eq("sector_id", sector_id)
+        .eq("account_id", accountId);
 
       if (updateError) {
         console.error("Error removing PIN:", updateError);
@@ -98,11 +116,12 @@ serve(async (req) => {
     // Gerar hash do PIN
     const pinHash = await hashPin(pin);
 
-    // Verificar se já existe registro para este setor
+    // Verificar se já existe registro para este setor desta conta
     const { data: existing } = await supabase
       .from("sector_settings")
       .select("id")
       .eq("sector_id", sector_id)
+      .eq("account_id", accountId)
       .maybeSingle();
 
     if (existing) {
@@ -110,7 +129,8 @@ serve(async (req) => {
       const { error: updateError } = await supabase
         .from("sector_settings")
         .update({ pin_hash: pinHash })
-        .eq("sector_id", sector_id);
+        .eq("sector_id", sector_id)
+        .eq("account_id", accountId);
 
       if (updateError) {
         console.error("Error updating PIN:", updateError);
@@ -123,7 +143,11 @@ serve(async (req) => {
       // Inserir
       const { error: insertError } = await supabase
         .from("sector_settings")
-        .insert({ sector_id, pin_hash: pinHash });
+        .insert({ 
+          sector_id, 
+          pin_hash: pinHash,
+          account_id: accountId
+        });
 
       if (insertError) {
         console.error("Error inserting PIN:", insertError);
