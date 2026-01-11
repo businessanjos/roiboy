@@ -139,12 +139,18 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
 
     setCreating(true);
     try {
+      // Buscar usuário autenticado primeiro
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Usuário não autenticado");
+
+      // Filtrar pelo auth_user_id para evitar erro de múltiplas linhas
       const { data: userData } = await supabase
         .from("users")
         .select("account_id, id")
+        .eq("auth_user_id", authUser.id)
         .single();
 
-      if (!userData) throw new Error("Usuário não encontrado");
+      if (!userData) throw new Error("Perfil de usuário não encontrado");
 
       const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
 
