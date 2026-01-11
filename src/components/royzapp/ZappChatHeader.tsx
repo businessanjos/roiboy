@@ -85,52 +85,52 @@ export const ZappChatHeader = memo(function ZappChatHeader({
       )}
       
       {/* Header */}
-      <div className="bg-zapp-panel-header px-4 py-3 flex items-center gap-3 border-b border-zapp-border">
+      <div className="bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b border-zapp-border">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden text-zapp-text-muted hover:bg-zapp-hover"
+          className="lg:hidden text-zapp-text-muted hover:bg-zapp-hover h-8 w-8"
           onClick={onBack}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div 
-          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => clientId && onOpenClientEdit(clientId)}
         >
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
             <AvatarImage src={contactInfo.avatar || undefined} />
-            <AvatarFallback className="bg-muted text-muted-foreground text-sm">
+            <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm">
               {contactInfo.isGroup ? (
-                <Users2 className="h-5 w-5" />
+                <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
               ) : (
                 getInitials(contactInfo.name)
               )}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              {contactInfo.isGroup && <Users2 className="h-4 w-4 text-zapp-accent flex-shrink-0" />}
-              <h3 className="text-zapp-text font-medium truncate">
+            <div className="flex items-center gap-1">
+              {contactInfo.isGroup && <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-zapp-accent flex-shrink-0" />}
+              <h3 className="text-zapp-text font-medium truncate text-sm sm:text-base">
                 {contactInfo.name}
               </h3>
-              {clientId && <ExternalLink className="h-3.5 w-3.5 text-zapp-text-muted flex-shrink-0" />}
+              {clientId && <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-zapp-text-muted flex-shrink-0" />}
             </div>
-            <div className="flex items-center gap-2">
-              <p className="text-zapp-text-muted text-xs">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <p className="text-zapp-text-muted text-[10px] sm:text-xs truncate">
                 {contactInfo.phone}
                 {assignment.agent?.user && (
-                  <span> • Atendido por {assignment.agent.user.name}</span>
+                  <span className="hidden sm:inline"> • Atendido por {assignment.agent.user.name}</span>
                 )}
               </p>
-              {/* Product badges in header */}
+              {/* Product badges - hidden on very small screens */}
               {clientProducts && clientProducts.length > 0 && (
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {clientProducts.slice(0, 2).map((p) => (
+                <div className="hidden xs:flex items-center gap-1 flex-shrink-0">
+                  {clientProducts.slice(0, 1).map((p) => (
                     <Badge 
                       key={p.id} 
                       variant="secondary" 
-                      className="text-[10px] px-1.5 py-0 h-4 border-0"
+                      className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 h-3.5 sm:h-4 border-0"
                       style={{ 
                         backgroundColor: `${p.color || '#10b981'}20`,
                         color: p.color || '#10b981'
@@ -139,9 +139,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                       {p.name}
                     </Badge>
                   ))}
-                  {clientProducts.length > 2 && (
-                    <span className="text-[10px] text-zapp-text-muted">
-                      +{clientProducts.length - 2}
+                  {clientProducts.length > 1 && (
+                    <span className="text-[9px] sm:text-[10px] text-zapp-text-muted">
+                      +{clientProducts.length - 1}
                     </span>
                   )}
                 </div>
@@ -149,42 +149,43 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Assign to me / Release button */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Assign to me / Release button - icon only on mobile */}
           {assignment.agent_id !== currentAgentId ? (
             <Button
               size="sm"
-              className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-8 px-3"
+              className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-7 sm:h-8 px-2 sm:px-3"
               onClick={() => onAssignToMe(assignment.id)}
             >
-              <UserCheck className="h-4 w-4 mr-1.5" />
-              Puxar para mim
+              <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Puxar</span>
             </Button>
           ) : (
             <Button
               size="sm"
               variant="outline"
-              className="border-amber-500 text-amber-500 hover:bg-amber-500/10 text-xs h-8 px-3"
+              className="border-amber-500 text-amber-500 hover:bg-amber-500/10 text-xs h-7 sm:h-8 px-2 sm:px-3"
               onClick={() => onReleaseToQueue(assignment.id)}
             >
-              <ArrowLeft className="h-4 w-4 mr-1.5" />
-              Devolver
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Devolver</span>
             </Button>
           )}
           
-          {/* Status dropdown */}
+          {/* Status dropdown - more compact on mobile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "h-8 px-3 text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
+                  "h-7 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
                   STATUS_CONFIG[assignment.status]?.color || "text-muted-foreground",
                   "border-current bg-transparent"
                 )}
               >
-                {STATUS_CONFIG[assignment.status]?.label || "Status"}
+                <span className="hidden sm:inline">{STATUS_CONFIG[assignment.status]?.label || "Status"}</span>
+                <span className="sm:hidden">{(STATUS_CONFIG[assignment.status]?.label || "Status").slice(0, 5)}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">
@@ -213,38 +214,67 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             </DropdownMenuContent>
           </DropdownMenu>
           
-          {/* Close ticket button */}
+          {/* Close ticket button - hidden on very small screens */}
           {assignment.status !== "closed" && onOpenCloseTicket && (
             <Button
               size="sm"
               variant="outline"
-              className="h-8 px-3 text-xs border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
+              className="hidden xs:flex h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
               onClick={onOpenCloseTicket}
             >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Finalizar
+              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Finalizar</span>
             </Button>
           )}
           
           <div className="flex items-center">
+            {/* Transfer and Phone - hidden on very small screens, moved to dropdown */}
             <Button
               variant="ghost"
               size="icon"
-              className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8"
+              className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
               onClick={onOpenTransfer}
             >
-              <ArrowRightLeft className="h-4 w-4" />
+              <ArrowRightLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
-              <Phone className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+            >
+              <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-8 w-8">
+                <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
+                {/* Mobile-only actions */}
+                <div className="sm:hidden">
+                  <DropdownMenuItem 
+                    className="text-zapp-text hover:bg-zapp-hover"
+                    onClick={onOpenTransfer}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    Transferir
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover">
+                    <Phone className="h-4 w-4 mr-2" />
+                    Ligar
+                  </DropdownMenuItem>
+                  {assignment.status !== "closed" && onOpenCloseTicket && (
+                    <DropdownMenuItem 
+                      className="text-emerald-500 hover:bg-zapp-hover"
+                      onClick={onOpenCloseTicket}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Finalizar Ticket
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator className="bg-zapp-border" />
+                </div>
                 {clientId && (
                   <>
                     <DropdownMenuItem 

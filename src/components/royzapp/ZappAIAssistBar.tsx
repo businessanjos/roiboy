@@ -76,10 +76,10 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
   }
 
   return (
-    <div className="bg-zapp-panel border-t border-zapp-border">
+    <div className="bg-zapp-panel border-t border-zapp-border overflow-hidden">
       {/* Correction section */}
       {hasCorrection && (
-        <div className="px-3 py-2 border-b border-zapp-border bg-amber-500/5">
+        <div className="px-2 sm:px-3 py-2 border-b border-zapp-border bg-amber-500/5">
           <div className="flex items-start gap-2">
             <Wand2 className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -97,8 +97,8 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
                 onClick={onApplyCorrection}
                 className="h-7 px-2 text-zapp-accent hover:bg-zapp-accent/10"
               >
-                <Check className="h-4 w-4 mr-1" />
-                Usar
+                <Check className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Usar</span>
               </Button>
               <Button
                 size="sm"
@@ -115,11 +115,11 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
 
       {/* Suggestions section - show toggle even when no suggestions */}
       {(hasSuggestions || isLoadingSuggestions || onToggleSuggestions) && (
-        <div className="px-3 py-2">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-zapp-accent" />
-            <span className="text-xs text-zapp-text-muted font-medium">
-              Sugestões de resposta
+        <div className="px-2 sm:px-3 py-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 overflow-x-auto">
+            <Sparkles className="h-4 w-4 text-zapp-accent flex-shrink-0" />
+            <span className="text-[10px] sm:text-xs text-zapp-text-muted font-medium whitespace-nowrap">
+              Sugestões<span className="hidden sm:inline"> de resposta</span>
             </span>
             
             {/* Toggle button */}
@@ -127,7 +127,7 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
               <button
                 onClick={onToggleSuggestions}
                 className={cn(
-                  "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full transition-colors",
+                  "flex items-center gap-1 text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full transition-colors flex-shrink-0",
                   suggestionsEnabled 
                     ? "bg-zapp-accent/15 text-zapp-accent hover:bg-zapp-accent/25" 
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -139,14 +139,14 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
                 ) : (
                   <ToggleLeft className="h-3 w-3" />
                 )}
-                {suggestionsEnabled ? "Ativado" : "Desativado"}
+                <span className="hidden xs:inline">{suggestionsEnabled ? "Ativado" : "Desativado"}</span>
               </button>
             )}
             
-            {/* SPIN Phase indicator */}
+            {/* SPIN Phase indicator - hidden on very small screens */}
             {suggestionsEnabled && currentSpinPhase && spinPhaseConfig[currentSpinPhase] && (
               <span className={cn(
-                "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                "hidden xs:inline text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-medium whitespace-nowrap",
                 spinPhaseConfig[currentSpinPhase].color
               )}>
                 {spinPhaseConfig[currentSpinPhase].icon} {spinPhaseConfig[currentSpinPhase].label}
@@ -155,13 +155,13 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
             
             {suggestionsEnabled && (
               isLoadingSuggestions ? (
-                <Loader2 className="h-3 w-3 animate-spin text-zapp-text-muted" />
+                <Loader2 className="h-3 w-3 animate-spin text-zapp-text-muted flex-shrink-0" />
               ) : (
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={onRefreshSuggestions}
-                  className="h-5 w-5 p-0 text-zapp-text-muted hover:text-zapp-accent"
+                  className="h-5 w-5 p-0 text-zapp-text-muted hover:text-zapp-accent flex-shrink-0"
                 >
                   <RefreshCw className="h-3 w-3" />
                 </Button>
@@ -170,26 +170,26 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
           </div>
           
           {suggestionsEnabled && suggestions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-2 px-2 sm:-mx-3 sm:px-3">
               {suggestions.map((suggestion) => (
                 <div
                   key={suggestion.id}
                   className={cn(
-                    "group flex items-center gap-1 bg-zapp-bg rounded-lg border border-zapp-border transition-colors",
+                    "group flex items-center gap-1 bg-zapp-bg rounded-lg border border-zapp-border transition-colors flex-shrink-0",
                     suggestion.feedbackGiven === "positive" && "border-green-500/50 bg-green-500/5",
                     suggestion.feedbackGiven === "negative" && "border-red-500/50 bg-red-500/5"
                   )}
                 >
                   <button
                     onClick={() => onSelectSuggestion(suggestion)}
-                    className="px-3 py-1.5 text-sm text-zapp-text hover:text-zapp-accent transition-colors text-left max-w-[280px] truncate"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-zapp-text hover:text-zapp-accent transition-colors text-left max-w-[200px] sm:max-w-[280px] truncate"
                     title={suggestion.text}
                   >
                     {suggestion.text}
                   </button>
                   
                   {!suggestion.feedbackGiven ? (
-                    <div className="flex items-center gap-0.5 pr-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="hidden sm:flex items-center gap-0.5 pr-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => onSendFeedback(suggestion.id, "positive")}
                         className="p-1 text-zapp-text-muted hover:text-green-500 transition-colors"
@@ -219,8 +219,8 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
           )}
           
           {suggestionsEnabled && suggestions.length === 0 && !isLoadingSuggestions && (
-            <p className="text-xs text-zapp-text-muted">
-              Aguardando mensagem do cliente para sugerir respostas...
+            <p className="text-[10px] sm:text-xs text-zapp-text-muted">
+              Aguardando mensagem do cliente...
             </p>
           )}
         </div>
@@ -228,10 +228,10 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
 
       {/* Loading indicator when no content yet */}
       {isLoading && !hasCorrection && !hasSuggestions && (
-        <div className="px-3 py-2 flex items-center gap-2">
+        <div className="px-2 sm:px-3 py-2 flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin text-zapp-text-muted" />
-          <span className="text-xs text-zapp-text-muted">
-            {isCheckingSpelling ? "Verificando ortografia..." : "Gerando sugestões..."}
+          <span className="text-[10px] sm:text-xs text-zapp-text-muted">
+            {isCheckingSpelling ? "Verificando..." : "Gerando..."}
           </span>
         </div>
       )}
