@@ -4669,6 +4669,54 @@ export type Database = {
           },
         ]
       }
+      instagram_insights: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          id: string
+          imported_at: string | null
+          metric_date: string
+          metric_type: string
+          profile_id: string
+          value: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          id?: string
+          imported_at?: string | null
+          metric_date: string
+          metric_type: string
+          profile_id: string
+          value?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          id?: string
+          imported_at?: string | null
+          metric_date?: string
+          metric_type?: string
+          profile_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_insights_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instagram_insights_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_posts: {
         Row: {
           ai_objective: string | null

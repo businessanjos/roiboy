@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   List,
   PieChart,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +64,7 @@ import { AddPostDialog, PostFormData } from './AddPostDialog';
 import { EditPostDialog, EditPostFormData } from './EditPostDialog';
 import { DeletePostDialog } from './DeletePostDialog';
 import { ContentDistributionCharts } from './ContentDistributionCharts';
+import { ProfileInsightsDashboard } from './ProfileInsightsDashboard';
 import { cn } from '@/lib/utils';
 
 export function SocialMediaTab() {
@@ -295,6 +297,10 @@ export function SocialMediaTab() {
                   <TabsTrigger value="charts" className="gap-1.5 text-xs px-3">
                     <PieChart className="h-3.5 w-3.5" />
                     Divisão
+                  </TabsTrigger>
+                  <TabsTrigger value="insights" className="gap-1.5 text-xs px-3">
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    Insights
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -617,6 +623,17 @@ export function SocialMediaTab() {
           <TabsContent value="charts" className="mt-0">
             <CardContent className="pt-2">
               <ContentDistributionCharts posts={filteredPosts} />
+            </CardContent>
+          </TabsContent>
+
+          <TabsContent value="insights" className="mt-0">
+            <CardContent className="pt-2">
+              {currentProfile && (
+                <ProfileInsightsDashboard
+                  profileId={currentProfile.id}
+                  profiles={profiles.map(p => ({ id: p.id, username: p.username }))}
+                />
+              )}
             </CardContent>
           </TabsContent>
         </Tabs>
