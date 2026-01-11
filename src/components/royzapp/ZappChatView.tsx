@@ -240,7 +240,7 @@ export function ZappChatView({
   const clientId = selectedConversation.zapp_conversation?.client_id || selectedConversation.conversation?.client?.id;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full bg-zapp-bg overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 w-full bg-zapp-bg overflow-hidden max-w-full">
       {/* Chat header */}
       <ZappChatHeader
         assignment={selectedConversation}

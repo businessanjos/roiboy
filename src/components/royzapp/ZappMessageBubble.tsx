@@ -291,7 +291,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
         )}
         
         <div className={cn(
-          "max-w-[65%] px-3 py-2 rounded-lg relative shadow",
+          "max-w-[65%] px-3 py-2 rounded-lg relative shadow overflow-hidden",
           message.is_from_client
             ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
             : "bg-zapp-message-out text-zapp-text rounded-tr-none"
@@ -334,7 +334,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               <img 
                 src={message.media_url} 
                 alt="Imagem"
-                className="max-w-full max-h-72 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                className="max-w-full w-full max-h-72 object-contain cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => window.open(message.media_url!, '_blank')}
               />
             </div>
@@ -451,7 +451,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           
           {/* Text content (hide for audio-only messages) */}
           {renderedContent && (
-            <p className="text-sm whitespace-pre-wrap break-words">
+            <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">
               {renderedContent}
             </p>
           )}
