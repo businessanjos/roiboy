@@ -38,7 +38,10 @@ import {
   Users,
   Target,
   Search,
+  Calendar,
 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import LeadsTab from "@/components/sales/LeadsTab";
 
 export default function SalesPipeline() {
@@ -84,6 +87,7 @@ export default function SalesPipeline() {
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSalesRep, setSelectedSalesRep] = useState<string>('all');
+  const [wonMonthFilter, setWonMonthFilter] = useState<string>('all');
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
@@ -130,6 +134,36 @@ export default function SalesPipeline() {
   const filteredOpenDeals = filterDeals(openDeals);
   const filteredWonDeals = filterDeals(wonDeals);
   const filteredLostDeals = filterDeals(lostDeals);
+
+  // Available months for won deals filter
+  const availableWonMonths = useMemo(() => {
+    const monthsSet = new Map<string, string>();
+    wonDeals.forEach(deal => {
+      if (deal.won_at) {
+        const date = new Date(deal.won_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+        monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
+      }
+    });
+    return Array.from(monthsSet.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]));
+  }, [wonDeals]);
+
+  // Filter won deals by selected month
+  const filteredWonDealsByMonth = useMemo(() => {
+    if (wonMonthFilter === 'all') return filteredWonDeals;
+    return filteredWonDeals.filter(deal => {
+      if (!deal.won_at) return false;
+      const date = new Date(deal.won_at);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return key === wonMonthFilter;
+    });
+  }, [filteredWonDeals, wonMonthFilter]);
+
+  const filteredWonTotal = useMemo(() => {
+    return filteredWonDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
+  }, [filteredWonDealsByMonth]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -485,9 +519,44 @@ export default function SalesPipeline() {
                 )}
               </TabsContent>
 
-              <TabsContent value="won" className="mt-0">
+              <TabsContent value="won" className="mt-0 space-y-4">
+                {/* Summary and Month Filter */}
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total de Ganhas</p>
+                      <p className="text-2xl font-bold text-emerald-600">
+                        {formatCurrency(filteredWonTotal)}
+                      </p>
+                    </div>
+                    <div className="h-10 w-px bg-emerald-500/20" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Negócios</p>
+                      <p className="text-xl font-semibold">
+                        {filteredWonDealsByMonth.length}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Month Filter */}
+                  <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
+                    <SelectTrigger className="w-[200px] bg-background">
+                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="Todos os meses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os meses</SelectItem>
+                      {availableWonMonths.map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <DealListView 
-                  deals={filteredWonDeals} 
+                  deals={filteredWonDealsByMonth} 
                   stages={stages}
                   onDealClick={handleDealClick} 
                   showStatus
