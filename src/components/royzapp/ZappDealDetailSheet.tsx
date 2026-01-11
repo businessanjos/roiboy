@@ -114,6 +114,19 @@ export function ZappDealDetailSheet({
   const [activeTab, setActiveTab] = useState("resumo");
   const [newActivityType, setNewActivityType] = useState("note");
   const [newActivityDescription, setNewActivityDescription] = useState("");
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const toggleItemExpanded = (itemId: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
 
   // Fetch deal details
   const { data: deal, isLoading: dealLoading, refetch: refetchDeal } = useQuery({
@@ -670,9 +683,22 @@ export function ZappDealDetailSheet({
                                 )}
                               </div>
                               {item.description && (
-                                <p className="text-xs text-zapp-text-muted mt-0.5 line-clamp-2">
-                                  {item.description}
-                                </p>
+                                <div>
+                                  <p className={cn(
+                                    "text-xs text-zapp-text-muted mt-0.5 whitespace-pre-wrap",
+                                    !expandedItems.has(item.id) && "line-clamp-2"
+                                  )}>
+                                    {item.description}
+                                  </p>
+                                  {item.description.length > 80 && (
+                                    <button
+                                      onClick={() => toggleItemExpanded(item.id)}
+                                      className="text-[10px] text-zapp-accent hover:underline mt-0.5"
+                                    >
+                                      {expandedItems.has(item.id) ? "Ver menos" : "Ver mais"}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                               <div className="flex items-center gap-2 mt-1 text-[10px] text-zapp-text-muted">
                                 {item.user && <span>{item.user.name}</span>}
