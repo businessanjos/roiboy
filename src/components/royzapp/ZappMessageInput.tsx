@@ -311,7 +311,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
       {/* Message input */}
       <div 
         className={cn(
-          "bg-zapp-panel px-4 py-3 flex items-center gap-2 relative",
+          "bg-zapp-panel px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-1 sm:gap-2 relative",
           isDragging && "ring-2 ring-zapp-accent ring-inset"
         )}
         onDrop={handleDrop}
@@ -323,24 +323,26 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           <div className="absolute inset-0 bg-zapp-accent/10 border-2 border-dashed border-zapp-accent rounded-lg flex items-center justify-center z-50 pointer-events-none">
             <div className="flex items-center gap-2 text-zapp-accent font-medium">
               <ImageIcon className="h-5 w-5" />
-              Solte a imagem aqui
+              <span className="hidden sm:inline">Solte a imagem aqui</span>
             </div>
           </div>
         )}
+        
+        {/* Formatting toggle - hidden on mobile */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
               variant="ghost" 
               size="icon" 
               className={cn(
-                "flex-shrink-0",
+                "hidden sm:flex flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10",
                 showFormatting 
                   ? "text-zapp-accent hover:bg-zapp-hover" 
                   : "text-zapp-text-muted hover:bg-zapp-hover"
               )}
               onClick={onToggleFormatting}
             >
-              <Bold className="h-5 w-5" />
+              <Bold className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">Formatação</TooltipContent>
@@ -354,9 +356,9 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                  className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                 >
-                  <Smile className="h-5 w-5" />
+                  <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
@@ -372,15 +374,15 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               onEmojiClick={handleEmojiSelect}
               theme={Theme.DARK}
               searchPlaceholder="Buscar emoji..."
-              width={320}
-              height={400}
+              width={280}
+              height={350}
               skinTonesDisabled
               lazyLoadEmojis
             />
           </PopoverContent>
         </Popover>
         
-        {/* Signature toggle button */}
+        {/* Signature toggle button - hidden on mobile */}
         {hasSignature && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -388,14 +390,14 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 variant="ghost" 
                 size="icon" 
                 className={cn(
-                  "flex-shrink-0",
+                  "hidden sm:flex flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10",
                   signatureEnabled 
                     ? "text-zapp-accent hover:bg-zapp-hover" 
                     : "text-zapp-text-muted hover:bg-zapp-hover"
                 )}
                 onClick={onToggleSignature}
               >
-                <PenLine className="h-5 w-5" />
+                <PenLine className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">
@@ -409,13 +411,13 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+              className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
               disabled={uploadingMedia}
             >
               {uploadingMedia ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
               ) : (
-                <Plus className="h-6 w-6" />
+                <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
               )}
             </Button>
           </DropdownMenuTrigger>
@@ -452,17 +454,17 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </DropdownMenuContent>
         </DropdownMenu>
         
-        {/* Playbook button */}
+        {/* Playbook button - hidden on mobile */}
         {onOpenPlaybook && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                 onClick={onOpenPlaybook}
               >
-                <BookOpen className="h-5 w-5" />
+                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Playbook</TooltipContent>
