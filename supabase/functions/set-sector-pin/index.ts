@@ -44,10 +44,14 @@ serve(async (req) => {
       );
     }
 
-    // Verificar se é super_admin
-    const { data: isSuperAdmin } = await supabase.rpc("is_super_admin");
+    // Verificar se é super_admin diretamente na tabela
+    const { data: superAdminRecord } = await supabase
+      .from("super_admins")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
     
-    if (!isSuperAdmin) {
+    if (!superAdminRecord) {
       return new Response(
         JSON.stringify({ success: false, error: "Acesso restrito a super administradores" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
