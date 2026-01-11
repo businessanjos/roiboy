@@ -88,6 +88,7 @@ export default function SalesPipeline() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSalesRep, setSelectedSalesRep] = useState<string>('all');
   const [wonMonthFilter, setWonMonthFilter] = useState<string>('all');
+  const [lostMonthFilter, setLostMonthFilter] = useState<string>('all');
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
@@ -164,6 +165,36 @@ export default function SalesPipeline() {
   const filteredWonTotal = useMemo(() => {
     return filteredWonDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
   }, [filteredWonDealsByMonth]);
+
+  // Available months for lost deals filter
+  const availableLostMonths = useMemo(() => {
+    const monthsSet = new Map<string, string>();
+    lostDeals.forEach(deal => {
+      if (deal.lost_at) {
+        const date = new Date(deal.lost_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+        monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
+      }
+    });
+    return Array.from(monthsSet.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]));
+  }, [lostDeals]);
+
+  // Filter lost deals by selected month
+  const filteredLostDealsByMonth = useMemo(() => {
+    if (lostMonthFilter === 'all') return filteredLostDeals;
+    return filteredLostDeals.filter(deal => {
+      if (!deal.lost_at) return false;
+      const date = new Date(deal.lost_at);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return key === lostMonthFilter;
+    });
+  }, [filteredLostDeals, lostMonthFilter]);
+
+  const filteredLostTotal = useMemo(() => {
+    return filteredLostDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
+  }, [filteredLostDealsByMonth]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -563,9 +594,44 @@ export default function SalesPipeline() {
                 />
               </TabsContent>
 
-              <TabsContent value="lost" className="mt-0">
+              <TabsContent value="lost" className="mt-0 space-y-4">
+                {/* Summary and Month Filter - Red Style */}
+                <div className="flex items-center justify-between bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total de Perdidas</p>
+                      <p className="text-2xl font-bold text-red-600">
+                        {formatCurrency(filteredLostTotal)}
+                      </p>
+                    </div>
+                    <div className="h-10 w-px bg-red-500/20" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Negócios</p>
+                      <p className="text-xl font-semibold">
+                        {filteredLostDealsByMonth.length}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Month Filter */}
+                  <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
+                    <SelectTrigger className="w-[200px] bg-background">
+                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="Todos os meses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os meses</SelectItem>
+                      {availableLostMonths.map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <DealListView 
-                  deals={filteredLostDeals} 
+                  deals={filteredLostDealsByMonth} 
                   stages={stages}
                   onDealClick={handleDealClick} 
                   showStatus
