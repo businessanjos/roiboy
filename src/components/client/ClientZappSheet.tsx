@@ -72,7 +72,7 @@ interface ClientData {
   id: string;
   full_name: string;
   phone_e164: string;
-  emails: string[] | null;
+  emails: unknown; // Can be array of strings, array of objects, or object
   cpf: string | null;
   cnpj: string | null;
   birth_date: string | null;
@@ -107,6 +107,36 @@ interface Deal {
   created_at: string;
   stage?: DealStage | null;
 }
+
+// Helper function to extract first email from various data formats
+const extractFirstEmail = (emails: unknown): string => {
+  if (!emails) return "";
+  
+  // If it's an array
+  if (Array.isArray(emails)) {
+    const first = emails[0];
+    if (!first) return "";
+    // If the item is a string, return it directly
+    if (typeof first === "string") return first;
+    // If it's an object with email property
+    if (typeof first === "object" && first !== null) {
+      if ("email" in first && typeof (first as any).email === "string") return (first as any).email;
+      // If it's an object with numeric property (e.g., {0: "email"})
+      if ("0" in first && typeof (first as any)["0"] === "string") return (first as any)["0"];
+    }
+  }
+  
+  // If it's an object (not array)
+  if (typeof emails === "object" && emails !== null) {
+    if ("email" in emails && typeof (emails as any).email === "string") return (emails as any).email;
+    if ("0" in emails && typeof (emails as any)["0"] === "string") return (emails as any)["0"];
+  }
+  
+  // If it's a direct string
+  if (typeof emails === "string") return emails;
+  
+  return "";
+};
 
 export function ClientZappSheet({ 
   clientId, 
@@ -184,7 +214,7 @@ export function ClientZappSheet({
         id: data.id,
         full_name: data.full_name,
         phone_e164: data.phone_e164,
-        emails: Array.isArray(data.emails) ? data.emails as string[] : null,
+        emails: data.emails, // Keep raw data, will be processed by extractFirstEmail
         cpf: data.cpf,
         cnpj: data.cnpj,
         birth_date: data.birth_date,
@@ -203,11 +233,10 @@ export function ClientZappSheet({
       };
 
       setClient(clientData);
-      const emails = clientData.emails;
       const initialData = {
         full_name: clientData.full_name || "",
         phone_e164: formatBrazilianPhone(clientData.phone_e164) || clientData.phone_e164 || "",
-        email: emails && emails.length > 0 ? emails[0] : "",
+        email: extractFirstEmail(clientData.emails),
         cpf: formatCPF(clientData.cpf || "") || "",
         cnpj: formatCNPJ(clientData.cnpj || "") || "",
         birth_date: clientData.birth_date ? parseISOToDateBR(clientData.birth_date) : "",
