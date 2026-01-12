@@ -639,7 +639,7 @@ export function ZappDealDetailSheet({
                           : ListTodo;
                         
                         return (
-                          <div key={item.id} className="flex gap-3 relative">
+                          <div key={item.id} className="flex gap-3">
                             <div 
                               className={cn(
                                 "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
@@ -663,52 +663,56 @@ export function ZappDealDetailSheet({
                                 <Icon className="h-4 w-4 text-zapp-accent" />
                               )}
                             </div>
-                            <div className="flex-1 min-w-0 pr-8">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-zapp-text">
-                                  {item.type === "task" ? item.title : item.title}
-                                </span>
-                                {item.type === "task" && (
-                                  <Badge 
-                                    variant="outline" 
-                                    className={cn(
-                                      "text-[10px] h-4",
-                                      item.status === "done" || item.status === "completed"
-                                        ? "border-green-500 text-green-500"
-                                        : "border-amber-500 text-amber-500"
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-zapp-text">
+                                      {item.type === "task" ? item.title : item.title}
+                                    </span>
+                                    {item.type === "task" && (
+                                      <Badge 
+                                        variant="outline" 
+                                        className={cn(
+                                          "text-[10px] h-4",
+                                          item.status === "done" || item.status === "completed"
+                                            ? "border-green-500 text-green-500"
+                                            : "border-amber-500 text-amber-500"
+                                        )}
+                                      >
+                                        {item.status === "done" || item.status === "completed" ? "Concluído" : "Pendente"}
+                                      </Badge>
                                     )}
+                                  </div>
+                                  {item.description && (
+                                    <p className={cn(
+                                      "text-xs text-zapp-text-muted mt-0.5 whitespace-pre-wrap",
+                                      !expandedItems.has(item.id) && "line-clamp-2"
+                                    )}>
+                                      {item.description}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2 mt-1 text-[10px] text-zapp-text-muted">
+                                    {item.user && <span>{item.user.name}</span>}
+                                    <span>•</span>
+                                    <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
+                                  </div>
+                                </div>
+                                {item.description && item.description.length > 80 && (
+                                  <button
+                                    onClick={() => toggleItemExpanded(item.id)}
+                                    className="flex-shrink-0 p-1.5 rounded-full bg-zapp-panel hover:bg-zapp-border text-zapp-text-muted hover:text-zapp-accent transition-colors self-end"
+                                    title={expandedItems.has(item.id) ? "Recolher" : "Expandir"}
                                   >
-                                    {item.status === "done" || item.status === "completed" ? "Concluído" : "Pendente"}
-                                  </Badge>
+                                    {expandedItems.has(item.id) ? (
+                                      <ChevronUp className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <ChevronDown className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
                                 )}
-                              </div>
-                              {item.description && (
-                                <p className={cn(
-                                  "text-xs text-zapp-text-muted mt-0.5 whitespace-pre-wrap",
-                                  !expandedItems.has(item.id) && "line-clamp-2"
-                                )}>
-                                  {item.description}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-2 mt-1 text-[10px] text-zapp-text-muted">
-                                {item.user && <span>{item.user.name}</span>}
-                                <span>•</span>
-                                <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
                               </div>
                             </div>
-                            {item.description && item.description.length > 80 && (
-                              <button
-                                onClick={() => toggleItemExpanded(item.id)}
-                                className="absolute bottom-0 right-0 p-1.5 rounded-full bg-zapp-panel hover:bg-zapp-border text-zapp-text-muted hover:text-zapp-accent transition-colors"
-                                title={expandedItems.has(item.id) ? "Recolher" : "Expandir"}
-                              >
-                                {expandedItems.has(item.id) ? (
-                                  <ChevronUp className="h-3.5 w-3.5" />
-                                ) : (
-                                  <ChevronDown className="h-3.5 w-3.5" />
-                                )}
-                              </button>
-                            )}
                           </div>
                         );
                       })
