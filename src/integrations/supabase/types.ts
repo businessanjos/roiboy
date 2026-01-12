@@ -4765,6 +4765,41 @@ export type Database = {
           },
         ]
       }
+      instagram_post_options: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          option_type: string
+          value: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          option_type: string
+          value: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          option_type?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_post_options_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_posts: {
         Row: {
           ai_objective: string | null
@@ -4772,6 +4807,7 @@ export type Database = {
           caption: string | null
           collaborator: string | null
           comments: number | null
+          composition: string[] | null
           created_at: string
           engagement_rate: number | null
           followers_gained: number | null
@@ -4787,6 +4823,7 @@ export type Database = {
           reach: number | null
           saves: number | null
           shares: number | null
+          specialist_version: string | null
           theme: string | null
           thumbnail_url: string | null
           updated_at: string
@@ -4799,6 +4836,7 @@ export type Database = {
           caption?: string | null
           collaborator?: string | null
           comments?: number | null
+          composition?: string[] | null
           created_at?: string
           engagement_rate?: number | null
           followers_gained?: number | null
@@ -4814,6 +4852,7 @@ export type Database = {
           reach?: number | null
           saves?: number | null
           shares?: number | null
+          specialist_version?: string | null
           theme?: string | null
           thumbnail_url?: string | null
           updated_at?: string
@@ -4826,6 +4865,7 @@ export type Database = {
           caption?: string | null
           collaborator?: string | null
           comments?: number | null
+          composition?: string[] | null
           created_at?: string
           engagement_rate?: number | null
           followers_gained?: number | null
@@ -4841,6 +4881,7 @@ export type Database = {
           reach?: number | null
           saves?: number | null
           shares?: number | null
+          specialist_version?: string | null
           theme?: string | null
           thumbnail_url?: string | null
           updated_at?: string

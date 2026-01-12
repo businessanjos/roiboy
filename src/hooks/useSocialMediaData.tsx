@@ -44,6 +44,8 @@ export interface InstagramPost {
   ai_objective: 'growth' | 'connection' | 'authority' | 'sales' | null;
   ai_objective_confidence: number | null;
   is_trending: boolean;
+  specialist_version: string | null;
+  composition: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -238,6 +240,8 @@ export function useSocialMediaData() {
       views: number;
       followers_gained: number;
       collaborator: string;
+      specialist_version?: string;
+      composition?: string[];
     }) => {
       if (!currentProfile) throw new Error('Nenhum perfil selecionado');
 
@@ -271,6 +275,8 @@ export function useSocialMediaData() {
           views: data.views,
           followers_gained: data.followers_gained,
           collaborator: data.collaborator || null,
+          specialist_version: data.specialist_version || null,
+          composition: data.composition || [],
           engagement_rate: Math.round(engagementRate * 100) / 100,
           virality_rate: Math.round(viralityRate * 100) / 100,
           is_trending: engagementRate >= 12 || viralityRate >= 1.5,
@@ -310,6 +316,8 @@ export function useSocialMediaData() {
         shares: number;
         saves: number;
         views: number;
+        specialist_version?: string;
+        composition?: string[];
       };
     }) => {
       // Extract Instagram ID from permalink
@@ -338,6 +346,8 @@ export function useSocialMediaData() {
           shares: data.shares,
           saves: data.saves,
           views: data.views,
+          specialist_version: data.specialist_version || null,
+          composition: data.composition || [],
           engagement_rate: Math.round(engagementRate * 100) / 100,
           virality_rate: Math.round(viralityRate * 100) / 100,
           is_trending: engagementRate >= 12 || viralityRate >= 1.5,
