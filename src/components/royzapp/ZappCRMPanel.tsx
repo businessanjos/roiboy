@@ -5,6 +5,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { format, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -366,7 +367,8 @@ export function ZappCRMPanel({
   // Format task date with relative labels and time
   const formatTaskDate = (dueDate: string | null, dueTime: string | null): string => {
     if (!dueDate) return "";
-    const date = new Date(dueDate + "T00:00:00");
+    const date = parseLocalDate(dueDate);
+    if (!date) return "";
     
     let dateLabel: string;
     if (isToday(date)) {

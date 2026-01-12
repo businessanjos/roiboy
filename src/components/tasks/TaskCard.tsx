@@ -29,6 +29,7 @@ import {
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 interface User {
   id: string;
@@ -87,10 +88,10 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
 
   const getDueDateInfo = () => {
     if (!task.due_date) return null;
-    const dueDate = new Date(task.due_date);
+    const dueDate = parseLocalDate(task.due_date);
+    if (!dueDate) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    dueDate.setHours(0, 0, 0, 0);
     
     const daysDiff = differenceInDays(dueDate, today);
     const formattedDate = format(dueDate, "dd/MM", { locale: ptBR });
