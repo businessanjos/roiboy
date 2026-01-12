@@ -538,7 +538,7 @@ export function ZappDealDetailSheet({
                   {leadId && customFields.length > 0 && (
                     <Card className="p-3 bg-zapp-panel border-zapp-border">
                       <Label className="text-xs text-zapp-text-muted mb-2 block">Campos Personalizados</Label>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3 items-start">
                         {customFields.map(field => {
                           // Convert string[] options to FieldOption[] format
                           const formattedOptions = Array.isArray(field.options)
