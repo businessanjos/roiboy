@@ -6,7 +6,7 @@ export { DealDialog } from "./DealDialog";
 export { DealDetailSheet } from "./DealDetailSheet";
 export { DealActivitiesDialog } from "./DealActivitiesDialog";
 export { DealStagesManager } from "./DealStagesManager";
-export { DealFieldsConfigDialog } from "./DealFieldsConfigDialog/index";
+export { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 export { PlaybookDialog } from "./PlaybookDialog";
 export { PlaybookItemForm } from "./PlaybookItemForm";
 export { PlaybookButton } from "./PlaybookButton";
