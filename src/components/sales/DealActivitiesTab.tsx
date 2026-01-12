@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -166,7 +167,11 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
 
   const isOverdue = (dueDate: string | null, completedAt: string | null) => {
     if (!dueDate || completedAt) return false;
-    return new Date(dueDate) < new Date();
+    const date = parseLocalDate(dueDate);
+    if (!date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
   };
 
   const pendingTasks = tasks.filter(t => !t.custom_status?.is_completed_status && !t.completed_at);
@@ -240,7 +245,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                         {task.due_date && (
                           <span className={cn("flex items-center gap-0.5", overdue && "text-red-500")}>
                             <Calendar className="h-2.5 w-2.5" />
-                            {format(new Date(task.due_date), "dd/MM/yy")}
+                            {formatLocalDate(task.due_date)}
                           </span>
                         )}
                         {task.custom_status && (
