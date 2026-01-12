@@ -157,7 +157,7 @@ export function ZappDealDetailSheet({
         .from("custom_fields")
         .select("id, name, field_type, options, display_order")
         .eq("account_id", currentUser?.account_id)
-        .eq("show_in_leads", true)
+        .eq("show_in_deals", true)
         .eq("is_active", true)
         .order("display_order");
       if (error) throw error;
@@ -295,8 +295,9 @@ export function ZappDealDetailSheet({
       case "number":
       case "currency": return fv.value_number;
       case "date": return fv.value_date;
-      case "multi-select":
-      case "user": return fv.value_json;
+      case "multi_select":
+      case "user":
+      case "location": return fv.value_json;
       default: return fv.value_text;
     }
   };
