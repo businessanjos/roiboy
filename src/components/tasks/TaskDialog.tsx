@@ -173,7 +173,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         client_id: clientId || "",
         deal_id: dealId || "",
         lead_id: leadId || "",
-        assigned_to: "",
+        assigned_to: currentUser?.id || "",
         activity_type_id: initialActivityTypeId || "",
       });
     }
