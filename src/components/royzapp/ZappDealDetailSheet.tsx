@@ -693,25 +693,20 @@ export function ZappDealDetailSheet({
                                       {item.description}
                                     </p>
                                   )}
+                                  {item.description && item.description.length > 100 && (
+                                    <button
+                                      onClick={() => toggleItemExpanded(item.id)}
+                                      className="text-xs font-medium text-primary hover:underline mt-1 cursor-pointer"
+                                    >
+                                      {expandedItems.has(item.id) ? "Ver menos" : "Ver mais"}
+                                    </button>
+                                  )}
                                   <div className="flex items-center gap-2 mt-1 text-[10px] text-zapp-text-muted">
                                     {item.user && <span>{item.user.name}</span>}
                                     <span>•</span>
                                     <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
                                   </div>
                                 </div>
-                                {item.description && item.description.length > 40 && (
-                                  <button
-                                    onClick={() => toggleItemExpanded(item.id)}
-                                    className="flex-shrink-0 p-1.5 rounded-full bg-zapp-accent/20 hover:bg-zapp-accent/30 text-zapp-accent transition-colors"
-                                    title={expandedItems.has(item.id) ? "Recolher" : "Expandir"}
-                                  >
-                                    {expandedItems.has(item.id) ? (
-                                      <ChevronUp className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4" />
-                                    )}
-                                  </button>
-                                )}
                               </div>
                             </div>
                           </div>
