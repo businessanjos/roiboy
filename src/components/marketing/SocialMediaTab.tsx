@@ -440,7 +440,7 @@ export function SocialMediaTab() {
                     <TableRow className="bg-muted/30">
                       <TableHead className="w-[100px]">Data</TableHead>
                       <TableHead className="w-[100px]">Formato</TableHead>
-                      <TableHead className="w-[120px]">Tema</TableHead>
+                      <TableHead className="w-[120px]">Categoria</TableHead>
                       <TableHead className="w-[120px]">Objetivo (IA)</TableHead>
                       <TableHead className="min-w-[200px]">Conteúdo</TableHead>
                       <TableHead className="text-right w-[80px]">
