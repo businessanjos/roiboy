@@ -56,7 +56,7 @@ import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
 import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
-import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
+import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog/index";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
