@@ -6235,6 +6235,7 @@ export type Database = {
           link_title: string | null
           link_url: string | null
           list_items: Json | null
+          media_caption: string | null
           media_duration: number | null
           media_filename: string | null
           media_size: number | null
@@ -6264,6 +6265,7 @@ export type Database = {
           link_title?: string | null
           link_url?: string | null
           list_items?: Json | null
+          media_caption?: string | null
           media_duration?: number | null
           media_filename?: string | null
           media_size?: number | null
@@ -6293,6 +6295,7 @@ export type Database = {
           link_title?: string | null
           link_url?: string | null
           list_items?: Json | null
+          media_caption?: string | null
           media_duration?: number | null
           media_filename?: string | null
           media_size?: number | null
