@@ -538,7 +538,7 @@ export function ZappDealDetailSheet({
                   {leadId && customFields.length > 0 && (
                     <Card className="p-3 bg-zapp-panel border-zapp-border">
                       <Label className="text-xs text-zapp-text-muted mb-2 block">Campos Personalizados</Label>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3 items-start">
+                      <div className="columns-2 gap-4">
                         {customFields.map(field => {
                           // Convert string[] options to FieldOption[] format
                           const formattedOptions = Array.isArray(field.options)
@@ -550,7 +550,7 @@ export function ZappDealDetailSheet({
                             : [];
                           
                           return (
-                            <div key={field.id} className="min-w-0">
+                            <div key={field.id} className="min-w-0 break-inside-avoid mb-3">
                               <span className="text-[10px] text-zapp-text-muted block mb-1 break-words">
                                 {field.name}
                               </span>
