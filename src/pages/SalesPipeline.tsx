@@ -137,12 +137,22 @@ export default function SalesPipeline() {
 
   // Filter won deals by selected month
   const filteredWonDealsByMonth = useMemo(() => {
-    if (wonMonthFilter === 'all') return filteredWonDeals;
-    return filteredWonDeals.filter(deal => {
-      if (!deal.won_at) return false;
-      const date = new Date(deal.won_at);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      return key === wonMonthFilter;
+    let result = filteredWonDeals;
+    
+    if (wonMonthFilter !== 'all') {
+      result = result.filter(deal => {
+        if (!deal.won_at) return false;
+        const date = new Date(deal.won_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return key === wonMonthFilter;
+      });
+    }
+    
+    // Sort by won_at descending (most recent first)
+    return [...result].sort((a, b) => {
+      const dateA = a.won_at ? new Date(a.won_at).getTime() : 0;
+      const dateB = b.won_at ? new Date(b.won_at).getTime() : 0;
+      return dateB - dateA;
     });
   }, [filteredWonDeals, wonMonthFilter]);
 
