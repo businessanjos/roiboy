@@ -4786,6 +4786,7 @@ export type Database = {
           reach: number | null
           saves: number | null
           shares: number | null
+          theme: string | null
           thumbnail_url: string | null
           updated_at: string
           views: number
@@ -4811,6 +4812,7 @@ export type Database = {
           reach?: number | null
           saves?: number | null
           shares?: number | null
+          theme?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           views?: number
@@ -4836,6 +4838,7 @@ export type Database = {
           reach?: number | null
           saves?: number | null
           shares?: number | null
+          theme?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           views?: number
