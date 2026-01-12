@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Minus, User, Instagram, MapPin } from "lucide-react";
 import { CustomField, FieldOption } from "./CustomFieldsManager";
+import { formatLocalDate } from "@/lib/dateUtils";
 
 interface TeamUser {
   id: string;
@@ -155,7 +156,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
     }
     return (
       <span className={textSize}>
-        {new Date(value).toLocaleDateString("pt-BR")}
+        {formatLocalDate(value)}
       </span>
     );
   }

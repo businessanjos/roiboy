@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomField } from "./CustomFieldsManager";
 import { FieldValueBadge } from "./FieldValueBadge";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 interface LeadFieldValueEditorProps {
   field: CustomField;
@@ -323,7 +324,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
-            selected={currentValue ? new Date(currentValue) : undefined}
+            selected={currentValue ? parseLocalDate(currentValue) ?? undefined : undefined}
             onSelect={(date) => saveValue(date ? format(date, "yyyy-MM-dd") : null)}
             locale={ptBR}
           />
