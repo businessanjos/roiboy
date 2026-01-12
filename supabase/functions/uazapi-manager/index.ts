@@ -208,10 +208,10 @@ serve(async (req) => {
       );
     }
 
-    // Get user's account
+    // Get user's account AND role for authorization
     const { data: userData } = await supabase
       .from("users")
-      .select("account_id")
+      .select("account_id, role, is_also_admin")
       .eq("auth_user_id", user.id)
       .single();
 
@@ -224,6 +224,20 @@ serve(async (req) => {
 
     const accountId = userData.account_id;
     const payload: UazapiRequest = await req.json();
+    
+    // SECURITY: Define admin-only actions for WhatsApp management
+    const adminOnlyActions = ["create", "connect", "disconnect", "qrcode", "paircode", "configure_webhook", "link_instance"];
+    const isAdminAction = adminOnlyActions.includes(payload.action);
+    const isAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
+    
+    // Block non-admins from admin-only actions
+    if (isAdminAction && !isAdmin) {
+      console.log(`[SECURITY] Non-admin user ${user.id} (role: ${userData.role}) attempted action: ${payload.action}`);
+      return new Response(
+        JSON.stringify({ error: "Apenas administradores podem gerenciar conexões WhatsApp" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const { action, phone, message, group_id, group_name, participants, groups, sector_id, integration_id } = payload;
 
     // Build query for existing integration

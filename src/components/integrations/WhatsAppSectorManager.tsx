@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -18,10 +19,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2, MessageSquare, Trash2, Link2 } from "lucide-react";
+import { Plus, Loader2, MessageSquare, Trash2, Link2, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sectors, SectorId } from "@/config/sectors";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -49,6 +51,7 @@ const WHATSAPP_SECTORS: { id: SectorId; name: string; description: string; color
 ];
 
 export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: WhatsAppSectorManagerProps) {
+  const { isAdmin } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -207,13 +210,14 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
               </CardDescription>
             </div>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" disabled={availableSectors.length === 0}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Conexão
-              </Button>
-            </DialogTrigger>
+          {isAdmin && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" disabled={availableSectors.length === 0}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Conexão
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Nova Conexão WhatsApp</DialogTitle>
@@ -258,9 +262,19 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </CardHeader>
       <CardContent>
+        {/* Admin-only notice */}
+        {!isAdmin && (
+          <Alert className="mb-4">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertDescription>
+              Apenas administradores podem gerenciar conexões WhatsApp por setor.
+            </AlertDescription>
+          </Alert>
+        )}
         {whatsappIntegrations.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -313,26 +327,28 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {!isConnected && (
+                  {isAdmin && (
+                    <div className="flex items-center gap-2">
+                      {!isConnected && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenLinkDialog(integration.sector_id || "")}
+                        >
+                          <Link2 className="h-4 w-4 mr-2" />
+                          Vincular
+                        </Button>
+                      )}
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenLinkDialog(integration.sector_id || "")}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteConnection(integration.id)}
                       >
-                        <Link2 className="h-4 w-4 mr-2" />
-                        Vincular
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteConnection(integration.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
