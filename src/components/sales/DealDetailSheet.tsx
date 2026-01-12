@@ -172,6 +172,19 @@ export function DealDetailSheet({
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const toggleItemExpanded = (itemId: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
   
   // Deal custom fields
   const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
@@ -834,9 +847,22 @@ export function DealDetailSheet({
                                       </span>
                                     </div>
                                     {activity.content && (
-                                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                        {activity.content}
-                                      </p>
+                                      <>
+                                        <p className={cn(
+                                          "text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap",
+                                          !expandedItems.has(activity.id) && "line-clamp-2"
+                                        )}>
+                                          {activity.content}
+                                        </p>
+                                        {activity.content.length > 100 && (
+                                          <button
+                                            onClick={() => toggleItemExpanded(activity.id)}
+                                            className="text-xs font-medium text-primary hover:underline mt-1 cursor-pointer"
+                                          >
+                                            {expandedItems.has(activity.id) ? "Ver menos" : "Ver mais"}
+                                          </button>
+                                        )}
+                                      </>
                                     )}
                                     {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
                                       <p className="text-xs text-muted-foreground mt-0.5">
