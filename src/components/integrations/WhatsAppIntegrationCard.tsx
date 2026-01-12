@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, XCircle, RefreshCw, Clock, Loader2, QrCode, LogOut, Smartphone, KeyRound, ScanLine, Plus, Wifi, WifiOff } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, XCircle, RefreshCw, Clock, Loader2, QrCode, LogOut, Smartphone, KeyRound, ScanLine, Plus, Wifi, WifiOff, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePermissions } from "@/hooks/usePermissions";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -27,6 +29,8 @@ export function WhatsAppIntegrationCard({
   onRefresh,
   sectorId,
 }: WhatsAppIntegrationCardProps) {
+  const { isAdmin } = usePermissions();
+  
   // Get ALL WhatsApp integrations for listing
   const allWhatsAppIntegrations = integrations.filter((i) => (i.type as string) === "whatsapp");
   
@@ -383,19 +387,31 @@ export function WhatsAppIntegrationCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Main Connect Button - Always visible */}
-          <Button 
-            onClick={handleCreateInstance} 
-            disabled={loading}
-            className="w-full"
-          >
-            {loading && action === "create" ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
-            Conectar WhatsApp
-          </Button>
+          {/* Admin-only notice */}
+          {!isAdmin && (
+            <Alert>
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription>
+                Apenas administradores podem conectar ou gerenciar instâncias WhatsApp.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Main Connect Button - Only for admins */}
+          {isAdmin && (
+            <Button 
+              onClick={handleCreateInstance} 
+              disabled={loading}
+              className="w-full"
+            >
+              {loading && action === "create" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              Conectar WhatsApp
+            </Button>
+          )}
 
           {/* Connection Options - Show when connecting */}
           {showConnectionOptions && !qrCode && !paircode && (
@@ -665,7 +681,7 @@ export function WhatsAppIntegrationCard({
                           <RefreshCw className="h-4 w-4" />
                         )}
                       </Button>
-                      {isIntegrationConnected && (
+                      {isAdmin && isIntegrationConnected && (
                         <Button 
                           size="sm" 
                           variant="ghost"
