@@ -382,6 +382,175 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
 
   const needsOptions = fieldType === "select" || fieldType === "multi_select";
 
+  // Componente de diálogo para criação/edição de campo
+  const fieldDialog = (
+    <Dialog open={dialogOpen} onOpenChange={(open) => {
+      setDialogOpen(open);
+      if (!open) resetForm();
+    }}>
+      <DialogTrigger asChild>
+        <Button size="sm" className={isControlled ? "ml-auto" : ""}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Campo
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{editingField ? "Editar campo" : "Adicionar campo"}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5 py-2">
+          {/* Title and Type in same row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm">
+                Título do campo <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                placeholder="Prioridade, etapa, status..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Tipo de campo</Label>
+              <Select value={fieldType} onValueChange={(v) => setFieldType(v as CustomField["field_type"])}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FIELD_TYPES.map(({ value, label, icon: Icon }) => (
+                    <SelectItem key={value} value={value}>
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        {label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {needsOptions && (
+            <div className="space-y-3">
+              <Label className="text-sm">
+                Opções <span className="text-destructive">*</span>
+              </Label>
+              <div className="space-y-2">
+                {options.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Select
+                      value={option.color}
+                      onValueChange={(color) => updateOption(index, { color })}
+                    >
+                      <SelectTrigger className="w-10 h-9 p-0 justify-center border-0 bg-transparent hover:bg-muted">
+                        <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-gray-500"}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLOR_OPTIONS.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full ${color.class}`} />
+                              {color.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Digite o título da opção"
+                      value={option.label}
+                      onChange={(e) => updateOption(index, { label: e.target.value })}
+                      className="flex-1 border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
+                    />
+                    {options.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => removeOption(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addOption}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar uma opção
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2">
+            <div>
+              <Label className="text-sm">Obrigatório</Label>
+              <p className="text-xs text-muted-foreground">Campo deve ser preenchido</p>
+            </div>
+            <Switch checked={isRequired} onCheckedChange={setIsRequired} />
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div>
+              <Label className="text-sm">Exibir em clientes</Label>
+              <p className="text-xs text-muted-foreground">Campo aparece na ficha do cliente</p>
+            </div>
+            <Switch checked={showInClients} onCheckedChange={setShowInClients} />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave}>
+            {editingField ? "Salvar" : "Criar Campo"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Lista de campos com scroll independente
+  const fieldsList = loading ? (
+    <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+  ) : fields.length === 0 ? (
+    <div className="text-center py-8 border-2 border-dashed rounded-lg">
+      <Settings2 className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+      <p className="text-muted-foreground">Nenhum campo criado</p>
+      <p className="text-sm text-muted-foreground">
+        Crie campos personalizados para acompanhar seus clientes
+      </p>
+    </div>
+  ) : (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-2">
+          {fields.map((field) => (
+            <SortableFieldItem
+              key={field.id}
+              field={field}
+              onEdit={openEditDialog}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+
   const content = (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -393,183 +562,37 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
             </p>
           </div>
         )}
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className={isControlled ? "ml-auto" : ""}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Campo
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{editingField ? "Editar campo" : "Adicionar campo"}</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-5 py-2">
-              {/* Title and Type in same row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm">
-                    Título do campo <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    placeholder="Prioridade, etapa, status..."
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm">Tipo de campo</Label>
-                  <Select value={fieldType} onValueChange={(v) => setFieldType(v as CustomField["field_type"])}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FIELD_TYPES.map(({ value, label, icon: Icon }) => (
-                        <SelectItem key={value} value={value}>
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                            {label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {needsOptions && (
-                <div className="space-y-3">
-                  <Label className="text-sm">
-                    Opções <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="space-y-2">
-                    {options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Select
-                          value={option.color}
-                          onValueChange={(color) => updateOption(index, { color })}
-                        >
-                          <SelectTrigger className="w-10 h-9 p-0 justify-center border-0 bg-transparent hover:bg-muted">
-                            <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-gray-500"}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {COLOR_OPTIONS.map((color) => (
-                              <SelectItem key={color.value} value={color.value}>
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-4 h-4 rounded-full ${color.class}`} />
-                                  {color.label}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          placeholder="Digite o título da opção"
-                          value={option.label}
-                          onChange={(e) => updateOption(index, { label: e.target.value })}
-                          className="flex-1 border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
-                        />
-                        {options.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => removeOption(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addOption}
-                    className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Adicionar uma opção
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-2">
-                <div>
-                  <Label className="text-sm">Obrigatório</Label>
-                  <p className="text-xs text-muted-foreground">Campo deve ser preenchido</p>
-                </div>
-                <Switch checked={isRequired} onCheckedChange={setIsRequired} />
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <div>
-                  <Label className="text-sm">Exibir em clientes</Label>
-                  <p className="text-xs text-muted-foreground">Campo aparece na ficha do cliente</p>
-                </div>
-                <Switch checked={showInClients} onCheckedChange={setShowInClients} />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave}>
-                {editingField ? "Salvar" : "Criar Campo"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {fieldDialog}
       </div>
-
-      {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-      ) : fields.length === 0 ? (
-        <div className="text-center py-8 border-2 border-dashed rounded-lg">
-          <Settings2 className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">Nenhum campo criado</p>
-          <p className="text-sm text-muted-foreground">
-            Crie campos personalizados para acompanhar seus clientes
-          </p>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
-              {fields.map((field) => (
-                <SortableFieldItem
-                  key={field.id}
-                  field={field}
-                  onEdit={openEditDialog}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
+      {fieldsList}
     </div>
   );
 
-  // If externally controlled, wrap in a Dialog
+  // If externally controlled, wrap in a Dialog with fixed header and scrollable content
   if (isControlled) {
     return (
       <Dialog open={managerOpen} onOpenChange={setManagerOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Configurar Campos</DialogTitle>
-          </DialogHeader>
-          {content}
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
+          <div className="flex flex-col h-full max-h-[90vh]">
+            {/* Header fixo */}
+            <div className="flex-shrink-0 p-6 pb-0">
+              <DialogHeader>
+                <DialogTitle>Configurar Campos</DialogTitle>
+              </DialogHeader>
+            </div>
+            
+            {/* Botão Novo Campo - fixo */}
+            <div className="flex-shrink-0 px-6 pt-4">
+              <div className="flex items-center justify-end">
+                {fieldDialog}
+              </div>
+            </div>
+            
+            {/* Área de scroll - SOMENTE esta parte rola */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+              {fieldsList}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     );
