@@ -104,6 +104,8 @@ export function PlaybookItemForm({
   const [templateButtons, setTemplateButtons] = useState<TemplateButton[]>([]);
   // Visibility
   const [visibility, setVisibility] = useState<PlaybookVisibility>('sector');
+  // Media caption for images
+  const [mediaCaption, setMediaCaption] = useState('');
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -122,6 +124,8 @@ export function PlaybookItemForm({
         setExistingMediaUrl(editingItem.media_url);
         setMediaFile(null);
         setMediaPreview(null);
+        // Media caption
+        setMediaCaption(editingItem.media_caption || '');
         // Link fields
         setLinkUrl(editingItem.link_url || '');
         setLinkTitle(editingItem.link_title || '');
@@ -142,6 +146,8 @@ export function PlaybookItemForm({
         setMediaFile(null);
         setMediaPreview(null);
         setExistingMediaUrl(null);
+        // Media caption
+        setMediaCaption('');
         // Link fields
         setLinkUrl('');
         setLinkTitle('');
@@ -295,6 +301,7 @@ export function PlaybookItemForm({
         media_url: mediaUrl,
         media_filename: mediaFile?.name || editingItem?.media_filename,
         media_size: mediaFile?.size || editingItem?.media_size,
+        media_caption: contentType === 'image' ? mediaCaption : null,
         list_items: contentType === 'list' ? listItems.filter(item => item.title.trim()) : null,
         // Link fields
         link_url: contentType === 'link' ? linkUrl : null,
@@ -826,6 +833,26 @@ export function PlaybookItemForm({
                     >
                       <X className="h-3 w-3" />
                     </Button>
+                  </div>
+                )}
+
+                {/* Caption field for image type - appears below file upload */}
+                {contentType === 'image' && (mediaPreview || existingMediaUrl) && (
+                  <div className="space-y-2 mt-4">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="mediaCaption">Legenda (opcional)</Label>
+                      <VariablePickerDropdown
+                        onSelectVariable={(variable) => {
+                          setMediaCaption(prev => prev + variable);
+                        }}
+                      />
+                    </div>
+                    <WhatsAppFormattingToolbar
+                      value={mediaCaption}
+                      onChange={setMediaCaption}
+                      placeholder="Digite a legenda que será enviada junto com a imagem..."
+                      rows={3}
+                    />
                   </div>
                 )}
               </div>

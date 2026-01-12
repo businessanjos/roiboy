@@ -39,6 +39,7 @@ export interface PlaybookItem {
   media_filename: string | null;
   media_size: number | null;
   media_duration: number | null;
+  media_caption: string | null;
   list_items: any[] | null;
   // Link fields
   link_url: string | null;
@@ -68,6 +69,7 @@ export interface CreatePlaybookItemInput {
   media_filename?: string | null;
   media_size?: number | null;
   media_duration?: number | null;
+  media_caption?: string | null;
   list_items?: any[] | null;
   // Link fields
   link_url?: string | null;
@@ -243,6 +245,7 @@ export function usePlaybook(options: PlaybookOptions = {}) {
           media_filename: input.media_filename || null,
           media_size: input.media_size || null,
           media_duration: input.media_duration || null,
+          media_caption: input.media_caption || null,
           list_items: input.list_items || null,
           // Link fields
           link_url: input.link_url || null,
