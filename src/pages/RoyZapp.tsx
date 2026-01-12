@@ -3261,13 +3261,31 @@ export default function RoyZapp() {
         open={playbookDialogOpen}
         onOpenChange={setPlaybookDialogOpen}
         sectorId={selectedSectorId}
-        onUseItem={(item, processedText) => {
+        onUseItem={async (item, processedText) => {
           // Insert text content into message input
           if (item.content_type === 'text' && processedText) {
             setMessageInput(processedText);
             messageInputRef.current?.focus();
+          } else if (item.content_type === 'image' && item.media_url) {
+            // For image items, download and set as image preview
+            try {
+              const response = await fetch(item.media_url);
+              if (!response.ok) throw new Error('Failed to fetch image');
+              
+              const blob = await response.blob();
+              const fileName = item.name || 'playbook-image.jpg';
+              const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+              const url = URL.createObjectURL(blob);
+              
+              setImagePreview({ file, url });
+              toast.success("Imagem anexada! Clique em enviar.");
+              messageInputRef.current?.focus();
+            } catch (error) {
+              console.error('Error loading playbook image:', error);
+              toast.error("Erro ao carregar imagem do playbook");
+            }
           } else if (item.media_url) {
-            // For media items, copy the URL to clipboard
+            // For other media items (audio, video, document), copy the URL to clipboard
             navigator.clipboard.writeText(item.media_url);
             toast.success("Link da mídia copiado!");
           }
