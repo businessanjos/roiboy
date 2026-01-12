@@ -16,6 +16,8 @@ import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
+import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
+import { ActiveFilter, applyFilterToDeals } from "@/hooks/usePipelineFilters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,7 +41,6 @@ import {
   Settings2,
   LayoutGrid,
   List,
-  Tag,
   Users,
   Target,
   Search,
@@ -88,10 +89,9 @@ export default function SalesPipeline() {
   const [isFieldsDialogOpen, setIsFieldsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
-  const [selectedTag, setSelectedTag] = useState<string>('all');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSalesRep, setSelectedSalesRep] = useState<string>('all');
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = useState<string>('all');
   const [lostMonthFilter, setLostMonthFilter] = useState<string>('all');
 
@@ -106,40 +106,19 @@ export default function SalesPipeline() {
     return Array.from(tagSet).sort();
   }, [deals]);
 
-  // Filter deals by selected tag, search term, and sales rep
-  const filterDeals = (dealsList: Deal[]) => {
-    let filtered = dealsList;
-    
-    // Filter by sales rep
-    if (selectedSalesRep !== 'all') {
-      filtered = filtered.filter(deal => deal.responsible_user_id === selectedSalesRep);
-    }
-    
-    // Filter by tag
-    if (selectedTag !== 'all') {
-      filtered = filtered.filter(deal => 
-        deal.tags && Array.isArray(deal.tags) && deal.tags.includes(selectedTag)
-      );
-    }
-    
-    // Filter by search term
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(deal => 
-        deal.title.toLowerCase().includes(term) ||
-        deal.contact_name?.toLowerCase().includes(term) ||
-        deal.contact_phone?.toLowerCase().includes(term) ||
-        deal.client?.full_name?.toLowerCase().includes(term) ||
-        deal.client?.phone_e164?.toLowerCase().includes(term)
-      );
-    }
-    
-    return filtered;
-  };
-
-  const filteredOpenDeals = filterDeals(openDeals);
-  const filteredWonDeals = filterDeals(wonDeals);
-  const filteredLostDeals = filterDeals(lostDeals);
+  // Apply unified filter to deals
+  const filteredOpenDeals = useMemo(() => 
+    applyFilterToDeals(openDeals, activeFilter, searchTerm), 
+    [openDeals, activeFilter, searchTerm]
+  );
+  const filteredWonDeals = useMemo(() => 
+    applyFilterToDeals(wonDeals, activeFilter, searchTerm), 
+    [wonDeals, activeFilter, searchTerm]
+  );
+  const filteredLostDeals = useMemo(() => 
+    applyFilterToDeals(lostDeals, activeFilter, searchTerm), 
+    [lostDeals, activeFilter, searchTerm]
+  );
 
   // Available months for won deals filter
   const availableWonMonths = useMemo(() => {
@@ -521,45 +500,14 @@ export default function SalesPipeline() {
 
               {/* Filters */}
               <div className="flex items-center gap-2">
-                {/* Sales Rep Filter */}
-                <Select value={selectedSalesRep} onValueChange={setSelectedSalesRep}>
-                  <SelectTrigger className="h-9 w-auto gap-2 bg-background border-border">
-                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <SelectValue placeholder="Todos vendedores" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos vendedores</SelectItem>
-                    {salesUsers.map(user => (
-                      <SelectItem key={user.id} value={user.id}>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-5 w-5">
-                            <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback className="text-[10px]">
-                              {user.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{user.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Tag Filter */}
-                <Select value={selectedTag} onValueChange={setSelectedTag}>
-                  <SelectTrigger className="h-9 w-auto gap-2 bg-background border-border">
-                    <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <SelectValue placeholder="Todas as tags" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as tags</SelectItem>
-                    {availableTags.map(tag => (
-                      <SelectItem key={tag} value={tag}>
-                        {tag}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Unified Filter Button */}
+                <PipelineFilterButton
+                  salesUsers={salesUsers}
+                  stages={stages}
+                  activeFilter={activeFilter}
+                  onFilterChange={setActiveFilter}
+                  availableTags={availableTags}
+                />
                 
                 {/* Search bar */}
                 <div className="relative">

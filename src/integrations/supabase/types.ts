@@ -6170,6 +6170,57 @@ export type Database = {
           },
         ]
       }
+      pipeline_filters: {
+        Row: {
+          account_id: string
+          conditions: Json
+          created_at: string
+          created_by: string
+          id: string
+          is_public: boolean
+          match_type: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          conditions?: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          is_public?: boolean
+          match_type?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          conditions?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_public?: boolean
+          match_type?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_filters_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_filters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playbook_folders: {
         Row: {
           account_id: string
