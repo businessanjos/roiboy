@@ -28,6 +28,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { OptionSelectWithAdd } from './OptionSelectWithAdd';
+import { useInstagramPostOptions } from '@/hooks/useInstagramPostOptions';
 
 interface AddPostDialogProps {
   open: boolean;
@@ -52,6 +54,8 @@ export interface PostFormData {
   views: number;
   followers_gained: number;
   collaborator: string;
+  specialist_version?: string;
+  composition?: string[];
 }
 
 const extractInstagramId = (url: string): string | null => {
@@ -70,6 +74,8 @@ export function AddPostDialog({
   onSubmit,
   isLoading,
 }: AddPostDialogProps) {
+  const { specialistVersionOptions, compositionOptions, addOption, isLoading: isLoadingOptions } = useInstagramPostOptions();
+  
   const [permalink, setPermalink] = useState('');
   const [postType, setPostType] = useState<'reels' | 'carousel' | 'static'>('reels');
   const [theme, setTheme] = useState('');
@@ -85,6 +91,8 @@ export function AddPostDialog({
   const [views, setViews] = useState('');
   const [followersGained, setFollowersGained] = useState('');
   const [collaborator, setCollaborator] = useState('');
+  const [specialistVersion, setSpecialistVersion] = useState('');
+  const [composition, setComposition] = useState<string[]>([]);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -110,6 +118,8 @@ export function AddPostDialog({
     setViews('');
     setFollowersGained('');
     setCollaborator('');
+    setSpecialistVersion('');
+    setComposition([]);
   };
 
   const handleClose = () => {
@@ -151,6 +161,8 @@ export function AddPostDialog({
       views: viewsNum,
       followers_gained: followersGainedNum,
       collaborator: collaborator.trim(),
+      specialist_version: specialistVersion || undefined,
+      composition: composition.length > 0 ? composition : undefined,
     });
   };
 
@@ -261,6 +273,29 @@ export function AddPostDialog({
               />
             </div>
           </div>
+
+          {/* Versão do Especialista */}
+          <OptionSelectWithAdd
+            label="Versão do Especialista"
+            placeholder="Selecione uma versão..."
+            options={specialistVersionOptions}
+            value={specialistVersion}
+            onChange={(v) => setSpecialistVersion(v as string)}
+            onAddOption={(v) => addOption.mutate({ optionType: 'specialist_version', value: v })}
+            isLoading={isLoadingOptions || addOption.isPending}
+          />
+
+          {/* Composição */}
+          <OptionSelectWithAdd
+            label="Composição"
+            placeholder="Selecione..."
+            options={compositionOptions}
+            value={composition}
+            onChange={(v) => setComposition(v as string[])}
+            onAddOption={(v) => addOption.mutate({ optionType: 'composition', value: v })}
+            isMultiple
+            isLoading={isLoadingOptions || addOption.isPending}
+          />
 
           {/* Data de Publicação */}
           <div className="space-y-2">

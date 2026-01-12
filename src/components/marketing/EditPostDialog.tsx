@@ -29,6 +29,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { InstagramPost } from '@/hooks/useSocialMediaData';
+import { OptionSelectWithAdd } from './OptionSelectWithAdd';
+import { useInstagramPostOptions } from '@/hooks/useInstagramPostOptions';
 
 interface EditPostDialogProps {
   open: boolean;
@@ -51,6 +53,8 @@ export interface EditPostFormData {
   shares: number;
   saves: number;
   views: number;
+  specialist_version?: string;
+  composition?: string[];
 }
 
 const isValidInstagramUrl = (url: string): boolean => {
@@ -64,6 +68,8 @@ export function EditPostDialog({
   isLoading,
   post,
 }: EditPostDialogProps) {
+  const { specialistVersionOptions, compositionOptions, addOption, isLoading: isLoadingOptions } = useInstagramPostOptions();
+  
   const [permalink, setPermalink] = useState('');
   const [postType, setPostType] = useState<'reels' | 'carousel' | 'static'>('reels');
   const [theme, setTheme] = useState('');
@@ -76,6 +82,8 @@ export function EditPostDialog({
   const [shares, setShares] = useState('');
   const [saves, setSaves] = useState('');
   const [views, setViews] = useState('');
+  const [specialistVersion, setSpecialistVersion] = useState('');
+  const [composition, setComposition] = useState<string[]>([]);
 
   // Populate form when post changes
   useEffect(() => {
@@ -92,6 +100,8 @@ export function EditPostDialog({
       setShares(post.shares.toString());
       setSaves(post.saves.toString());
       setViews((post.views || 0).toString());
+      setSpecialistVersion(post.specialist_version || '');
+      setComposition(post.composition || []);
     }
   }, [post]);
 
@@ -124,6 +134,8 @@ export function EditPostDialog({
       shares: sharesNum,
       saves: savesNum,
       views: viewsNum,
+      specialist_version: specialistVersion || undefined,
+      composition: composition.length > 0 ? composition : undefined,
     });
   };
 
@@ -345,6 +357,29 @@ export function EditPostDialog({
               rows={3}
             />
           </div>
+
+          {/* Versão do Especialista */}
+          <OptionSelectWithAdd
+            label="Versão do Especialista"
+            placeholder="Selecione uma versão..."
+            options={specialistVersionOptions}
+            value={specialistVersion}
+            onChange={(v) => setSpecialistVersion(v as string)}
+            onAddOption={(v) => addOption.mutate({ optionType: 'specialist_version', value: v })}
+            isLoading={isLoadingOptions || addOption.isPending}
+          />
+
+          {/* Composição */}
+          <OptionSelectWithAdd
+            label="Composição"
+            placeholder="Selecione..."
+            options={compositionOptions}
+            value={composition}
+            onChange={(v) => setComposition(v as string[])}
+            onAddOption={(v) => addOption.mutate({ optionType: 'composition', value: v })}
+            isMultiple
+            isLoading={isLoadingOptions || addOption.isPending}
+          />
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
