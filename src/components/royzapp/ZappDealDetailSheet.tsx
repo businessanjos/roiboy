@@ -550,11 +550,11 @@ export function ZappDealDetailSheet({
                             : [];
                           
                           return (
-                            <div key={field.id} className="min-w-0 overflow-hidden">
-                              <span className="text-[10px] text-zapp-text-muted block mb-1 truncate" title={field.name}>
+                            <div key={field.id} className="min-w-0">
+                              <span className="text-[10px] text-zapp-text-muted block mb-1 break-words">
                                 {field.name}
                               </span>
-                              <div className="max-w-full overflow-hidden">
+                              <div className="max-w-full">
                                 <LeadFieldValueEditor
                                   field={{
                                     id: field.id,

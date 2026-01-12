@@ -61,8 +61,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
     }
     return (
       <span 
-        className={`inline-flex items-center ${padding} rounded border font-medium ${getColorClasses(option.color)} ${textSize} truncate max-w-full`}
-        title={option.label}
+        className={`inline-flex items-center ${padding} rounded border font-medium ${getColorClasses(option.color)} ${textSize} break-words whitespace-normal`}
       >
         {option.label}
       </span>
@@ -77,21 +76,15 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
     }
     const selectedOptions = field.options.filter(opt => selectedValues.includes(opt.value));
     return (
-      <div className="flex flex-wrap gap-1 max-w-full overflow-hidden">
-        {selectedOptions.slice(0, 2).map((option) => (
+      <div className="flex flex-wrap gap-1">
+        {selectedOptions.map((option) => (
           <span
             key={option.value}
-            className={`inline-flex items-center ${padding} rounded border font-medium ${getColorClasses(option.color)} ${textSize} truncate max-w-[100px]`}
-            title={option.label}
+            className={`inline-flex items-center ${padding} rounded border font-medium ${getColorClasses(option.color)} ${textSize} break-words whitespace-normal`}
           >
             {option.label}
           </span>
         ))}
-        {selectedOptions.length > 2 && (
-          <span className={`inline-flex items-center ${padding} rounded bg-muted/50 text-muted-foreground border border-border ${textSize}`}>
-            +{selectedOptions.length - 2}
-          </span>
-        )}
       </div>
     );
   }
@@ -173,7 +166,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
       return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     return (
-      <span className={`${textSize} truncate max-w-full block`} title={value}>
+      <span className={`${textSize} break-words whitespace-normal`}>
         {value}
       </span>
     );
@@ -193,11 +186,10 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} truncate max-w-full`}
-        title={`@${handle}`}
+        className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} break-all`}
       >
         <Instagram className="h-3 w-3 flex-shrink-0" />
-        <span className="truncate">@{handle}</span>
+        <span className="break-all">@{handle}</span>
       </a>
     );
   }
@@ -208,9 +200,9 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
       return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     return (
-      <span className={`inline-flex items-center gap-1 ${padding} rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 font-medium ${textSize}`}>
-        <MapPin className="h-3 w-3" />
-        <span className="truncate max-w-40">{value.formatted_address}</span>
+      <span className={`inline-flex items-start gap-1 ${padding} rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 font-medium ${textSize}`}>
+        <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+        <span className="break-words whitespace-normal">{value.formatted_address}</span>
       </span>
     );
   }
