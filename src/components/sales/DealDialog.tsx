@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Deal, DealStage } from "@/hooks/useDeals";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -90,7 +91,7 @@ interface DealDialogProps {
   onOpenChange: (open: boolean) => void;
   deal?: Deal | null;
   stages: DealStage[];
-  onSave: (data: DealFormValues) => Promise<void>;
+  onSave: (data: DealFormValues, sendNotification?: boolean) => Promise<void>;
   onDelete?: (dealId: string) => Promise<void>;
   onMarkAsWon?: (dealId: string) => Promise<void>;
   onMarkAsLost?: (dealId: string, reason?: string) => Promise<void>;
@@ -129,6 +130,7 @@ export function DealDialog({
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [sendNotification, setSendNotification] = useState(false);
 
   const isEditing = !!deal;
   const isClosed = deal?.status !== 'open';
@@ -254,6 +256,8 @@ export function DealDialog({
         notes: "",
         tags: [],
       });
+      // Reset notification checkbox for new deals
+      setSendNotification(false);
     }
   }, [deal, stages, form, currentUser?.id]);
 
@@ -272,7 +276,12 @@ export function DealDialog({
   const handleSubmit = async (data: DealFormValues) => {
     setSaving(true);
     try {
-      await onSave(data);
+      // Auto-assign to creator if no responsible selected
+      const finalData = {
+        ...data,
+        responsible_user_id: data.responsible_user_id || currentUser?.id || "",
+      };
+      await onSave(finalData, !isEditing && sendNotification);
     } finally {
       setSaving(false);
     }
@@ -551,6 +560,24 @@ export function DealDialog({
                       </FormItem>
                     )}
                   />
+
+                  {/* Send Notification Checkbox - Only for new deals */}
+                  {!isEditing && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="send-notification"
+                        checked={sendNotification}
+                        onCheckedChange={(checked) => setSendNotification(checked === true)}
+                        disabled={isClosed}
+                      />
+                      <label
+                        htmlFor="send-notification"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Enviar notificação ao responsável
+                      </label>
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="contact" className="space-y-4 mt-4">

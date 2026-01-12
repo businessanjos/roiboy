@@ -220,11 +220,33 @@ export default function SalesPipeline() {
     return await moveDeal(dealId, newStageId);
   };
 
-  const handleSaveDeal = async (data: any) => {
+  const handleSaveDeal = async (data: any, sendNotification?: boolean) => {
     if (isEditDialogOpen && selectedDeal) {
       await updateDeal(selectedDeal.id, data);
     } else {
-      await createDeal(data);
+      const newDeal = await createDeal(data);
+      
+      // Send notification to responsible user if checkbox was checked
+      if (sendNotification && newDeal && data.responsible_user_id && currentUser) {
+        // Only notify if responsible is different from creator
+        if (data.responsible_user_id !== currentUser.id) {
+          try {
+            await supabase.from("notifications").insert({
+              account_id: currentUser.account_id,
+              user_id: data.responsible_user_id,
+              type: "new_deal",
+              title: "📊 Novo negócio atribuído",
+              content: `"${data.title}" foi atribuído a você`,
+              link: `/pipeline`,
+              source_type: "deal",
+              source_id: newDeal.id,
+              triggered_by_user_id: currentUser.id,
+            });
+          } catch (error) {
+            console.error("Error sending deal notification:", error);
+          }
+        }
+      }
     }
     setSelectedDeal(null);
     setIsEditDialogOpen(false);
