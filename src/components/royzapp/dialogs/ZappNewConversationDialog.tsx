@@ -33,9 +33,9 @@ interface ZappNewConversationDialogProps {
 
 // Função para abreviar nomes longos mantendo legibilidade
 const formatName = (name: string, maxLength: number = 22): string => {
-  if (name.length <= maxLength) return name;
+  if (!name || name.length <= maxLength) return name || '';
   
-  const parts = name.trim().split(' ');
+  const parts = name.trim().split(' ').filter(p => p.length > 0);
   if (parts.length <= 1) return name.slice(0, maxLength - 3) + '...';
   
   const firstName = parts[0];
@@ -48,7 +48,8 @@ const formatName = (name: string, maxLength: number = 22): string => {
   }
   
   // Para múltiplos nomes: "Nome M. M. Sobrenome"
-  const middleInitials = parts.slice(1, -1).map(n => n[0].toLowerCase() + '.').join(' ');
+  const middleParts = parts.slice(1, -1).filter(n => n && n.length > 0);
+  const middleInitials = middleParts.map(n => n[0]?.toLowerCase() + '.').join(' ');
   const abbreviated = `${firstName} ${middleInitials} ${lastName}`;
   
   if (abbreviated.length <= maxLength) return abbreviated;
