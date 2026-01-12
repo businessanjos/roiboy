@@ -538,7 +538,7 @@ export function ZappDealDetailSheet({
                   {leadId && customFields.length > 0 && (
                     <Card className="p-3 bg-zapp-panel border-zapp-border">
                       <Label className="text-xs text-zapp-text-muted mb-2 block">Campos Personalizados</Label>
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                         {customFields.map(field => {
                           // Convert string[] options to FieldOption[] format
                           const formattedOptions = Array.isArray(field.options)
@@ -550,23 +550,27 @@ export function ZappDealDetailSheet({
                             : [];
                           
                           return (
-                            <div key={field.id} className="flex items-center justify-between">
-                              <span className="text-xs text-zapp-text-muted">{field.name}</span>
-                              <LeadFieldValueEditor
-                                field={{
-                                  id: field.id,
-                                  name: field.name,
-                                  field_type: field.field_type as any,
-                                  options: formattedOptions,
-                                  is_required: false,
-                                  is_active: true,
-                                  display_order: field.display_order,
-                                }}
-                                leadId={leadId}
-                                accountId={currentUser?.account_id || ""}
-                                currentValue={getFieldValue(field.id)}
-                                onValueChange={() => refetchFieldValues()}
-                              />
+                            <div key={field.id} className="min-w-0 overflow-hidden">
+                              <span className="text-[10px] text-zapp-text-muted block mb-1 truncate" title={field.name}>
+                                {field.name}
+                              </span>
+                              <div className="max-w-full overflow-hidden">
+                                <LeadFieldValueEditor
+                                  field={{
+                                    id: field.id,
+                                    name: field.name,
+                                    field_type: field.field_type as any,
+                                    options: formattedOptions,
+                                    is_required: false,
+                                    is_active: true,
+                                    display_order: field.display_order,
+                                  }}
+                                  leadId={leadId}
+                                  accountId={currentUser?.account_id || ""}
+                                  currentValue={getFieldValue(field.id)}
+                                  onValueChange={() => refetchFieldValues()}
+                                />
+                              </div>
                             </div>
                           );
                         })}

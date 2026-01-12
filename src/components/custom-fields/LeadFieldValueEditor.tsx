@@ -125,7 +125,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
@@ -162,7 +162,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
@@ -205,7 +205,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
@@ -245,7 +245,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} teamUsers={teamUsers.length ? teamUsers : undefined} />
           </button>
         </PopoverTrigger>
@@ -285,7 +285,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
@@ -316,7 +316,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
@@ -337,7 +337,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-32">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
@@ -367,7 +367,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
@@ -400,7 +400,7 @@ export function LeadFieldValueEditor({ field, leadId, accountId, currentValue, o
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-full overflow-hidden">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
