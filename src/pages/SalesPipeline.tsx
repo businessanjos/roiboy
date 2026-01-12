@@ -786,6 +786,17 @@ function DealListView({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={deal.responsible_user?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {deal.responsible_user?.name
+                          ?.split(" ")
+                          .map(n => n[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
                     <div
                       className="w-2 h-8 rounded-full"
                       style={{ backgroundColor: stage?.color || '#6b7280' }}
