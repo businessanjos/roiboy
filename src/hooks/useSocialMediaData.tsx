@@ -26,6 +26,7 @@ export interface InstagramPost {
   profile_id: string;
   instagram_id: string | null;
   post_type: 'reels' | 'carousel' | 'static';
+  theme: string | null;
   caption: string | null;
   thumbnail_url: string | null;
   permalink: string | null;
@@ -223,6 +224,7 @@ export function useSocialMediaData() {
     mutationFn: async (data: {
       permalink: string;
       post_type: 'reels' | 'carousel' | 'static';
+      theme?: string;
       ai_objective: 'growth' | 'connection' | 'authority' | 'sales';
       posted_at: Date;
       caption: string;
@@ -253,6 +255,7 @@ export function useSocialMediaData() {
           instagram_id: instagramId,
           permalink: data.permalink,
           post_type: data.post_type,
+          theme: data.theme || null,
           ai_objective: data.ai_objective,
           ai_objective_confidence: 100, // Manual = 100% confidence
           posted_at: data.posted_at.toISOString(),
@@ -294,6 +297,7 @@ export function useSocialMediaData() {
       data: {
         permalink: string;
         post_type: 'reels' | 'carousel' | 'static';
+        theme?: string;
         ai_objective: 'growth' | 'connection' | 'authority' | 'sales';
         posted_at: Date;
         caption: string;
@@ -320,6 +324,7 @@ export function useSocialMediaData() {
           instagram_id: instagramId,
           permalink: data.permalink,
           post_type: data.post_type,
+          theme: data.theme || null,
           ai_objective: data.ai_objective,
           ai_objective_confidence: 100,
           posted_at: data.posted_at.toISOString(),

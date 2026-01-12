@@ -118,6 +118,22 @@ export function SocialMediaTab() {
     return num.toString();
   };
 
+  const getThemeLabel = (theme: string): string => {
+    const themeLabels: Record<string, string> = {
+      dump: '📷 Dump',
+      frase: '💭 Frase',
+      reels_curto: '⚡ Reels Curto',
+      carrossel_lifestyle: '🌴 Lifestyle',
+      carrossel_reflexivo: '🧘 Reflexivo',
+      trends: '📈 Trends',
+      reacts: '🎭 Reacts',
+      fato_novo: '📰 Fato Novo',
+      prova_social: '⭐ Prova Social',
+      assunto_alta: '🔥 Assunto em Alta',
+    };
+    return themeLabels[theme] || theme;
+  };
+
   const handleConnect = (data: { username: string; accessToken: string }) => {
     createProfile.mutate(data, {
       onSuccess: () => setConnectDialogOpen(false),
@@ -424,6 +440,7 @@ export function SocialMediaTab() {
                     <TableRow className="bg-muted/30">
                       <TableHead className="w-[100px]">Data</TableHead>
                       <TableHead className="w-[100px]">Formato</TableHead>
+                      <TableHead className="w-[120px]">Tema</TableHead>
                       <TableHead className="w-[120px]">Objetivo (IA)</TableHead>
                       <TableHead className="min-w-[200px]">Conteúdo</TableHead>
                       <TableHead className="text-right w-[80px]">
@@ -494,7 +511,7 @@ export function SocialMediaTab() {
                   <TableBody>
                     {filteredPosts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={14} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={15} className="text-center py-12 text-muted-foreground">
                           {posts.length === 0 
                             ? 'Nenhum post encontrado para este perfil.'
                             : 'Nenhum post encontrado com os filtros selecionados.'}
@@ -514,6 +531,15 @@ export function SocialMediaTab() {
                           </TableCell>
                           <TableCell>
                             <PostFormatBadge format={post.post_type} />
+                          </TableCell>
+                          <TableCell>
+                            {post.theme ? (
+                              <Badge variant="outline" className="text-xs">
+                                {getThemeLabel(post.theme)}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">

@@ -41,6 +41,7 @@ interface EditPostDialogProps {
 export interface EditPostFormData {
   permalink: string;
   post_type: 'reels' | 'carousel' | 'static';
+  theme?: string;
   ai_objective: 'growth' | 'connection' | 'authority' | 'sales';
   posted_at: Date;
   caption: string;
@@ -65,6 +66,7 @@ export function EditPostDialog({
 }: EditPostDialogProps) {
   const [permalink, setPermalink] = useState('');
   const [postType, setPostType] = useState<'reels' | 'carousel' | 'static'>('reels');
+  const [theme, setTheme] = useState('');
   const [objective, setObjective] = useState<'growth' | 'connection' | 'authority' | 'sales'>('growth');
   const [postedAt, setPostedAt] = useState<Date | undefined>(new Date());
   const [caption, setCaption] = useState('');
@@ -80,6 +82,7 @@ export function EditPostDialog({
     if (post) {
       setPermalink(post.permalink || '');
       setPostType(post.post_type);
+      setTheme(post.theme || '');
       setObjective(post.ai_objective || 'growth');
       setPostedAt(new Date(post.posted_at));
       setCaption(post.caption || '');
@@ -111,6 +114,7 @@ export function EditPostDialog({
     onSubmit(post.id, {
       permalink,
       post_type: postType,
+      theme: theme || undefined,
       ai_objective: objective,
       posted_at: postedAt,
       caption,
@@ -163,8 +167,8 @@ export function EditPostDialog({
             )}
           </div>
 
-          {/* Formato e Objetivo */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Formato, Tema e Objetivo */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label>Formato *</Label>
               <Select value={postType} onValueChange={(v) => setPostType(v as typeof postType)}>
@@ -175,6 +179,27 @@ export function EditPostDialog({
                   <SelectItem value="reels">🎬 Reels</SelectItem>
                   <SelectItem value="carousel">📸 Carrossel</SelectItem>
                   <SelectItem value="static">🖼️ Estático</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tema</Label>
+              <Select value={theme} onValueChange={setTheme}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dump">📷 Dump</SelectItem>
+                  <SelectItem value="frase">💭 Frase</SelectItem>
+                  <SelectItem value="reels_curto">⚡ Reels Curto</SelectItem>
+                  <SelectItem value="carrossel_lifestyle">🌴 Carrossel Lifestyle</SelectItem>
+                  <SelectItem value="carrossel_reflexivo">🧘 Carrossel Reflexivo</SelectItem>
+                  <SelectItem value="trends">📈 Trends</SelectItem>
+                  <SelectItem value="reacts">🎭 Reacts</SelectItem>
+                  <SelectItem value="fato_novo">📰 Fato Novo</SelectItem>
+                  <SelectItem value="prova_social">⭐ Prova Social</SelectItem>
+                  <SelectItem value="assunto_alta">🔥 Assunto em Alta</SelectItem>
                 </SelectContent>
               </Select>
             </div>
