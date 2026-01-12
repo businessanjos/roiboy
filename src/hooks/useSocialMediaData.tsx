@@ -38,6 +38,7 @@ export interface InstagramPost {
   saves: number;
   link_clicks: number;
   views: number;
+  followers_gained: number;
   engagement_rate: number;
   virality_rate: number;
   ai_objective: 'growth' | 'connection' | 'authority' | 'sales' | null;
@@ -235,6 +236,7 @@ export function useSocialMediaData() {
       saves: number;
       link_clicks: number;
       views: number;
+      followers_gained: number;
       collaborator: string;
     }) => {
       if (!currentProfile) throw new Error('Nenhum perfil selecionado');
@@ -267,6 +269,7 @@ export function useSocialMediaData() {
           saves: data.saves,
           link_clicks: data.link_clicks,
           views: data.views,
+          followers_gained: data.followers_gained,
           collaborator: data.collaborator || null,
           engagement_rate: Math.round(engagementRate * 100) / 100,
           virality_rate: Math.round(viralityRate * 100) / 100,

@@ -4774,6 +4774,7 @@ export type Database = {
           comments: number | null
           created_at: string
           engagement_rate: number | null
+          followers_gained: number | null
           id: string
           instagram_id: string | null
           is_trending: boolean | null
@@ -4800,6 +4801,7 @@ export type Database = {
           comments?: number | null
           created_at?: string
           engagement_rate?: number | null
+          followers_gained?: number | null
           id?: string
           instagram_id?: string | null
           is_trending?: boolean | null
@@ -4826,6 +4828,7 @@ export type Database = {
           comments?: number | null
           created_at?: string
           engagement_rate?: number | null
+          followers_gained?: number | null
           id?: string
           instagram_id?: string | null
           is_trending?: boolean | null

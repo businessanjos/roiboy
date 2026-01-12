@@ -50,6 +50,7 @@ export interface PostFormData {
   saves: number;
   link_clicks: number;
   views: number;
+  followers_gained: number;
   collaborator: string;
 }
 
@@ -82,6 +83,7 @@ export function AddPostDialog({
   const [saves, setSaves] = useState('');
   const [linkClicks, setLinkClicks] = useState('');
   const [views, setViews] = useState('');
+  const [followersGained, setFollowersGained] = useState('');
   const [collaborator, setCollaborator] = useState('');
 
   // Reset form when dialog opens
@@ -106,6 +108,7 @@ export function AddPostDialog({
     setSaves('');
     setLinkClicks('');
     setViews('');
+    setFollowersGained('');
     setCollaborator('');
   };
 
@@ -130,6 +133,7 @@ export function AddPostDialog({
     const savesNum = parseInt(saves) || 0;
     const linkClicksNum = parseInt(linkClicks) || 0;
     const viewsNum = parseInt(views) || 0;
+    const followersGainedNum = parseInt(followersGained) || 0;
 
     onSubmit({
       permalink,
@@ -145,6 +149,7 @@ export function AddPostDialog({
       saves: savesNum,
       link_clicks: linkClicksNum,
       views: viewsNum,
+      followers_gained: followersGainedNum,
       collaborator: collaborator.trim(),
     });
   };
@@ -379,6 +384,19 @@ export function AddPostDialog({
                   placeholder="0"
                   value={views}
                   onChange={(e) => setViews(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="followersGained" className="text-xs text-muted-foreground">
+                  Seg. Ganhos
+                </Label>
+                <Input
+                  id="followersGained"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={followersGained}
+                  onChange={(e) => setFollowersGained(e.target.value)}
                 />
               </div>
             </div>
