@@ -265,12 +265,31 @@ export function TeamManager() {
         },
       });
 
-      if (response.error) {
-        throw new Error(response.error.message || "Erro ao criar usuário");
-      }
-
+      // Check for specific error message from edge function first
       if (response.data?.error) {
         throw new Error(response.data.error);
+      }
+
+      // Handle SDK error, but try to extract the real message
+      if (response.error) {
+        let errorMessage = "Erro ao criar usuário";
+        
+        // Try to parse the error from context body (raw response)
+        if (response.error.context?.body) {
+          try {
+            const bodyError = JSON.parse(response.error.context.body);
+            if (bodyError.error) {
+              errorMessage = bodyError.error;
+            }
+          } catch {
+            // If parsing fails, continue with fallback
+          }
+        } else if (response.error.message && !response.error.message.includes("non-2xx")) {
+          // Use error message only if it's not the generic one
+          errorMessage = response.error.message;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       toast.success("Membro adicionado com sucesso! Ele já pode fazer login.");
