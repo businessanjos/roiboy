@@ -49,6 +49,7 @@ export interface EditPostFormData {
   comments: number;
   shares: number;
   saves: number;
+  views: number;
 }
 
 const isValidInstagramUrl = (url: string): boolean => {
@@ -72,6 +73,7 @@ export function EditPostDialog({
   const [comments, setComments] = useState('');
   const [shares, setShares] = useState('');
   const [saves, setSaves] = useState('');
+  const [views, setViews] = useState('');
 
   // Populate form when post changes
   useEffect(() => {
@@ -86,6 +88,7 @@ export function EditPostDialog({
       setComments(post.comments.toString());
       setShares(post.shares.toString());
       setSaves(post.saves.toString());
+      setViews((post.views || 0).toString());
     }
   }, [post]);
 
@@ -103,6 +106,7 @@ export function EditPostDialog({
     const commentsNum = parseInt(comments) || 0;
     const sharesNum = parseInt(shares) || 0;
     const savesNum = parseInt(saves) || 0;
+    const viewsNum = parseInt(views) || 0;
 
     onSubmit(post.id, {
       permalink,
@@ -115,6 +119,7 @@ export function EditPostDialog({
       comments: commentsNum,
       shares: sharesNum,
       saves: savesNum,
+      views: viewsNum,
     });
   };
 
@@ -286,6 +291,19 @@ export function EditPostDialog({
                   placeholder="0"
                   value={saves}
                   onChange={(e) => setSaves(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-views" className="text-xs text-muted-foreground">
+                  Views
+                </Label>
+                <Input
+                  id="edit-views"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={views}
+                  onChange={(e) => setViews(e.target.value)}
                 />
               </div>
             </div>

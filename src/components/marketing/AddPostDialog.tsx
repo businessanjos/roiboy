@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Link2, Plus, AtSign } from 'lucide-react';
@@ -48,6 +48,7 @@ export interface PostFormData {
   shares: number;
   saves: number;
   link_clicks: number;
+  views: number;
   collaborator: string;
 }
 
@@ -78,7 +79,16 @@ export function AddPostDialog({
   const [shares, setShares] = useState('');
   const [saves, setSaves] = useState('');
   const [linkClicks, setLinkClicks] = useState('');
+  const [views, setViews] = useState('');
   const [collaborator, setCollaborator] = useState('');
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      handleReset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleReset = () => {
     setPermalink('');
@@ -92,6 +102,7 @@ export function AddPostDialog({
     setShares('');
     setSaves('');
     setLinkClicks('');
+    setViews('');
     setCollaborator('');
   };
 
@@ -115,6 +126,7 @@ export function AddPostDialog({
     const sharesNum = parseInt(shares) || 0;
     const savesNum = parseInt(saves) || 0;
     const linkClicksNum = parseInt(linkClicks) || 0;
+    const viewsNum = parseInt(views) || 0;
 
     onSubmit({
       permalink,
@@ -128,6 +140,7 @@ export function AddPostDialog({
       shares: sharesNum,
       saves: savesNum,
       link_clicks: linkClicksNum,
+      views: viewsNum,
       collaborator: collaborator.trim(),
     });
   };
@@ -328,6 +341,19 @@ export function AddPostDialog({
                   placeholder="0"
                   value={linkClicks}
                   onChange={(e) => setLinkClicks(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="views" className="text-xs text-muted-foreground">
+                  Views
+                </Label>
+                <Input
+                  id="views"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={views}
+                  onChange={(e) => setViews(e.target.value)}
                 />
               </div>
             </div>

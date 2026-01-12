@@ -4788,6 +4788,7 @@ export type Database = {
           shares: number | null
           thumbnail_url: string | null
           updated_at: string
+          views: number
           virality_rate: number | null
         }
         Insert: {
@@ -4812,6 +4813,7 @@ export type Database = {
           shares?: number | null
           thumbnail_url?: string | null
           updated_at?: string
+          views?: number
           virality_rate?: number | null
         }
         Update: {
@@ -4836,6 +4838,7 @@ export type Database = {
           shares?: number | null
           thumbnail_url?: string | null
           updated_at?: string
+          views?: number
           virality_rate?: number | null
         }
         Relationships: [
