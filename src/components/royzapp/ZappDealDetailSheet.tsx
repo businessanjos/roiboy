@@ -64,6 +64,7 @@ interface DealActivity {
 interface InternalTask {
   id: string;
   title: string;
+  description: string | null;
   due_date: string | null;
   due_time: string | null;
   status: string;
@@ -201,7 +202,7 @@ export function ZappDealDetailSheet({
       let query = supabase
         .from("internal_tasks")
         .select(`
-          id, title, due_date, due_time, status, custom_status_id, completed_at, created_at,
+          id, title, description, due_date, due_time, status, custom_status_id, completed_at, created_at,
           activity_type:activity_types(name, color, icon),
           assigned_user:users!internal_tasks_assigned_to_fkey(name, avatar_url)
         `)
@@ -334,7 +335,7 @@ export function ZappDealDetailSheet({
       type: "task" as const,
       subType: t.activity_type?.name || "Tarefa",
       title: t.title,
-      description: null,
+      description: t.description,
       date: t.completed_at || t.created_at,
       user: t.assigned_user,
       status: t.status,
@@ -698,16 +699,16 @@ export function ZappDealDetailSheet({
                                     <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
                                   </div>
                                 </div>
-                                {item.description && item.description.length > 80 && (
+                                {item.description && item.description.length > 40 && (
                                   <button
                                     onClick={() => toggleItemExpanded(item.id)}
-                                    className="flex-shrink-0 p-1.5 rounded-full bg-zapp-panel hover:bg-zapp-border text-zapp-text-muted hover:text-zapp-accent transition-colors self-end"
+                                    className="flex-shrink-0 p-1.5 rounded-full bg-zapp-accent/20 hover:bg-zapp-accent/30 text-zapp-accent transition-colors"
                                     title={expandedItems.has(item.id) ? "Recolher" : "Expandir"}
                                   >
                                     {expandedItems.has(item.id) ? (
-                                      <ChevronUp className="h-3.5 w-3.5" />
+                                      <ChevronUp className="h-4 w-4" />
                                     ) : (
-                                      <ChevronDown className="h-3.5 w-3.5" />
+                                      <ChevronDown className="h-4 w-4" />
                                     )}
                                   </button>
                                 )}
