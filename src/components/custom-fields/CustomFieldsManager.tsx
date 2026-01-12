@@ -755,7 +755,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
             </div>
             
             {/* Botões Nova Pasta e Novo Campo - fixos */}
-            <div className="flex-shrink-0 px-6 pt-4">
+            <div className="flex-shrink-0 px-6 pt-4 pb-4 border-b">
               <div className="flex items-center gap-2 justify-end">
                 {showNewFolderInput ? (
                   <div className="flex-1 flex items-center gap-2">
@@ -798,7 +798,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
             </div>
             
             {/* Área de scroll - SOMENTE esta parte rola */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
               {fieldsList}
             </div>
           </div>
