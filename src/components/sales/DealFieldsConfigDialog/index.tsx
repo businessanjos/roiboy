@@ -339,16 +339,16 @@ export function DealFieldsConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Personalizar Campos do Negócio</DialogTitle>
         </DialogHeader>
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground flex-shrink-0">
           Arraste para reordenar, use o switch para ocultar/exibir campos, e organize em pastas.
         </p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {showNewFolderInput ? (
             <div className="flex-1 flex items-center gap-2">
               <Input
@@ -391,7 +391,7 @@ export function DealFieldsConfigDialog({
           )}
         </div>
 
-        <div className="space-y-2 max-h-[400px] overflow-y-auto py-2">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 py-2">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -466,7 +466,7 @@ export function DealFieldsConfigDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
