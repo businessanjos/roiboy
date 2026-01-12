@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users, Instagram, MapPin } from "lucide-react";
+import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users, Instagram, MapPin, FolderPlus, Check, ChevronDown, ChevronRight, Folder } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -18,6 +18,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -28,6 +30,14 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+interface FolderConfig {
+  id: string;
+  name: string;
+  display_order: number;
+  is_expanded: boolean;
+  isNew?: boolean;
+}
+
 export interface CustomField {
   id: string;
   name: string;
@@ -37,6 +47,7 @@ export interface CustomField {
   display_order: number;
   is_active: boolean;
   show_in_clients?: boolean;
+  folder_id?: string | null;
 }
 
 export interface FieldOption {
@@ -169,8 +180,13 @@ interface CustomFieldsManagerProps {
 export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpenChange: externalOnOpenChange }: CustomFieldsManagerProps) {
   const { currentUser } = useCurrentUser();
   const [fields, setFields] = useState<CustomField[]>([]);
+  const [folders, setFolders] = useState<FolderConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [internalDialogOpen, setInternalDialogOpen] = useState(false);
+  
+  // Folder creation state
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   
   // Use external control if provided, otherwise internal
   const isControlled = externalOpen !== undefined;
@@ -200,9 +216,29 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
   );
 
   const fetchFields = async () => {
+    if (!currentUser?.account_id) return;
+    
+    // Fetch folders
+    const { data: foldersData } = await supabase
+      .from("custom_field_folders")
+      .select("*")
+      .eq("account_id", currentUser.account_id)
+      .order("display_order");
+    
+    if (foldersData) {
+      setFolders(foldersData.map(f => ({
+        id: f.id,
+        name: f.name,
+        display_order: f.display_order,
+        is_expanded: f.is_expanded ?? true,
+      })));
+    }
+    
+    // Fetch fields
     const { data, error } = await supabase
       .from("custom_fields")
       .select("*")
+      .eq("account_id", currentUser.account_id)
       .eq("is_active", true)
       .order("display_order");
 
@@ -216,6 +252,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
         display_order: f.display_order,
         is_active: f.is_active,
         show_in_clients: f.show_in_clients,
+        folder_id: f.folder_id,
       }));
       setFields(mappedFields);
     }
@@ -223,8 +260,92 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
   };
 
   useEffect(() => {
-    fetchFields();
-  }, []);
+    if (currentUser?.account_id) {
+      fetchFields();
+    }
+  }, [currentUser?.account_id]);
+  
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || !currentUser?.account_id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("custom_field_folders")
+        .insert({
+          account_id: currentUser.account_id,
+          name: newFolderName.trim(),
+          display_order: folders.length,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setFolders(prev => [...prev, {
+        id: data.id,
+        name: data.name,
+        display_order: data.display_order,
+        is_expanded: true,
+      }]);
+      
+      setNewFolderName("");
+      setShowNewFolderInput(false);
+      toast.success("Pasta criada!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao criar pasta");
+    }
+  };
+  
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta pasta? Os campos serão movidos para fora da pasta.")) {
+      return;
+    }
+    
+    try {
+      // Move fields out of folder
+      await supabase
+        .from("custom_fields")
+        .update({ folder_id: null })
+        .eq("folder_id", folderId);
+      
+      // Delete folder
+      const { error } = await supabase
+        .from("custom_field_folders")
+        .delete()
+        .eq("id", folderId);
+      
+      if (error) throw error;
+      
+      setFolders(prev => prev.filter(f => f.id !== folderId));
+      setFields(prev => prev.map(f => f.folder_id === folderId ? { ...f, folder_id: null } : f));
+      toast.success("Pasta excluída!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir pasta");
+    }
+  };
+  
+  const handleRenameFolder = async (folderId: string, newName: string) => {
+    if (!newName.trim()) return;
+    
+    try {
+      const { error } = await supabase
+        .from("custom_field_folders")
+        .update({ name: newName.trim() })
+        .eq("id", folderId);
+      
+      if (error) throw error;
+      
+      setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name: newName.trim() } : f));
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao renomear pasta");
+    }
+  };
+  
+  const toggleFolderExpanded = (folderId: string) => {
+    setFolders(prev => prev.map(f => 
+      f.id === folderId ? { ...f, is_expanded: !f.is_expanded } : f
+    ));
+  };
 
   const resetForm = () => {
     setName("");
@@ -519,10 +640,37 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
     </Dialog>
   );
 
+  // Campos sem pasta
+  const fieldsWithoutFolder = fields.filter(f => !f.folder_id);
+  
+  // Função para renderizar campos de uma pasta
+  const renderFolderFields = (folderId: string) => {
+    const folderFields = fields.filter(f => f.folder_id === folderId);
+    if (folderFields.length === 0) {
+      return (
+        <div className="text-center py-3 text-muted-foreground text-sm">
+          Arraste campos para esta pasta
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-2">
+        {folderFields.map((field) => (
+          <SortableFieldItem
+            key={field.id}
+            field={field}
+            onEdit={openEditDialog}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+    );
+  };
+
   // Lista de campos com scroll independente
   const fieldsList = loading ? (
     <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-  ) : fields.length === 0 ? (
+  ) : fields.length === 0 && folders.length === 0 ? (
     <div className="text-center py-8 border-2 border-dashed rounded-lg">
       <Settings2 className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
       <p className="text-muted-foreground">Nenhum campo criado</p>
@@ -536,18 +684,43 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-2">
-          {fields.map((field) => (
-            <SortableFieldItem
-              key={field.id}
-              field={field}
-              onEdit={openEditDialog}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      </SortableContext>
+      <div className="space-y-4">
+        {/* Pastas */}
+        {folders.map((folder) => (
+          <FolderSection
+            key={folder.id}
+            folder={folder}
+            onToggleExpand={() => toggleFolderExpanded(folder.id)}
+            onRename={(name) => handleRenameFolder(folder.id, name)}
+            onDelete={() => handleDeleteFolder(folder.id)}
+          >
+            <SortableContext items={fields.filter(f => f.folder_id === folder.id).map(f => f.id)} strategy={verticalListSortingStrategy}>
+              {renderFolderFields(folder.id)}
+            </SortableContext>
+          </FolderSection>
+        ))}
+        
+        {/* Campos sem pasta */}
+        {fieldsWithoutFolder.length > 0 && (
+          <div className="space-y-2">
+            {folders.length > 0 && (
+              <h4 className="text-sm font-medium text-muted-foreground">Sem pasta</h4>
+            )}
+            <SortableContext items={fieldsWithoutFolder.map(f => f.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {fieldsWithoutFolder.map((field) => (
+                  <SortableFieldItem
+                    key={field.id}
+                    field={field}
+                    onEdit={openEditDialog}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </div>
+        )}
+      </div>
     </DndContext>
   );
 
@@ -581,9 +754,45 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
               </DialogHeader>
             </div>
             
-            {/* Botão Novo Campo - fixo */}
+            {/* Botões Nova Pasta e Novo Campo - fixos */}
             <div className="flex-shrink-0 px-6 pt-4">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center gap-2 justify-end">
+                {showNewFolderInput ? (
+                  <div className="flex-1 flex items-center gap-2">
+                    <Input
+                      placeholder="Nome da pasta"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      className="h-8"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCreateFolder();
+                        if (e.key === "Escape") {
+                          setShowNewFolderInput(false);
+                          setNewFolderName("");
+                        }
+                      }}
+                    />
+                    <Button size="sm" variant="ghost" onClick={handleCreateFolder}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => {
+                      setShowNewFolderInput(false);
+                      setNewFolderName("");
+                    }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewFolderInput(true)}
+                  >
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Nova Pasta
+                  </Button>
+                )}
                 {fieldDialog}
               </div>
             </div>
@@ -599,4 +808,83 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
   }
 
   return content;
+}
+
+// Componente de seção de pasta
+function FolderSection({
+  folder,
+  onToggleExpand,
+  onRename,
+  onDelete,
+  children,
+}: {
+  folder: FolderConfig;
+  onToggleExpand: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+  children: React.ReactNode;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(folder.name);
+  
+  const handleSaveRename = () => {
+    if (editName.trim() && editName.trim() !== folder.name) {
+      onRename(editName.trim());
+    }
+    setIsEditing(false);
+  };
+  
+  return (
+    <div className="border rounded-lg">
+      <div className="flex items-center gap-2 p-3 bg-muted/50">
+        <button onClick={onToggleExpand} className="text-muted-foreground hover:text-foreground">
+          {folder.is_expanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </button>
+        <Folder className="h-4 w-4 text-muted-foreground" />
+        
+        {isEditing ? (
+          <div className="flex-1 flex items-center gap-2">
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="h-7 text-sm"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveRename();
+                if (e.key === "Escape") {
+                  setIsEditing(false);
+                  setEditName(folder.name);
+                }
+              }}
+              onBlur={handleSaveRename}
+            />
+          </div>
+        ) : (
+          <span 
+            className="flex-1 font-medium text-sm cursor-pointer hover:underline"
+            onClick={() => {
+              setEditName(folder.name);
+              setIsEditing(true);
+            }}
+          >
+            {folder.name}
+          </span>
+        )}
+        
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+      
+      {folder.is_expanded && (
+        <div className="p-3 pt-2">
+          {children}
+        </div>
+      )}
+    </div>
+  );
 }
