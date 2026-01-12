@@ -40,6 +40,93 @@ interface UazapiRequest {
   integration_id?: string; // NEW: Target specific integration by ID
 }
 
+// Helper function to get sector display name
+function getSectorDisplayName(sectorId: string | null): string {
+  const sectorNames: Record<string, string> = {
+    "operacoes": "Operações",
+    "financeiro": "Finanças",
+    "vendas": "Vendas",
+    "diretoria": "Diretoria",
+  };
+  return sectorId ? (sectorNames[sectorId] || sectorId) : "Padrão";
+}
+
+// Helper function to log WhatsApp changes and notify other admins
+// deno-lint-ignore no-explicit-any
+async function logWhatsAppChangeAndNotify(
+  supabaseClient: any,
+  accountId: string,
+  userId: string,
+  userName: string,
+  action: string,
+  sectorId: string | null,
+  instanceName: string,
+  phoneNumber: string
+): Promise<void> {
+  const sectorName = getSectorDisplayName(sectorId);
+  const details = {
+    action,
+    sector_id: sectorId,
+    sector_name: sectorName,
+    instance_name: instanceName,
+    phone_number: phoneNumber,
+    changed_by: userName,
+    changed_at: new Date().toISOString(),
+  };
+
+  console.log(`[AUDIT] WhatsApp change: ${action} by ${userName} for sector ${sectorName}`);
+
+  // 1. Log to security_audit_logs
+  const { error: auditError } = await supabaseClient.from("security_audit_logs").insert({
+    event_type: "whatsapp_integration_change",
+    user_id: userId,
+    account_id: accountId,
+    details,
+  });
+
+  if (auditError) {
+    console.error("Failed to log audit:", auditError.message);
+  }
+
+  // 2. Fetch all other admins to notify (excluding the user who made the change)
+  const { data: admins, error: adminsError } = await supabaseClient
+    .from("users")
+    .select("id, name")
+    .eq("account_id", accountId)
+    .or("role.eq.admin,is_also_admin.eq.true")
+    .neq("id", userId);
+
+  if (adminsError) {
+    console.error("Failed to fetch admins for notification:", adminsError.message);
+    return;
+  }
+
+  if (admins && admins.length > 0) {
+    const actionText = action === "link_instance" ? "alterou" : action === "disconnect" ? "desconectou" : action;
+    const phoneText = phoneNumber ? ` (${phoneNumber})` : "";
+    
+    // deno-lint-ignore no-explicit-any
+    const notifications = admins.map((admin: any) => ({
+      account_id: accountId,
+      user_id: admin.id,
+      type: "security_alert",
+      title: "🔔 WhatsApp Alterado",
+      content: `${userName} ${actionText} o WhatsApp do setor "${sectorName}"${phoneText}`,
+      link: "/settings",
+      source_type: "integration",
+      triggered_by_user_id: userId,
+    }));
+
+    const { error: notifyError } = await supabaseClient.from("notifications").insert(notifications);
+    
+    if (notifyError) {
+      console.error("Failed to send notifications:", notifyError.message);
+    } else {
+      console.log(`[NOTIFY] Sent ${notifications.length} notifications to admins`);
+    }
+  }
+}
+
 // Helper function to configure webhook automatically
 async function configureWebhook(instanceToken: string, instanceName: string, supabaseUrl: string): Promise<boolean> {
   const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
@@ -211,7 +298,7 @@ serve(async (req) => {
     // Get user's account AND role for authorization
     const { data: userData } = await supabase
       .from("users")
-      .select("account_id, role, is_also_admin")
+      .select("id, name, account_id, role, is_also_admin")
       .eq("auth_user_id", user.id)
       .single();
 
@@ -914,6 +1001,22 @@ serve(async (req) => {
           api_disconnected: disconnected,
           locally_disconnected: true 
         };
+        
+        // Audit and notify other admins about this disconnect
+        const previousPhone = (existingWhatsapp?.config as { owner?: string })?.owner || 
+                              (existingWhatsapp?.config as { phone_number?: string })?.phone_number || "";
+        const previousInstanceName = (existingWhatsapp?.config as { instance_name?: string })?.instance_name || instanceName;
+        
+        await logWhatsAppChangeAndNotify(
+          supabase,
+          accountId,
+          userData.id,
+          userData.name || "Admin",
+          "disconnect",
+          sector_id || null,
+          previousInstanceName,
+          previousPhone
+        );
           
         break;
       }
@@ -1028,6 +1131,18 @@ serve(async (req) => {
           };
           
           console.log(`Successfully linked ${targetInstanceName} to sector ${sector_id}`);
+          
+          // Audit and notify other admins about this change
+          await logWhatsAppChangeAndNotify(
+            supabase,
+            accountId,
+            userData.id,
+            userData.name || "Admin",
+            "link_instance",
+            sector_id || null,
+            targetInstanceName,
+            targetInstance.owner || ""
+          );
         } catch (err) {
           console.error("Failed to link instance:", (err as Error).message);
           return new Response(
