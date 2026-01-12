@@ -526,6 +526,9 @@ export default function RoyZapp() {
 
     console.log("[RoyZapp] Setting up realtime for conversation:", zappConvId);
 
+    // Track recently sent messages to avoid duplicate processing
+    const recentlySentRef = { current: new Set<string>() };
+    
     const messagesChannel = supabase
       .channel(`zapp-messages-${zappConvId}`)
       .on(
@@ -538,7 +541,45 @@ export default function RoyZapp() {
         },
         (payload) => {
           console.log("[RoyZapp] Realtime INSERT received:", payload);
-          // Refetch messages to ensure proper ordering
+          const newMsg = payload.new as any;
+          
+          // Skip if this is our own recently sent outbound message
+          // This prevents duplicate fetching right after we insert
+          if (newMsg.direction === 'outbound' && newMsg.id) {
+            const insertTime = new Date(newMsg.sent_at || newMsg.created_at).getTime();
+            const now = Date.now();
+            // If message was sent in last 3 seconds by us, skip refetch
+            if (now - insertTime < 3000) {
+              console.log("[RoyZapp] Skipping refetch for own recent message:", newMsg.id);
+              // Just update state directly instead of refetching
+              setMessages(prev => {
+                // Check if message already exists (avoid duplicates)
+                const exists = prev.some(m => m.id === newMsg.id || m.external_message_id === newMsg.external_message_id);
+                if (exists) {
+                  return prev;
+                }
+                // Remove any temp messages that might be for this audio
+                const filtered = prev.filter(m => !m.id.startsWith('temp-audio-'));
+                return [...filtered, {
+                  id: newMsg.id,
+                  content: newMsg.content,
+                  is_from_client: newMsg.direction === 'inbound',
+                  created_at: newMsg.sent_at || newMsg.created_at,
+                  message_type: newMsg.message_type,
+                  media_url: newMsg.media_url,
+                  media_type: newMsg.media_type,
+                  media_mimetype: newMsg.media_mimetype,
+                  media_filename: newMsg.media_filename,
+                  audio_duration_sec: newMsg.audio_duration_sec,
+                  sender_name: newMsg.sender_name,
+                  external_message_id: newMsg.external_message_id,
+                }];
+              });
+              return;
+            }
+          }
+          
+          // For inbound messages or older outbound, refetch to ensure proper ordering
           fetchMessages(zappConvId);
         }
       )
@@ -1607,11 +1648,22 @@ export default function RoyZapp() {
           sent_at: now,
         }).select("id").single();
         
-        // Replace temp message with real one
+        // Replace temp message with real one - filter out temp completely then add real
         if (insertedMessage) {
-          setMessages(prev => prev.map(m => 
-            m.id === tempMessageId ? { ...m, id: insertedMessage.id, media_url: mediaUrl } : m
-          ));
+          setMessages(prev => {
+            // Remove ALL temp audio messages for this conversation to prevent duplicates
+            const filtered = prev.filter(m => m.id !== tempMessageId && !m.id.startsWith('temp-audio-'));
+            // Check if this message already exists (from realtime)
+            const exists = filtered.some(m => m.id === insertedMessage.id);
+            if (exists) {
+              return filtered;
+            }
+            // Add the real message
+            return [...filtered, { ...optimisticMessage, id: insertedMessage.id, media_url: mediaUrl }];
+          });
+        } else {
+          // Even if insert didn't return data, remove the temp message
+          setMessages(prev => prev.filter(m => m.id !== tempMessageId));
         }
         
         // Update conversation last message
