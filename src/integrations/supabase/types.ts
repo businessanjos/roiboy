@@ -2202,6 +2202,89 @@ export type Database = {
           },
         ]
       }
+      composition_presets: {
+        Row: {
+          account_id: string
+          composition_items: string[]
+          created_at: string | null
+          id: string
+          is_favorite: boolean | null
+          name: string
+          objective: string | null
+          post_type: string | null
+          specialist_version: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          composition_items: string[]
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          name: string
+          objective?: string | null
+          post_type?: string | null
+          specialist_version?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          composition_items?: string[]
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          name?: string
+          objective?: string | null
+          post_type?: string | null
+          specialist_version?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "composition_presets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      composition_templates: {
+        Row: {
+          composition_items: string[]
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          objective: string | null
+          post_type: string | null
+        }
+        Insert: {
+          composition_items: string[]
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          objective?: string | null
+          post_type?: string | null
+        }
+        Update: {
+          composition_items?: string[]
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          objective?: string | null
+          post_type?: string | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           account_id: string
