@@ -3,6 +3,7 @@ import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   CalendarIcon,
+  Play,
   Instagram,
   Plus,
   Users,
@@ -473,6 +474,14 @@ export function SocialMediaTab() {
                           <TooltipContent>Cliques no Link</TooltipContent>
                         </Tooltip>
                       </TableHead>
+                      <TableHead className="text-right w-[70px]">
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            <Play className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Views</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
                       <TableHead className="text-right w-[90px] font-semibold text-primary">
                         Engaj. %
                       </TableHead>
@@ -485,7 +494,7 @@ export function SocialMediaTab() {
                   <TableBody>
                     {filteredPosts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={14} className="text-center py-12 text-muted-foreground">
                           {posts.length === 0 
                             ? 'Nenhum post encontrado para este perfil.'
                             : 'Nenhum post encontrado com os filtros selecionados.'}
@@ -558,6 +567,9 @@ export function SocialMediaTab() {
                           </TableCell>
                           <TableCell className="text-right">
                             {formatNumber(post.link_clicks || 0)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber(post.views || 0)}
                           </TableCell>
                           <TableCell className="text-right">
                             <Badge
