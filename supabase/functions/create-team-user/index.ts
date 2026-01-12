@@ -95,16 +95,38 @@ serve(async (req: Request) => {
       );
     }
 
-    // Check if email already exists
-    const { data: existingUsers } = await supabaseAdmin
+    // Global email check: search if email exists anywhere in the system
+    const { data: globalUser } = await supabaseAdmin
       .from("users")
-      .select("id")
+      .select("id, account_id, name")
       .eq("email", email.toLowerCase())
-      .eq("account_id", requestingProfile.account_id);
+      .maybeSingle();
 
-    if (existingUsers && existingUsers.length > 0) {
+    if (globalUser) {
+      if (globalUser.account_id === requestingProfile.account_id) {
+        // Email already exists in the SAME account
+        return new Response(
+          JSON.stringify({ error: "Este usuário já faz parte da sua equipe" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        // Email already exists in ANOTHER account
+        return new Response(
+          JSON.stringify({ error: "Este email já está cadastrado em outra empresa no sistema. Entre em contato com o suporte se precisar transferir este usuário." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Also check in auth.users (may exist without a profile in users table)
+    const { data: { users: allAuthUsers } } = await supabaseAdmin.auth.admin.listUsers({ 
+      perPage: 1000 
+    });
+    const existsInAuth = allAuthUsers?.some(u => u.email?.toLowerCase() === email.toLowerCase());
+    
+    if (existsInAuth) {
       return new Response(
-        JSON.stringify({ error: "Já existe um usuário com este email na sua conta" }),
+        JSON.stringify({ error: "Este email já está registrado no sistema. Entre em contato com o suporte para assistência." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
