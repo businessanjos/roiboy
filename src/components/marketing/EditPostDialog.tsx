@@ -183,8 +183,8 @@ export function EditPostDialog({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Tema</Label>
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
               <Select value={theme} onValueChange={setTheme}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
