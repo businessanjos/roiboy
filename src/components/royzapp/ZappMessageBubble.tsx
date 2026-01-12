@@ -240,62 +240,24 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
       )}
       <div 
         className={cn(
-          "flex mb-1 group relative",
+          "flex mb-1 group",
           message.is_from_client ? "justify-start" : "justify-end"
         )}
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => setShowActions(false)}
       >
-        {/* Action buttons - positioned outside bubble */}
-        {showActions && (onReply || (onDelete && canDelete)) && (
-          <div className={cn(
-            "flex items-center gap-1 absolute top-1/2 -translate-y-1/2 z-10",
-            message.is_from_client ? "right-[calc(65%+8px)]" : "left-[calc(65%+8px)]"
-          )}>
-            {onReply && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
-                    onClick={() => onReply(message)}
-                  >
-                    <Reply className="h-4 w-4 text-zapp-text-muted" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Responder</TooltipContent>
-              </Tooltip>
-            )}
-            {onDelete && canDelete && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <Loader2 className="h-4 w-4 text-zapp-text-muted animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4 text-red-400" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">Apagar para todos</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        )}
-        
+        {/* Container with bubble + actions - uses flexbox for relative positioning */}
         <div className={cn(
-          "max-w-[65%] px-3 py-2 rounded-lg relative shadow overflow-hidden",
-          message.is_from_client
-            ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
-            : "bg-zapp-message-out text-zapp-text rounded-tr-none"
+          "flex items-end gap-1 max-w-[65%]",
+          message.is_from_client ? "flex-row" : "flex-row-reverse"
         )}>
+          {/* Message bubble */}
+          <div className={cn(
+            "px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0",
+            message.is_from_client
+              ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
+              : "bg-zapp-message-out text-zapp-text rounded-tr-none"
+          )}>
           {/* Sender name for group messages */}
           {message.is_from_client && isGroup && message.sender_name && (
             <p 
@@ -487,7 +449,57 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             )}
           </div>
         </div>
+          
+        {/* Action buttons - now positioned relative to message */}
+        <AnimatePresence>
+          {showActions && (onReply || (onDelete && canDelete)) && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center gap-1 flex-shrink-0"
+            >
+              {onReply && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                      onClick={() => onReply(message)}
+                    >
+                      <Reply className="h-4 w-4 text-zapp-text-muted" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Responder</TooltipContent>
+                </Tooltip>
+              )}
+              {onDelete && canDelete && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 text-zapp-text-muted animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-red-400" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Apagar para todos</TooltipContent>
+                </Tooltip>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+    </div>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
