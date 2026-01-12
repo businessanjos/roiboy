@@ -2480,12 +2480,51 @@ export type Database = {
           },
         ]
       }
+      custom_field_folders: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_expanded: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_expanded?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_expanded?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_field_folders_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_fields: {
         Row: {
           account_id: string
           created_at: string
           display_order: number | null
           field_type: string
+          folder_id: string | null
           id: string
           is_active: boolean | null
           is_required: boolean | null
@@ -2501,6 +2540,7 @@ export type Database = {
           created_at?: string
           display_order?: number | null
           field_type: string
+          folder_id?: string | null
           id?: string
           is_active?: boolean | null
           is_required?: boolean | null
@@ -2516,6 +2556,7 @@ export type Database = {
           created_at?: string
           display_order?: number | null
           field_type?: string
+          folder_id?: string | null
           id?: string
           is_active?: boolean | null
           is_required?: boolean | null
@@ -2532,6 +2573,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_fields_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "custom_field_folders"
             referencedColumns: ["id"]
           },
         ]
