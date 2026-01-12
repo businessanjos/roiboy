@@ -819,7 +819,7 @@ export function DealDetailSheet({
                           Nenhuma interação registrada
                         </div>
                       ) : (
-                        <div className="max-h-[280px] overflow-y-auto divide-y">
+                        <div className="max-h-[480px] overflow-y-auto divide-y">
                           {timelineItems.map((item) => {
                             if (item.type === 'activity') {
                               const activity = item.data;
