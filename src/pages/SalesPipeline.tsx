@@ -6,6 +6,11 @@ import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
+import {
+  fetchDealCustomFieldValues,
+  updateClientWithDealData,
+  getContractDataFromDealFields,
+} from "@/utils/dealToClientContractMapping";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
@@ -264,6 +269,9 @@ export default function SalesPipeline() {
     try {
       let clientId = deal.client_id;
       
+      // Fetch deal custom field values BEFORE conversion
+      const dealFieldValues = await fetchDealCustomFieldValues(dealId);
+      
       // If deal has lead_id but no client_id, convert lead to client first
       if (deal.lead_id && !deal.client_id) {
         const { data: convertedClient, error: convertError } = await supabase
@@ -301,6 +309,11 @@ export default function SalesPipeline() {
         }
       }
 
+      // Update client with deal custom field data (Instagram, City, Bonus)
+      if (clientId && currentUser?.account_id) {
+        await updateClientWithDealData(clientId, currentUser.account_id, dealFieldValues);
+      }
+
       // Mark deal as won (keeps in pipeline with 'won' status)
       await markAsWon(dealId);
       
@@ -312,6 +325,9 @@ export default function SalesPipeline() {
         const today = new Date().toISOString().split('T')[0];
         const clientName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || "";
         
+        // Get contract data from deal custom fields
+        const contractDataFromDeal = await getContractDataFromDealFields(dealFieldValues);
+        
         const contractData = {
           client_id: clientId,
           account_id: currentUser.account_id,
@@ -321,6 +337,10 @@ export default function SalesPipeline() {
           status: 'active',
           receivables_generated: false, // Ensures it goes to reconciliation queue
           notes: `Contrato gerado automaticamente do negócio: ${deal.title}`,
+          // NEW: Data from deal custom fields
+          product_id: contractDataFromDeal.product_id || null,
+          payment_method: contractDataFromDeal.payment_method || null,
+          negotiation_description: contractDataFromDeal.negotiation_description || null,
         };
 
         const { data: newContract, error: contractError } = await supabase
