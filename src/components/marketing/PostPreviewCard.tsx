@@ -36,6 +36,9 @@ const themeLabels: Record<string, string> = {
   fato_novo: '📰 Fato Novo',
   prova_social: '⭐ Prova Social',
   assunto_alta: '🔥 Assunto em Alta',
+  vlog: '🎥 Vlog',
+  corte_podcast_convidado: '🎙️ Corte Podcast Convidado',
+  corte_vida_ryka_podcast: '🎧 Corte Vida Ryka Podcast',
 };
 
 export function PostPreviewCard({
