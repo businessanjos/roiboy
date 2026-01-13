@@ -25,6 +25,7 @@ import {
   Camera,
   Users,
   MapPin,
+  Trash2,
 } from "lucide-react";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { ConversationView } from "./ConversationView";
 
 export interface TimelineEvent {
@@ -320,7 +332,13 @@ function CommentItem({ event, highlightState }: { event: TimelineEvent; highligh
   );
 }
 
-function SystemEventItem({ event }: { event: TimelineEvent }) {
+function SystemEventItem({ 
+  event, 
+  onDeleteClick 
+}: { 
+  event: TimelineEvent; 
+  onDeleteClick?: (event: TimelineEvent) => void;
+}) {
   const config = getEventConfig(event);
   
   // Field change event - compact inline style
@@ -356,7 +374,7 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
   }
   
   return (
-    <div className="flex gap-3 py-2">
+    <div className="group flex gap-3 py-2">
       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0", config.bgColor)}>
         {event.type === "roi" && event.metadata?.category
           ? categoryIcons[event.metadata.category] || config.icon
@@ -383,6 +401,17 @@ function SystemEventItem({ event }: { event: TimelineEvent }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Delete button for followup files */}
+            {event.type === "followup" && event.metadata?.file_url && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => onDeleteClick?.(event)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {getImpactBadge(event.metadata?.impact || event.metadata?.level)}
             <span className="text-xs text-muted-foreground whitespace-nowrap">
               {formatDistanceToNow(new Date(event.timestamp), { locale: ptBR, addSuffix: false })}
@@ -425,6 +454,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [clientName, setClientName] = useState<string>(propClientName || "");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [highlightState, setHighlightState] = useState<"glow" | "fading" | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<TimelineEvent | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const location = useLocation();
   
   // Refs for hidden file inputs
@@ -573,6 +605,43 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       e.preventDefault();
       handleSubmitComment();
     }
+  };
+
+  const handleDeleteFollowup = async () => {
+    if (!eventToDelete) return;
+
+    setDeleting(true);
+    try {
+      // Delete file from storage if exists
+      if (eventToDelete.metadata?.file_url) {
+        const filePath = eventToDelete.metadata.file_url.split("/client-followups/")[1];
+        if (filePath) {
+          await supabase.storage.from("client-followups").remove([filePath]);
+        }
+      }
+
+      const { error } = await supabase
+        .from("client_followups")
+        .delete()
+        .eq("id", eventToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("Arquivo excluído!");
+      setDeleteDialogOpen(false);
+      setEventToDelete(null);
+      onCommentAdded?.(); // Reload events
+    } catch (error: any) {
+      console.error("Error deleting followup:", error);
+      toast.error(error.message || "Erro ao excluir");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteDialog = (event: TimelineEvent) => {
+    setEventToDelete(event);
+    setDeleteDialogOpen(true);
   };
 
   // Upload file to Supabase Storage
@@ -767,9 +836,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               {event.type === "comment" ? (
                 <CommentItem event={event} highlightState={highlightedId === event.id ? highlightState : null} />
               ) : event.type === "field_change" ? (
-                <SystemEventItem event={event} />
+                <SystemEventItem event={event} onDeleteClick={openDeleteDialog} />
               ) : (
-                <SystemEventItem event={event} />
+                <SystemEventItem event={event} onDeleteClick={openDeleteDialog} />
               )}
               
               {/* Show "Mostrar X atualizações anteriores" after a few items */}
@@ -861,6 +930,28 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir arquivo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O arquivo será permanentemente excluído.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFollowup}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
