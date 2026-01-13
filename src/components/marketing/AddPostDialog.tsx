@@ -35,6 +35,7 @@ import { PostQualityScore } from './PostQualityScore';
 import { PostPreviewCard } from './PostPreviewCard';
 import { CompositionTemplateSelector } from './CompositionTemplateSelector';
 import { SavePresetDialog } from './SavePresetDialog';
+import { EditCompositionOptionsDialog } from './EditCompositionOptionsDialog';
 
 interface AddPostDialogProps {
   open: boolean;
@@ -79,7 +80,7 @@ export function AddPostDialog({
   onSubmit,
   isLoading,
 }: AddPostDialogProps) {
-  const { specialistVersionOptions, compositionOptions, addOption, isLoading: isLoadingOptions } = useInstagramPostOptions();
+  const { specialistVersionOptions, compositionOptions, addOption, deleteOption, isLoading: isLoadingOptions } = useInstagramPostOptions();
   const { templates, presets, createPreset, deletePreset, isLoading: isLoadingTemplates } = useCompositionTemplates();
   
   const [permalink, setPermalink] = useState('');
@@ -100,6 +101,7 @@ export function AddPostDialog({
   const [specialistVersion, setSpecialistVersion] = useState('');
   const [composition, setComposition] = useState<string[]>([]);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
+  const [editCompositionOpen, setEditCompositionOpen] = useState(false);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -336,6 +338,8 @@ export function AddPostDialog({
                 onAddOption={(v) => addOption.mutate({ optionType: 'composition', value: v })}
                 isMultiple
                 isLoading={isLoadingOptions || addOption.isPending}
+                showEditButton
+                onEditClick={() => setEditCompositionOpen(true)}
               />
 
               {/* Data de Publicação */}
@@ -556,6 +560,15 @@ export function AddPostDialog({
         specialistVersion={specialistVersion}
         postType={postType}
         objective={objective}
+      />
+
+      <EditCompositionOptionsDialog
+        open={editCompositionOpen}
+        onOpenChange={setEditCompositionOpen}
+        options={compositionOptions}
+        onAddOption={(v) => addOption.mutate({ optionType: 'composition', value: v })}
+        onDeleteOption={(id) => deleteOption.mutate(id)}
+        isLoading={isLoadingOptions || addOption.isPending || deleteOption.isPending}
       />
     </>
   );

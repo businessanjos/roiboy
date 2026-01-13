@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Check, X } from 'lucide-react';
+import { Plus, Check, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +30,8 @@ interface OptionSelectWithAddProps {
   isMultiple?: boolean;
   isLoading?: boolean;
   className?: string;
+  showEditButton?: boolean;
+  onEditClick?: () => void;
 }
 
 export function OptionSelectWithAdd({
@@ -42,6 +44,8 @@ export function OptionSelectWithAdd({
   isMultiple = false,
   isLoading = false,
   className,
+  showEditButton = false,
+  onEditClick,
 }: OptionSelectWithAddProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newOption, setNewOption] = useState('');
@@ -84,18 +88,32 @@ export function OptionSelectWithAdd({
       <div className={cn('space-y-2', className)}>
         <div className="flex items-center justify-between">
           <Label>{label}</Label>
-          {!isAdding && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => setIsAdding(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Adicionar
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {showEditButton && onEditClick && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={onEditClick}
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Editar
+              </Button>
+            )}
+            {!isAdding && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => setIsAdding(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Adicionar
+              </Button>
+            )}
+          </div>
         </div>
 
         {isAdding && (
