@@ -2502,10 +2502,21 @@ export default function RoyZapp() {
         if (isArchived) return false;
       }
       
+      // Closed conversations filter
+      // When filterStatus is "closed", show only closed
+      // Otherwise, HIDE closed conversations by default
+      const isClosed = a.status === "closed";
+      if (filterStatus === "closed") {
+        if (!isClosed) return false;
+      } else if (filterStatus === "all") {
+        // When showing "all", hide closed unless explicitly requested
+        if (isClosed) return false;
+      }
+      
       // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only
       // Admins can see ALL conversations in "mine" tab (to monitor team)
-      // Skip tab filter when viewing archived (show all archived regardless of assignment)
-      const matchesTab = filterArchived ? true : (
+      // Skip tab filter when viewing archived or closed (show all regardless of assignment)
+      const matchesTab = (filterArchived || filterStatus === "closed") ? true : (
         inboxTab === "mine" 
           ? (isAdmin || a.agent_id === currentAgent?.id) // Admins see all assigned, others see only their own
           : a.agent_id === null // Queue always shows only unassigned
@@ -2516,7 +2527,8 @@ export default function RoyZapp() {
         contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         contact.phone?.includes(searchQuery);
       // Status filter: "triage" means no agent assigned (in queue)
-      const matchesStatus = filterStatus === "all" || 
+      // Skip status filter for "closed" and "all" as they're handled above
+      const matchesStatus = filterStatus === "all" || filterStatus === "closed" ||
         (filterStatus === "triage" ? a.agent_id === null : a.status === filterStatus);
       
       // Unread filter

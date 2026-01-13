@@ -990,12 +990,19 @@ serve(async (req) => {
           }
 
           // Create or update zapp_conversation_assignment for the queue
-          const { data: existingAssignment } = await supabase
+          // CRITICAL: Prioritize assignment with department_id to avoid duplicates
+          const { data: existingAssignments } = await supabase
             .from("zapp_conversation_assignments")
-            .select("id, status, agent_id")
+            .select("id, status, agent_id, department_id")
             .eq("account_id", accountId)
             .eq("zapp_conversation_id", zappConversationId)
-            .maybeSingle();
+            .order("department_id", { nullsFirst: false }) // Prioritize with department
+            .limit(5);
+          
+          // Find the best assignment: prefer one with department_id
+          const existingAssignment = existingAssignments?.find(a => a.department_id !== null) 
+            || existingAssignments?.[0] 
+            || null;
 
           if (existingAssignment) {
             // Update existing assignment - also set department if not set

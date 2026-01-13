@@ -150,6 +150,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
       currentDepartmentIdRef.current = dept.id;
       
       // CRITICAL: Filter by department_id at the database level
+      // Fetch ALL assignments (including closed) - filtering done in frontend
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("zapp_conversation_assignments")
         .select(`
@@ -161,9 +162,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
         `)
         .eq("account_id", currentUser.account_id)
         .eq("department_id", dept.id) // CRITICAL: Filter by department
-        .neq("status", "closed")
         .order("updated_at", { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (assignmentsError) throw assignmentsError;
       
@@ -302,6 +302,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
       }
       
       // Build assignments query - CRITICAL: filter by department if sector is selected
+      // Fetch ALL assignments (including closed) - filtering done in frontend
       let assignmentsQuery = supabase
         .from("zapp_conversation_assignments")
         .select(`
@@ -312,9 +313,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
           zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url), lead:leads(id, full_name, phone, email, status))
         `)
         .eq("account_id", currentUser.account_id)
-        .neq("status", "closed")
         .order("updated_at", { ascending: false })
-        .limit(100);
+        .limit(500);
       
       // CRITICAL: If sector is selected, ONLY fetch that department's assignments
       if (sectorId && targetDepartmentId) {
