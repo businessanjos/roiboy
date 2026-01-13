@@ -298,6 +298,7 @@ export function DealDetailSheet({
                 break;
               case "multi_select":
               case "user":
+              case "location":
                 valuesMap[v.field_id] = v.value_json;
                 break;
             }
