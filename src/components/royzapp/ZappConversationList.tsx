@@ -21,10 +21,12 @@ interface ZappConversationListProps {
   filterProductId: string;
   filterTagId: string;
   filterAgentId: string;
+  showClosed: boolean;
   myConversations: number;
   totalQueueConversations: number;
   myUnreadCount: number;
   queueUnreadCount: number;
+  closedCount: number;
   isAdmin?: boolean;
   onSearchChange: (value: string) => void;
   onTabChange: (tab: "mine" | "queue") => void;
@@ -51,10 +53,12 @@ export const ZappConversationList = memo(function ZappConversationList({
   filterProductId,
   filterTagId,
   filterAgentId,
+  showClosed,
   myConversations,
   totalQueueConversations,
   myUnreadCount,
   queueUnreadCount,
+  closedCount,
   onSearchChange,
   onTabChange,
   onSelectConversation,
@@ -73,6 +77,16 @@ export const ZappConversationList = memo(function ZappConversationList({
       // Hide archived conversations from main inbox
       const isArchived = a.zapp_conversation?.is_archived || false;
       if (isArchived) return false;
+      
+      // Filter by closed status
+      const isClosed = a.status === "closed";
+      if (showClosed) {
+        // When showing closed, ONLY show closed conversations
+        if (!isClosed) return false;
+      } else {
+        // When not showing closed, HIDE closed conversations
+        if (isClosed) return false;
+      }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
       // ADMINS always see all conversations regardless of tab
@@ -125,7 +139,7 @@ export const ZappConversationList = memo(function ZappConversationList({
       const dateB = new Date(contactB.lastMessageAt).getTime();
       return dateB - dateA;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
 
   return (
     <div className="flex flex-col h-full">
