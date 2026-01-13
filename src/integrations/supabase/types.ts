@@ -1583,6 +1583,51 @@ export type Database = {
           },
         ]
       }
+      client_life_event_images: {
+        Row: {
+          account_id: string
+          created_at: string
+          file_name: string | null
+          file_size: number | null
+          id: string
+          image_url: string
+          life_event_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          image_url: string
+          life_event_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          image_url?: string
+          life_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_life_event_images_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_life_event_images_life_event_id_fkey"
+            columns: ["life_event_id"]
+            isOneToOne: false
+            referencedRelation: "client_life_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_life_events: {
         Row: {
           account_id: string
