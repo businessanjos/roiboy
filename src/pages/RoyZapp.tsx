@@ -337,7 +337,7 @@ export default function RoyZapp() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
-  const [imagePreview, setImagePreview] = useState<{ file: File; url: string } | null>(null);
+  const [imagePreview, setImagePreview] = useState<{ file: File; url: string; caption?: string } | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -1154,17 +1154,12 @@ export default function RoyZapp() {
     // If there's an image preview, send it instead
     if (imagePreview && selectedConversation) {
       const file = imagePreview.file;
+      const caption = imagePreview.caption;
       URL.revokeObjectURL(imagePreview.url);
       setImagePreview(null);
       
-      // Create a synthetic event for handleFileSelect
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      const syntheticEvent = {
-        target: { files: dataTransfer.files }
-      } as React.ChangeEvent<HTMLInputElement>;
-      
-      await handleFileSelect(syntheticEvent, "image");
+      // Send media message with caption
+      await sendMediaMessage(file, "image", caption);
       return;
     }
     
@@ -1290,7 +1285,7 @@ export default function RoyZapp() {
   };
 
   // Send media message (image/document)
-  const sendMediaMessage = async (file: File, mediaType: "image" | "document") => {
+  const sendMediaMessage = async (file: File, mediaType: "image" | "document", caption?: string) => {
     if (!selectedConversation || uploadingMedia) return;
     
     const contactInfo = getContactInfo(selectedConversation);
@@ -1310,7 +1305,7 @@ export default function RoyZapp() {
     // Create optimistic message
     const optimisticMessage: Message = {
       id: tempMessageId,
-      content: mediaType === "image" ? "" : file.name,
+      content: caption || (mediaType === "image" ? "" : file.name),
       is_from_client: false,
       created_at: now,
       message_type: mediaType,
@@ -1349,7 +1344,7 @@ export default function RoyZapp() {
         action,
         media_url: mediaUrl,
         media_type: mediaType,
-        caption: "",
+        caption: caption || "",
         file_name: file.name,
         sector_id: selectedSectorId || "",
       };
@@ -1376,7 +1371,7 @@ export default function RoyZapp() {
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
-          content: mediaType === "image" ? "" : file.name,
+          content: caption || (mediaType === "image" ? "" : file.name),
           message_type: mediaType,
           media_url: mediaUrl,
           media_type: mediaType,
@@ -3291,8 +3286,9 @@ export default function RoyZapp() {
               const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
               const url = URL.createObjectURL(blob);
               
-              setImagePreview({ file, url });
-              toast.success("Imagem anexada! Clique em enviar.");
+              // Include caption from playbook item
+              setImagePreview({ file, url, caption: item.media_caption || undefined });
+              toast.success(item.media_caption ? "Imagem com legenda anexada! Clique em enviar." : "Imagem anexada! Clique em enviar.");
               messageInputRef.current?.focus();
             } catch (error) {
               console.error('Error loading playbook image:', error);
