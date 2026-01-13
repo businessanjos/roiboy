@@ -23,11 +23,12 @@ import {
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
+import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferencesCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlanUsageCard } from "@/components/plan";
 import { BillingContent } from "@/components/billing/BillingContent";
-import { Receipt } from "lucide-react";
+import { Receipt, Video } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -404,6 +405,10 @@ export default function Profile() {
             <Receipt className="h-4 w-4" />
             Cobranças
           </TabsTrigger>
+          <TabsTrigger value="meetings" className="gap-2">
+            <Video className="h-4 w-4" />
+            Reuniões
+          </TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -722,6 +727,11 @@ export default function Profile() {
         {/* Billing Tab */}
         <TabsContent value="billing">
           <BillingContent />
+        </TabsContent>
+
+        {/* Meetings Tab */}
+        <TabsContent value="meetings" className="space-y-6">
+          <MeetingPreferencesCard />
         </TabsContent>
       </Tabs>
     </div>
