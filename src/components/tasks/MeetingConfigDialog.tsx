@@ -73,10 +73,16 @@ export function MeetingConfigDialog({
     }
   }, [open, currentUser?.id]);
 
+  // Parse date without timezone shift
+  const parseDateWithoutTimezone = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   // Auto-populate email message with participant data
   useEffect(() => {
     if (open && participantName && dueDate) {
-      const formattedDate = format(new Date(dueDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      const formattedDate = format(parseDateWithoutTimezone(dueDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
       const formattedTime = dueTime || "09:00";
       
       const autoMessage = `Olá ${participantName},
@@ -195,7 +201,7 @@ Até lá!`;
   };
 
   const formattedDate = dueDate 
-    ? format(new Date(dueDate), "dd 'de' MMMM", { locale: ptBR })
+    ? format(parseDateWithoutTimezone(dueDate), "dd 'de' MMMM", { locale: ptBR })
     : "Data não definida";
   const formattedTime = dueTime || "Horário não definido";
 
