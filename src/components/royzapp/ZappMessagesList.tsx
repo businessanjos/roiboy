@@ -21,25 +21,58 @@ export function ZappMessagesList({
 
   // Deduplicate messages to prevent visual duplicates from race conditions
   // Priority: real messages over temp, dedupe by external_message_id when available
+  // Special handling for audio messages which can have duplicate records with different content
   const deduplicatedMessages = useMemo(() => {
     const seen = new Map<string, boolean>();
     const result: Message[] = [];
     
-    // First pass: collect all real message IDs
-    const realMessageIds = new Set<string>();
+    // Group outbound audio messages by approximate time (5-second buckets) for deduplication
+    // This handles the case where frontend and webhook create separate records
+    const audioTimeMap = new Map<string, Message[]>();
+    
     for (const msg of messages) {
-      if (!msg.id.startsWith('temp-')) {
-        realMessageIds.add(msg.id);
+      if (msg.message_type === 'audio' && !msg.is_from_client) {
+        const timeKey = String(Math.floor(new Date(msg.created_at).getTime() / 5000));
+        if (!audioTimeMap.has(timeKey)) {
+          audioTimeMap.set(timeKey, []);
+        }
+        audioTimeMap.get(timeKey)!.push(msg);
+      }
+    }
+    
+    // For each time bucket with multiple audios, prefer the one with external_message_id and duration
+    const duplicateAudioIds = new Set<string>();
+    for (const [, audioMsgs] of audioTimeMap) {
+      if (audioMsgs.length > 1) {
+        // Sort: prefer messages with external_message_id and non-zero duration
+        audioMsgs.sort((a, b) => {
+          // Prefer real messages over temp
+          if (!a.id.startsWith('temp-') && b.id.startsWith('temp-')) return -1;
+          if (a.id.startsWith('temp-') && !b.id.startsWith('temp-')) return 1;
+          // Prefer messages with external_message_id
+          if (a.external_message_id && !b.external_message_id) return -1;
+          if (!a.external_message_id && b.external_message_id) return 1;
+          // Prefer messages with duration
+          if ((a.audio_duration_sec || 0) > (b.audio_duration_sec || 0)) return -1;
+          if ((a.audio_duration_sec || 0) < (b.audio_duration_sec || 0)) return 1;
+          return 0;
+        });
+        // Mark all but the first (best) as duplicates
+        for (let i = 1; i < audioMsgs.length; i++) {
+          duplicateAudioIds.add(audioMsgs[i].id);
+        }
       }
     }
     
     // Process from oldest to newest to maintain order
     for (const msg of messages) {
+      // Skip duplicate audio messages identified above
+      if (duplicateAudioIds.has(msg.id)) {
+        continue;
+      }
+      
       // Skip temporary messages if a real version exists
-      // (temp messages are replaced by real ones after insert)
       if (msg.id.startsWith('temp-')) {
-        // Check if we have ANY real audio message in the last few seconds
-        // This prevents showing temp while real is being processed
         const hasRecentRealAudio = messages.some(m => 
           !m.id.startsWith('temp-') && 
           m.message_type === 'audio' &&

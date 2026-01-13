@@ -906,24 +906,50 @@ serve(async (req) => {
             let isDuplicate = false;
             if (direction === "outbound") {
               const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-              const { data: recentDupe } = await supabase
-                .from("zapp_messages")
-                .select("id")
-                .eq("zapp_conversation_id", zappConversationId)
-                .eq("direction", "outbound")
-                .eq("content", content)
-                .is("external_message_id", null)
-                .gte("created_at", twoMinutesAgo)
-                .limit(1)
-                .maybeSingle();
+              
+              // For audio messages, frontend saves with "[Áudio]" but webhook receives empty content
+              // So we need to search by message_type instead of content for audio
+              let recentDupe = null;
+              
+              if (mediaType === "audio") {
+                // Search for audio messages by type, not content (content differs between frontend/webhook)
+                const { data } = await supabase
+                  .from("zapp_messages")
+                  .select("id")
+                  .eq("zapp_conversation_id", zappConversationId)
+                  .eq("direction", "outbound")
+                  .eq("message_type", "audio")
+                  .is("external_message_id", null)
+                  .gte("created_at", twoMinutesAgo)
+                  .limit(1)
+                  .maybeSingle();
+                recentDupe = data;
+              } else {
+                // For non-audio messages, use content-based matching
+                const { data } = await supabase
+                  .from("zapp_messages")
+                  .select("id")
+                  .eq("zapp_conversation_id", zappConversationId)
+                  .eq("direction", "outbound")
+                  .eq("content", content)
+                  .is("external_message_id", null)
+                  .gte("created_at", twoMinutesAgo)
+                  .limit(1)
+                  .maybeSingle();
+                recentDupe = data;
+              }
 
               if (recentDupe) {
-                // Update the existing message with the external_message_id
+                // Update the existing message with the external_message_id and audio duration
+                const updateData: Record<string, unknown> = { external_message_id: messageId };
+                if (mediaType === "audio" && audioDurationSec) {
+                  updateData.audio_duration_sec = audioDurationSec;
+                }
                 await supabase
                   .from("zapp_messages")
-                  .update({ external_message_id: messageId })
+                  .update(updateData)
                   .eq("id", recentDupe.id);
-                console.log(`Updated existing message ${recentDupe.id} with external_message_id ${messageId}`);
+                console.log(`Updated existing ${mediaType || 'text'} message ${recentDupe.id} with external_message_id ${messageId}`);
                 isDuplicate = true;
               }
             }
