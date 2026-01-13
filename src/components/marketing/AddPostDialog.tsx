@@ -566,9 +566,8 @@ export function AddPostDialog({
         open={editCompositionOpen}
         onOpenChange={setEditCompositionOpen}
         options={compositionOptions}
-        onAddOption={(v) => addOption.mutate({ optionType: 'composition', value: v })}
         onDeleteOption={(id) => deleteOption.mutate(id)}
-        isLoading={isLoadingOptions || addOption.isPending || deleteOption.isPending}
+        isLoading={isLoadingOptions || deleteOption.isPending}
       />
     </>
   );
