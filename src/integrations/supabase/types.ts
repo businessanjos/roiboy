@@ -4902,6 +4902,7 @@ export type Database = {
           created_at: string | null
           display_order: number | null
           id: string
+          is_system_default: boolean | null
           option_type: string
           value: string
         }
@@ -4910,6 +4911,7 @@ export type Database = {
           created_at?: string | null
           display_order?: number | null
           id?: string
+          is_system_default?: boolean | null
           option_type: string
           value: string
         }
@@ -4918,6 +4920,7 @@ export type Database = {
           created_at?: string | null
           display_order?: number | null
           id?: string
+          is_system_default?: boolean | null
           option_type?: string
           value?: string
         }

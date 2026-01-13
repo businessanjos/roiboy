@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from './useCurrentUser';
 import { toast } from 'sonner';
+import { useEffect, useRef } from 'react';
 
 export interface PostOption {
   id?: string;
@@ -10,7 +11,7 @@ export interface PostOption {
   isDefault?: boolean;
 }
 
-// Default composition options
+// Default composition options - used for seeding new accounts
 const DEFAULT_COMPOSITION_OPTIONS: string[] = [
   'Valoriza a mulher',
   'Autoral (medo, riqueza, bmw)',
@@ -60,9 +61,10 @@ const DEFAULT_COMPOSITION_OPTIONS: string[] = [
 export function useInstagramPostOptions() {
   const { currentUser: user } = useCurrentUser();
   const queryClient = useQueryClient();
+  const hasSeeded = useRef(false);
 
-  // Fetch custom options from database
-  const { data: customOptions = [], isLoading } = useQuery({
+  // Fetch all options from database
+  const { data: dbOptions = [], isLoading, refetch } = useQuery({
     queryKey: ['instagram-post-options', user?.account_id],
     queryFn: async () => {
       if (!user?.account_id) return [];
@@ -79,8 +81,50 @@ export function useInstagramPostOptions() {
     enabled: !!user?.account_id,
   });
 
+  // Seed default composition options for new accounts
+  useEffect(() => {
+    const seedDefaultOptions = async () => {
+      if (!user?.account_id || hasSeeded.current || isLoading) return;
+      
+      // Check if composition options already exist
+      const existingCompositionOptions = dbOptions.filter(
+        (opt) => opt.option_type === 'composition'
+      );
+      
+      if (existingCompositionOptions.length > 0) {
+        hasSeeded.current = true;
+        return;
+      }
+
+      hasSeeded.current = true;
+
+      // Insert default options
+      const optionsToInsert = DEFAULT_COMPOSITION_OPTIONS.map((value, index) => ({
+        account_id: user.account_id,
+        option_type: 'composition' as const,
+        value,
+        display_order: index,
+        is_system_default: true,
+      }));
+
+      const { error } = await supabase
+        .from('instagram_post_options')
+        .insert(optionsToInsert);
+
+      if (error) {
+        console.error('Error seeding default options:', error);
+        return;
+      }
+
+      // Refetch to get the new options with IDs
+      refetch();
+    };
+
+    seedDefaultOptions();
+  }, [user?.account_id, dbOptions, isLoading, refetch]);
+
   // Get specialist version options (custom only, user adds their own)
-  const specialistVersionOptions: PostOption[] = customOptions
+  const specialistVersionOptions: PostOption[] = dbOptions
     .filter((opt) => opt.option_type === 'specialist_version')
     .map((opt) => ({
       id: opt.id,
@@ -88,30 +132,15 @@ export function useInstagramPostOptions() {
       display_order: opt.display_order,
     }));
 
-  // Get composition options (defaults + custom)
-  const customCompositionOptions = customOptions
+  // Get composition options from database (all editable now)
+  const compositionOptions: PostOption[] = dbOptions
     .filter((opt) => opt.option_type === 'composition')
-    .map((opt) => opt.value);
-
-  const allCompositionOptions: PostOption[] = [
-    ...DEFAULT_COMPOSITION_OPTIONS.map((value) => ({
-      value,
-      isDefault: true,
-    })),
-    ...customOptions
-      .filter((opt) => opt.option_type === 'composition')
-      .map((opt) => ({
-        id: opt.id,
-        value: opt.value,
-        display_order: opt.display_order,
-      })),
-  ];
-
-  // Remove duplicates
-  const uniqueCompositionOptions = allCompositionOptions.filter(
-    (opt, index, self) =>
-      index === self.findIndex((o) => o.value.toLowerCase() === opt.value.toLowerCase())
-  );
+    .map((opt) => ({
+      id: opt.id,
+      value: opt.value,
+      display_order: opt.display_order,
+      isDefault: opt.is_system_default,
+    }));
 
   // Add new option mutation
   const addOption = useMutation({
@@ -172,11 +201,31 @@ export function useInstagramPostOptions() {
     },
   });
 
+  // Update option mutation
+  const updateOption = useMutation({
+    mutationFn: async ({ optionId, value }: { optionId: string; value: string }) => {
+      const { error } = await supabase
+        .from('instagram_post_options')
+        .update({ value: value.trim() })
+        .eq('id', optionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instagram-post-options'] });
+      toast.success('Opção atualizada!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar opção: ' + error.message);
+    },
+  });
+
   return {
     specialistVersionOptions,
-    compositionOptions: uniqueCompositionOptions,
+    compositionOptions,
     isLoading,
     addOption,
     deleteOption,
+    updateOption,
   };
 }
