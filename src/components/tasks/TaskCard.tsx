@@ -25,7 +25,9 @@ import {
   XCircle,
   ArrowRight,
   User2,
+  TrendingUp,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -51,9 +53,11 @@ interface Task {
   due_date: string | null;
   due_time: string | null;
   client_id: string | null;
+  deal_id?: string | null;
   assigned_to: string | null;
   created_at: string;
   clients?: Client | null;
+  deals?: { id: string; title: string } | null;
   assigned_user?: User | null;
   activity_type?: {
     id: string;
@@ -80,6 +84,7 @@ const STATUS_CONFIG = {
 };
 
 export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusChange, showClient = true }: TaskCardProps) {
+  const navigate = useNavigate();
   const statusConfig = STATUS_CONFIG[task.status];
   const StatusIcon = statusConfig.icon;
   const isCompleted = task.status === "done";
@@ -172,7 +177,16 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-48">
+              {task.deals && task.deal_id && (
+                <DropdownMenuItem 
+                  onClick={() => navigate(`/pipeline?deal=${task.deal_id}`)}
+                  className="text-blue-600 dark:text-blue-400"
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Ver Negócio
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => onEdit(task)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
