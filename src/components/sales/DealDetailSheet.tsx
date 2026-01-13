@@ -142,7 +142,7 @@ const getEventConfig = (eventType: string) => {
     case "stage_change":
       return { icon: ArrowRightLeft, bgColor: "bg-indigo-500", textColor: "text-indigo-500", label: "Mudança de etapa" };
     case "status_change":
-      return { icon: CheckCircle, bgColor: "bg-slate-500", textColor: "text-slate-500", label: "Status" };
+      return { icon: CheckCircle, bgColor: "bg-emerald-500", textColor: "text-emerald-500", label: "Status" };
     default:
       return { icon: StickyNote, bgColor: "bg-muted", textColor: "text-muted-foreground", label: "Evento" };
   }
@@ -865,7 +865,7 @@ export function DealDetailSheet({
                                         )}
                                       </>
                                     )}
-                                    {activity.type === 'stage_change' && activity.old_value && activity.new_value && (
+                                    {(activity.type === 'stage_change' || activity.type === 'status_change') && activity.old_value && activity.new_value && (
                                       <p className="text-xs text-muted-foreground mt-0.5">
                                         {activity.old_value} → {activity.new_value}
                                       </p>
