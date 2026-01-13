@@ -1,6 +1,7 @@
-import { X } from 'lucide-react';
+import { useState } from 'react';
+import { X, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
@@ -20,6 +21,7 @@ interface EditCompositionOptionsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   options: PostOption[];
+  onUpdateOption: (id: string, value: string) => void;
   onDeleteOption: (id: string) => void;
   isLoading?: boolean;
 }
@@ -28,16 +30,47 @@ export function EditCompositionOptionsDialog({
   open,
   onOpenChange,
   options,
+  onUpdateOption,
   onDeleteOption,
   isLoading = false,
 }: EditCompositionOptionsDialogProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+
   const handleClose = () => {
+    setEditingId(null);
+    setEditValue('');
     onOpenChange(false);
   };
 
-  // Separate default and custom options
-  const defaultOptions = options.filter((opt) => opt.isDefault);
-  const customOptions = options.filter((opt) => !opt.isDefault);
+  const handleStartEdit = (option: PostOption) => {
+    if (option.id) {
+      setEditingId(option.id);
+      setEditValue(option.value);
+    }
+  };
+
+  const handleConfirmEdit = () => {
+    if (editingId && editValue.trim()) {
+      onUpdateOption(editingId, editValue.trim());
+      setEditingId(null);
+      setEditValue('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleConfirmEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -47,54 +80,77 @@ export function EditCompositionOptionsDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <ScrollArea className="h-[300px] rounded-md border p-3">
-            <div className="space-y-3">
-              {/* Custom options first */}
-              {customOptions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Personalizadas
-                  </p>
-                  {customOptions.map((option, index) => (
-                    <div
-                      key={option.id || `custom-${index}`}
-                      className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <span className="text-sm">{option.value}</span>
+          <ScrollArea className="h-[400px] rounded-md border p-3">
+            <div className="space-y-2">
+              {options.map((option, index) => (
+                <div
+                  key={option.id || `option-${index}`}
+                  className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  {editingId === option.id ? (
+                    // Edit mode
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        autoFocus
+                        className="flex-1 h-8"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-green-600 hover:text-green-700"
+                        onClick={handleConfirmEdit}
+                        disabled={!editValue.trim() || isLoading}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => option.id && onDeleteOption(option.id)}
-                        disabled={isLoading}
+                        onClick={handleCancelEdit}
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                  ))}
+                  ) : (
+                    // View mode
+                    <>
+                      <span className="text-sm flex-1">{option.value}</span>
+                      <div className="flex items-center gap-1">
+                        {option.id && (
+                          <>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleStartEdit(option)}
+                              disabled={isLoading}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => option.id && onDeleteOption(option.id)}
+                              disabled={isLoading}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
-              )}
-
-              {/* Default options */}
-              {defaultOptions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Padrão (não removíveis)
-                  </p>
-                  {defaultOptions.map((option, index) => (
-                    <div
-                      key={option.id || `default-${index}`}
-                      className="flex items-center justify-between py-2 px-3 rounded-md bg-background border"
-                    >
-                      <span className="text-sm">{option.value}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        Padrão
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
 
               {options.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-8">

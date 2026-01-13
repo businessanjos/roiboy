@@ -80,7 +80,7 @@ export function AddPostDialog({
   onSubmit,
   isLoading,
 }: AddPostDialogProps) {
-  const { specialistVersionOptions, compositionOptions, addOption, deleteOption, isLoading: isLoadingOptions } = useInstagramPostOptions();
+  const { specialistVersionOptions, compositionOptions, addOption, deleteOption, updateOption, isLoading: isLoadingOptions } = useInstagramPostOptions();
   const { templates, presets, createPreset, deletePreset, isLoading: isLoadingTemplates } = useCompositionTemplates();
   
   const [permalink, setPermalink] = useState('');
@@ -566,8 +566,9 @@ export function AddPostDialog({
         open={editCompositionOpen}
         onOpenChange={setEditCompositionOpen}
         options={compositionOptions}
+        onUpdateOption={(id, value) => updateOption.mutate({ optionId: id, value })}
         onDeleteOption={(id) => deleteOption.mutate(id)}
-        isLoading={isLoadingOptions || deleteOption.isPending}
+        isLoading={isLoadingOptions || deleteOption.isPending || updateOption.isPending}
       />
     </>
   );
