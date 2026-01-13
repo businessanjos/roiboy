@@ -913,6 +913,11 @@ export function DealDetailSheet({
                                     )}>
                                       {task.activity_type?.name || task.title}
                                     </p>
+                                    {task.description && (
+                                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                        {task.description}
+                                      </p>
+                                    )}
                                     {task.due_date && (
                                       <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
                                         <Calendar className="h-2.5 w-2.5" />
