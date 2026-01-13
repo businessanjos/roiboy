@@ -404,7 +404,8 @@ export function ZappCRMPanel({
       case "currency": return fv.value_number;
       case "date": return fv.value_date;
       case "multi_select":
-      case "user": return fv.value_json;
+      case "user":
+      case "location": return fv.value_json;
       default: return fv.value_text;
     }
   };
