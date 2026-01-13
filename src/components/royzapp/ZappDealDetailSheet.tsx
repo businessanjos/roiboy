@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { 
   DollarSign, TrendingUp, Clock, Calendar, User, Tag,
   CheckCircle, XCircle, RotateCcw, Loader2, MessageSquare,
-  Phone, Video, Mail, FileText, Plus, ListTodo, ChevronDown, ChevronUp
+  Phone, Video, Mail, FileText, Plus, ListTodo, ChevronDown, ChevronUp, ExternalLink
 } from "lucide-react";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { ZappLeadDataEditor } from "./ZappLeadDataEditor";
@@ -71,6 +71,8 @@ interface InternalTask {
   custom_status_id: string | null;
   completed_at: string | null;
   created_at: string;
+  meeting_url?: string | null;
+  meeting_platform?: string | null;
   activity_type?: { name: string; color: string; icon: string | null } | null;
   assigned_user?: { name: string; avatar_url: string | null } | null;
 }
@@ -203,6 +205,7 @@ export function ZappDealDetailSheet({
         .from("internal_tasks")
         .select(`
           id, title, description, due_date, due_time, status, custom_status_id, completed_at, created_at,
+          meeting_url, meeting_platform,
           activity_type:activity_types(name, color, icon),
           assigned_user:users!internal_tasks_assigned_to_fkey(name, avatar_url)
         `)
@@ -341,6 +344,8 @@ export function ZappDealDetailSheet({
       user: t.assigned_user,
       status: t.status,
       activityType: t.activity_type,
+      meetingUrl: t.meeting_url,
+      meetingPlatform: t.meeting_platform,
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -711,6 +716,25 @@ export function ZappDealDetailSheet({
                                     <span>•</span>
                                     <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
                                   </div>
+                                  {item.type === "task" && item.meetingUrl && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 text-xs gap-1 mt-1.5"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(item.meetingUrl, "_blank");
+                                      }}
+                                    >
+                                      {item.meetingPlatform === "zoom" ? (
+                                        <span className="text-blue-500">🔵</span>
+                                      ) : (
+                                        <span className="text-green-500">🟢</span>
+                                      )}
+                                      Entrar na Reunião
+                                      <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>

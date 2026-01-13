@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -64,30 +63,49 @@ export function MeetingConfigDialog({
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [platform, setPlatform] = useState("google");
-  const [email, setEmail] = useState(participantEmail);
   const [emailAdvance, setEmailAdvance] = useState("immediate");
-  const [emailMessage, setEmailMessage] = useState(DEFAULT_EMAIL_TEMPLATE);
+  const [emailMessage, setEmailMessage] = useState("");
 
-  // Load user preferences when dialog opens
+  // Load user preferences and auto-populate message when dialog opens
   useEffect(() => {
     if (open && currentUser?.id) {
       loadUserPreferences();
     }
-    setEmail(participantEmail);
-  }, [open, currentUser?.id, participantEmail]);
+  }, [open, currentUser?.id]);
+
+  // Auto-populate email message with participant data
+  useEffect(() => {
+    if (open && participantName && dueDate) {
+      const formattedDate = format(new Date(dueDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      const formattedTime = dueTime || "09:00";
+      
+      const autoMessage = `Olá ${participantName},
+
+Sua reunião está confirmada!
+
+📅 Data: ${formattedDate}
+⏰ Horário: ${formattedTime}
+🔗 Link: {link}
+
+Clique no link acima para entrar na reunião no horário agendado.
+
+Até lá!`;
+      
+      setEmailMessage(autoMessage);
+    }
+  }, [open, participantName, dueDate, dueTime]);
 
   const loadUserPreferences = async () => {
     try {
       const { data } = await supabase
         .from("users")
-        .select("meeting_platform, meeting_email_advance, meeting_email_template")
+        .select("meeting_platform, meeting_email_advance")
         .eq("id", currentUser!.id)
         .single();
 
       if (data) {
         if (data.meeting_platform) setPlatform(data.meeting_platform);
         if (data.meeting_email_advance) setEmailAdvance(data.meeting_email_advance);
-        if (data.meeting_email_template) setEmailMessage(data.meeting_email_template);
       }
     } catch (error) {
       console.error("Error loading user preferences:", error);
@@ -95,8 +113,8 @@ export function MeetingConfigDialog({
   };
 
   const handleCreateMeeting = async () => {
-    if (!email) {
-      toast.error("Informe o email do participante");
+    if (!participantEmail) {
+      toast.error("O lead não possui email cadastrado");
       return;
     }
 
@@ -142,8 +160,8 @@ export function MeetingConfigDialog({
         body: {
           task_id: taskId,
           platform,
-          participant_email: email,
-          participant_name: participantName || email.split("@")[0],
+          participant_email: participantEmail,
+          participant_name: participantName || participantEmail.split("@")[0],
           start_time: startDate.toISOString(),
           end_time: endDate.toISOString(),
           title: taskTitle,
@@ -160,7 +178,7 @@ export function MeetingConfigDialog({
         onMeetingCreated(data.meeting_url, platform);
         toast.success("Reunião criada com sucesso!");
         if (emailAdvance === "immediate") {
-          toast.info("Convite enviado para " + email);
+          toast.info("Convite enviado para " + participantEmail);
         } else {
           toast.info(`Convite será enviado ${EMAIL_ADVANCE_OPTIONS.find(o => o.value === emailAdvance)?.label.toLowerCase()}`);
         }
@@ -220,18 +238,20 @@ export function MeetingConfigDialog({
             </Select>
           </div>
 
-          {/* Participant Email */}
+          {/* Participant Email - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
               Email do Participante
             </Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@exemplo.com"
-            />
+            <div className="p-2 bg-muted rounded-md text-sm">
+              {participantEmail || "Email não disponível"}
+            </div>
+            {!participantEmail && (
+              <p className="text-xs text-destructive">
+                O lead vinculado não possui email cadastrado
+              </p>
+            )}
           </div>
 
           {/* When to send */}
@@ -273,7 +293,7 @@ export function MeetingConfigDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleCreateMeeting} disabled={loading}>
+          <Button onClick={handleCreateMeeting} disabled={loading || !participantEmail}>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
