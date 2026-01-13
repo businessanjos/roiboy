@@ -25,6 +25,7 @@ interface UazapiRequest {
   message?: string;
   message_id?: string;
   quoted_message_id?: string;
+  quoted_from_me?: boolean; // NEW: Whether the quoted message was sent by us
   group_id?: string;
   group_name?: string;
   group_description?: string;
@@ -1193,14 +1194,28 @@ serve(async (req) => {
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         const cleanPhone = phone.replace(/\D/g, "");
         const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
+        const quotedFromMe = (payload as UazapiRequest).quoted_from_me ?? false;
         
         // UAZAPI GO v2 - Documentação oficial: POST /send/text
-        // Body: { number: "5511999999999", text: "mensagem", quoted?: { key: { id: "..." } } }
+        // Body: { number: "5511999999999", text: "mensagem", quoted?: { key: { id: "...", fromMe: bool, remoteJid: "..." } } }
         const messageBody: Record<string, unknown> = { number: cleanPhone, text: message };
         
-        // Add quoted message for replies
+        // Add quoted message for replies - UAZAPI requires complete key with remoteJid and fromMe
         if (quotedMessageId) {
-          messageBody.quoted = { key: { id: quotedMessageId } };
+          const remoteJid = `${cleanPhone}@s.whatsapp.net`;
+          messageBody.quoted = { 
+            key: { 
+              id: quotedMessageId,
+              fromMe: quotedFromMe,
+              remoteJid: remoteJid
+            }
+          };
+          // Also add contextInfo for some UAZAPI versions
+          messageBody.contextInfo = {
+            stanzaId: quotedMessageId,
+            participant: quotedFromMe ? "" : remoteJid
+          };
+          console.log(`[send_text] Quote payload: id=${quotedMessageId}, fromMe=${quotedFromMe}, remoteJid=${remoteJid}`);
         }
         
         if (instanceToken) {
@@ -1867,7 +1882,8 @@ serve(async (req) => {
         const groupJid = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
         const mentionsList = (payload as UazapiRequest).mentions || [];
         const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
-        console.log(`Sending message to group: ${groupJid}, mentions: ${mentionsList.length}, quoted: ${quotedMessageId || 'none'}`);
+        const quotedFromMe = (payload as UazapiRequest).quoted_from_me ?? false;
+        console.log(`Sending message to group: ${groupJid}, mentions: ${mentionsList.length}, quoted: ${quotedMessageId || 'none'}, quotedFromMe: ${quotedFromMe}`);
         
         let sendResult: unknown = null;
         let sendSuccess = false;
@@ -1883,9 +1899,20 @@ serve(async (req) => {
         // Base message body
         const baseBody: Record<string, unknown> = { number: groupJid, text: message };
         
-        // Add quoted message for replies
+        // Add quoted message for replies - UAZAPI requires complete key with remoteJid and fromMe
         if (quotedMessageId) {
-          baseBody.quoted = { key: { id: quotedMessageId } };
+          baseBody.quoted = { 
+            key: { 
+              id: quotedMessageId,
+              fromMe: quotedFromMe,
+              remoteJid: groupJid  // For groups, use the group JID
+            }
+          };
+          // Also add contextInfo for some UAZAPI versions
+          baseBody.contextInfo = {
+            stanzaId: quotedMessageId
+          };
+          console.log(`[send_to_group] Quote payload: id=${quotedMessageId}, fromMe=${quotedFromMe}, remoteJid=${groupJid}`);
         }
         
         // First try WITHOUT mentions (to ensure message is sent)

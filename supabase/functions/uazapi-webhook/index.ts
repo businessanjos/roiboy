@@ -335,6 +335,9 @@ serve(async (req) => {
         const chat = payload.chat;
         const msg = payload.message;
         
+        // DETAILED LOG: Start of message processing
+        console.log(`[WEBHOOK] Processing message - chat.phone: ${chat.phone || 'N/A'}, chat.name: ${chat.name || 'N/A'}, msg.fromMe: ${msg.fromMe}, msg.type: ${msg.type || 'N/A'}, msg.id: ${msg.id || 'N/A'}`);
+        
         // Check if this is a reaction (not a real message)
         // UAZAPI includes 'reaction' field for message reactions
         const msgReaction = (msg as Record<string, unknown>).reaction;
@@ -658,14 +661,15 @@ serve(async (req) => {
         const hasMedia = mediaType && (mediaUrl || encryptedMediaUrl);
 
         if (direction === "inbound" && !phone) {
-          console.log(`Skipping inbound message: no phone (${phone})`);
+          console.log(`[WEBHOOK] BLOCKED: Inbound message without phone. Chat data: id=${chat.id}, wa_chatid=${chat.wa_chatid}, jid=${chat.jid}, phone=${chat.phone}`);
+          console.log(`[WEBHOOK] Message data: sender=${msg.sender}, sender_pn=${msg.sender_pn}, chatid=${msg.chatid}`);
           return new Response(JSON.stringify({ ignored: true, reason: "missing_phone" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
 
         if (direction === "inbound" && !hasContent && !hasMedia) {
-          console.log(`Skipping inbound message: no content and no media (phone: ${phone}, content: "${content}", mediaType: ${mediaType})`);
+          console.log(`[WEBHOOK] BLOCKED: Inbound message without content/media. phone: ${phone}, content: "${content.substring(0, 50)}", mediaType: ${mediaType}, mediaUrl: ${mediaUrl?.substring(0, 50) || 'N/A'}`);
           return new Response(JSON.stringify({ ignored: true, reason: "missing_content_and_media" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
