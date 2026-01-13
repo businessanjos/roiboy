@@ -25,7 +25,7 @@ async function createZoomMeeting(
   endTime: string,
   title: string,
   participantEmail: string
-): Promise<{ meeting_url: string; meeting_id: string }> {
+): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
   const clientId = Deno.env.get("ZOOM_CLIENT_ID");
   const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
   const accountId = Deno.env.get("ZOOM_ACCOUNT_ID");
@@ -91,6 +91,7 @@ async function createZoomMeeting(
   return {
     meeting_url: meetingData.join_url,
     meeting_id: meetingData.id.toString(),
+    meeting_password: meetingData.password || "",
   };
 }
 
@@ -101,7 +102,7 @@ async function createGoogleMeetMeeting(
   participantEmail: string,
   supabaseClient: any,
   accountId: string
-): Promise<{ meeting_url: string; meeting_id: string }> {
+): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
   // Check if Google OAuth is configured for this account
   const { data: integration } = await supabaseClient
     .from("integrations")
@@ -118,6 +119,7 @@ async function createGoogleMeetMeeting(
     return {
       meeting_url: `https://meet.google.com/${meetCode}`,
       meeting_id: meetCode,
+      meeting_password: "", // Google Meet doesn't use passwords
     };
   }
 
@@ -154,6 +156,7 @@ async function createGoogleMeetMeeting(
     return {
       meeting_url: `https://meet.google.com/${meetCode}`,
       meeting_id: meetCode,
+      meeting_password: "", // Google Meet doesn't use passwords
     };
   }
 
@@ -161,6 +164,7 @@ async function createGoogleMeetMeeting(
   return {
     meeting_url: eventData.hangoutLink || eventData.conferenceData?.entryPoints?.[0]?.uri || "",
     meeting_id: eventData.id,
+    meeting_password: "", // Google Meet doesn't use passwords
   };
 }
 
@@ -203,7 +207,7 @@ serve(async (req) => {
     }
 
     // Create meeting based on platform
-    let meetingResult: { meeting_url: string; meeting_id: string };
+    let meetingResult: { meeting_url: string; meeting_id: string; meeting_password: string };
 
     if (platform === "zoom") {
       meetingResult = await createZoomMeeting(start_time, end_time, title, participant_email);
@@ -233,9 +237,11 @@ serve(async (req) => {
       console.error("Error updating task:", updateError);
     }
 
-    // Prepare HTML email content
+    // Prepare HTML email content - replace placeholders with actual values
+    const passwordDisplay = meetingResult.meeting_password || "Não requer senha";
     const emailHtml = email_message
       .replace("{MEETING_URL}", meetingResult.meeting_url)
+      .replace("{MEETING_PASSWORD}", passwordDisplay)
       .replace(/\n/g, "<br>");
 
     // Schedule email
