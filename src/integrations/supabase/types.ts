@@ -8780,6 +8780,9 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           message_type: string | null
+          quoted_content: string | null
+          quoted_message_id: string | null
+          quoted_sender_name: string | null
           sender_name: string | null
           sender_phone: string | null
           sent_at: string
@@ -8805,6 +8808,9 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           message_type?: string | null
+          quoted_content?: string | null
+          quoted_message_id?: string | null
+          quoted_sender_name?: string | null
           sender_name?: string | null
           sender_phone?: string | null
           sent_at?: string
@@ -8830,6 +8836,9 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           message_type?: string | null
+          quoted_content?: string | null
+          quoted_message_id?: string | null
+          quoted_sender_name?: string | null
           sender_name?: string | null
           sender_phone?: string | null
           sent_at?: string

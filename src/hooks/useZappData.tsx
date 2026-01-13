@@ -37,6 +37,10 @@ interface Message {
   transcription?: string | null;
   is_deleted?: boolean;
   deleted_at?: string | null;
+  // Campos para mensagem citada (reply)
+  quoted_message_id?: string | null;
+  quoted_content?: string | null;
+  quoted_sender_name?: string | null;
 }
 
 const HEARTBEAT_INTERVAL_MS = 60000;
@@ -545,7 +549,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
       // Fetch latest 100 messages (ordered descending, then reverse for display)
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at")
+        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name")
         .eq("zapp_conversation_id", zappConversationId)
         .or("is_deleted.is.null,is_deleted.eq.false")
         .order("sent_at", { ascending: false })
@@ -575,6 +579,10 @@ export function useZappData(options: UseZappDataOptions = {}) {
         external_message_id: m.external_message_id,
         is_deleted: m.is_deleted || false,
         deleted_at: m.deleted_at,
+        // Campos de mensagem citada
+        quoted_message_id: m.quoted_message_id || null,
+        quoted_content: m.quoted_content || null,
+        quoted_sender_name: m.quoted_sender_name || null,
       }));
       
       setMessages(msgs);
