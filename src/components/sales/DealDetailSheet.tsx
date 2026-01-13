@@ -914,9 +914,20 @@ export function DealDetailSheet({
                                       {task.activity_type?.name || task.title}
                                     </p>
                                     {task.description && (
-                                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                      <p className={cn(
+                                        "text-xs text-muted-foreground mt-1 whitespace-pre-wrap",
+                                        !expandedItems.has(task.id) && "line-clamp-2"
+                                      )}>
                                         {task.description}
                                       </p>
+                                    )}
+                                    {task.description && task.description.length > 100 && (
+                                      <button
+                                        onClick={() => toggleItemExpanded(task.id)}
+                                        className="text-xs font-medium text-primary hover:underline mt-1 cursor-pointer"
+                                      >
+                                        {expandedItems.has(task.id) ? "Ver menos" : "Ver mais"}
+                                      </button>
                                     )}
                                     {task.due_date && (
                                       <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
