@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ConversationAssignment, Agent, getContactInfo } from "./types";
+import { ConversationAssignment, Agent, getContactInfo, matchesSearchQuery } from "./types";
 import { ZappConversationItem } from "./ZappConversationItem";
 
 interface ZappConversationListProps {
@@ -97,9 +97,7 @@ export const ZappConversationList = memo(function ZappConversationList({
           : true);
       
       const contact = getContactInfo(a);
-      const matchesSearch = searchQuery === "" ||
-        contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.phone?.includes(searchQuery);
+      const matchesSearch = matchesSearchQuery(contact, searchQuery);
       
       const matchesStatus = filterStatus === "all" || 
         (filterStatus === "triage" ? a.agent_id === null : a.status === filterStatus);

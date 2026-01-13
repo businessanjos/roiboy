@@ -4,26 +4,8 @@ import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput, MentionData } from "./ZappMessageInput";
 import { ZappAIAssistBar } from "./ZappAIAssistBar";
-import { ConversationAssignment, Message } from "./types";
+import { ConversationAssignment, Message, ContactInfo } from "./types";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
-
-interface ContactInfo {
-  name: string;
-  phone: string;
-  avatar: string | null;
-  clientId: string | null;
-  isClient: boolean;
-  isGroup: boolean;
-  lastMessage: string | null;
-  lastMessagePreview: string;
-  unreadCount: number;
-  lastMessageAt: string;
-  isPinned: boolean;
-  isMuted: boolean;
-  isArchived: boolean;
-  isFavorite: boolean;
-  isBlocked: boolean;
-}
 
 interface ReplyingToMessage {
   id: string;

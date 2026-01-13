@@ -15,6 +15,7 @@ import {
   ConversationAssignment,
   ZappAIAgentChat,
 } from "@/components/royzapp";
+import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
 import type { AIAgent } from "@/components/royzapp/ZappAIAgentItem";
 import {
@@ -1027,9 +1028,22 @@ export default function RoyZapp() {
     const zc = assignment.zapp_conversation;
     const c = assignment.conversation?.client;
     
+    const name = zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || "Contato";
+    const phone = zc?.phone_e164 || c?.phone_e164 || "";
+    
+    // Build searchable text with all relevant fields
+    const searchableText = normalizeSearchText([
+      zc?.client?.full_name,
+      zc?.lead?.full_name,
+      zc?.contact_name,
+      c?.full_name,
+      phone,
+      zc?.last_message_preview,
+    ].filter(Boolean).join(" "));
+    
     return {
-      name: zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || "Contato",
-      phone: zc?.phone_e164 || c?.phone_e164 || "",
+      name,
+      phone,
       avatar: zc?.client?.avatar_url || zc?.avatar_url || c?.avatar_url || null,
       clientId: zc?.client_id || c?.id || null,
       isClient: !!(zc?.client_id || c?.id),
@@ -1043,6 +1057,7 @@ export default function RoyZapp() {
       isArchived: zc?.is_archived || false,
       isFavorite: zc?.is_favorite || false,
       isBlocked: zc?.is_blocked || false,
+      searchableText,
     };
   }, []);
 
@@ -2540,9 +2555,7 @@ export default function RoyZapp() {
       );
       
       const contact = getContactInfo(a);
-      const matchesSearch = searchQuery === "" ||
-        contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.phone?.includes(searchQuery);
+      const matchesSearch = matchesSearchQuery(contact, searchQuery);
       // Status filter: "triage" means no agent assigned (in queue)
       // Skip status filter for "closed" and "all" as they're handled above
       const matchesStatus = filterStatus === "all" || filterStatus === "closed" ||
@@ -2977,7 +2990,7 @@ export default function RoyZapp() {
           <ZappChatView
             selectedConversation={selectedConversation}
           messages={messages}
-          contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false }}
+          contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false, searchableText: "" }}
           clientProducts={selectedClientProducts}
           currentAgentId={currentAgent?.id || null}
           messageInput={messageInput}
