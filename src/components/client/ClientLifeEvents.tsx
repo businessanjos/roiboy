@@ -88,6 +88,12 @@ interface LifeEvent {
   image_url: string | null;
 }
 
+interface LifeEventImage {
+  id: string;
+  image_url: string;
+  file_name?: string;
+}
+
 interface ClientLifeEventsProps {
   clientId: string;
 }
@@ -135,9 +141,11 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [formRecurring, setFormRecurring] = useState(false);
   const [formReminderDays, setFormReminderDays] = useState("7");
 
-  // Image upload state
-  const [formImageFile, setFormImageFile] = useState<File | null>(null);
-  const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
+  // Image upload state - now supports multiple images
+  const [formImageFiles, setFormImageFiles] = useState<File[]>([]);
+  const [formImagePreviews, setFormImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<LifeEventImage[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -257,8 +265,10 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormRecurring(false);
     setFormReminderDays("7");
     setEditingEvent(null);
-    setFormImageFile(null);
-    setFormImagePreview(null);
+    setFormImageFiles([]);
+    setFormImagePreviews([]);
+    setExistingImages([]);
+    setImagesToDelete([]);
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
@@ -267,7 +277,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (event: LifeEvent) => {
+  const openEditDialog = async (event: LifeEvent) => {
     setEditingEvent(event);
     setFormType(event.event_type);
     setFormTitle(event.title);
@@ -275,31 +285,45 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormDescription(event.description || "");
     setFormRecurring(event.is_recurring);
     setFormReminderDays(String(event.reminder_days_before || 7));
-    setFormImagePreview(event.image_url || null);
-    setFormImageFile(null);
+    setFormImageFiles([]);
+    setFormImagePreviews([]);
+    setImagesToDelete([]);
     setDialogOpen(true);
+    
+    // Fetch existing images from the new table
+    const { data: images } = await supabase
+      .from("client_life_event_images")
+      .select("id, image_url, file_name")
+      .eq("life_event_id", event.id);
+    
+    setExistingImages((images as LifeEventImage[]) || []);
   };
 
-  // Image upload handlers
+  // Image upload handlers - now supports multiple images
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    
+    for (const file of files) {
       if (!file.type.startsWith("image/")) {
-        toast.error("Por favor, selecione uma imagem válida");
-        return;
+        toast.error(`${file.name} não é uma imagem válida`);
+        continue;
       }
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("A imagem deve ter no máximo 5MB");
-        return;
+        toast.error(`${file.name} é muito grande (máx 5MB)`);
+        continue;
       }
-      setFormImageFile(file);
-      setFormImagePreview(URL.createObjectURL(file));
+      
+      setFormImageFiles(prev => [...prev, file]);
+      setFormImagePreviews(prev => [...prev, URL.createObjectURL(file)]);
     }
+    
+    // Reset the input so the same file can be selected again
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const uploadImage = async (file: File): Promise<string> => {
     const fileExt = file.name.split(".").pop();
-    const fileName = `${clientId}/${Date.now()}.${fileExt}`;
+    const fileName = `${clientId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("event-media")
@@ -311,10 +335,14 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     return data.publicUrl;
   };
 
-  const removeImage = () => {
-    setFormImageFile(null);
-    setFormImagePreview(null);
-    if (imageInputRef.current) imageInputRef.current.value = "";
+  const removeNewImage = (index: number) => {
+    setFormImageFiles(prev => prev.filter((_, i) => i !== index));
+    setFormImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (imageId: string) => {
+    setImagesToDelete(prev => [...prev, imageId]);
+    setExistingImages(prev => prev.filter(img => img.id !== imageId));
   };
 
   const handleSave = async () => {
@@ -330,20 +358,6 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
 
     setSaving(true);
     try {
-      // Handle image upload
-      let imageUrl = editingEvent?.image_url || null;
-      if (formImageFile) {
-        setUploadingImage(true);
-        try {
-          imageUrl = await uploadImage(formImageFile);
-        } finally {
-          setUploadingImage(false);
-        }
-      } else if (!formImagePreview && editingEvent?.image_url) {
-        // User removed the existing image
-        imageUrl = null;
-      }
-
       const eventData = {
         event_type: formType,
         title: formTitle.trim(),
@@ -351,8 +365,9 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
         description: formDescription.trim() || null,
         is_recurring: formRecurring,
         reminder_days_before: parseInt(formReminderDays) || 7,
-        image_url: imageUrl,
       };
+
+      let eventId: string;
 
       if (editingEvent) {
         const { error } = await supabase
@@ -361,21 +376,51 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
           .eq("id", editingEvent.id);
 
         if (error) throw error;
-        toast.success("Momento atualizado!");
+        eventId = editingEvent.id;
       } else {
-        const { error } = await supabase
+        const { data: newEvent, error } = await supabase
           .from("client_life_events")
           .insert({
             ...eventData,
             account_id: currentUser.account_id,
             client_id: clientId,
             source: "manual",
-          });
+          })
+          .select("id")
+          .single();
 
         if (error) throw error;
-        toast.success("Momento adicionado!");
+        eventId = newEvent.id;
       }
 
+      // Delete images marked for deletion
+      if (imagesToDelete.length > 0) {
+        await supabase
+          .from("client_life_event_images")
+          .delete()
+          .in("id", imagesToDelete);
+      }
+
+      // Upload and save new images
+      if (formImageFiles.length > 0) {
+        setUploadingImage(true);
+        try {
+          for (const file of formImageFiles) {
+            const imageUrl = await uploadImage(file);
+            await supabase.from("client_life_event_images").insert({
+              account_id: currentUser.account_id,
+              life_event_id: eventId,
+              image_url: imageUrl,
+              file_name: file.name,
+              file_size: file.size,
+            });
+          }
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
+      toast.success(editingEvent ? "Momento atualizado!" : "Momento adicionado!");
       setDialogOpen(false);
       resetForm();
       fetchEvents();
@@ -755,61 +800,78 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
               />
             </div>
 
-            {/* Image Upload Field */}
+            {/* Image Upload Field - Multiple Images */}
             <div className="space-y-2">
-              <Label>Imagem (opcional)</Label>
+              <Label>Imagens (opcional)</Label>
               <input
                 ref={imageInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={handleImageSelect}
               />
 
-              {formImagePreview ? (
-                <div className="relative group">
-                  <img
-                    src={formImagePreview}
-                    alt="Preview"
-                    className="w-full h-32 object-cover rounded-lg border"
-                  />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => imageInputRef.current?.click()}
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Trocar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={removeImage}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Remover
-                    </Button>
-                  </div>
-                  {uploadingImage && (
-                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-white" />
+              {/* Grid of images */}
+              {(existingImages.length > 0 || formImagePreviews.length > 0) && (
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Existing images */}
+                  {existingImages.map((img) => (
+                    <div key={img.id} className="relative group aspect-square">
+                      <img
+                        src={img.image_url}
+                        alt=""
+                        className="w-full h-full object-cover rounded-lg border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(img.id)}
+                        className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
-                  )}
+                  ))}
+                  
+                  {/* New images (previews) */}
+                  {formImagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group aspect-square">
+                      <img
+                        src={preview}
+                        alt="Preview"
+                        className="w-full h-full object-cover rounded-lg border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                          <Loader2 className="h-4 w-4 animate-spin text-white" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-20 border-dashed"
-                  onClick={() => imageInputRef.current?.click()}
-                >
-                  <ImagePlus className="h-5 w-5 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">Adicionar imagem</span>
-                </Button>
               )}
+
+              {/* Add images button */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-dashed"
+                onClick={() => imageInputRef.current?.click()}
+              >
+                <ImagePlus className="h-5 w-5 mr-2 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  {existingImages.length + formImagePreviews.length > 0 
+                    ? "Adicionar mais imagens" 
+                    : "Adicionar imagens"}
+                </span>
+              </Button>
             </div>
 
             <div className="flex items-center justify-between">
