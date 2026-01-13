@@ -899,7 +899,22 @@ serve(async (req) => {
             .maybeSingle();
 
           if (existingMsg) {
-            console.log(`Message already exists with external_message_id ${messageId}, skipping insert`);
+            console.log(`Message already exists with external_message_id ${messageId}, checking if deleted`);
+            
+            // Check if the message is deleted - don't update if so
+            const { data: msgDetails } = await supabase
+              .from("zapp_messages")
+              .select("is_deleted")
+              .eq("id", existingMsg.id)
+              .maybeSingle();
+            
+            if (msgDetails?.is_deleted) {
+              console.log(`Message ${messageId} is deleted, ignoring webhook update`);
+              return new Response(
+                JSON.stringify({ ignored: true, reason: "message_deleted" }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
           } else {
             // For outbound messages, also check for recent duplicates without external_message_id
             // This handles messages sent from the UI that are then echoed back by the webhook
@@ -1515,6 +1530,50 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, event: eventType }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Handle message deletion events
+    if (eventType === "messages.delete" || eventType === "message.revoke" || eventType === "message.deleted" || eventType === "messages.revoke") {
+      console.log(`Processing message deletion event: ${eventType}`, JSON.stringify(payload).substring(0, 500));
+      
+      const payloadAny = payload as any;
+      const msg = payloadAny.message || payloadAny.data || payloadAny;
+      
+      // Try to extract message ID from various formats
+      let deletedMessageId = msg?.id || msg?.key?.id || msg?.messageId || payloadAny?.key?.id;
+      
+      // Also check for remoteJid:id format
+      if (!deletedMessageId && msg?.key) {
+        deletedMessageId = msg.key.id;
+      }
+      
+      if (deletedMessageId) {
+        console.log(`Marking message ${deletedMessageId} as deleted`);
+        
+        // Update the message as deleted
+        const { error: deleteError, count } = await supabase
+          .from("zapp_messages")
+          .update({ 
+            is_deleted: true, 
+            deleted_at: new Date().toISOString(),
+            content: "🚫 Mensagem apagada"
+          })
+          .eq("account_id", accountId)
+          .eq("external_message_id", deletedMessageId);
+        
+        if (deleteError) {
+          console.error("Error marking message as deleted:", deleteError);
+        } else {
+          console.log(`Message ${deletedMessageId} marked as deleted`);
+        }
+      } else {
+        console.log("Could not extract message ID from deletion event");
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, event: eventType, deleted: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
