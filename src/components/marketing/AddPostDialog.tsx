@@ -268,6 +268,8 @@ export function AddPostDialog({
                       <SelectItem value="prova_social">⭐ Prova Social</SelectItem>
                       <SelectItem value="assunto_alta">🔥 Assunto em Alta</SelectItem>
                       <SelectItem value="vlog">🎥 Vlog</SelectItem>
+                      <SelectItem value="corte_podcast_convidado">🎙️ Corte Podcast Convidado</SelectItem>
+                      <SelectItem value="corte_vida_ryka_podcast">🎧 Corte Vida Ryka Podcast</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

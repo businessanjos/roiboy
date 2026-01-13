@@ -131,6 +131,9 @@ export function SocialMediaTab() {
       fato_novo: '📰 Fato Novo',
       prova_social: '⭐ Prova Social',
       assunto_alta: '🔥 Assunto em Alta',
+      vlog: '🎥 Vlog',
+      corte_podcast_convidado: '🎙️ Podcast Convidado',
+      corte_vida_ryka_podcast: '🎧 Vida Ryka Podcast',
     };
     return themeLabels[theme] || theme;
   };
