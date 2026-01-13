@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useLeads } from "@/hooks/useLeads";
@@ -51,6 +52,7 @@ import { ptBR } from "date-fns/locale";
 import LeadsTab from "@/components/sales/LeadsTab";
 
 export default function SalesPipeline() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useCurrentUser();
   const {
     stages,
@@ -94,6 +96,22 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = useState<string>('all');
   const [lostMonthFilter, setLostMonthFilter] = useState<string>('all');
+
+  // Handle URL query param to open deal detail automatically
+  useEffect(() => {
+    const dealIdFromUrl = searchParams.get('deal');
+    
+    if (dealIdFromUrl && deals.length > 0 && !loading) {
+      const deal = deals.find(d => d.id === dealIdFromUrl);
+      if (deal) {
+        setSelectedDeal(deal);
+        setIsDetailOpen(true);
+        // Clear the query param after opening
+        searchParams.delete('deal');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, deals, loading, setSearchParams]);
 
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
