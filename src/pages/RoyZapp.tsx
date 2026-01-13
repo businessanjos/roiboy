@@ -1717,10 +1717,17 @@ export default function RoyZapp() {
           },
         });
         
-        if (!error && data?.deleted) {
+        if (!error && data?.data?.deleted) {
           whatsappDeleted = true;
+          console.log("WhatsApp delete successful");
         } else {
-          console.warn("WhatsApp delete failed or not supported, proceeding with local soft delete");
+          const errorMsg = data?.data?.error || data?.error || "Unknown error";
+          console.warn("WhatsApp delete failed:", errorMsg);
+          
+          // Check if it's a time limit issue
+          if (errorMsg.includes("7 minutos") || errorMsg.includes("time") || errorMsg.includes("expired")) {
+            toast.warning("Mensagens só podem ser apagadas para todos em até 7 minutos após o envio");
+          }
         }
       }
       
