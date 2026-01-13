@@ -323,6 +323,28 @@ export function ZappDealDetailSheet({
   const contactName = deal?.lead?.full_name || deal?.client?.full_name || "Contato";
   const currentStage = stages.find(s => s.id === deal?.stage_id);
 
+  // Helper to format due date/time without timezone shift
+  const formatDueDateTime = (dueDate: string | null, dueTime: string | null): string => {
+    if (!dueDate) return "";
+    
+    // Parse date without timezone shift
+    const [year, month, day] = dueDate.split("-").map(Number);
+    
+    let hours = 0, minutes = 0;
+    if (dueTime) {
+      const timeParts = dueTime.split(":");
+      hours = parseInt(timeParts[0], 10);
+      minutes = parseInt(timeParts[1], 10);
+    }
+    
+    const dateObj = new Date(year, month - 1, day, hours, minutes);
+    
+    if (dueTime) {
+      return format(dateObj, "dd/MM/yy 'às' HH:mm", { locale: ptBR });
+    }
+    return format(dateObj, "dd/MM/yy", { locale: ptBR });
+  };
+
   // Merge activities and tasks for timeline
   const timelineItems = [
     ...activities.map(a => ({
@@ -341,6 +363,8 @@ export function ZappDealDetailSheet({
       title: t.title,
       description: t.description,
       date: t.completed_at || t.created_at,
+      dueDate: t.due_date,
+      dueTime: t.due_time,
       user: t.assigned_user,
       status: t.status,
       activityType: t.activity_type,
@@ -716,6 +740,13 @@ export function ZappDealDetailSheet({
                                     <span>•</span>
                                     <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
                                   </div>
+                                  {item.type === "task" && item.dueDate && (
+                                    <div className="flex items-center gap-1 mt-0.5 text-[10px] text-zapp-accent">
+                                      <Calendar className="h-2.5 w-2.5" />
+                                      <span className="font-medium">Agendado:</span>
+                                      <span>{formatDueDateTime(item.dueDate, item.dueTime)}</span>
+                                    </div>
+                                  )}
                                   {item.type === "task" && item.meetingUrl && (
                                     <Button
                                       variant="outline"
