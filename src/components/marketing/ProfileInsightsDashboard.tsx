@@ -18,6 +18,8 @@ import { subDays, startOfDay, endOfDay } from 'date-fns';
 interface ProfileInsightsDashboardProps {
   profileId: string;
   profiles: Array<{ id: string; username: string }>;
+  period: string;
+  onPeriodChange: (period: string) => void;
 }
 
 const METRIC_TYPES = ['views', 'reach', 'interactions', 'link_clicks', 'visits', 'followers'];
@@ -29,10 +31,9 @@ const PERIOD_OPTIONS = [
   { value: '90', label: 'Últimos 90 dias' },
 ];
 
-export function ProfileInsightsDashboard({ profileId, profiles }: ProfileInsightsDashboardProps) {
+export function ProfileInsightsDashboard({ profileId, profiles, period, onPeriodChange }: ProfileInsightsDashboardProps) {
   const queryClient = useQueryClient();
   const [importerOpen, setImporterOpen] = useState(false);
-  const [period, setPeriod] = useState('28');
 
   const periodDays = parseInt(period);
 
@@ -121,7 +122,7 @@ export function ProfileInsightsDashboard({ profileId, profiles }: ProfileInsight
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Select value={period} onValueChange={setPeriod}>
+          <Select value={period} onValueChange={onPeriodChange}>
             <SelectTrigger className="w-[180px] h-9">
               <SelectValue />
             </SelectTrigger>
