@@ -78,6 +78,7 @@ export function SocialMediaTab() {
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [insightsPeriod, setInsightsPeriod] = useState<string>('28');
   
   const {
     profiles,
@@ -670,6 +671,8 @@ export function SocialMediaTab() {
                 <ProfileInsightsDashboard
                   profileId={currentProfile.id}
                   profiles={profiles.map(p => ({ id: p.id, username: p.username }))}
+                  period={insightsPeriod}
+                  onPeriodChange={setInsightsPeriod}
                 />
               )}
             </CardContent>
