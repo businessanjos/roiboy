@@ -127,7 +127,7 @@ const EVENT_TYPES = [
   { value: "meeting", label: "Reunião", icon: Video },
 ];
 
-const getEventConfig = (eventType: string) => {
+const getEventConfig = (eventType: string, title?: string) => {
   switch (eventType) {
     case "note":
       return { icon: StickyNote, bgColor: "bg-primary", textColor: "text-primary", label: "Nota" };
@@ -142,7 +142,13 @@ const getEventConfig = (eventType: string) => {
     case "stage_change":
       return { icon: ArrowRightLeft, bgColor: "bg-indigo-500", textColor: "text-indigo-500", label: "Mudança de etapa" };
     case "status_change":
-      return { icon: CheckCircle, bgColor: "bg-emerald-500", textColor: "text-emerald-500", label: "Status" };
+      if (title === 'Negócio perdido') {
+        return { icon: XCircle, bgColor: "bg-red-500", textColor: "text-red-500", label: "Perdido" };
+      }
+      if (title === 'Negócio reaberto') {
+        return { icon: RotateCcw, bgColor: "bg-gray-500", textColor: "text-gray-500", label: "Reaberto" };
+      }
+      return { icon: CheckCircle, bgColor: "bg-emerald-500", textColor: "text-emerald-500", label: "Ganho" };
     default:
       return { icon: StickyNote, bgColor: "bg-muted", textColor: "text-muted-foreground", label: "Evento" };
   }
@@ -824,7 +830,7 @@ export function DealDetailSheet({
                           {timelineItems.map((item) => {
                             if (item.type === 'activity') {
                               const activity = item.data;
-                              const config = getEventConfig(activity.type);
+                              const config = getEventConfig(activity.type, activity.title);
                               const Icon = config.icon;
                               const userName = activity.user?.name || "Sistema";
 
