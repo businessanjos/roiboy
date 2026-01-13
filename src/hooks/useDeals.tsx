@@ -306,10 +306,17 @@ export function useDeals() {
       });
       
       // Handle status changes
+      let statusChanged = false;
+      let newStatus = '';
+      
       if (data.status === 'won' && !data.won_at) {
         updateData.won_at = new Date().toISOString();
+        statusChanged = true;
+        newStatus = 'won';
       } else if (data.status === 'lost' && !data.lost_at) {
         updateData.lost_at = new Date().toISOString();
+        statusChanged = true;
+        newStatus = 'lost';
       }
 
       const { error } = await supabase
@@ -319,6 +326,26 @@ export function useDeals() {
         .eq('account_id', currentUser.account_id);
 
       if (error) throw error;
+
+      // Registrar mudança de status no histórico
+      if (statusChanged) {
+        const statusLabels: Record<string, string> = {
+          won: 'Ganho',
+          lost: 'Perdido',
+          open: 'Em aberto'
+        };
+        
+        await supabase.from('deal_activities').insert({
+          account_id: currentUser.account_id,
+          deal_id: dealId,
+          type: 'status_change',
+          title: newStatus === 'won' ? 'Negócio ganho' : 'Negócio perdido',
+          old_value: 'Em aberto',
+          new_value: statusLabels[newStatus],
+          content: newStatus === 'lost' ? (data.lost_reason || null) : null,
+          user_id: currentUser.id,
+        });
+      }
 
       // Refresh deals
       await fetchDeals();
@@ -426,6 +453,10 @@ export function useDeals() {
   const reopenDeal = async (dealId: string): Promise<boolean> => {
     if (!currentUser?.account_id) return false;
 
+    // Buscar status atual do negócio antes de reabrir
+    const currentDeal = deals.find(d => d.id === dealId);
+    const previousStatus = currentDeal?.status === 'won' ? 'Ganho' : 'Perdido';
+
     try {
       const { error } = await supabase
         .from('deals')
@@ -439,6 +470,17 @@ export function useDeals() {
         .eq('account_id', currentUser.account_id);
 
       if (error) throw error;
+
+      // Registrar reabertura no histórico
+      await supabase.from('deal_activities').insert({
+        account_id: currentUser.account_id,
+        deal_id: dealId,
+        type: 'status_change',
+        title: 'Negócio reaberto',
+        old_value: previousStatus,
+        new_value: 'Em aberto',
+        user_id: currentUser.id,
+      });
 
       await fetchDeals();
 
