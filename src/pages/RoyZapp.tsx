@@ -1202,6 +1202,12 @@ export default function RoyZapp() {
       media_filename: null,
       audio_duration_sec: null,
       sender_name: null,
+      // Dados da citação para exibição imediata
+      quoted_message_id: replyContext?.external_message_id || null,
+      quoted_content: replyContext?.content || null,
+      quoted_sender_name: replyContext?.is_from_client 
+        ? (replyContext.sender_name || "Cliente") 
+        : "Você",
     };
     
     console.log("[RoyZapp] Adding optimistic message:", optimisticMessage.id);
@@ -1259,6 +1265,12 @@ export default function RoyZapp() {
             content: messageContent,
             message_type: "text",
             sent_at: now,
+            // Dados da mensagem citada
+            quoted_message_id: replyContext?.external_message_id || null,
+            quoted_content: replyContext?.content || null,
+            quoted_sender_name: replyContext?.is_from_client 
+              ? (replyContext.sender_name || "Cliente") 
+              : "Você",
           }).select("id").single();
           
           // Replace temp message with real one

@@ -97,7 +97,7 @@ interface UazapiWebhookPayload {
     groupName?: string;
     // Nested message content
     conversation?: string;
-    extendedTextMessage?: { text?: string };
+    extendedTextMessage?: { text?: string; contextInfo?: { quotedMessage?: Record<string, unknown>; stanzaId?: string; participant?: string } };
     imageMessage?: { caption?: string; url?: string; mimetype?: string; fileName?: string };
     videoMessage?: { caption?: string; url?: string; mimetype?: string; fileName?: string };
     audioMessage?: { seconds?: number; url?: string; mimetype?: string };
@@ -109,6 +109,10 @@ interface UazapiWebhookPayload {
     url?: string;
     mimetype?: string;
     fileName?: string;
+    // Quoted message (reply) fields
+    quotedMsg?: Record<string, unknown>;
+    quotedMessageId?: string;
+    contextInfo?: { quotedMessage?: Record<string, unknown>; stanzaId?: string; participant?: string };
   };
   // Alternative message format
   data?: {
@@ -597,6 +601,54 @@ serve(async (req) => {
           ? new Date(Number(msg.timestamp) * 1000).toISOString()
           : new Date().toISOString();
 
+        // ============================================
+        // EXTRACT QUOTED MESSAGE DATA (for replies)
+        // ============================================
+        const msgAnyQuote = msg as Record<string, unknown>;
+        const contextInfo = msg.contextInfo || msg.extendedTextMessage?.contextInfo || (msgAnyQuote.contextInfo as Record<string, unknown>);
+        const quotedMsg = (msgAnyQuote.quotedMsg as Record<string, unknown>) || (contextInfo?.quotedMessage as Record<string, unknown>);
+        const quotedMsgId = msg.quotedMessageId || (contextInfo?.stanzaId as string) || null;
+        
+        // Extract quoted content from various formats
+        let quotedContent: string | null = null;
+        if (quotedMsg) {
+          quotedContent = 
+            (quotedMsg.conversation as string) || 
+            ((quotedMsg.extendedTextMessage as Record<string, unknown>)?.text as string) ||
+            (quotedMsg.caption as string) ||
+            ((quotedMsg.imageMessage as Record<string, unknown>)?.caption as string) ||
+            ((quotedMsg.videoMessage as Record<string, unknown>)?.caption as string) ||
+            ((quotedMsg.documentMessage as Record<string, unknown>)?.caption as string) ||
+            (quotedMsg.text as string) ||
+            null;
+          
+          // If still no content and it's media, show placeholder
+          if (!quotedContent) {
+            if (quotedMsg.imageMessage) quotedContent = "📷 Imagem";
+            else if (quotedMsg.videoMessage) quotedContent = "🎬 Vídeo";
+            else if (quotedMsg.audioMessage) quotedContent = "🎤 Áudio";
+            else if (quotedMsg.documentMessage) quotedContent = "📄 Documento";
+            else if (quotedMsg.stickerMessage) quotedContent = "🎨 Figurinha";
+          }
+        }
+        
+        // Extract quoted sender name
+        const quotedParticipant = contextInfo?.participant as string | undefined;
+        let quotedSenderName: string | null = null;
+        if (quotedParticipant) {
+          // participant is like "5511999999999@s.whatsapp.net"
+          // Try to get the name, or just use a placeholder
+          quotedSenderName = quotedParticipant.split("@")[0];
+          // Prefix with + if it looks like a phone number
+          if (quotedSenderName && /^\d+$/.test(quotedSenderName)) {
+            quotedSenderName = `+${quotedSenderName}`;
+          }
+        }
+        
+        if (quotedMsgId) {
+          console.log(`Quoted message detected - ID: ${quotedMsgId}, content: ${quotedContent?.substring(0, 50)}...`);
+        }
+
         console.log(`Extracted - phone: ${phone}, content: ${content.substring(0, 50)}...`);
 
         // For outbound messages in groups, we don't need a phone, just the group identifier
@@ -993,6 +1045,10 @@ serve(async (req) => {
                   media_encrypted_url: encryptedMediaUrl || (isInvalidMediaUrl ? mediaUrl : null),
                   media_key: mediaKey || null,
                   media_download_status: initialMediaDownloadStatus,
+                  // Quoted message (reply) fields
+                  quoted_message_id: quotedMsgId || null,
+                  quoted_content: quotedContent || null,
+                  quoted_sender_name: quotedSenderName || null,
                 });
 
               if (zappMsgError) {

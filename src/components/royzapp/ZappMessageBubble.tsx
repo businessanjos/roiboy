@@ -268,6 +268,18 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             </p>
           )}
           
+          {/* Quoted message bar (reply) */}
+          {message.quoted_content && (
+            <div className="bg-black/20 border-l-4 border-zapp-accent/60 px-2 py-1.5 mb-2 rounded-r">
+              <p className="text-xs font-medium text-zapp-accent truncate">
+                {message.quoted_sender_name || ""}
+              </p>
+              <p className="text-xs text-zapp-text-muted/80 line-clamp-2">
+                {message.quoted_content}
+              </p>
+            </div>
+          )}
+          
           {/* Media content - show loading state ONLY for pending downloads without a URL */}
           {message.media_download_status === "pending" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">

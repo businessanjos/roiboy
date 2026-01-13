@@ -81,6 +81,10 @@ export interface Message {
   transcription?: string | null;
   is_deleted?: boolean;
   deleted_at?: string | null;
+  // Campos para mensagem citada (reply)
+  quoted_message_id?: string | null;
+  quoted_content?: string | null;
+  quoted_sender_name?: string | null;
 }
 
 export interface ConversationAssignment {
