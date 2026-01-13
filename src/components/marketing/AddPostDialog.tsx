@@ -265,6 +265,7 @@ export function AddPostDialog({
                       <SelectItem value="fato_novo">📰 Fato Novo</SelectItem>
                       <SelectItem value="prova_social">⭐ Prova Social</SelectItem>
                       <SelectItem value="assunto_alta">🔥 Assunto em Alta</SelectItem>
+                      <SelectItem value="vlog">🎥 Vlog</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
