@@ -30,6 +30,7 @@ Sua reunião está confirmada!
 📅 Data: {data}
 ⏰ Horário: {horario}
 🔗 Link: {link}
+🔑 Senha: {senha}
 
 Clique no link acima para entrar na reunião no horário agendado.
 
@@ -92,6 +93,7 @@ Sua reunião está confirmada!
 📅 Data: ${formattedDate}
 ⏰ Horário: ${formattedTime}
 🔗 Link: {link}
+🔑 Senha: {senha}
 
 Clique no link acima para entrar na reunião no horário agendado.
 
@@ -160,7 +162,8 @@ Até lá!`;
         .replace(/{nome}/g, participantName || "Participante")
         .replace(/{data}/g, format(startDate, "dd/MM/yyyy", { locale: ptBR }))
         .replace(/{horario}/g, format(startDate, "HH:mm", { locale: ptBR }))
-        .replace(/{link}/g, "{MEETING_URL}"); // Will be replaced by the edge function
+        .replace(/{link}/g, "{MEETING_URL}") // Will be replaced by the edge function
+        .replace(/{senha}/g, "{MEETING_PASSWORD}"); // Will be replaced by the edge function
 
       const { data, error } = await supabase.functions.invoke("create-meeting", {
         body: {
@@ -290,7 +293,7 @@ Até lá!`;
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Use {"{nome}"}, {"{data}"}, {"{horario}"}, {"{link}"} para personalizar
+              Use {"{nome}"}, {"{data}"}, {"{horario}"}, {"{link}"}, {"{senha}"} para personalizar
             </p>
           </div>
         </div>
