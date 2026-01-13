@@ -3029,8 +3029,13 @@ serve(async (req) => {
 
         const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
         const deleteInstanceName = (integration?.config as { instance_name?: string })?.instance_name;
+        const ownerPhone = (integration?.config as { owner?: string })?.owner || "";
+        const ownerJid = ownerPhone ? `${ownerPhone}@s.whatsapp.net` : "";
         
+        console.log("=== DELETE MESSAGE DEBUG ===");
         console.log("Instance Name:", deleteInstanceName);
+        console.log("Owner Phone:", ownerPhone);
+        console.log("Owner JID:", ownerJid);
         
         if (!instanceToken) {
           return new Response(
@@ -3054,18 +3059,37 @@ serve(async (req) => {
           actualMessageId = message_id.split(':').pop() || message_id;
         }
         
+        console.log("Original Message ID:", message_id);
         console.log("Actual Message ID (extracted):", actualMessageId);
         
         // Try different endpoints for deleting message
-        // Evolution API v2 uses DELETE method with specific payload format
+        // UAZAPI GO uses POST /chat/delete with PascalCase parameters
         const deleteEndpoints = [
+          // UAZAPI GO - Official documented format (PascalCase) - PRIMARY
+          { 
+            url: `/chat/delete`, 
+            method: "POST", 
+            body: { Phone: cleanPhone, Id: actualMessageId }
+          },
+          // UAZAPI GO - Alternative with remoteJid format
+          { 
+            url: `/chat/delete`, 
+            method: "POST", 
+            body: { Phone: remoteJid, Id: actualMessageId }
+          },
+          // UAZAPI GO - camelCase variant
+          { 
+            url: `/chat/delete`, 
+            method: "POST", 
+            body: { phone: cleanPhone, id: actualMessageId }
+          },
           // Evolution API v2 - Primary endpoint
           { 
             url: deleteInstanceName ? `/chat/deleteMessageForEveryone/${deleteInstanceName}` : `/chat/deleteMessageForEveryone`, 
             method: "DELETE", 
-            body: { remoteJid, id: actualMessageId, fromMe: true }
+            body: { remoteJid, id: actualMessageId, fromMe: true, participant: ownerJid || undefined }
           },
-          // UAZAPI GO v2 - Alternative format
+          // UAZAPI GO v2 - DELETE method variant
           { 
             url: `/message/delete`, 
             method: "DELETE", 
@@ -3085,27 +3109,43 @@ serve(async (req) => {
         ];
         
         let deleted = false;
+        const attemptErrors: string[] = [];
+        
         for (const endpoint of deleteEndpoints) {
           if (deleted) break;
           try {
             console.log(`Trying delete: ${endpoint.method} ${endpoint.url}`);
             console.log("Payload:", JSON.stringify(endpoint.body, null, 2));
             result = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, endpoint.body);
-            console.log(`Delete successful via ${endpoint.url}`, result);
+            console.log(`Delete successful via ${endpoint.url}`, JSON.stringify(result));
             deleted = true;
           } catch (err) {
-            console.log(`Delete ${endpoint.url} failed:`, (err as Error).message);
+            const errorMsg = (err as Error).message;
+            console.log(`Delete ${endpoint.url} failed:`, errorMsg);
+            attemptErrors.push(`${endpoint.method} ${endpoint.url}: ${errorMsg}`);
           }
         }
         
         if (!deleted) {
           console.error("=== ALL DELETE ATTEMPTS FAILED ===");
           console.error("Tried endpoints:", deleteEndpoints.map(e => `${e.method} ${e.url}`).join(", "));
+          console.error("Errors:", attemptErrors.join(" | "));
+          
+          // Check if it might be time limit issue
+          const timeoutHint = attemptErrors.some(e => 
+            e.toLowerCase().includes("time") || 
+            e.toLowerCase().includes("expired") || 
+            e.toLowerCase().includes("revoke")
+          );
+          
           result = { 
             deleted: false, 
             message_id, 
             soft_delete_only: true,
-            error: "Não foi possível deletar no WhatsApp - verifique os logs"
+            error: timeoutHint 
+              ? "Mensagens só podem ser apagadas para todos em até 7 minutos após o envio"
+              : "Não foi possível deletar no WhatsApp - apagada apenas localmente",
+            attemptErrors
           };
         } else {
           result = { deleted: true, message_id, success: true };
