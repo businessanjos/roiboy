@@ -362,7 +362,7 @@ export function ZappDealDetailSheet({
       subType: t.activity_type?.name || "Tarefa",
       title: t.title,
       description: t.description,
-      date: t.completed_at || t.created_at,
+      date: t.due_date || t.completed_at || t.created_at,
       dueDate: t.due_date,
       dueTime: t.due_time,
       user: t.assigned_user,
@@ -738,15 +738,12 @@ export function ZappDealDetailSheet({
                                   <div className="flex items-center gap-2 mt-1 text-[10px] text-zapp-text-muted">
                                     {item.user && <span>{item.user.name}</span>}
                                     <span>•</span>
-                                    <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
-                                  </div>
-                                  {item.type === "task" && item.dueDate && (
-                                    <div className="flex items-center gap-1 mt-0.5 text-[10px] text-zapp-accent">
-                                      <Calendar className="h-2.5 w-2.5" />
-                                      <span className="font-medium">Agendado:</span>
+                                    {item.type === "task" && item.dueDate ? (
                                       <span>{formatDueDateTime(item.dueDate, item.dueTime)}</span>
-                                    </div>
-                                  )}
+                                    ) : (
+                                      <span>{format(new Date(item.date), "dd/MM HH:mm", { locale: ptBR })}</span>
+                                    )}
+                                  </div>
                                   {item.type === "task" && item.meetingUrl && (
                                     <Button
                                       variant="outline"
