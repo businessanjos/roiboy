@@ -84,6 +84,7 @@ interface DealTask {
   status: string;
   priority: string;
   due_date: string | null;
+  due_time: string | null;
   completed_at: string | null;
   created_at: string;
   assigned_user?: {
@@ -939,7 +940,19 @@ export function DealDetailSheet({
                                     {task.due_date && (
                                       <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 mt-0.5">
                                         <Calendar className="h-2.5 w-2.5" />
-                                        {format(new Date(task.due_date), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+                                        {(() => {
+                                          const [year, month, day] = task.due_date.split("-").map(Number);
+                                          let hours = 0, minutes = 0;
+                                          if (task.due_time) {
+                                            const timeParts = task.due_time.split(":");
+                                            hours = parseInt(timeParts[0], 10);
+                                            minutes = parseInt(timeParts[1], 10);
+                                          }
+                                          const dateObj = new Date(year, month - 1, day, hours, minutes);
+                                          return task.due_time 
+                                            ? format(dateObj, "dd/MM/yy 'às' HH:mm", { locale: ptBR })
+                                            : format(dateObj, "dd/MM/yy", { locale: ptBR });
+                                        })()}
                                       </span>
                                     )}
                                   </div>
