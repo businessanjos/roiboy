@@ -70,6 +70,7 @@ import { TaskStatusManager } from "@/components/tasks/TaskStatusManager";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
+import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
@@ -153,6 +154,7 @@ export default function Tasks() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
+  const [filterActivityType, setFilterActivityType] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -165,6 +167,9 @@ export default function Tasks() {
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
+  
+  // Activity types for filtering
+  const { activityTypes } = useActivityTypes();
 
   // No need to set default tab - "all" is the default
 
@@ -368,6 +373,9 @@ export default function Tasks() {
     const matchesUser = filterUser === "all" || 
       filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
 
+    const matchesActivityType = filterActivityType === "all" || 
+      task.activity_type?.id === filterActivityType;
+
     // Filter by custom_status_id - also include tasks without status in first tab
     const defaultStatus = customStatuses.find(s => s.is_default);
     const matchesTab = activeTab 
@@ -375,8 +383,8 @@ export default function Tasks() {
         (!task.custom_status_id && activeTab === defaultStatus?.id)
       : true;
 
-    return matchesSearch && matchesUser && matchesTab;
-  }), [tasks, searchTerm, filterUser, currentUser?.id, activeTab, customStatuses]);
+    return matchesSearch && matchesUser && matchesTab && matchesActivityType;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, activeTab, customStatuses]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
@@ -849,8 +857,11 @@ export default function Tasks() {
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all"}
-        onClearFilters={() => setFilterUser("all")}
+        filtersActive={filterUser !== "all" || filterActivityType !== "all"}
+        onClearFilters={() => {
+          setFilterUser("all");
+          setFilterActivityType("all");
+        }}
       >
         <FilterItem>
           <Select value={filterUser} onValueChange={setFilterUser}>
@@ -885,6 +896,30 @@ export default function Tasks() {
           </Select>
         </FilterItem>
         <FilterItem>
+          <Select value={filterActivityType} onValueChange={setFilterActivityType}>
+            <SelectTrigger className="w-full sm:w-[180px] h-10">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Tipo de Tarefa" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {activityTypes.map((type) => (
+                <SelectItem key={type.id} value={type.id}>
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: type.color || '#6b7280' }}
+                    />
+                    <span>{type.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterItem>
+        <FilterItem>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
             <SelectTrigger className="w-full sm:w-[160px] h-10">
               <div className="flex items-center gap-2">
@@ -912,7 +947,10 @@ export default function Tasks() {
             const matchesUser = filterUser === "all" || 
               filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
 
-            return matchesSearch && matchesUser;
+            const matchesActivityType = filterActivityType === "all" || 
+              task.activity_type?.id === filterActivityType;
+
+            return matchesSearch && matchesUser && matchesActivityType;
           })}
           onEditTask={openEditDialog}
           onDeleteTask={openDeleteDialog}
