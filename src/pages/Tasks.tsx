@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -149,6 +149,7 @@ const STATUS_CONFIG = {
 type ViewMode = "list" | "kanban";
 
 export default function Tasks() {
+  const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const queryClient = useQueryClient();
@@ -693,7 +694,16 @@ export default function Tasks() {
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuContent align="end" className="w-48">
+                            {task.deals && task.deal_id && (
+                              <DropdownMenuItem 
+                                onClick={() => navigate(`/pipeline?deal=${task.deal_id}`)}
+                                className="text-blue-600 dark:text-blue-400"
+                              >
+                                <TrendingUp className="mr-2 h-4 w-4" />
+                                Ver Negócio
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => openEditDialog(task)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Editar
