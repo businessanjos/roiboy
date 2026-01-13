@@ -26,7 +26,9 @@ import {
   ArrowRight,
   User2,
   TrendingUp,
+  MessageCircle,
 } from "lucide-react";
+import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -57,7 +59,16 @@ interface Task {
   assigned_to: string | null;
   created_at: string;
   clients?: Client | null;
-  deals?: { id: string; title: string } | null;
+  deals?: { 
+    id: string; 
+    title: string;
+    client_id: string | null;
+    lead_id: string | null;
+    contact_name: string | null;
+    contact_phone: string | null;
+    client?: { id: string; full_name: string; phone_e164: string } | null;
+    lead?: { id: string; full_name: string; phone: string | null } | null;
+  } | null;
   assigned_user?: User | null;
   activity_type?: {
     id: string;
@@ -85,6 +96,7 @@ const STATUS_CONFIG = {
 
 export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusChange, showClient = true }: TaskCardProps) {
   const navigate = useNavigate();
+  const { openZappConversation, loading: zappLoading } = useZappNavigation();
   const statusConfig = STATUS_CONFIG[task.status];
   const StatusIcon = statusConfig.icon;
   const isCompleted = task.status === "done";
@@ -121,6 +133,20 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
   };
 
   const dueDateInfo = getDueDateInfo();
+
+  const getContactInfoFromTask = () => {
+    if (!task.deals) return null;
+    
+    const deal = task.deals;
+    const phone = deal.client?.phone_e164 || deal.lead?.phone || deal.contact_phone;
+    const name = deal.client?.full_name || deal.lead?.full_name || deal.contact_name;
+    const clientId = deal.client_id || undefined;
+    const leadId = deal.lead_id || undefined;
+    
+    if (!phone) return null;
+    
+    return { phone, name, clientId, leadId };
+  };
 
   const getInitials = (name: string) => {
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -178,6 +204,25 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              {(() => {
+                const contactInfo = getContactInfoFromTask();
+                if (!contactInfo) return null;
+                return (
+                  <DropdownMenuItem
+                    onClick={() => openZappConversation({
+                      phone: contactInfo.phone,
+                      clientId: contactInfo.clientId,
+                      leadId: contactInfo.leadId,
+                      name: contactInfo.name || undefined,
+                    })}
+                    className="text-emerald-600 dark:text-emerald-400"
+                    disabled={zappLoading}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Conversar
+                  </DropdownMenuItem>
+                );
+              })()}
               {task.deals && task.deal_id && (
                 <DropdownMenuItem 
                   onClick={() => navigate(`/pipeline?deal=${task.deal_id}`)}
