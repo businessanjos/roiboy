@@ -1248,6 +1248,9 @@ export default function RoyZapp() {
         // Add quoted message for replies (use external_message_id if available, fallback to id)
         if (replyContext?.external_message_id) {
           payload.quoted_message_id = replyContext.external_message_id;
+          // is_from_client = true means CLIENT sent the message, so fromMe = false (we didn't send it)
+          // is_from_client = false means WE sent the message, so fromMe = true
+          payload.quoted_from_me = !replyContext.is_from_client;
         }
         
         const { error } = await supabase.functions.invoke("uazapi-manager", {
