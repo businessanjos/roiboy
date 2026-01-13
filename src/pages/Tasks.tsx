@@ -62,6 +62,7 @@ import {
   List,
   LayoutGrid,
   Settings,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
@@ -71,6 +72,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
@@ -90,6 +92,12 @@ interface Client {
 interface Deal {
   id: string;
   title: string;
+  client_id: string | null;
+  lead_id: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  client?: { id: string; full_name: string; phone_e164: string } | null;
+  lead?: { id: string; full_name: string; phone: string | null } | null;
 }
 
 interface Lead {
@@ -152,6 +160,7 @@ export default function Tasks() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
+  const { openZappConversation, loading: zappLoading } = useZappNavigation();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
@@ -183,7 +192,16 @@ export default function Tasks() {
         .select(`
           *,
           clients:client_id (id, full_name),
-          deals:deal_id (id, title),
+          deals:deal_id (
+            id, 
+            title, 
+            client_id,
+            lead_id,
+            contact_name,
+            contact_phone,
+            client:clients(id, full_name, phone_e164),
+            lead:leads(id, full_name, phone)
+          ),
           leads:lead_id (id, full_name),
           assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
           activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color)
@@ -329,6 +347,20 @@ export default function Tasks() {
   const openDeleteDialog = useCallback((task: Task) => {
     setTaskToDelete(task);
     setDeleteDialogOpen(true);
+  }, []);
+
+  const getContactInfoFromTask = useCallback((task: Task) => {
+    if (!task.deals) return null;
+    
+    const deal = task.deals;
+    const phone = deal.client?.phone_e164 || deal.lead?.phone || deal.contact_phone;
+    const name = deal.client?.full_name || deal.lead?.full_name || deal.contact_name;
+    const clientId = deal.client_id || undefined;
+    const leadId = deal.lead_id || undefined;
+    
+    if (!phone) return null;
+    
+    return { phone, name, clientId, leadId };
   }, []);
 
   const getInitials = useCallback((name: string) => {
@@ -695,6 +727,25 @@ export default function Tasks() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
+                            {(() => {
+                              const contactInfo = getContactInfoFromTask(task);
+                              if (!contactInfo) return null;
+                              return (
+                                <DropdownMenuItem
+                                  onClick={() => openZappConversation({
+                                    phone: contactInfo.phone,
+                                    clientId: contactInfo.clientId,
+                                    leadId: contactInfo.leadId,
+                                    name: contactInfo.name || undefined,
+                                  })}
+                                  className="text-emerald-600 dark:text-emerald-400"
+                                  disabled={zappLoading}
+                                >
+                                  <MessageCircle className="mr-2 h-4 w-4" />
+                                  Conversar
+                                </DropdownMenuItem>
+                              );
+                            })()}
                             {task.deals && task.deal_id && (
                               <DropdownMenuItem 
                                 onClick={() => navigate(`/pipeline?deal=${task.deal_id}`)}
