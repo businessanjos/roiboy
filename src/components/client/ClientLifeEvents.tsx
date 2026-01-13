@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,8 @@ import {
   Sparkles,
   Home,
   Send,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isAfter } from "date-fns";
@@ -83,6 +85,7 @@ interface LifeEvent {
   reminder_days_before: number | null;
   source: "manual" | "conversation" | "ai_detected";
   created_at: string;
+  image_url: string | null;
 }
 
 interface ClientLifeEventsProps {
@@ -131,6 +134,12 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [formDescription, setFormDescription] = useState("");
   const [formRecurring, setFormRecurring] = useState(false);
   const [formReminderDays, setFormReminderDays] = useState("7");
+
+  // Image upload state
+  const [formImageFile, setFormImageFile] = useState<File | null>(null);
+  const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -248,6 +257,9 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormRecurring(false);
     setFormReminderDays("7");
     setEditingEvent(null);
+    setFormImageFile(null);
+    setFormImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const openNewDialog = () => {
@@ -263,7 +275,46 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormDescription(event.description || "");
     setFormRecurring(event.is_recurring);
     setFormReminderDays(String(event.reminder_days_before || 7));
+    setFormImagePreview(event.image_url || null);
+    setFormImageFile(null);
     setDialogOpen(true);
+  };
+
+  // Image upload handlers
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Por favor, selecione uma imagem válida");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("A imagem deve ter no máximo 5MB");
+        return;
+      }
+      setFormImageFile(file);
+      setFormImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${clientId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("event-media")
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from("event-media").getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const removeImage = () => {
+    setFormImageFile(null);
+    setFormImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const handleSave = async () => {
@@ -279,6 +330,20 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
 
     setSaving(true);
     try {
+      // Handle image upload
+      let imageUrl = editingEvent?.image_url || null;
+      if (formImageFile) {
+        setUploadingImage(true);
+        try {
+          imageUrl = await uploadImage(formImageFile);
+        } finally {
+          setUploadingImage(false);
+        }
+      } else if (!formImagePreview && editingEvent?.image_url) {
+        // User removed the existing image
+        imageUrl = null;
+      }
+
       const eventData = {
         event_type: formType,
         title: formTitle.trim(),
@@ -286,6 +351,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
         description: formDescription.trim() || null,
         is_recurring: formRecurring,
         reminder_days_before: parseInt(formReminderDays) || 7,
+        image_url: imageUrl,
       };
 
       if (editingEvent) {
@@ -450,9 +516,17 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                   key={event.id}
                   className="flex items-center gap-3 py-3 px-2 hover:bg-muted/30 rounded-lg transition-colors group"
                 >
-                  <div className={`p-2 rounded-lg bg-muted/50 ${typeInfo.color}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
+                  {event.image_url ? (
+                    <img
+                      src={event.image_url}
+                      alt=""
+                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className={`p-2 rounded-lg bg-muted/50 ${typeInfo.color}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm truncate">{event.title}</span>
@@ -679,6 +753,63 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                 onChange={(e) => setFormDescription(e.target.value)}
                 rows={3}
               />
+            </div>
+
+            {/* Image Upload Field */}
+            <div className="space-y-2">
+              <Label>Imagem (opcional)</Label>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+
+              {formImagePreview ? (
+                <div className="relative group">
+                  <img
+                    src={formImagePreview}
+                    alt="Preview"
+                    className="w-full h-32 object-cover rounded-lg border"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => imageInputRef.current?.click()}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Trocar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={removeImage}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Remover
+                    </Button>
+                  </div>
+                  {uploadingImage && (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-white" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-20 border-dashed"
+                  onClick={() => imageInputRef.current?.click()}
+                >
+                  <ImagePlus className="h-5 w-5 mr-2 text-muted-foreground" />
+                  <span className="text-muted-foreground">Adicionar imagem</span>
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center justify-between">

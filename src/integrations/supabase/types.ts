@@ -1592,6 +1592,7 @@ export type Database = {
           event_date: string | null
           event_type: string
           id: string
+          image_url: string | null
           is_recurring: boolean
           reminder_days_before: number | null
           source: string
@@ -1606,6 +1607,7 @@ export type Database = {
           event_date?: string | null
           event_type: string
           id?: string
+          image_url?: string | null
           is_recurring?: boolean
           reminder_days_before?: number | null
           source?: string
@@ -1620,6 +1622,7 @@ export type Database = {
           event_date?: string | null
           event_type?: string
           id?: string
+          image_url?: string | null
           is_recurring?: boolean
           reminder_days_before?: number | null
           source?: string
