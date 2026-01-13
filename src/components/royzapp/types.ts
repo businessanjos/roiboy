@@ -160,7 +160,24 @@ export interface ContactInfo {
   isFavorite: boolean;
   isBlocked: boolean;
   isArchived: boolean;
+  searchableText: string;
 }
+
+// Normalize string for flexible search (remove accents, special chars)
+export const normalizeSearchText = (text: string): string => {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .trim();
+};
+
+// Normalize phone for flexible search (remove all non-digits)
+export const normalizePhone = (phone: string): string => {
+  if (!phone) return "";
+  return phone.replace(/\D/g, ""); // Mantém apenas dígitos
+};
 
 export const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -193,9 +210,21 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
   if (zappConv) {
     const clientData = zappConv.client;
     const leadData = zappConv.lead;
+    const name = clientData?.full_name || leadData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido";
+    const phone = zappConv.phone_e164 || "";
+    
+    // Build searchable text with all relevant fields
+    const searchableText = normalizeSearchText([
+      clientData?.full_name,
+      leadData?.full_name,
+      zappConv.contact_name,
+      zappConv.phone_e164,
+      zappConv.last_message_preview,
+    ].filter(Boolean).join(" "));
+    
     return {
-      name: clientData?.full_name || leadData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido",
-      phone: zappConv.phone_e164 || "",
+      name,
+      phone,
       avatar: clientData?.avatar_url || zappConv.avatar_url || null,
       clientId: zappConv.client_id || null,
       isClient: !!zappConv.client_id || !!zappConv.lead_id,
@@ -208,8 +237,14 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
       isFavorite: zappConv.is_favorite || false,
       isBlocked: zappConv.is_blocked || false,
       isArchived: zappConv.is_archived || false,
+      searchableText,
     };
   } else if (oldConv?.client) {
+    const searchableText = normalizeSearchText([
+      oldConv.client.full_name,
+      oldConv.client.phone_e164,
+    ].filter(Boolean).join(" "));
+    
     return {
       name: oldConv.client.full_name,
       phone: oldConv.client.phone_e164,
@@ -225,6 +260,7 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
       isFavorite: false,
       isBlocked: false,
       isArchived: false,
+      searchableText,
     };
   }
   
@@ -243,7 +279,27 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
     isFavorite: false,
     isBlocked: false,
     isArchived: false,
+    searchableText: "",
   };
+};
+
+// Flexible search matching function
+export const matchesSearchQuery = (contact: ContactInfo, searchQuery: string): boolean => {
+  if (!searchQuery || searchQuery.trim() === "") return true;
+  
+  const normalizedQuery = normalizeSearchText(searchQuery);
+  const normalizedPhoneQuery = normalizePhone(searchQuery);
+  
+  // Search by normalized name (handles accents: "João" matches "joao")
+  if (contact.searchableText.includes(normalizedQuery)) return true;
+  
+  // Search by phone (handles formatting: "11999" matches "+5511999887766")
+  if (normalizedPhoneQuery.length >= 3) {
+    const normalizedPhone = normalizePhone(contact.phone);
+    if (normalizedPhone.includes(normalizedPhoneQuery)) return true;
+  }
+  
+  return false;
 };
 
 // Helper to get initials from name
