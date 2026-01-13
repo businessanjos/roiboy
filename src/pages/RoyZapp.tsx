@@ -1563,9 +1563,10 @@ export default function RoyZapp() {
     const now = new Date().toISOString();
     
     // Create optimistic message
+    // Use empty content to match what webhook receives (prevents deduplication failures)
     const optimisticMessage: Message = {
       id: tempMessageId,
-      content: "[Áudio]",
+      content: "",
       is_from_client: false,
       created_at: now,
       message_type: "audio",
@@ -1633,12 +1634,13 @@ export default function RoyZapp() {
       }
       
       // Save message to zapp_messages
+      // Use empty content to match what webhook receives (prevents deduplication failures)
       if (selectedConversation.zapp_conversation_id) {
         const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
-          content: "[Áudio]",
+          content: "",
           message_type: "audio",
           media_url: mediaUrl,
           media_type: "audio",
