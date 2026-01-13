@@ -281,28 +281,60 @@ export default function SalesPipeline() {
       
       // If deal has lead_id but no client_id, convert lead to client first
       if (deal.lead_id && !deal.client_id) {
-        const { data: convertedClient, error: convertError } = await supabase
-          .rpc('convert_lead_to_client', { p_lead_id: deal.lead_id });
+        // 1. Fetch lead data to check status and phone
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('phone, account_id, converted_to_client_id, status')
+          .eq('id', deal.lead_id)
+          .single();
         
-        if (convertError) {
-          // Check if lead was already converted
-          if (convertError.message?.includes('já foi convertido')) {
-            // Fetch the already converted client_id from the lead
-            const { data: lead } = await supabase
+        // 2. If lead was already converted, use existing client
+        if (lead?.converted_to_client_id) {
+          clientId = lead.converted_to_client_id;
+        } else if (lead?.phone) {
+          // 3. Check if client with same phone already exists
+          const { data: existingClient } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('account_id', lead.account_id)
+            .eq('phone_e164', lead.phone)
+            .maybeSingle();
+          
+          if (existingClient) {
+            // 4. Use existing client and mark lead as converted
+            clientId = existingClient.id;
+            await supabase
               .from('leads')
-              .select('converted_to_client_id')
-              .eq('id', deal.lead_id)
-              .single();
-            
-            if (lead?.converted_to_client_id) {
-              clientId = lead.converted_to_client_id;
-            }
+              .update({ 
+                converted_to_client_id: existingClient.id,
+                converted_at: new Date().toISOString(),
+                status: 'converted'
+              })
+              .eq('id', deal.lead_id);
+            toast.success("Lead vinculado ao cliente existente!");
           } else {
+            // 5. No existing client, do normal conversion
+            const { data: convertedClient, error: convertError } = await supabase
+              .rpc('convert_lead_to_client', { p_lead_id: deal.lead_id });
+            
+            if (convertError) {
+              console.error("Error converting lead:", convertError);
+              toast.error("Erro ao converter lead para cliente");
+              return;
+            }
+            clientId = convertedClient;
+            toast.success("Lead convertido para cliente!");
+          }
+        } else {
+          // Lead has no phone, try normal conversion
+          const { data: convertedClient, error: convertError } = await supabase
+            .rpc('convert_lead_to_client', { p_lead_id: deal.lead_id });
+          
+          if (convertError) {
             console.error("Error converting lead:", convertError);
             toast.error("Erro ao converter lead para cliente");
             return;
           }
-        } else {
           clientId = convertedClient;
           toast.success("Lead convertido para cliente!");
         }
