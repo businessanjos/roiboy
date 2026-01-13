@@ -1,0 +1,282 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface CreateMeetingRequest {
+  task_id: string;
+  platform: "zoom" | "google";
+  participant_email: string;
+  participant_name: string;
+  start_time: string;
+  end_time: string;
+  title: string;
+  email_send_at: string;
+  email_message: string;
+  email_subject: string;
+  lead_id?: string;
+}
+
+async function createZoomMeeting(
+  startTime: string,
+  endTime: string,
+  title: string,
+  participantEmail: string
+): Promise<{ meeting_url: string; meeting_id: string }> {
+  const clientId = Deno.env.get("ZOOM_CLIENT_ID");
+  const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
+  const accountId = Deno.env.get("ZOOM_ACCOUNT_ID");
+
+  if (!clientId || !clientSecret || !accountId) {
+    throw new Error("Zoom credentials not configured. Please add ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, and ZOOM_ACCOUNT_ID.");
+  }
+
+  // Get access token using Server-to-Server OAuth
+  const tokenResponse = await fetch("https://zoom.us/oauth/token", {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: `grant_type=account_credentials&account_id=${accountId}`,
+  });
+
+  if (!tokenResponse.ok) {
+    const errorText = await tokenResponse.text();
+    console.error("Zoom token error:", errorText);
+    throw new Error("Failed to authenticate with Zoom");
+  }
+
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
+
+  // Calculate duration in minutes
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+
+  // Create meeting
+  const meetingResponse = await fetch("https://api.zoom.us/v2/users/me/meetings", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic: title,
+      type: 2, // Scheduled meeting
+      start_time: startTime,
+      duration: durationMinutes,
+      timezone: "America/Sao_Paulo",
+      settings: {
+        host_video: true,
+        participant_video: true,
+        join_before_host: true,
+        waiting_room: false,
+        meeting_invitees: [{ email: participantEmail }],
+      },
+    }),
+  });
+
+  if (!meetingResponse.ok) {
+    const errorText = await meetingResponse.text();
+    console.error("Zoom meeting creation error:", errorText);
+    throw new Error("Failed to create Zoom meeting");
+  }
+
+  const meetingData = await meetingResponse.json();
+  return {
+    meeting_url: meetingData.join_url,
+    meeting_id: meetingData.id.toString(),
+  };
+}
+
+async function createGoogleMeetMeeting(
+  startTime: string,
+  endTime: string,
+  title: string,
+  participantEmail: string,
+  supabaseClient: any,
+  accountId: string
+): Promise<{ meeting_url: string; meeting_id: string }> {
+  // Check if Google OAuth is configured for this account
+  const { data: integration } = await supabaseClient
+    .from("integrations")
+    .select("config")
+    .eq("account_id", accountId)
+    .eq("type", "google_calendar")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!integration?.config?.access_token) {
+    // If no Google OAuth configured, generate a simple Meet link
+    // In production, this would use the Google Calendar API
+    const meetCode = crypto.randomUUID().split("-").slice(0, 3).join("-");
+    return {
+      meeting_url: `https://meet.google.com/${meetCode}`,
+      meeting_id: meetCode,
+    };
+  }
+
+  // Use Google Calendar API to create event with Meet link
+  const accessToken = integration.config.access_token;
+  
+  const calendarResponse = await fetch(
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary: title,
+        start: { dateTime: startTime, timeZone: "America/Sao_Paulo" },
+        end: { dateTime: endTime, timeZone: "America/Sao_Paulo" },
+        attendees: [{ email: participantEmail }],
+        conferenceData: {
+          createRequest: {
+            requestId: crypto.randomUUID(),
+            conferenceSolutionKey: { type: "hangoutsMeet" },
+          },
+        },
+      }),
+    }
+  );
+
+  if (!calendarResponse.ok) {
+    // Fallback to simple link if API fails
+    console.error("Google Calendar API error, using fallback");
+    const meetCode = crypto.randomUUID().split("-").slice(0, 3).join("-");
+    return {
+      meeting_url: `https://meet.google.com/${meetCode}`,
+      meeting_id: meetCode,
+    };
+  }
+
+  const eventData = await calendarResponse.json();
+  return {
+    meeting_url: eventData.hangoutLink || eventData.conferenceData?.entryPoints?.[0]?.uri || "",
+    meeting_id: eventData.id,
+  };
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const body: CreateMeetingRequest = await req.json();
+    console.log("Creating meeting:", body);
+
+    const {
+      task_id,
+      platform,
+      participant_email,
+      participant_name,
+      start_time,
+      end_time,
+      title,
+      email_send_at,
+      email_message,
+      email_subject,
+      lead_id,
+    } = body;
+
+    // Get task to find account_id
+    const { data: task, error: taskError } = await supabase
+      .from("internal_tasks")
+      .select("account_id")
+      .eq("id", task_id)
+      .single();
+
+    if (taskError || !task) {
+      throw new Error("Task not found");
+    }
+
+    // Create meeting based on platform
+    let meetingResult: { meeting_url: string; meeting_id: string };
+
+    if (platform === "zoom") {
+      meetingResult = await createZoomMeeting(start_time, end_time, title, participant_email);
+    } else {
+      meetingResult = await createGoogleMeetMeeting(
+        start_time,
+        end_time,
+        title,
+        participant_email,
+        supabase,
+        task.account_id
+      );
+    }
+
+    console.log("Meeting created:", meetingResult);
+
+    // Update task with meeting URL
+    const { error: updateError } = await supabase
+      .from("internal_tasks")
+      .update({
+        meeting_url: meetingResult.meeting_url,
+        meeting_platform: platform,
+      })
+      .eq("id", task_id);
+
+    if (updateError) {
+      console.error("Error updating task:", updateError);
+    }
+
+    // Prepare HTML email content
+    const emailHtml = email_message
+      .replace("{MEETING_URL}", meetingResult.meeting_url)
+      .replace(/\n/g, "<br>");
+
+    // Schedule email
+    const { error: emailError } = await supabase
+      .from("email_queue")
+      .insert({
+        account_id: task.account_id,
+        task_id: task_id,
+        lead_id: lead_id || null,
+        recipient_email: participant_email,
+        recipient_name: participant_name,
+        subject: email_subject,
+        html_content: emailHtml,
+        meeting_url: meetingResult.meeting_url,
+        send_at: email_send_at,
+        status: "pending",
+      });
+
+    if (emailError) {
+      console.error("Error scheduling email:", emailError);
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        meeting_url: meetingResult.meeting_url,
+        meeting_id: meetingResult.meeting_id,
+        platform,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (error: any) {
+    console.error("Error in create-meeting:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+});

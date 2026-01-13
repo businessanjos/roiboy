@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Video, ExternalLink } from "lucide-react";
+import { MeetingConfigDialog } from "./MeetingConfigDialog";
 
 interface User {
   id: string;
@@ -62,6 +63,8 @@ interface Task {
   completed_at?: string | null;
   custom_status_id?: string | null;
   activity_type_id?: string | null;
+  meeting_url?: string | null;
+  meeting_platform?: string | null;
 }
 
 interface TaskDialogProps {
@@ -95,6 +98,12 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   const [deals, setDeals] = useState<Deal[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(task?.id || null);
+  const [meetingUrl, setMeetingUrl] = useState<string | null>(task?.meeting_url || null);
+  const [meetingPlatform, setMeetingPlatform] = useState<string | null>(task?.meeting_platform || null);
+  const [participantEmail, setParticipantEmail] = useState<string>("");
+  const [participantName, setParticipantName] = useState<string>("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -161,6 +170,9 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         assigned_to: task.assigned_to || "",
         activity_type_id: task.activity_type_id || "",
       });
+      setCurrentTaskId(task.id);
+      setMeetingUrl(task.meeting_url || null);
+      setMeetingPlatform(task.meeting_platform || null);
     } else {
       const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
       setFormData({
@@ -176,9 +188,55 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         assigned_to: currentUser?.id || "",
         activity_type_id: initialActivityTypeId || "",
       });
+      setCurrentTaskId(null);
+      setMeetingUrl(null);
+      setMeetingPlatform(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task, clientId, dealId, leadId, initialStatus, customStatuses]);
+
+  // Fetch lead/deal email when selected for meeting
+  useEffect(() => {
+    const fetchParticipantInfo = async () => {
+      if (formData.lead_id) {
+        const { data } = await supabase
+          .from("leads")
+          .select("full_name, email")
+          .eq("id", formData.lead_id)
+          .single();
+        if (data) {
+          setParticipantName(data.full_name || "");
+          setParticipantEmail(data.email || "");
+        }
+      } else if (formData.deal_id) {
+        const { data } = await supabase
+          .from("deals")
+          .select("title, lead_id, leads(full_name, email)")
+          .eq("id", formData.deal_id)
+          .single();
+        if (data) {
+          const lead = data.leads as any;
+          setParticipantName(lead?.full_name || data.title);
+          setParticipantEmail(lead?.email || "");
+        }
+      } else if (formData.client_id) {
+        const { data } = await supabase
+          .from("clients")
+          .select("full_name, emails")
+          .eq("id", formData.client_id)
+          .single();
+        if (data) {
+          setParticipantName(data.full_name || "");
+          const emails = data.emails as any[];
+          setParticipantEmail(emails?.[0]?.email || "");
+        }
+      } else {
+        setParticipantName("");
+        setParticipantEmail("");
+      }
+    };
+    fetchParticipantInfo();
+  }, [formData.lead_id, formData.deal_id, formData.client_id]);
 
   const fetchUsers = async () => {
     const { data } = await supabase
@@ -541,6 +599,56 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </div>
           </div>
 
+          {/* Meeting Button - Show for meeting/call activity types */}
+          {formData.activity_type_id && activityTypes.find(t => 
+            t.id === formData.activity_type_id && 
+            (t.name.toLowerCase().includes("reunião") || 
+             t.name.toLowerCase().includes("call") ||
+             t.name.toLowerCase().includes("meet"))
+          ) && (
+            <div className="space-y-2">
+              {meetingUrl ? (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <Video className="h-4 w-4 text-primary" />
+                  <span className="text-sm flex-1">
+                    {meetingPlatform === "zoom" ? "🔵 Zoom" : "🟢 Google Meet"} configurado
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(meetingUrl, "_blank")}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    Abrir
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    if (!currentTaskId && !task) {
+                      toast.error("Salve a atividade primeiro para configurar a reunião");
+                      return;
+                    }
+                    setMeetingDialogOpen(true);
+                  }}
+                  disabled={!formData.due_date}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Configurar Reunião Online
+                </Button>
+              )}
+              {!formData.due_date && (
+                <p className="text-xs text-muted-foreground">
+                  Defina a data para habilitar a reunião online
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
@@ -552,6 +660,25 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           </div>
         </div>
       </DialogContent>
+
+      {/* Meeting Configuration Dialog */}
+      {(currentTaskId || task?.id) && (
+        <MeetingConfigDialog
+          open={meetingDialogOpen}
+          onOpenChange={setMeetingDialogOpen}
+          taskId={currentTaskId || task?.id || ""}
+          taskTitle={activityTypes.find(t => t.id === formData.activity_type_id)?.name || "Reunião"}
+          dueDate={formData.due_date}
+          dueTime={formData.due_time}
+          participantEmail={participantEmail}
+          participantName={participantName}
+          leadId={formData.lead_id}
+          onMeetingCreated={(url, platform) => {
+            setMeetingUrl(url);
+            setMeetingPlatform(platform);
+          }}
+        />
+      )}
     </Dialog>
   );
 }

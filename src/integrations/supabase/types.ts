@@ -3014,6 +3014,82 @@ export type Database = {
           },
         ]
       }
+      email_queue: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          error: string | null
+          html_content: string
+          id: string
+          lead_id: string | null
+          meeting_url: string | null
+          recipient_email: string
+          recipient_name: string | null
+          send_at: string
+          sent_at: string | null
+          status: string
+          subject: string
+          task_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          error?: string | null
+          html_content: string
+          id?: string
+          lead_id?: string | null
+          meeting_url?: string | null
+          recipient_email: string
+          recipient_name?: string | null
+          send_at: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          error?: string | null
+          html_content?: string
+          id?: string
+          lead_id?: string | null
+          meeting_url?: string | null
+          recipient_email?: string
+          recipient_name?: string | null
+          send_at?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_queue_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_queue_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "internal_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_checklist: {
         Row: {
           account_id: string
@@ -5303,6 +5379,8 @@ export type Database = {
           due_time: string | null
           id: string
           lead_id: string | null
+          meeting_platform: string | null
+          meeting_url: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           status: Database["public"]["Enums"]["task_status"]
           title: string
@@ -5324,6 +5402,8 @@ export type Database = {
           due_time?: string | null
           id?: string
           lead_id?: string | null
+          meeting_platform?: string | null
+          meeting_url?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           title: string
@@ -5345,6 +5425,8 @@ export type Database = {
           due_time?: string | null
           id?: string
           lead_id?: string | null
+          meeting_platform?: string | null
+          meeting_url?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
@@ -7944,6 +8026,9 @@ export type Database = {
           email: string
           id: string
           is_also_admin: boolean
+          meeting_email_advance: string | null
+          meeting_email_template: string | null
+          meeting_platform: string | null
           name: string
           role: Database["public"]["Enums"]["user_role"]
           team_role_id: string | null
@@ -7956,6 +8041,9 @@ export type Database = {
           email: string
           id?: string
           is_also_admin?: boolean
+          meeting_email_advance?: string | null
+          meeting_email_template?: string | null
+          meeting_platform?: string | null
           name: string
           role?: Database["public"]["Enums"]["user_role"]
           team_role_id?: string | null
@@ -7968,6 +8056,9 @@ export type Database = {
           email?: string
           id?: string
           is_also_admin?: boolean
+          meeting_email_advance?: string | null
+          meeting_email_template?: string | null
+          meeting_platform?: string | null
           name?: string
           role?: Database["public"]["Enums"]["user_role"]
           team_role_id?: string | null
