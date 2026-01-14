@@ -65,13 +65,13 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
 
   // Buscar preferências do usuário
   const fetchUserPreferences = async () => {
-    if (!currentUser?.id || !currentUser?.account_id) return;
+    if (!currentUser?.auth_user_id || !currentUser?.account_id) return;
     
     try {
       const { data, error } = await supabase
         .from("user_instance_preferences")
         .select("sector_id, integration_id")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentUser.auth_user_id)
         .eq("account_id", currentUser.account_id);
       
       if (error) throw error;
@@ -88,13 +88,13 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
 
   // Salvar preferência do usuário
   const saveUserPreference = async (sectorId: SectorId, integrationId: string) => {
-    if (!currentUser?.id || !currentUser?.account_id) return;
+    if (!currentUser?.auth_user_id || !currentUser?.account_id) return;
     
     try {
       const { error } = await supabase
         .from("user_instance_preferences")
         .upsert({
-          user_id: currentUser.id,
+          user_id: currentUser.auth_user_id,
           account_id: currentUser.account_id,
           sector_id: sectorId,
           integration_id: integrationId,
@@ -208,7 +208,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
     };
 
     fetchSectorStatuses();
-  }, [currentUser?.account_id, currentUser?.id]);
+  }, [currentUser?.account_id, currentUser?.auth_user_id]);
 
   // Filtrar setores que o usuário tem acesso
   const accessibleSectors = WHATSAPP_SECTOR_IDS.filter(sectorId => {
