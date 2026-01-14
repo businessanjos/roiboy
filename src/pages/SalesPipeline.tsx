@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
 import { useLeads } from "@/hooks/useLeads";
@@ -763,11 +764,25 @@ function DealListView({
   onDealClick: (deal: Deal) => void;
   showStatus?: boolean;
 }) {
+  const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  const toggleExpanded = (dealId: string) => {
+    setExpandedReasons(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dealId)) {
+        newSet.delete(dealId);
+      } else {
+        newSet.add(dealId);
+      }
+      return newSet;
+    });
   };
 
   if (deals.length === 0) {
@@ -786,6 +801,9 @@ function DealListView({
         <div className="divide-y">
           {deals.map((deal) => {
             const stage = stages.find(s => s.id === deal.stage_id);
+            const isExpanded = expandedReasons.has(deal.id);
+            const hasLongReason = deal.lost_reason && deal.lost_reason.length > 80;
+            
             return (
               <div
                 key={deal.id}
@@ -841,6 +859,32 @@ function DealListView({
                     </span>
                   </div>
                 </div>
+                
+                {/* Loss Reason - shown only for lost deals */}
+                {deal.status === 'lost' && deal.lost_reason && (
+                  <div className="mt-3 ml-[52px]">
+                    <div 
+                      className={cn(
+                        "text-xs text-muted-foreground bg-destructive/10 rounded px-2.5 py-2 border border-destructive/20",
+                        !isExpanded && "line-clamp-1"
+                      )}
+                    >
+                      <span className="font-medium text-destructive/80">Motivo:</span>{" "}
+                      {deal.lost_reason}
+                    </div>
+                    {hasLongReason && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpanded(deal.id);
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground mt-1.5 hover:underline"
+                      >
+                        {isExpanded ? "Ver menos" : "Ver mais"}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
