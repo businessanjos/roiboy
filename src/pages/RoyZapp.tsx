@@ -285,7 +285,8 @@ export default function RoyZapp() {
           phone_e164: normalizedPhone,
           contact_name: contact.full_name,
           avatar_url: contact.avatar_url,
-          sector_id: "vendas" as SectorId,
+          sector_id: selectedSectorId,
+          integration_id: selectedIntegrationId,
         };
         
         const insertData = isLead 
@@ -2475,6 +2476,7 @@ export default function RoyZapp() {
           contact_name: contact.full_name,
           avatar_url: contact.avatar_url,
           sector_id: selectedSectorId,
+          integration_id: selectedIntegrationId,
         };
         
         const insertData = isLeadMode 
