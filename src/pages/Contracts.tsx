@@ -1080,8 +1080,21 @@ export default function Contracts() {
 
       let clientId = selectedClient?.id;
 
-      // If creating new client, insert first
+      // If creating new client, check for duplicate phone first
       if (isCreatingNewClient) {
+        const { data: existingClient } = await supabase
+          .from("clients")
+          .select("id, full_name")
+          .eq("account_id", userProfile.account_id)
+          .eq("phone_e164", clientFormData.phone_e164)
+          .maybeSingle();
+        
+        if (existingClient) {
+          toast.error(`Este telefone já está cadastrado para: ${existingClient.full_name}. Use "Selecionar existente" para vincular ao cliente.`);
+          setSaving(false);
+          return;
+        }
+
         const newClientData = {
           account_id: userProfile.account_id,
           full_name: clientFormData.full_name,
@@ -1254,9 +1267,15 @@ export default function Contracts() {
       toast.success(isCreatingNewClient ? "Cliente e contrato criados com sucesso" : "Contrato criado com sucesso");
       setDialogOpen(false);
       fetchContracts();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving contract:", error);
-      toast.error("Erro ao salvar contrato");
+      
+      // Handle specific constraint violation errors
+      if (error?.code === '23505' && error?.message?.includes('phone_e164')) {
+        toast.error("Este telefone já está cadastrado para outro cliente. Use 'Selecionar existente'.");
+      } else {
+        toast.error("Erro ao salvar contrato");
+      }
     } finally {
       setSaving(false);
     }
