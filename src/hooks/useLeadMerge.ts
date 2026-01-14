@@ -9,7 +9,8 @@ export function useLeadMerge() {
   const mergeLeads = async (
     sourceLeadId: string,
     targetLeadId: string,
-    mergedData: MergedLeadData
+    mergedData: MergedLeadData,
+    sourceLeadName: string
   ): Promise<boolean> => {
     if (!currentUser?.account_id) {
       toast.error("Usuário não autenticado");
@@ -99,7 +100,29 @@ export function useLeadMerge() {
         console.error("Error updating deals:", dealsError);
       }
 
-      // 5. Delete the source lead
+      // 5. Add merge event to timeline
+      const { error: mergeEventError } = await supabase
+        .from("lead_timeline")
+        .insert({
+          account_id: currentUser.account_id,
+          lead_id: targetLeadId,
+          event_type: "note",
+          title: "Lead mesclado",
+          description: `O lead "${sourceLeadName}" foi mesclado a este lead.`,
+          user_id: currentUser.id,
+          metadata: {
+            type: "merge",
+            merged_lead_id: sourceLeadId,
+            merged_lead_name: sourceLeadName,
+            merged_at: new Date().toISOString(),
+          },
+        });
+
+      if (mergeEventError) {
+        console.error("Error creating merge event:", mergeEventError);
+      }
+
+      // 6. Delete the source lead
       const { error: deleteError } = await supabase
         .from("leads")
         .delete()

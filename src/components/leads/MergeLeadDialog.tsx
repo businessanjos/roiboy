@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Lead } from "@/hooks/useLeads";
-import { Search, GitMerge, ArrowRight, User, Phone, Mail, Calendar, Tag, FileText, DollarSign, Instagram } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Search, GitMerge, ArrowRight, User, Phone, Mail, Calendar, Tag, FileText, DollarSign, Instagram, Briefcase, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ interface MergeLeadDialogProps {
   onOpenChange: (open: boolean) => void;
   sourceLead: Lead;
   leads: Lead[];
-  onMerge: (sourceLeadId: string, targetLeadId: string, mergedData: MergedLeadData) => Promise<void>;
+  onMerge: (sourceLeadId: string, targetLeadId: string, mergedData: MergedLeadData, sourceLeadName: string) => Promise<void>;
 }
 
 export interface MergedLeadData {
@@ -70,6 +71,9 @@ export function MergeLeadDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [targetLead, setTargetLead] = useState<Lead | null>(null);
   const [merging, setMerging] = useState(false);
+  const [dealsCount, setDealsCount] = useState(0);
+  const [timelineCount, setTimelineCount] = useState(0);
+  const [loadingCounts, setLoadingCounts] = useState(false);
   const [choices, setChoices] = useState<FieldChoice>({
     full_name: "target",
     phone: "target",
@@ -80,6 +84,29 @@ export function MergeLeadDialog({
     revenue_range: "target",
     responsible_user_id: "target",
   });
+
+  const fetchMergeCounts = async (sourceId: string) => {
+    setLoadingCounts(true);
+    try {
+      const [dealsResult, timelineResult] = await Promise.all([
+        supabase
+          .from("deals")
+          .select("*", { count: "exact", head: true })
+          .eq("lead_id", sourceId),
+        supabase
+          .from("lead_timeline")
+          .select("*", { count: "exact", head: true })
+          .eq("lead_id", sourceId),
+      ]);
+      
+      setDealsCount(dealsResult.count || 0);
+      setTimelineCount(timelineResult.count || 0);
+    } catch (error) {
+      console.error("Error fetching merge counts:", error);
+    } finally {
+      setLoadingCounts(false);
+    }
+  };
 
   // Filter leads for search (exclude source lead)
   const filteredLeads = useMemo(() => {
@@ -98,6 +125,7 @@ export function MergeLeadDialog({
   const handleSelectTarget = (lead: Lead) => {
     setTargetLead(lead);
     setSearchQuery("");
+    fetchMergeCounts(sourceLead.id);
   };
 
   const handleChoiceChange = (field: keyof FieldChoice, value: MergeChoice) => {
@@ -129,7 +157,7 @@ export function MergeLeadDialog({
         notes: mergeNotes(sourceLead.notes, targetLead.notes),
       };
 
-      await onMerge(sourceLead.id, targetLead.id, mergedData);
+      await onMerge(sourceLead.id, targetLead.id, mergedData, sourceLead.full_name);
       onOpenChange(false);
     } finally {
       setMerging(false);
@@ -152,6 +180,8 @@ export function MergeLeadDialog({
   const resetDialog = () => {
     setSearchQuery("");
     setTargetLead(null);
+    setDealsCount(0);
+    setTimelineCount(0);
     setChoices({
       full_name: "target",
       phone: "target",
@@ -345,8 +375,28 @@ export function MergeLeadDialog({
                     <li>• <strong>Notas:</strong> Serão concatenadas</li>
                     <li>• <strong>Telefones adicionais:</strong> Serão mesclados</li>
                     <li>• <strong>Emails adicionais:</strong> Serão mesclados</li>
-                    <li>• <strong>Histórico/Timeline:</strong> Será transferido</li>
                   </ul>
+                  
+                  {/* Transfer counts */}
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-sm font-medium mb-2">Será transferido para o lead destino:</p>
+                    {loadingCounts ? (
+                      <p className="text-xs text-muted-foreground">Carregando...</p>
+                    ) : (
+                      <div className="flex gap-4">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Badge variant="secondary">{dealsCount}</Badge>
+                          <span className="text-muted-foreground">Negócio{dealsCount !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Badge variant="secondary">{timelineCount}</Badge>
+                          <span className="text-muted-foreground">Atividade{timelineCount !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

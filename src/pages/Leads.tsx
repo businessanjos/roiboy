@@ -1789,8 +1789,8 @@ export default function Leads() {
           }}
           sourceLead={leadToMerge}
           leads={leads}
-          onMerge={async (sourceId, targetId, mergedData) => {
-            const success = await mergeLeads(sourceId, targetId, mergedData);
+          onMerge={async (sourceId, targetId, mergedData, sourceLeadName) => {
+            const success = await mergeLeads(sourceId, targetId, mergedData, sourceLeadName);
             if (success) {
               await refetchLeads();
             }
