@@ -68,6 +68,7 @@ import {
   DollarSign,
   ChevronRight,
   Upload,
+  Instagram,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -184,7 +185,16 @@ export default function Leads() {
     email: "",
     source: "",
     notes: "",
+    additional_phones: [] as { label?: string; number: string }[],
+    emails: [] as string[],
+    instagram: "",
+    instagrams: [] as string[],
   });
+  
+  // Temp input state for adding multi-value fields
+  const [newPhone, setNewPhone] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newInstagram, setNewInstagram] = useState("");
 
   // Fetch custom fields
   const fetchCustomFields = useCallback(async () => {
@@ -272,6 +282,10 @@ export default function Leads() {
       email: "",
       source: "",
       notes: "",
+      additional_phones: [],
+      emails: [],
+      instagram: "",
+      instagrams: [],
     });
     setDealFormData({
       title: "",
@@ -279,6 +293,9 @@ export default function Leads() {
       stage_id: "",
       notes: "",
     });
+    setNewPhone("");
+    setNewEmail("");
+    setNewInstagram("");
     setSelectedLead(null);
     setExistingClient(null);
     setLeadForDeal(null);
@@ -292,13 +309,24 @@ export default function Leads() {
 
   const openEditDialog = (lead: Lead) => {
     setSelectedLead(lead);
+    // Convert string[] from lead to the correct object format for additional_phones
+    const additionalPhonesArray = (lead.additional_phones as string[] | null) || [];
+    const formattedPhones = additionalPhonesArray.map((phone: string) => ({ number: phone }));
+    
     setFormData({
       full_name: lead.full_name,
       phone: lead.phone || "",
       email: lead.email || "",
       source: lead.source || "",
       notes: lead.notes || "",
+      additional_phones: formattedPhones,
+      emails: (lead.emails as string[]) || [],
+      instagram: lead.instagram || "",
+      instagrams: (lead.instagrams as string[]) || [],
     });
+    setNewPhone("");
+    setNewEmail("");
+    setNewInstagram("");
     setDialogStep('lead-form');
     setIsDialogOpen(true);
   };
@@ -1342,7 +1370,8 @@ export default function Leads() {
 
           {/* Step 2a: Lead Form (if no existing client) */}
           {(dialogStep === 'lead-form' || selectedLead) && (
-            <div className="space-y-4">
+            <ScrollArea className="max-h-[60vh] pr-2">
+            <div className="space-y-4 pr-2">
               <div className="space-y-2">
                 <Label htmlFor="full_name">Nome *</Label>
                 <Input
@@ -1374,6 +1403,188 @@ export default function Leads() {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="email@exemplo.com"
                   />
+                </div>
+              </div>
+
+              {/* Additional Phones */}
+              <div className="space-y-2">
+                <Label>Telefones Adicionais</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.additional_phones.map((phone, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {phone.number}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPhones = formData.additional_phones.filter((_, i) => i !== index);
+                          setFormData({ ...formData, additional_phones: newPhones });
+                        }}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    placeholder="Adicionar telefone..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newPhone.trim()) {
+                        e.preventDefault();
+                        setFormData({
+                          ...formData,
+                          additional_phones: [...formData.additional_phones, { number: newPhone.trim() }]
+                        });
+                        setNewPhone("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (newPhone.trim()) {
+                        setFormData({
+                          ...formData,
+                          additional_phones: [...formData.additional_phones, { number: newPhone.trim() }]
+                        });
+                        setNewPhone("");
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Additional Emails */}
+              <div className="space-y-2">
+                <Label>Emails Adicionais</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.emails.map((email, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      {email}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newEmails = formData.emails.filter((_, i) => i !== index);
+                          setFormData({ ...formData, emails: newEmails });
+                        }}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="Adicionar email..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newEmail.trim()) {
+                        e.preventDefault();
+                        setFormData({
+                          ...formData,
+                          emails: [...formData.emails, newEmail.trim()]
+                        });
+                        setNewEmail("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (newEmail.trim()) {
+                        setFormData({
+                          ...formData,
+                          emails: [...formData.emails, newEmail.trim()]
+                        });
+                        setNewEmail("");
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Instagram */}
+              <div className="space-y-2">
+                <Label htmlFor="instagram">Instagram</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="instagram"
+                    value={formData.instagram}
+                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                    placeholder="@usuario"
+                  />
+                </div>
+              </div>
+
+              {/* Additional Instagrams */}
+              <div className="space-y-2">
+                <Label>Instagrams Adicionais</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.instagrams.map((ig, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      <Instagram className="h-3 w-3" />
+                      {ig}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newIgs = formData.instagrams.filter((_, i) => i !== index);
+                          setFormData({ ...formData, instagrams: newIgs });
+                        }}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newInstagram}
+                    onChange={(e) => setNewInstagram(e.target.value)}
+                    placeholder="@outro_usuario"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newInstagram.trim()) {
+                        e.preventDefault();
+                        setFormData({
+                          ...formData,
+                          instagrams: [...formData.instagrams, newInstagram.trim()]
+                        });
+                        setNewInstagram("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (newInstagram.trim()) {
+                        setFormData({
+                          ...formData,
+                          instagrams: [...formData.instagrams, newInstagram.trim()]
+                        });
+                        setNewInstagram("");
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
 
@@ -1421,6 +1632,7 @@ export default function Leads() {
                 </Button>
               </DialogFooter>
             </div>
+            </ScrollArea>
           )}
 
           {/* Step 2b: Deal Form (if existing client found OR converting from lead) */}
