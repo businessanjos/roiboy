@@ -13,6 +13,7 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 interface UazapiRequest {
   action: "create" | "connect" | "disconnect" | "status" | "qrcode" | "send_text" | "paircode" | "configure_webhook" | "fetch_token" 
     | "list_groups" | "sync_groups" | "save_selected_groups" | "create_group" | "group_participants" | "add_participant" | "remove_participant" | "send_to_group"
+    | "unlink_instance"
     | "send_media" | "send_media_to_group"
     | "update_group_name" | "update_group_description" | "update_group_image"
     | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status"
@@ -1023,10 +1024,11 @@ serve(async (req) => {
       }
 
       case "list_instances": {
-        // List all UAZAPI instances available for linking
-        console.log("Listing all UAZAPI instances...");
+        // List all UAZAPI instances available for linking - enriched with linking info
+        console.log("Listing all UAZAPI instances with linking info...");
         
         try {
+          // 1. Fetch all instances from UAZAPI
           const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
             name?: string; 
             token?: string; 
@@ -1036,21 +1038,121 @@ serve(async (req) => {
             profilePicUrl?: string;
           }>;
           
-          console.log(`Found ${allInstances.length} instances`);
+          console.log(`Found ${allInstances.length} instances from UAZAPI`);
           
+          // 2. Fetch all WhatsApp integrations for this account to map linking info
+          const { data: integrations } = await supabase
+            .from("integrations")
+            .select("id, sector_id, config, status")
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp");
+          
+          // 3. Create a map of instance_name -> integration
+          const integrationMap = new Map<string, { id: string; sector_id: string | null; status: string }>();
+          integrations?.forEach(int => {
+            const instanceName = (int.config as { instance_name?: string })?.instance_name;
+            if (instanceName) {
+              integrationMap.set(instanceName, {
+                id: int.id,
+                sector_id: int.sector_id,
+                status: int.status,
+              });
+            }
+          });
+          
+          // 4. Enrich instances with linking info
           result = {
-            instances: allInstances.map(i => ({
-              name: i.name || "",
-              status: i.status || "unknown",
-              owner: i.owner || "",
-              profileName: i.profileName || "",
-              profilePicUrl: i.profilePicUrl || "",
-              hasToken: !!i.token,
-            }))
+            instances: allInstances.map(i => {
+              const linkedIntegration = integrationMap.get(i.name || "");
+              return {
+                name: i.name || "",
+                status: i.status || "unknown",
+                owner: i.owner || "",
+                profileName: i.profileName || "",
+                profilePicUrl: i.profilePicUrl || "",
+                hasToken: !!i.token,
+                // New linking properties
+                linked_sector_id: linkedIntegration?.sector_id || null,
+                linked_integration_id: linkedIntegration?.id || null,
+                linked_status: linkedIntegration?.status || null,
+              };
+            })
           };
         } catch (err) {
           console.error("Failed to list instances:", (err as Error).message);
           result = { instances: [], error: (err as Error).message };
+        }
+        
+        break;
+      }
+
+      case "unlink_instance": {
+        // Unlink a UAZAPI instance from a sector by deleting the integration
+        const targetIntegrationId = payload.integration_id;
+        
+        if (!targetIntegrationId) {
+          return new Response(
+            JSON.stringify({ error: "integration_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`Unlinking integration ${targetIntegrationId}...`);
+        
+        try {
+          // Get the integration details before deleting for audit
+          const { data: integrationToDelete } = await supabase
+            .from("integrations")
+            .select("id, sector_id, config, status")
+            .eq("id", targetIntegrationId)
+            .eq("account_id", accountId)
+            .single();
+          
+          if (!integrationToDelete) {
+            return new Response(
+              JSON.stringify({ error: "Integration not found or access denied" }),
+              { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          const previousInstanceName = (integrationToDelete.config as { instance_name?: string })?.instance_name || "";
+          const previousOwner = (integrationToDelete.config as { owner?: string })?.owner || "";
+          const previousSectorId = integrationToDelete.sector_id;
+          
+          // Delete the integration
+          const { error: deleteError } = await supabase
+            .from("integrations")
+            .delete()
+            .eq("id", targetIntegrationId)
+            .eq("account_id", accountId);
+          
+          if (deleteError) throw deleteError;
+          
+          result = { 
+            success: true, 
+            message: `Integration ${targetIntegrationId} unlinked successfully`,
+            unlinked_instance: previousInstanceName,
+          };
+          
+          console.log(`Successfully unlinked integration ${targetIntegrationId}`);
+          
+          // Audit and notify other admins about this change
+          await logWhatsAppChangeAndNotify(
+            supabase,
+            accountId,
+            userData.id,
+            userData.name || "Admin",
+            "unlink_instance",
+            previousSectorId || null,
+            previousInstanceName,
+            previousOwner
+          );
+        } catch (err) {
+          console.error("Failed to unlink instance:", (err as Error).message);
+          return new Response(
+            JSON.stringify({ error: (err as Error).message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
         
         break;
