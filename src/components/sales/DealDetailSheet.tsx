@@ -10,6 +10,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -180,6 +188,8 @@ export function DealDetailSheet({
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
+  const [lostReason, setLostReason] = useState("");
 
   const toggleItemExpanded = (itemId: string) => {
     setExpandedItems(prev => {
@@ -554,7 +564,7 @@ export function DealDetailSheet({
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2.5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                    onClick={() => onMarkAsLost(deal.id)}
+                    onClick={() => setLostDialogOpen(true)}
                   >
                     <XCircle className="h-4 w-4 mr-1" />
                     Perdida
@@ -991,6 +1001,51 @@ export function DealDetailSheet({
             }}
           />
         )}
+
+        {/* Lost Reason Dialog */}
+        <Dialog open={lostDialogOpen} onOpenChange={setLostDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Marcar como Perdida</DialogTitle>
+              <DialogDescription>
+                Por favor, informe o motivo da perda para continuar.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <label className="text-sm font-medium mb-2 block">
+                Motivo da Perda <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                value={lostReason}
+                onChange={(e) => setLostReason(e.target.value)}
+                placeholder="Ex: Preço acima do orçamento, concorrente ofereceu melhor condição..."
+                className="min-h-[100px]"
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setLostDialogOpen(false);
+                  setLostReason("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={!lostReason.trim()}
+                onClick={async () => {
+                  await onMarkAsLost(deal.id, lostReason.trim());
+                  setLostDialogOpen(false);
+                  setLostReason("");
+                }}
+              >
+                Concluído
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
       </SheetContent>
     </Sheet>
