@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { Check, X, User, Instagram, MapPin } from "lucide-react";
+import { Check, X, User, Instagram, MapPin, Pencil } from "lucide-react";
 import { LocationAutocomplete, LocationValue } from "./LocationAutocomplete";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -408,6 +408,8 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   if (field.field_type === "multi_instagram") {
     const instagrams = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
     const [newHandle, setNewHandle] = useState("");
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editValue, setEditValue] = useState("");
 
     const addInstagram = () => {
       if (!newHandle.trim()) return;
@@ -423,35 +425,123 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
       saveValue(newValues);
     };
 
+    const updateInstagram = (index: number) => {
+      if (!editValue.trim()) return;
+      const handle = editValue.replace(/^@/, '').trim();
+      if (handle) {
+        const newValues = [...instagrams];
+        newValues[index] = handle;
+        saveValue(newValues);
+      }
+      setEditingIndex(null);
+      setEditValue("");
+    };
+
+    const startEditing = (index: number, currentHandle: string) => {
+      setEditingIndex(index);
+      setEditValue(currentHandle);
+    };
+
+    const cancelEditing = () => {
+      setEditingIndex(null);
+      setEditValue("");
+    };
+
     return (
-      <Popover open={open} onOpenChange={setOpen} modal={true}>
+      <Popover open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+          cancelEditing();
+        }
+      }} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
             <FieldValueBadge field={field} value={currentValue} />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-3" align="start">
+        <PopoverContent className="w-80 p-3" align="start">
           <div className="space-y-3">
             {/* Existing instagrams */}
             {instagrams.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-col gap-2">
                 {instagrams.map((ig, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 text-xs"
-                  >
-                    <Instagram className="h-3 w-3" />
-                    @{ig}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeInstagram(index);
-                      }}
-                      className="ml-0.5 hover:text-pink-800 dark:hover:text-pink-200"
+                  editingIndex === index ? (
+                    // Editing mode
+                    <div key={index} className="flex items-center gap-1">
+                      <Instagram className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-8 text-sm flex-1"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            updateInstagram(index);
+                          }
+                          if (e.key === "Escape") {
+                            cancelEditing();
+                          }
+                        }}
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => updateInstagram(index)}
+                        disabled={saving}
+                      >
+                        <Check className="h-4 w-4 text-emerald-500" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0"
+                        onClick={cancelEditing}
+                      >
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ) : (
+                    // View mode
+                    <div
+                      key={index}
+                      className="flex items-center justify-between px-2 py-1.5 rounded bg-pink-500/10 border border-pink-500/20"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
+                      <a
+                        href={`https://instagram.com/${ig}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-pink-600 dark:text-pink-400 hover:underline text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Instagram className="h-3.5 w-3.5" />
+                        @{ig}
+                      </a>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditing(index, ig);
+                          }}
+                          className="p-1 hover:bg-pink-500/20 rounded transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-pink-600" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeInstagram(index);
+                          }}
+                          className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                          title="Remover"
+                        >
+                          <X className="h-3.5 w-3.5 text-muted-foreground hover:text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  )
                 ))}
               </div>
             )}
@@ -472,7 +562,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
                 }}
               />
               <Button size="sm" onClick={addInstagram} disabled={saving || !newHandle.trim()}>
-                +
+                Adicionar
               </Button>
             </div>
           </div>
