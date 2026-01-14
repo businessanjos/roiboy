@@ -5172,7 +5172,9 @@ export type Database = {
           account_id: string
           config: Json | null
           created_at: string
+          display_name: string | null
           id: string
+          pin_hash: string | null
           sector_id: string | null
           status: Database["public"]["Enums"]["integration_status"]
           type: Database["public"]["Enums"]["integration_type"]
@@ -5181,7 +5183,9 @@ export type Database = {
           account_id: string
           config?: Json | null
           created_at?: string
+          display_name?: string | null
           id?: string
+          pin_hash?: string | null
           sector_id?: string | null
           status?: Database["public"]["Enums"]["integration_status"]
           type: Database["public"]["Enums"]["integration_type"]
@@ -5190,7 +5194,9 @@ export type Database = {
           account_id?: string
           config?: Json | null
           created_at?: string
+          display_name?: string | null
           id?: string
+          pin_hash?: string | null
           sector_id?: string | null
           status?: Database["public"]["Enums"]["integration_status"]
           type?: Database["public"]["Enums"]["integration_type"]
