@@ -128,3 +128,12 @@ verify_jwt = false
 
 [functions.process-meeting-emails]
 verify_jwt = false
+
+[functions.verify-instance-pin]
+verify_jwt = false
+
+[functions.verify-sector-pin]
+verify_jwt = false
+
+[functions.set-sector-pin]
+verify_jwt = false

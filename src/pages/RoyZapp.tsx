@@ -71,6 +71,7 @@ export default function RoyZapp() {
   
   // Sector selection state - initialize from URL if provided
   const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(sectorFromUrl);
+  const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | undefined>(undefined);
   
   // Use centralized data hook with sector filtering
   const {
@@ -94,7 +95,7 @@ export default function RoyZapp() {
     fetchData,
     fetchMessages,
     setMessages,
-  } = useZappData({ sectorId: selectedSectorId || undefined });
+  } = useZappData({ sectorId: selectedSectorId || undefined, integrationId: selectedIntegrationId });
 
   // Check WhatsApp status when sector changes
   useEffect(() => {
@@ -2700,7 +2701,10 @@ export default function RoyZapp() {
 
   // If no sector selected, show selector
   if (!selectedSectorId) {
-    return <ZappSectorSelector onSelectSector={setSelectedSectorId} />;
+    return <ZappSectorSelector onSelectSector={(sectorId, integrationId) => {
+      setSelectedSectorId(sectorId);
+      setSelectedIntegrationId(integrationId);
+    }} />;
   }
 
   // Tag functions
