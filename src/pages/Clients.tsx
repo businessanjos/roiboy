@@ -259,7 +259,8 @@ export default function Clients() {
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter states
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterClientStatus, setFilterClientStatus] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all"); // Keep for backward compatibility
   const [filterProduct, setFilterProduct] = useState<string>("all");
   const [filterVNPS, setFilterVNPS] = useState<string>("all");
   const [filterContract, setFilterContract] = useState<string>("all");
@@ -339,38 +340,7 @@ export default function Clients() {
       return;
     }
 
-    // Determine which contract statuses to include based on sector
-    // Financeiro: include active, pending, paused, suspended (all except cancelled/ended)
-    // Operações: only active and pending
-    const isFinancialSector = currentSector?.id === "financeiro";
-    const contractStatuses = isFinancialSector 
-      ? ["active", "pending", "paused", "suspended"] 
-      : ["active", "pending"];
-
-    // First, get all client IDs that have contracts with allowed statuses
-    const { data: activeContractsData, error: contractsError } = await supabase
-      .from("client_contracts")
-      .select("client_id")
-      .eq("account_id", accId)
-      .in("status", contractStatuses);
-
-    if (contractsError) {
-      console.error("Error fetching contracts:", contractsError);
-      setLoading(false);
-      return;
-    }
-
-    // Get unique client IDs with matching contracts
-    const clientIdsWithContracts = [...new Set((activeContractsData || []).map(c => c.client_id))];
-
-    if (clientIdsWithContracts.length === 0) {
-      // No clients with matching contracts
-      setClients([]);
-      setLoading(false);
-      return;
-    }
-
-    // Fetch only clients that have active/pending contracts
+    // Fetch ALL clients - no contract-based filtering
     const { data, error } = await supabase
       .from("clients")
       .select(`
@@ -384,7 +354,7 @@ export default function Clients() {
           )
         )
       `)
-      .in("id", clientIdsWithContracts)
+      .eq("account_id", accId)
       .order("created_at", { ascending: false });
 
     if (!error) {
@@ -431,12 +401,12 @@ export default function Clients() {
         });
         setScoreMap(scoresGrouped);
 
-        // Fetch contracts for each client (using same status filter as main query)
+        // Fetch contracts for each client (all statuses now, not filtered)
         const { data: contractsData } = await supabase
           .from("client_contracts")
           .select("client_id, status, start_date, end_date")
           .in("client_id", clientIds)
-          .in("status", contractStatuses)
+          .in("status", ["active", "pending", "paused", "suspended"])
           .order("end_date", { ascending: false });
 
         // Group by client_id - prioritize active over pending over suspended over paused
@@ -1157,7 +1127,7 @@ export default function Clients() {
 
   // Calculate active filter count
   const activeFilterCount = [
-    filterStatus !== "all",
+    filterClientStatus !== "all",
     filterProduct !== "all",
     filterVNPS !== "all",
     filterContract !== "all",
@@ -1165,7 +1135,7 @@ export default function Clients() {
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
-    setFilterStatus("all");
+    setFilterClientStatus("all");
     setFilterProduct("all");
     setFilterVNPS("all");
     setFilterContract("all");
@@ -1178,8 +1148,15 @@ export default function Clients() {
       c.phone_e164.includes(searchQuery);
     if (!matchesSearch) return false;
 
-    // Status filter
-    if (filterStatus !== "all" && c.status !== filterStatus) return false;
+    // Client Status filter (based on clients.status field)
+    if (filterClientStatus !== "all") {
+      if (filterClientStatus === "no_contract") {
+        // Check if client has no contracts using contractMap
+        if (contractMap[c.id]) return false;
+      } else {
+        if (c.status !== filterClientStatus) return false;
+      }
+    }
 
     // Product filter
     if (filterProduct !== "all") {
@@ -1197,14 +1174,21 @@ export default function Clients() {
       }
     }
 
-    // Contract filter
+    // Contract filter (based on contract expiry status)
     if (filterContract !== "all") {
-      const expiryStatus = getContractExpiryStatus(c.contract_end_date);
-      if (filterContract === "expired" && expiryStatus?.type !== "expired") return false;
-      if (filterContract === "urgent" && expiryStatus?.type !== "urgent") return false;
-      if (filterContract === "warning" && expiryStatus?.type !== "warning") return false;
-      if (filterContract === "ok" && expiryStatus !== null) return false;
-      if (filterContract === "none" && c.contract_end_date !== null) return false;
+      const contract = contractMap[c.id];
+      if (filterContract === "none") {
+        // Show only clients without any contract
+        if (contract) return false;
+      } else {
+        // For other contract filters, client must have a contract
+        if (!contract) return false;
+        const expiryStatus = getContractExpiryStatus(contract.end_date);
+        if (filterContract === "expired" && expiryStatus?.type !== "expired") return false;
+        if (filterContract === "urgent" && expiryStatus?.type !== "urgent") return false;
+        if (filterContract === "warning" && expiryStatus?.type !== "warning") return false;
+        if (filterContract === "ok" && expiryStatus !== null) return false;
+      }
     }
 
     // Responsible filter
@@ -2003,21 +1987,19 @@ export default function Clients() {
         {showFilters && (
           <Card className="p-4 bg-muted/30 border-dashed animate-fade-in">
             <div className="flex flex-wrap gap-3">
-              {/* Status Filter */}
-              <div className="space-y-1.5 min-w-[140px]">
-                <Label className="text-xs text-muted-foreground">Status</Label>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
+              {/* Client Status Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Status do Cliente</Label>
+                <Select value={filterClientStatus} onValueChange={setFilterClientStatus}>
                   <SelectTrigger className="h-9 bg-background">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="no_contract">Sem contrato</SelectItem>
-                    <SelectItem value="paused">Pausado</SelectItem>
                     <SelectItem value="churn_risk">Risco de Churn</SelectItem>
                     <SelectItem value="churned">Churned</SelectItem>
+                    <SelectItem value="no_contract">Sem contrato</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2112,10 +2094,10 @@ export default function Clients() {
             {activeFilterCount > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border/50">
                 <span className="text-xs text-muted-foreground mr-1">Filtros ativos:</span>
-                {filterStatus !== "all" && (
+                {filterClientStatus !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-                    Status: {filterStatus === "active" ? "Ativo" : filterStatus === "pending" ? "Pendente" : filterStatus === "no_contract" ? "Sem contrato" : filterStatus === "paused" ? "Pausado" : filterStatus === "churn_risk" ? "Risco" : "Churned"}
-                    <button onClick={() => setFilterStatus("all")} className="hover:text-destructive">
+                    Status: {filterClientStatus === "active" ? "Ativo" : filterClientStatus === "churn_risk" ? "Risco de Churn" : filterClientStatus === "no_contract" ? "Sem contrato" : "Churned"}
+                    <button onClick={() => setFilterClientStatus("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
