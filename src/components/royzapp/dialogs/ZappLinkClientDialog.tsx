@@ -129,12 +129,11 @@ export function ZappLinkClientDialog({
         .map(v => `phone.ilike.%${v}%`)
         .join(',');
 
-      // Search leads (not converted) - with more flexible phone matching
+      // Search ALL leads (including converted) - with more flexible phone matching
       const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
         .select("id, full_name, phone, email, status")
         .eq("account_id", accountId)
-        .neq("status", "converted")
         .or(
           `full_name.ilike.%${cleanQuery}%,` +
           leadPhoneConditions + `,` +
@@ -385,7 +384,7 @@ export function ZappLinkClientDialog({
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium truncate">{client.full_name}</p>
                           <Badge 
                             variant={client.type === "lead" ? "outline" : "secondary"} 
@@ -397,6 +396,14 @@ export function ZappLinkClientDialog({
                           >
                             {client.type === "lead" ? "Lead" : "Cliente"}
                           </Badge>
+                          {client.type === "lead" && client.status === "converted" && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] px-1.5 py-0 h-4 border-orange-400 text-orange-600 bg-orange-500/10"
+                            >
+                              Convertido
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Phone className="h-3 w-3" />
