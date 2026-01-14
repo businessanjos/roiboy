@@ -66,12 +66,13 @@ export default function RoyZapp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
-  // Get sector from URL if provided
+  // Get sector and integrationId from URL if provided
   const sectorFromUrl = searchParams.get('sector') as SectorId | null;
+  const integrationFromUrl = searchParams.get('integrationId');
   
   // Sector selection state - initialize from URL if provided
   const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(sectorFromUrl);
-  const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | undefined>(undefined);
+  const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | undefined>(integrationFromUrl || undefined);
   
   // Use centralized data hook with sector filtering
   const {
