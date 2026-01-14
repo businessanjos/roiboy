@@ -76,10 +76,24 @@ export function AddInstanceDialog({
 
       if (error) throw error;
 
-      // Filter out instances that are already added to this sector
-      const instances = (data?.instances || []).filter(
-        (inst: UazapiInstance) => !existingInstanceNames.includes(inst.name)
+      // Access nested data structure correctly (response comes as data.data.instances)
+      const allInstances = data?.data?.instances || data?.instances || [];
+      
+      console.log("[AddInstanceDialog] Raw instances from API:", allInstances.length);
+      console.log("[AddInstanceDialog] Existing instances in sector:", existingInstanceNames);
+
+      // Filter to show only instances NOT linked to ANY sector (available for linking)
+      // Also exclude instances already in this sector
+      const instances = allInstances.filter(
+        (inst: UazapiInstance) => {
+          const isNotLinked = inst.linked_sector_id === null;
+          const isNotInThisSector = !existingInstanceNames.includes(inst.name);
+          console.log(`[AddInstanceDialog] Instance ${inst.name}: linked_sector_id=${inst.linked_sector_id}, isNotLinked=${isNotLinked}, isNotInThisSector=${isNotInThisSector}`);
+          return isNotLinked && isNotInThisSector;
+        }
       );
+      
+      console.log("[AddInstanceDialog] Available instances after filter:", instances.length);
       setAvailableInstances(instances);
     } catch (err) {
       console.error("Failed to fetch instances:", err);
