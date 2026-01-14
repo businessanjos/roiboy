@@ -14,6 +14,7 @@ interface FieldValueBadgeProps {
   value: any;
   size?: "sm" | "md";
   teamUsers?: TeamUser[];
+  onRemoveInstagram?: (index: number) => void;
 }
 
 const getColorClasses = (color: string) => {
@@ -30,7 +31,7 @@ const getColorClasses = (color: string) => {
   return colorMap[color] || colorMap.gray;
 };
 
-export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldValueBadgeProps) {
+export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemoveInstagram }: FieldValueBadgeProps) {
   const textSize = size === "sm" ? "text-xs" : "text-sm";
   const padding = size === "sm" ? "px-1.5 py-0.5" : "px-2 py-1";
 
@@ -207,17 +208,31 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers }: FieldV
           const handle = String(ig).replace(/^@/, '').trim();
           const instagramUrl = `https://instagram.com/${handle}`;
           return (
-            <a
-              key={index}
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize}`}
-            >
-              <Instagram className="h-3 w-3 flex-shrink-0" />
-              @{handle}
-            </a>
+            <div key={index} className="relative group inline-flex">
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} ${onRemoveInstagram ? 'pr-5' : ''}`}
+              >
+                <Instagram className="h-3 w-3 flex-shrink-0" />
+                @{handle}
+              </a>
+              {onRemoveInstagram && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onRemoveInstagram(index);
+                  }}
+                  className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-pink-500/30 text-pink-600 dark:text-pink-400"
+                  title="Remover Instagram"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           );
         })}
         {instagrams.length > 3 && (

@@ -458,7 +458,14 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
       }} modal={true}>
         <PopoverTrigger asChild>
           <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
-            <FieldValueBadge field={field} value={currentValue} />
+            <FieldValueBadge 
+              field={field} 
+              value={currentValue} 
+              onRemoveInstagram={(index) => {
+                const newValues = instagrams.filter((_, i) => i !== index);
+                saveValue(newValues);
+              }}
+            />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-3" align="start">
