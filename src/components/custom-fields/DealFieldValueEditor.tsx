@@ -48,6 +48,11 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   const [saving, setSaving] = useState(false);
   const [localValue, setLocalValue] = useState<any>(currentValue);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
+  
+  // States for multi-instagram field (moved to top level to follow hooks rules)
+  const [newInstagramHandle, setNewInstagramHandle] = useState("");
+  const [editingInstagramIndex, setEditingInstagramIndex] = useState<number | null>(null);
+  const [editInstagramValue, setEditInstagramValue] = useState("");
 
   // Fetch team users when opening user field
   useEffect(() => {
@@ -407,16 +412,13 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
   // Multi-Instagram field
   if (field.field_type === "multi_instagram") {
     const instagrams = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
-    const [newHandle, setNewHandle] = useState("");
-    const [editingIndex, setEditingIndex] = useState<number | null>(null);
-    const [editValue, setEditValue] = useState("");
 
     const addInstagram = () => {
-      if (!newHandle.trim()) return;
-      const handle = newHandle.replace(/^@/, '').trim();
+      if (!newInstagramHandle.trim()) return;
+      const handle = newInstagramHandle.replace(/^@/, '').trim();
       if (handle && !instagrams.includes(handle)) {
         saveValue([...instagrams, handle]);
-        setNewHandle("");
+        setNewInstagramHandle("");
       }
     };
 
@@ -426,25 +428,25 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
     };
 
     const updateInstagram = (index: number) => {
-      if (!editValue.trim()) return;
-      const handle = editValue.replace(/^@/, '').trim();
+      if (!editInstagramValue.trim()) return;
+      const handle = editInstagramValue.replace(/^@/, '').trim();
       if (handle) {
         const newValues = [...instagrams];
         newValues[index] = handle;
         saveValue(newValues);
       }
-      setEditingIndex(null);
-      setEditValue("");
+      setEditingInstagramIndex(null);
+      setEditInstagramValue("");
     };
 
     const startEditing = (index: number, currentHandle: string) => {
-      setEditingIndex(index);
-      setEditValue(currentHandle);
+      setEditingInstagramIndex(index);
+      setEditInstagramValue(currentHandle);
     };
 
     const cancelEditing = () => {
-      setEditingIndex(null);
-      setEditValue("");
+      setEditingInstagramIndex(null);
+      setEditInstagramValue("");
     };
 
     return (
@@ -465,13 +467,13 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
             {instagrams.length > 0 && (
               <div className="flex flex-col gap-2">
                 {instagrams.map((ig, index) => (
-                  editingIndex === index ? (
+                  editingInstagramIndex === index ? (
                     // Editing mode
                     <div key={index} className="flex items-center gap-1">
                       <Instagram className="h-4 w-4 text-pink-500 flex-shrink-0" />
                       <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
+                        value={editInstagramValue}
+                        onChange={(e) => setEditInstagramValue(e.target.value)}
                         className="h-8 text-sm flex-1"
                         autoFocus
                         onKeyDown={(e) => {
@@ -550,8 +552,8 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
             <div className="flex items-center gap-2">
               <Instagram className="h-4 w-4 text-pink-500 flex-shrink-0" />
               <Input
-                value={newHandle}
-                onChange={(e) => setNewHandle(e.target.value)}
+                value={newInstagramHandle}
+                onChange={(e) => setNewInstagramHandle(e.target.value)}
                 placeholder="@usuario"
                 className="flex-1"
                 onKeyDown={(e) => {
@@ -561,7 +563,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
                   }
                 }}
               />
-              <Button size="sm" onClick={addInstagram} disabled={saving || !newHandle.trim()}>
+              <Button size="sm" onClick={addInstagram} disabled={saving || !newInstagramHandle.trim()}>
                 Adicionar
               </Button>
             </div>
