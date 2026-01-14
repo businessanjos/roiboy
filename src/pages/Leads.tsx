@@ -68,7 +68,6 @@ import {
   DollarSign,
   ChevronRight,
   Upload,
-  Instagram,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -187,14 +186,11 @@ export default function Leads() {
     notes: "",
     additional_phones: [] as { label?: string; number: string }[],
     emails: [] as string[],
-    instagram: "",
-    instagrams: [] as string[],
   });
   
   // Temp input state for adding multi-value fields
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newInstagram, setNewInstagram] = useState("");
 
   // Fetch custom fields
   const fetchCustomFields = useCallback(async () => {
@@ -284,8 +280,6 @@ export default function Leads() {
       notes: "",
       additional_phones: [],
       emails: [],
-      instagram: "",
-      instagrams: [],
     });
     setDealFormData({
       title: "",
@@ -295,7 +289,6 @@ export default function Leads() {
     });
     setNewPhone("");
     setNewEmail("");
-    setNewInstagram("");
     setSelectedLead(null);
     setExistingClient(null);
     setLeadForDeal(null);
@@ -321,12 +314,9 @@ export default function Leads() {
       notes: lead.notes || "",
       additional_phones: formattedPhones,
       emails: (lead.emails as string[]) || [],
-      instagram: lead.instagram || "",
-      instagrams: (lead.instagrams as string[]) || [],
     });
     setNewPhone("");
     setNewEmail("");
-    setNewInstagram("");
     setDialogStep('lead-form');
     setIsDialogOpen(true);
   };
@@ -1511,75 +1501,6 @@ export default function Leads() {
                           emails: [...formData.emails, newEmail.trim()]
                         });
                         setNewEmail("");
-                      }
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Instagram */}
-              <div className="space-y-2">
-                <Label htmlFor="instagram">Instagram</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="instagram"
-                    value={formData.instagram}
-                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                    placeholder="@usuario"
-                  />
-                </div>
-              </div>
-
-              {/* Additional Instagrams */}
-              <div className="space-y-2">
-                <Label>Instagrams Adicionais</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.instagrams.map((ig, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      <Instagram className="h-3 w-3" />
-                      {ig}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newIgs = formData.instagrams.filter((_, i) => i !== index);
-                          setFormData({ ...formData, instagrams: newIgs });
-                        }}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={newInstagram}
-                    onChange={(e) => setNewInstagram(e.target.value)}
-                    placeholder="@outro_usuario"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newInstagram.trim()) {
-                        e.preventDefault();
-                        setFormData({
-                          ...formData,
-                          instagrams: [...formData.instagrams, newInstagram.trim()]
-                        });
-                        setNewInstagram("");
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (newInstagram.trim()) {
-                        setFormData({
-                          ...formData,
-                          instagrams: [...formData.instagrams, newInstagram.trim()]
-                        });
-                        setNewInstagram("");
                       }
                     }}
                   >
