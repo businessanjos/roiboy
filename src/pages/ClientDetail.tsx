@@ -1583,12 +1583,12 @@ export default function ClientDetail() {
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] pr-4">
-              <ClientInfoForm 
-                data={editFormData} 
-                onChange={setEditFormData}
-                showBasicFields={false}
-                teamUsers={teamUsers}
-              />
+                <ClientInfoForm 
+                  data={editFormData} 
+                  onChange={setEditFormData}
+                  showBasicFields={true}
+                  teamUsers={teamUsers}
+                />
             </ScrollArea>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditInfoDialogOpen(false)}>
