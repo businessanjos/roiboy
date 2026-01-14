@@ -320,9 +320,9 @@ serve(async (req) => {
     // SECURITY: Define admin-only actions for WhatsApp management
     const adminOnlyActions = ["create", "connect", "disconnect", "qrcode", "paircode", "configure_webhook", "link_instance", "add_instance_to_sector", "update_instance_pin", "unlink_instance"];
     const isAdminAction = adminOnlyActions.includes(payload.action);
-    // CRITICAL: Para ações de WhatsApp, APENAS role admin/super_admin tem permissão
-    // is_also_admin NÃO deve dar acesso a gerenciamento de instâncias para prevenir propagação indevida
-    const isAdmin = userData.role === "admin" || userData.role === "super_admin";
+    // Check admin permissions (role-based OR is_also_admin flag)
+    // Duplicate protection is now enforced by unique constraint + add_instance_to_sector logic
+    const isAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
     
     // Block non-admins from admin-only actions
     if (isAdminAction && !isAdmin) {
