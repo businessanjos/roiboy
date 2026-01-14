@@ -41,6 +41,9 @@ export function ZappPinDialog({
   // Determine which mode we're in
   const isInstanceMode = !!integrationId;
   const displayName = isInstanceMode ? instanceName : sectorName;
+  
+  // Instance PINs are 4 digits, legacy sector PINs are 6 digits
+  const PIN_LENGTH = isInstanceMode ? 4 : 6;
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -52,8 +55,8 @@ export function ZappPinDialog({
   }, [open]);
 
   const handleVerify = async () => {
-    if (pin.length !== 6) {
-      setError("Digite o PIN completo de 6 dígitos");
+    if (pin.length !== PIN_LENGTH) {
+      setError(`Digite o PIN completo de ${PIN_LENGTH} dígitos`);
       return;
     }
 
@@ -118,25 +121,22 @@ export function ZappPinDialog({
           </div>
           <DialogTitle className="text-center">Acesso Restrito</DialogTitle>
           <DialogDescription className="text-center">
-            Digite o PIN de 6 dígitos para acessar {isInstanceMode ? "a instância" : "a área da"} <strong>{displayName}</strong>
+            Digite o PIN de {PIN_LENGTH} dígitos para acessar {isInstanceMode ? "a instância" : "a área da"} <strong>{displayName}</strong>
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-6 py-4">
           <InputOTP
-            maxLength={6}
+            maxLength={PIN_LENGTH}
             value={pin}
             onChange={setPin}
             disabled={verifying || isBlocked}
             onComplete={handleVerify}
           >
             <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
+              {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+                <InputOTPSlot key={i} index={i} />
+              ))}
             </InputOTPGroup>
           </InputOTP>
 
@@ -159,7 +159,7 @@ export function ZappPinDialog({
             <Button
               className="flex-1"
               onClick={handleVerify}
-              disabled={pin.length !== 6 || verifying || isBlocked}
+              disabled={pin.length !== PIN_LENGTH || verifying || isBlocked}
             >
               {verifying ? (
                 <>

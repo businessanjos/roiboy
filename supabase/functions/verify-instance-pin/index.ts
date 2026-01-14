@@ -30,9 +30,9 @@ serve(async (req) => {
       );
     }
 
-    if (pin.length !== 6) {
+    if (pin.length !== 4) {
       return new Response(
-        JSON.stringify({ valid: false, error: "PIN deve ter 6 dígitos" }),
+        JSON.stringify({ valid: false, error: "PIN deve ter 4 dígitos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
