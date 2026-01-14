@@ -13,6 +13,7 @@ import {
   ExternalLink,
   CheckCircle,
   Link2,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ interface ZappChatHeaderProps {
   onOpenCloseTicket?: () => void;
   onOpenLinkClient?: () => void;
   onClientLinked?: () => void;
+  onDeleteConversation?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
@@ -68,6 +70,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onOpenCloseTicket,
   onOpenLinkClient,
   onClientLinked,
+  onDeleteConversation,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
@@ -322,6 +325,14 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     </DropdownMenuItem>
                   </>
                 )}
+                <DropdownMenuSeparator className="bg-zapp-border" />
+                <DropdownMenuItem 
+                  className="text-red-500 hover:bg-red-500/10"
+                  onClick={onDeleteConversation}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir conversa
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

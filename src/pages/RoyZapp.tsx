@@ -46,6 +46,16 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ClientZappSheet } from "@/components/client/ClientZappSheet";
 import { PlaybookDialog } from "@/components/sales/PlaybookDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
@@ -506,6 +516,9 @@ export default function RoyZapp() {
   
   // Link client dialog state
   const [linkClientDialogOpen, setLinkClientDialogOpen] = useState(false);
+  
+  // Permanent delete conversation dialog state
+  const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
 
   // Fetch AI agents
   useEffect(() => {
@@ -1173,6 +1186,40 @@ export default function RoyZapp() {
     } catch (error: any) {
       console.error("Error deleting conversation:", error);
       toast.error("Erro ao apagar conversa");
+    }
+  };
+
+  // Permanent delete conversation (removes from database entirely)
+  const permanentlyDeleteConversation = async () => {
+    if (!selectedConversation?.zapp_conversation_id && !selectedConversation?.zapp_conversation?.id) {
+      toast.error("Conversa não encontrada");
+      return;
+    }
+    
+    const conversationId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
+    
+    try {
+      // Delete the zapp_conversation - cascade will handle:
+      // - zapp_messages (ON DELETE CASCADE)
+      // - zapp_conversation_assignments (ON DELETE CASCADE)
+      // - zapp_client_suggestions (ON DELETE CASCADE)
+      // Note: lead_id and client_id in other tables have ON DELETE SET NULL,
+      // so leads and clients are preserved
+      
+      const { error } = await supabase
+        .from("zapp_conversations")
+        .delete()
+        .eq("id", conversationId);
+
+      if (error) throw error;
+      
+      toast.success("Conversa excluída permanentemente!");
+      setSelectedConversation(null);
+      setPermanentDeleteDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error permanently deleting conversation:", error);
+      toast.error("Erro ao excluir conversa");
     }
   };
 
@@ -3053,6 +3100,7 @@ export default function RoyZapp() {
           onOpenAddClient={openAddContactDialog}
           onOpenLinkClient={() => setLinkClientDialogOpen(true)}
           onClientLinked={() => fetchData()}
+          onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
           accountId={currentUser?.account_id}
           showLeadOption={hasVendasAccess}
           onMessageChange={setMessageInput}
@@ -3396,6 +3444,37 @@ export default function RoyZapp() {
           }}
         />
       )}
+
+      {/* Permanent Delete Conversation Dialog */}
+      <AlertDialog 
+        open={permanentDeleteDialogOpen} 
+        onOpenChange={setPermanentDeleteDialogOpen}
+      >
+        <AlertDialogContent className="bg-zapp-panel border-zapp-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zapp-text">
+              Excluir conversa permanentemente?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zapp-text-muted">
+              Esta ação não pode ser desfeita. A conversa e todo o histórico de mensagens 
+              serão apagados permanentemente.
+              <br/><br/>
+              <strong className="text-zapp-text">O cadastro de Lead/Cliente será mantido.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zapp-border text-zapp-text hover:bg-zapp-hover">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={permanentlyDeleteConversation}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
