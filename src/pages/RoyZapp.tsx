@@ -110,6 +110,13 @@ export default function RoyZapp() {
     return sectors.find(s => s.id === selectedSectorId);
   }, [selectedSectorId]);
 
+  // Get the first department for the current sector (for creating new assignments)
+  const currentSectorDepartmentId = useMemo(() => {
+    if (!departments || departments.length === 0) return null;
+    // departments is already filtered by sector in useZappData, so take the first one
+    return departments[0]?.id || null;
+  }, [departments]);
+
   // UI state
   const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector">("inbox");
   const [searchQuery, setSearchQuery] = useState("");
@@ -302,6 +309,7 @@ export default function RoyZapp() {
           zapp_conversation_id: zappConvId,
           agent_id: currentAgent.id,
           status: "active",
+          department_id: currentSectorDepartmentId, // Associate with sector's department
         });
       
       if (assignError) throw assignError;
@@ -2485,6 +2493,7 @@ export default function RoyZapp() {
           zapp_conversation_id: zappConvId,
           agent_id: currentAgent.id,
           status: "active",
+          department_id: currentSectorDepartmentId, // Associate with sector's department
         });
       
       if (assignError) throw assignError;
