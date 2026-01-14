@@ -228,9 +228,9 @@ serve(async (req) => {
       ];
       
       for (const tryName of possibleNames) {
-        const { data: results } = await supabase
+      const { data: results } = await supabase
           .from("integrations")
-          .select("account_id, config, sector_id")
+          .select("id, account_id, config, sector_id")
           .eq("type", "whatsapp")
           .filter("config->>instance_name", "eq", tryName)
           .order("created_at", { ascending: true })
@@ -250,7 +250,7 @@ serve(async (req) => {
     if (!integration && payloadToken) {
       const { data: results } = await supabase
         .from("integrations")
-        .select("account_id, config, sector_id")
+        .select("id, account_id, config, sector_id")
         .eq("type", "whatsapp")
         .filter("config->>instance_token", "eq", payloadToken)
         .order("created_at", { ascending: true })
@@ -268,7 +268,7 @@ serve(async (req) => {
       const phoneClean = String(instanceOwner).replace(/\D/g, "");
       const { data: results } = await supabase
         .from("integrations")
-        .select("account_id, config, sector_id")
+        .select("id, account_id, config, sector_id")
         .eq("type", "whatsapp")
         .filter("config->>phone_number", "eq", phoneClean)
         .order("created_at", { ascending: true })
@@ -308,7 +308,8 @@ serve(async (req) => {
 
     const accountId = integration.account_id;
     const sectorId = integration.sector_id;
-    console.log(`Processing for account: ${accountId}, sector: ${sectorId}`);
+    const integrationId = integration.id;
+    console.log(`Processing for account: ${accountId}, sector: ${sectorId}, integration: ${integrationId}`);
     
     // Find the department for this sector to properly associate conversations
     let sectorDepartmentId: string | null = null;
@@ -710,32 +711,38 @@ serve(async (req) => {
         let existingZappConvo;
         
         if (isGroupMessage && groupJid) {
-          // For groups, search by group_jid + sector_id for multi-sector isolation
+          // For groups, search by group_jid + integration_id for multi-instance isolation
           let groupQuery = supabase
             .from("zapp_conversations")
-            .select("id, unread_count")
+            .select("id, unread_count, integration_id")
             .eq("account_id", accountId)
             .eq("group_jid", groupJid);
           
-          // Filter by sector_id if available for multi-sector isolation
-          if (sectorId) {
+          // CRITICAL: Filter by integration_id for multi-instance isolation within same sector
+          if (integrationId) {
+            groupQuery = groupQuery.eq("integration_id", integrationId);
+          } else if (sectorId) {
+            // Fallback to sector_id if no integration_id (legacy support)
             groupQuery = groupQuery.eq("sector_id", sectorId);
           }
           
           const { data } = await groupQuery.maybeSingle();
           existingZappConvo = data;
         } else {
-          // For direct messages, search by phone_e164 + sector_id for multi-sector isolation
-          // CRITICAL: This ensures same phone number creates separate conversations per sector
+          // For direct messages, search by phone_e164 + integration_id for multi-instance isolation
+          // CRITICAL: This ensures same phone number creates separate conversations per instance
           let directQuery = supabase
             .from("zapp_conversations")
-            .select("id, unread_count")
+            .select("id, unread_count, integration_id")
             .eq("account_id", accountId)
             .eq("phone_e164", phone)
             .eq("is_group", false);
           
-          // Filter by sector_id if available for multi-sector isolation
-          if (sectorId) {
+          // CRITICAL: Filter by integration_id for multi-instance isolation within same sector
+          if (integrationId) {
+            directQuery = directQuery.eq("integration_id", integrationId);
+          } else if (sectorId) {
+            // Fallback to sector_id if no integration_id (legacy support)
             directQuery = directQuery.eq("sector_id", sectorId);
           }
           
@@ -767,6 +774,12 @@ serve(async (req) => {
             if (profilePicUrl) {
               updateData.avatar_url = profilePicUrl;
             }
+          }
+          
+          // CRITICAL: Update integration_id if missing (migration for existing conversations)
+          if (integrationId && !existingZappConvo.integration_id) {
+            updateData.integration_id = integrationId;
+            console.log(`Updating conversation ${zappConversationId} with integration_id: ${integrationId}`);
           }
           
           await supabase
@@ -803,6 +816,8 @@ serve(async (req) => {
               group_jid: groupJid,
               // CRITICAL: Set sector_id for multi-sector isolation
               sector_id: sectorId || null,
+              // CRITICAL: Set integration_id for multi-instance isolation within same sector
+              integration_id: integrationId || null,
               last_message_at: timestamp,
               last_message_preview: direction === "outbound"
                 ? `Você: ${content.substring(0, 80)}`
