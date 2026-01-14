@@ -135,7 +135,7 @@ export default function Leads() {
     markAsConvertedToDeal,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
-  const { openZappConversation, loading: zappLoading } = useZappNavigation();
+  const { openZappConversation, loading: zappLoading, PinDialog } = useZappNavigation();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
@@ -1624,6 +1624,9 @@ export default function Leads() {
         onConfirmImport={handleConfirmImport}
         importing={importing}
       />
+      
+      {/* PIN Dialog for protected WhatsApp instances */}
+      {PinDialog}
     </>
   );
 }

@@ -30,7 +30,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   const [activityStatus, setActivityStatus] = useState<ActivityStatus>({ pendingCount: 0, hasOverdue: false, totalActivities: 0 });
   
-  const { openZappConversation, loading: zappLoading } = useZappNavigation();
+  const { openZappConversation, loading: zappLoading, PinDialog } = useZappNavigation();
   
   // Fetch all activities status for this deal
   useEffect(() => {
@@ -382,13 +382,15 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
         )}
       </CardContent>
     </Card>
-
     <DealActivitiesDialog
       open={activitiesDialogOpen}
       onOpenChange={setActivitiesDialogOpen}
       dealId={deal.id}
       leadId={deal.lead_id || undefined}
     />
+    
+    {/* PIN Dialog for protected WhatsApp instances */}
+    {PinDialog}
   </>
   );
 }
