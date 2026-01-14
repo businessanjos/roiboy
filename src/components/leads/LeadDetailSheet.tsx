@@ -33,6 +33,7 @@ import {
   Plus,
   Settings,
   Trash2,
+  Instagram,
 } from "lucide-react";
 import { LeadTimeline } from "./LeadTimeline";
 import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
@@ -63,6 +64,10 @@ interface Lead {
   full_name: string;
   phone: string | null;
   email: string | null;
+  emails: string[] | null;
+  additional_phones: string[] | null;
+  instagram: string | null;
+  instagrams: string[] | null;
   source: string | null;
   status: string;
   notes: string | null;
@@ -166,12 +171,17 @@ export function LeadDetailSheet({
       // Fetch lead data
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
-        .select("id, full_name, phone, email, source, status, notes, created_at")
+        .select("id, full_name, phone, email, emails, additional_phones, instagram, instagrams, source, status, notes, created_at")
         .eq("id", leadId)
         .single();
 
       if (leadError) throw leadError;
-      setLead(leadData);
+      setLead({
+        ...leadData,
+        emails: Array.isArray(leadData.emails) ? leadData.emails as string[] : null,
+        additional_phones: Array.isArray(leadData.additional_phones) ? leadData.additional_phones as string[] : null,
+        instagrams: Array.isArray(leadData.instagrams) ? leadData.instagrams as string[] : null,
+      });
 
       // Fetch associated deals
       const { data: dealsData, error: dealsError } = await supabase
@@ -260,10 +270,59 @@ export function LeadDetailSheet({
                       <span>{lead.phone}</span>
                     </div>
                   )}
+                  {lead.additional_phones && lead.additional_phones.length > 0 && (
+                    <div className="flex flex-wrap gap-2 ml-7">
+                      {lead.additional_phones.map((phone, idx) => (
+                        <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted text-sm">
+                          <Phone className="h-3 w-3" />
+                          {phone}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {lead.email && (
                     <div className="flex items-center gap-3">
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <span>{lead.email}</span>
+                    </div>
+                  )}
+                  {lead.emails && lead.emails.length > 0 && (
+                    <div className="flex flex-wrap gap-2 ml-7">
+                      {lead.emails.map((email, idx) => (
+                        <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted text-sm">
+                          <Mail className="h-3 w-3" />
+                          {email}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {lead.instagram && (
+                    <div className="flex items-center gap-3">
+                      <Instagram className="h-4 w-4 text-pink-500" />
+                      <a 
+                        href={`https://instagram.com/${lead.instagram.replace(/^@/, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-pink-600 hover:underline"
+                      >
+                        @{lead.instagram.replace(/^@/, '')}
+                      </a>
+                    </div>
+                  )}
+                  {lead.instagrams && lead.instagrams.length > 0 && (
+                    <div className="flex flex-wrap gap-2 ml-7">
+                      {lead.instagrams.map((ig, idx) => (
+                        <a
+                          key={idx}
+                          href={`https://instagram.com/${ig.replace(/^@/, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-pink-500/15 text-pink-600 text-sm hover:bg-pink-500/25"
+                        >
+                          <Instagram className="h-3 w-3" />
+                          @{ig.replace(/^@/, '')}
+                        </a>
+                      ))}
                     </div>
                   )}
                   {lead.source && (

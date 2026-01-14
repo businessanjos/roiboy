@@ -9,6 +9,10 @@ export interface Lead {
   full_name: string;
   phone: string | null;
   email: string | null;
+  emails: string[] | null;
+  additional_phones: string[] | null;
+  instagram: string | null;
+  instagrams: string[] | null;
   source: string | null;
   notes: string | null;
   status: string;
@@ -125,6 +129,9 @@ export function useLeads() {
       const formattedLeads: Lead[] = allLeads.map(lead => ({
         ...lead,
         tags: Array.isArray(lead.tags) ? lead.tags as string[] : [],
+        emails: Array.isArray(lead.emails) ? lead.emails as string[] : null,
+        additional_phones: Array.isArray(lead.additional_phones) ? lead.additional_phones as string[] : null,
+        instagrams: Array.isArray(lead.instagrams) ? lead.instagrams as string[] : null,
       }));
 
       setLeads(formattedLeads);
@@ -166,6 +173,9 @@ export function useLeads() {
       const formattedLead: Lead = {
         ...newLead,
         tags: Array.isArray(newLead.tags) ? newLead.tags as string[] : [],
+        emails: Array.isArray(newLead.emails) ? newLead.emails as string[] : null,
+        additional_phones: Array.isArray(newLead.additional_phones) ? newLead.additional_phones as string[] : null,
+        instagrams: Array.isArray(newLead.instagrams) ? newLead.instagrams as string[] : null,
       };
 
       setLeads(prev => [formattedLead, ...prev]);

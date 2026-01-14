@@ -42,6 +42,7 @@ interface Lead {
   email: string | null;
   emails: string[] | null;
   instagram: string | null;
+  instagrams: string[] | null;
   additional_phones: string[] | null;
   cpf: string | null;
   rg: string | null;
@@ -182,7 +183,7 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
     if (!editingSection) return;
     
     const sectionFields: Record<SectionKey, (keyof Lead)[]> = {
-      contact: ["full_name", "phone", "email", "emails", "instagram", "additional_phones"],
+      contact: ["full_name", "phone", "email", "emails", "instagram", "instagrams", "additional_phones"],
       personal: ["cpf", "rg", "birth_date"],
       company: ["company_name", "cnpj", "business_segment", "business_niche"],
       address: ["zip_code", "street", "street_number", "complement", "neighborhood", "city", "state"],
@@ -344,7 +345,106 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
                                 {renderEditField("Telefone", "phone")}
                                 {renderEditField("Email", "email")}
                               </div>
+                              
+                              {/* Additional phones */}
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-zapp-text-muted">Telefones adicionais</Label>
+                                <div className="flex flex-wrap gap-1">
+                                  {(formData.additional_phones || []).map((phone, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zapp-accent/10 text-zapp-text text-xs">
+                                      {phone}
+                                      <button
+                                        onClick={() => handleFieldChange("additional_phones", (formData.additional_phones || []).filter((_, i) => i !== idx))}
+                                        className="hover:text-red-500"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                                <div className="flex gap-1">
+                                  <Input
+                                    className="h-7 text-xs bg-zapp-bg border-zapp-border text-zapp-text flex-1"
+                                    placeholder="+55..."
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && e.currentTarget.value.trim()) {
+                                        e.preventDefault();
+                                        handleFieldChange("additional_phones", [...(formData.additional_phones || []), e.currentTarget.value.trim()]);
+                                        e.currentTarget.value = "";
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* Additional emails */}
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-zapp-text-muted">Emails adicionais</Label>
+                                <div className="flex flex-wrap gap-1">
+                                  {(formData.emails || []).map((email, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zapp-accent/10 text-zapp-text text-xs">
+                                      {email}
+                                      <button
+                                        onClick={() => handleFieldChange("emails", (formData.emails || []).filter((_, i) => i !== idx))}
+                                        className="hover:text-red-500"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                                <div className="flex gap-1">
+                                  <Input
+                                    type="email"
+                                    className="h-7 text-xs bg-zapp-bg border-zapp-border text-zapp-text flex-1"
+                                    placeholder="email@exemplo.com"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && e.currentTarget.value.trim()) {
+                                        e.preventDefault();
+                                        handleFieldChange("emails", [...(formData.emails || []), e.currentTarget.value.trim()]);
+                                        e.currentTarget.value = "";
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              
                               {renderEditField("Instagram", "instagram")}
+                              
+                              {/* Additional instagrams */}
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-zapp-text-muted">Instagrams adicionais</Label>
+                                <div className="flex flex-wrap gap-1">
+                                  {(formData.instagrams || []).map((ig, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 text-xs">
+                                      <Instagram className="h-3 w-3" />
+                                      @{ig.replace(/^@/, '')}
+                                      <button
+                                        onClick={() => handleFieldChange("instagrams", (formData.instagrams || []).filter((_, i) => i !== idx))}
+                                        className="hover:text-red-500"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                                <div className="flex gap-1">
+                                  <Input
+                                    className="h-7 text-xs bg-zapp-bg border-zapp-border text-zapp-text flex-1"
+                                    placeholder="@usuario"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && e.currentTarget.value.trim()) {
+                                        e.preventDefault();
+                                        const handle = e.currentTarget.value.replace(/^@/, '').trim();
+                                        if (handle) {
+                                          handleFieldChange("instagrams", [...(formData.instagrams || []), handle]);
+                                          e.currentTarget.value = "";
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
                             </>
                           )}
                           
@@ -436,7 +536,43 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
                                 {renderField("Telefone", lead.phone)}
                                 {renderField("Email", lead.email)}
                               </div>
+                              {lead.additional_phones && lead.additional_phones.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {lead.additional_phones.map((phone, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zapp-accent/10 text-zapp-text text-[10px]">
+                                      <Phone className="h-2.5 w-2.5" />
+                                      {phone}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {lead.emails && lead.emails.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {lead.emails.map((email, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zapp-accent/10 text-zapp-text text-[10px]">
+                                      <Mail className="h-2.5 w-2.5" />
+                                      {email}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                               {lead.instagram && renderField("Instagram", lead.instagram)}
+                              {lead.instagrams && lead.instagrams.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {lead.instagrams.map((ig, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={`https://instagram.com/${ig.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 text-[10px] hover:bg-pink-500/25"
+                                    >
+                                      <Instagram className="h-2.5 w-2.5" />
+                                      @{ig.replace(/^@/, '')}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                             </>
                           )}
                           

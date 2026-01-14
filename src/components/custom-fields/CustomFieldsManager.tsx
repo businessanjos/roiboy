@@ -41,7 +41,7 @@ interface FolderConfig {
 export interface CustomField {
   id: string;
   name: string;
-  field_type: "select" | "boolean" | "multi_select" | "number" | "currency" | "text" | "date" | "user" | "instagram" | "location";
+  field_type: "select" | "boolean" | "multi_select" | "number" | "currency" | "text" | "date" | "user" | "instagram" | "location" | "multi_instagram";
   options: FieldOption[];
   is_required: boolean;
   display_order: number;
@@ -65,6 +65,7 @@ const FIELD_TYPES = [
   { value: "number", label: "Número", icon: Hash },
   { value: "boolean", label: "Sim/Não", icon: ToggleLeft },
   { value: "instagram", label: "Instagram", icon: Instagram },
+  { value: "multi_instagram", label: "Múltiplos Instagrams", icon: Instagram },
   { value: "location", label: "Localização", icon: MapPin },
 ];
 
