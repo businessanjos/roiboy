@@ -312,6 +312,7 @@ serve(async (req) => {
     console.log(`Processing for account: ${accountId}, sector: ${sectorId}, integration: ${integrationId}`);
     
     // Find the department for this sector to properly associate conversations
+    // Using order by created_at to be deterministic when multiple departments exist
     let sectorDepartmentId: string | null = null;
     if (sectorId) {
       const { data: dept } = await supabase
@@ -319,6 +320,8 @@ serve(async (req) => {
         .select("id")
         .eq("account_id", accountId)
         .eq("sector_id", sectorId)
+        .order("created_at", { ascending: true })
+        .limit(1)
         .maybeSingle();
       
       if (dept) {
