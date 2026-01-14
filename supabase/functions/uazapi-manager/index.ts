@@ -1600,35 +1600,42 @@ serve(async (req) => {
           );
         }
 
-        // Get instance token from integration config - filter by sector_id
-        let sendTextIntQuery = supabase
-          .from("integrations")
-          .select("config, sector_id")
-          .eq("account_id", accountId)
-          .eq("type", "whatsapp");
+        // PRIORITY: Use the token already loaded at the start of the function (respects integration_id)
+        let instanceToken = savedInstanceToken;
         
-        // CRITICAL: Apply same sector filtering pattern as the start of the function
-        if (sector_id) {
-          sendTextIntQuery = sendTextIntQuery.eq("sector_id", sector_id);
-        } else {
-          // For default sector, explicitly match null sector_id to avoid cross-instance messaging
-          sendTextIntQuery = sendTextIntQuery.is("sector_id", null);
-        }
-        
-        const { data: integrations } = await sendTextIntQuery.limit(1);
-        const integration = integrations?.[0] || null;
+        // Fallback: If no token from initial load, try to find one
+        if (!instanceToken) {
+          let sendTextIntQuery = supabase
+            .from("integrations")
+            .select("config, sector_id")
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp");
+          
+          // CRITICAL: Use integration_id if provided, otherwise fall back to sector_id
+          if (integration_id) {
+            console.log(`[send_text] Using specific integration_id: ${integration_id}`);
+            sendTextIntQuery = sendTextIntQuery.eq("id", integration_id);
+          } else if (sector_id) {
+            sendTextIntQuery = sendTextIntQuery.eq("sector_id", sector_id);
+          } else {
+            sendTextIntQuery = sendTextIntQuery.is("sector_id", null);
+          }
+          
+          const { data: integrations } = await sendTextIntQuery.limit(1);
+          const fallbackIntegration = integrations?.[0] || null;
 
-        // Validation: Ensure we found the correct integration
-        if (!integration) {
-          console.error(`[send_text] No WhatsApp integration found for account ${accountId}, sector: ${sector_id || 'default'}`);
-          return new Response(
-            JSON.stringify({ error: `Nenhuma integração WhatsApp encontrada para o setor ${sector_id || 'default'}` }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          if (!fallbackIntegration) {
+            console.error(`[send_text] No WhatsApp integration found for account ${accountId}, integration_id: ${integration_id}, sector: ${sector_id || 'default'}`);
+            return new Response(
+              JSON.stringify({ error: `Nenhuma integração WhatsApp encontrada` }),
+              { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          instanceToken = (fallbackIntegration?.config as { instance_token?: string })?.instance_token;
         }
 
-        console.log(`[send_text] Using integration for sector: ${sector_id || 'default'}`);
-        const instanceToken = (integration?.config as { instance_token?: string })?.instance_token;
+        console.log(`[send_text] Using token from integration_id: ${integration_id || 'sector fallback'}, has token: ${!!instanceToken}`);
         const cleanPhone = phone.replace(/\D/g, "");
         const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
         const quotedFromMe = (payload as UazapiRequest).quoted_from_me ?? false;

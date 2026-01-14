@@ -1258,6 +1258,7 @@ export default function RoyZapp() {
           action,
           message: messageContent,
           sector_id: selectedSectorId,
+          integration_id: selectedIntegrationId,
         };
         
         if (isGroup && groupJid) {
@@ -1387,6 +1388,7 @@ export default function RoyZapp() {
         caption: caption || "",
         file_name: file.name,
         sector_id: selectedSectorId || "",
+        integration_id: selectedIntegrationId || "",
       };
       
       if (isGroup && groupJid) {
@@ -1648,6 +1650,7 @@ export default function RoyZapp() {
         caption: "",
         file_name: `audio_${Date.now()}.webm`,
         sector_id: selectedSectorId || "",
+        integration_id: selectedIntegrationId || "",
       };
       
       if (isGroup && groupJid) {
@@ -1859,6 +1862,7 @@ export default function RoyZapp() {
         action,
         message: contactMessage,
         sector_id: selectedSectorId || "",
+        integration_id: selectedIntegrationId || "",
       };
       
       if (isGroup && groupJid) {
