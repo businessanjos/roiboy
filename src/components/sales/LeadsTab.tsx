@@ -110,7 +110,7 @@ export default function LeadsTab() {
     markAsConvertedToDeal,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
-  const { openZappConversation, loading: zappLoading, PinDialog } = useZappNavigation();
+  const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const { users: salesUsers, loading: usersLoading } = useSectorUsers({ sectorId: "vendas" });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -1415,7 +1415,8 @@ export default function LeadsTab() {
         importing={importing}
       />
       
-      {/* PIN Dialog for protected WhatsApp instances */}
+      {/* Dialogs for WhatsApp instance selection and PIN */}
+      {InstanceSelectorDialog}
       {PinDialog}
     </div>
   );

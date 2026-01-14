@@ -160,7 +160,7 @@ export default function Tasks() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
-  const { openZappConversation, loading: zappLoading, PinDialog } = useZappNavigation();
+  const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
@@ -1096,7 +1096,8 @@ export default function Tasks() {
         onOpenChange={setStatusManagerOpen} 
       />
       
-      {/* PIN Dialog for protected WhatsApp instances */}
+      {/* Dialogs for WhatsApp instance selection and PIN */}
+      {InstanceSelectorDialog}
       {PinDialog}
     </div>
   );

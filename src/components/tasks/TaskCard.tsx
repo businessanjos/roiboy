@@ -96,7 +96,7 @@ const STATUS_CONFIG = {
 
 export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusChange, showClient = true }: TaskCardProps) {
   const navigate = useNavigate();
-  const { openZappConversation, loading: zappLoading, PinDialog } = useZappNavigation();
+  const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const statusConfig = STATUS_CONFIG[task.status];
   const StatusIcon = statusConfig.icon;
   const isCompleted = task.status === "done";
@@ -338,7 +338,8 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
         </div>
       </div>
       
-      {/* PIN Dialog for protected WhatsApp instances */}
+      {/* Dialogs for WhatsApp instance selection and PIN */}
+      {InstanceSelectorDialog}
       {PinDialog}
     </div>
   );

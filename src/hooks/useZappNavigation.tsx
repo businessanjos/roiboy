@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { ZappPinDialog } from "@/components/royzapp/dialogs/ZappPinDialog";
+import { ZappInstanceSelectorDialog } from "@/components/royzapp/dialogs/ZappInstanceSelectorDialog";
 
 interface ZappNavigationOptions {
   phone?: string | null;
@@ -28,10 +29,53 @@ export function useZappNavigation() {
   const [pendingIntegration, setPendingIntegration] = useState<IntegrationInfo | null>(null);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
 
+  // Instance selector state
+  const [showInstanceSelector, setShowInstanceSelector] = useState(false);
+  const [availableInstances, setAvailableInstances] = useState<IntegrationInfo[]>([]);
+  const [pendingOptions, setPendingOptions] = useState<ZappNavigationOptions | null>(null);
+
   const completeNavigation = useCallback((url: string) => {
     navigate(url);
     toast.info("Abrindo RoyZapp...");
   }, [navigate]);
+
+  const buildNavigationUrl = useCallback((integrationId: string, options: ZappNavigationOptions) => {
+    const { phone, leadId, clientId, name } = options;
+    const normalizedPhone = phone?.replace(/\D/g, "") || "";
+    const encodedName = encodeURIComponent(name || "");
+    return `/roy-zapp?sector=vendas&integrationId=${integrationId}&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
+  }, []);
+
+  const navigateToInstance = useCallback(async (integrationId: string, options: ZappNavigationOptions) => {
+    // Fetch integration to check for PIN
+    const { data: integration } = await supabase
+      .from("integrations")
+      .select("id, pin_hash, display_name, config")
+      .eq("id", integrationId)
+      .single();
+
+    if (!integration) {
+      toast.error("Instância não encontrada");
+      return;
+    }
+
+    const navigationUrl = buildNavigationUrl(integrationId, options);
+
+    // Check if integration has PIN protection
+    if (integration.pin_hash) {
+      setPendingIntegration({
+        id: integration.id,
+        displayName: integration.display_name || (integration.config as any)?.instance_name || "Instância",
+        hasPinHash: true,
+      });
+      setPendingNavigationUrl(navigationUrl);
+      setShowPinDialog(true);
+      return;
+    }
+
+    // No PIN required, navigate directly
+    completeNavigation(navigationUrl);
+  }, [buildNavigationUrl, completeNavigation]);
 
   const openZappConversation = useCallback(async (options: ZappNavigationOptions) => {
     const { phone, leadId, clientId, name } = options;
@@ -54,79 +98,62 @@ export function useZappNavigation() {
     setLoading(true);
 
     try {
-      // Step 1: Get user's preferred instance for 'vendas' sector
-      const { data: preference } = await supabase
-        .from("user_instance_preferences")
-        .select("integration_id")
-        .eq("user_id", currentUser.id)
+      // Fetch ALL connected integrations for vendas sector
+      const { data: allIntegrations } = await supabase
+        .from("integrations")
+        .select("id, pin_hash, display_name, config, status")
+        .eq("account_id", currentUser.account_id)
         .eq("sector_id", "vendas")
-        .maybeSingle();
+        .eq("status", "connected")
+        .order("created_at", { ascending: true });
 
-      let integrationId = preference?.integration_id;
-      
-      // Step 2: If no preference, get the first available integration for vendas
-      if (!integrationId) {
-        const { data: integrations } = await supabase
-          .from("integrations")
-          .select("id")
-          .eq("account_id", currentUser.account_id)
-          .eq("sector_id", "vendas")
-          .eq("status", "connected")
-          .order("created_at", { ascending: true })
-          .limit(1);
-        
-        if (integrations && integrations.length > 0) {
-          integrationId = integrations[0].id;
-        }
+      if (!allIntegrations || allIntegrations.length === 0) {
+        // No integrations, navigate without integrationId (fallback)
+        const normalizedPhone = phone.replace(/\D/g, "");
+        const encodedName = encodeURIComponent(name || "");
+        const navigationUrl = `/roy-zapp?sector=vendas&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
+        completeNavigation(navigationUrl);
+        setLoading(false);
+        return;
       }
 
-      // Step 3: If we have an integration, check if it requires PIN
-      if (integrationId) {
-        const { data: integration } = await supabase
-          .from("integrations")
-          .select("id, pin_hash, display_name, config")
-          .eq("id", integrationId)
-          .single();
-
-        if (integration) {
-          const normalizedPhone = phone.replace(/\D/g, "");
-          const encodedName = encodeURIComponent(name || "");
-          const navigationUrl = `/roy-zapp?sector=vendas&integrationId=${integrationId}&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
-          
-          // Check if integration has PIN protection
-          if (integration.pin_hash) {
-            // Show PIN dialog
-            setPendingIntegration({
-              id: integration.id,
-              displayName: integration.display_name || (integration.config as any)?.instance_name || "Instância",
-              hasPinHash: true,
-            });
-            setPendingNavigationUrl(navigationUrl);
-            setShowPinDialog(true);
-            setLoading(false);
-            return;
-          }
-
-          // No PIN required, navigate directly
-          completeNavigation(navigationUrl);
-          setLoading(false);
-          return;
-        }
+      // If only ONE integration, use it directly
+      if (allIntegrations.length === 1) {
+        const integration = allIntegrations[0];
+        await navigateToInstance(integration.id, options);
+        setLoading(false);
+        return;
       }
 
-      // Fallback: Navigate without integrationId (will use default)
-      const normalizedPhone = phone.replace(/\D/g, "");
-      const encodedName = encodeURIComponent(name || "");
-      const navigationUrl = `/roy-zapp?sector=vendas&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
-      
-      completeNavigation(navigationUrl);
+      // MULTIPLE integrations - show selector dialog
+      const instances: IntegrationInfo[] = allIntegrations.map((int) => ({
+        id: int.id,
+        displayName: int.display_name || (int.config as any)?.instance_name || "Instância",
+        hasPinHash: !!int.pin_hash,
+      }));
+
+      setAvailableInstances(instances);
+      setPendingOptions(options);
+      setShowInstanceSelector(true);
+      setLoading(false);
     } catch (error) {
       console.error("Error navigating to Zapp:", error);
       toast.error("Erro ao abrir conversa");
-    } finally {
       setLoading(false);
     }
-  }, [navigate, currentUser?.account_id, currentUser?.id, completeNavigation]);
+  }, [navigate, currentUser?.account_id, currentUser?.id, completeNavigation, navigateToInstance]);
+
+  const handleInstanceSelect = useCallback(async (integrationId: string) => {
+    if (!pendingOptions) return;
+    
+    setLoading(true);
+    setShowInstanceSelector(false);
+    
+    await navigateToInstance(integrationId, pendingOptions);
+    
+    setPendingOptions(null);
+    setLoading(false);
+  }, [pendingOptions, navigateToInstance]);
 
   const handlePinSuccess = useCallback(() => {
     if (pendingNavigationUrl) {
@@ -145,6 +172,14 @@ export function useZappNavigation() {
     }
   }, []);
 
+  const handleInstanceSelectorClose = useCallback((open: boolean) => {
+    if (!open) {
+      setShowInstanceSelector(false);
+      setAvailableInstances([]);
+      setPendingOptions(null);
+    }
+  }, []);
+
   // Render the PIN dialog component
   const PinDialog: ReactNode = showPinDialog && pendingIntegration ? (
     <ZappPinDialog
@@ -156,5 +191,16 @@ export function useZappNavigation() {
     />
   ) : null;
 
-  return { openZappConversation, loading, PinDialog };
+  // Render the Instance Selector dialog component
+  const InstanceSelectorDialog: ReactNode = showInstanceSelector ? (
+    <ZappInstanceSelectorDialog
+      open={showInstanceSelector}
+      onOpenChange={handleInstanceSelectorClose}
+      instances={availableInstances}
+      onSelect={handleInstanceSelect}
+      contactName={pendingOptions?.name}
+    />
+  ) : null;
+
+  return { openZappConversation, loading, PinDialog, InstanceSelectorDialog };
 }
