@@ -6,10 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple hash function for PIN verification (consistent with set-sector-pin)
-async function hashPin(pin: string): Promise<string> {
+// Hash function for PIN verification - uses account_id as salt (consistent with uazapi-manager)
+async function hashPin(pin: string, salt: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(pin + "roy-sector-pin-salt");
+  const data = encoder.encode(pin + salt);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
@@ -41,10 +41,10 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Buscar o hash do PIN armazenado na integração
+    // Buscar o hash do PIN armazenado na integração e o account_id para usar como salt
     const { data: integration, error } = await supabase
       .from("integrations")
-      .select("pin_hash, config")
+      .select("pin_hash, config, account_id")
       .eq("id", integration_id)
       .maybeSingle();
 
@@ -74,8 +74,8 @@ serve(async (req) => {
       );
     }
 
-    // Comparar hash do PIN informado com o armazenado
-    const inputHash = await hashPin(pin);
+    // Comparar hash do PIN informado com o armazenado (usando account_id como salt)
+    const inputHash = await hashPin(pin, integration.account_id);
     const valid = inputHash === storedPinHash;
 
     console.log(`[verify-instance-pin] Integration ${integration_id}: PIN ${valid ? 'VALID' : 'INVALID'}`);
