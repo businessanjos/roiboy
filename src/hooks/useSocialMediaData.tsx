@@ -251,8 +251,12 @@ export function useSocialMediaData() {
 
       // Calculate engagement and virality rates
       const totalEngagement = data.likes + data.comments + data.shares + data.saves;
-      const engagementRate = data.reach > 0 ? (totalEngagement / data.reach) * 100 : 0;
-      const viralityRate = data.reach > 0 ? (data.shares / data.reach) * 100 : 0;
+      const rawEngagementRate = data.reach > 0 ? (totalEngagement / data.reach) * 100 : 0;
+      const rawViralityRate = data.reach > 0 ? (data.shares / data.reach) * 100 : 0;
+      
+      // Cap rates at 999.99 to prevent numeric(5,2) overflow in database
+      const engagementRate = Math.min(rawEngagementRate, 999.99);
+      const viralityRate = Math.min(rawViralityRate, 999.99);
 
       const { data: post, error } = await supabase
         .from('instagram_posts')
@@ -326,8 +330,12 @@ export function useSocialMediaData() {
 
       // Calculate engagement and virality rates
       const totalEngagement = data.likes + data.comments + data.shares + data.saves;
-      const engagementRate = data.reach > 0 ? (totalEngagement / data.reach) * 100 : 0;
-      const viralityRate = data.reach > 0 ? (data.shares / data.reach) * 100 : 0;
+      const rawEngagementRate = data.reach > 0 ? (totalEngagement / data.reach) * 100 : 0;
+      const rawViralityRate = data.reach > 0 ? (data.shares / data.reach) * 100 : 0;
+      
+      // Cap rates at 999.99 to prevent numeric(5,2) overflow in database
+      const engagementRate = Math.min(rawEngagementRate, 999.99);
+      const viralityRate = Math.min(rawViralityRate, 999.99);
 
       const { data: post, error } = await supabase
         .from('instagram_posts')
