@@ -19,7 +19,8 @@ interface UazapiRequest {
     | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status"
     | "import-conversations"
     | "delete_message"
-    | "list_instances" | "link_instance";
+    | "list_instances" | "link_instance"
+    | "add_instance_to_sector" | "update_instance_pin" | "verify_instance_pin" | "list_sector_instances";
   limit?: number;
   instance_name?: string;
   phone?: string;
@@ -39,7 +40,9 @@ interface UazapiRequest {
   file_name?: string;
   groups?: Array<{ group_jid: string; name: string; participant_count: number }>;
   sector_id?: string;
-  integration_id?: string; // NEW: Target specific integration by ID
+  integration_id?: string; // Target specific integration by ID
+  display_name?: string; // Custom display name for instance
+  pin?: string; // PIN for instance access protection
 }
 
 // Helper function to get sector display name
@@ -315,7 +318,7 @@ serve(async (req) => {
     const payload: UazapiRequest = await req.json();
     
     // SECURITY: Define admin-only actions for WhatsApp management
-    const adminOnlyActions = ["create", "connect", "disconnect", "qrcode", "paircode", "configure_webhook", "link_instance"];
+    const adminOnlyActions = ["create", "connect", "disconnect", "qrcode", "paircode", "configure_webhook", "link_instance", "add_instance_to_sector", "update_instance_pin", "unlink_instance"];
     const isAdminAction = adminOnlyActions.includes(payload.action);
     const isAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
     
@@ -1248,6 +1251,282 @@ serve(async (req) => {
           );
         } catch (err) {
           console.error("Failed to link instance:", (err as Error).message);
+          return new Response(
+            JSON.stringify({ error: (err as Error).message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        break;
+      }
+
+      case "add_instance_to_sector": {
+        // Add an instance to a sector - allows multiple instances per sector
+        const targetInstanceName = payload.instance_name;
+        const displayName = payload.display_name;
+        const pin = payload.pin;
+        
+        if (!targetInstanceName) {
+          return new Response(
+            JSON.stringify({ error: "instance_name is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        if (!sector_id) {
+          return new Response(
+            JSON.stringify({ error: "sector_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`Adding instance ${targetInstanceName} to sector ${sector_id}...`);
+        
+        try {
+          // Get the instance details from UAZAPI
+          const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
+            name?: string; 
+            token?: string; 
+            status?: string;
+            owner?: string;
+            profileName?: string;
+            profilePicUrl?: string;
+          }>;
+          
+          const targetInstance = allInstances.find(i => i.name === targetInstanceName);
+          
+          if (!targetInstance) {
+            return new Response(
+              JSON.stringify({ error: `Instance ${targetInstanceName} not found in UAZAPI` }),
+              { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          const instanceToken = targetInstance.token || "";
+          const isConnected = targetInstance.status === "connected";
+          
+          // Hash the PIN if provided (simple hash for now - can be replaced with bcrypt)
+          let pinHash: string | null = null;
+          if (pin && pin.length >= 4) {
+            // Simple hash using Web Crypto API
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pin + accountId); // Salt with account ID
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            pinHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          }
+          
+          // INSERT new integration (not update - allows multiple per sector)
+          const { data: newIntegration, error: insertError } = await supabase
+            .from("integrations")
+            .insert({
+              account_id: accountId,
+              type: "whatsapp",
+              sector_id: sector_id,
+              status: isConnected ? "connected" : "disconnected",
+              display_name: displayName || null,
+              pin_hash: pinHash,
+              config: {
+                provider: "uazapi",
+                instance_name: targetInstanceName,
+                instance_token: instanceToken,
+                linked_at: new Date().toISOString(),
+                owner: targetInstance.owner || "",
+                phone_number: targetInstance.owner || "",
+                profile_name: targetInstance.profileName || "",
+                profile_pic_url: targetInstance.profilePicUrl || "",
+              },
+            })
+            .select()
+            .single();
+          
+          if (insertError) throw insertError;
+          
+          // Configure webhook for this instance
+          if (instanceToken) {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+            await configureWebhook(instanceToken, targetInstanceName, supabaseUrl);
+          }
+          
+          result = {
+            message: `Instance ${targetInstanceName} added to sector ${sector_id}`,
+            integration_id: newIntegration?.id,
+            instance_name: targetInstanceName,
+            status: isConnected ? "connected" : "disconnected",
+            profile_name: targetInstance.profileName || "",
+            has_pin: !!pinHash,
+          };
+          
+          console.log(`Successfully added ${targetInstanceName} to sector ${sector_id}`);
+          
+          // Audit and notify other admins about this change
+          await logWhatsAppChangeAndNotify(
+            supabase,
+            accountId,
+            userData.id,
+            userData.name || "Admin",
+            "add_instance_to_sector",
+            sector_id || null,
+            targetInstanceName,
+            targetInstance.owner || ""
+          );
+        } catch (err) {
+          console.error("Failed to add instance to sector:", (err as Error).message);
+          return new Response(
+            JSON.stringify({ error: (err as Error).message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        break;
+      }
+
+      case "update_instance_pin": {
+        // Update or remove PIN for an instance
+        const targetIntegrationId = payload.integration_id;
+        const pin = payload.pin;
+        
+        if (!targetIntegrationId) {
+          return new Response(
+            JSON.stringify({ error: "integration_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`Updating PIN for integration ${targetIntegrationId}...`);
+        
+        try {
+          // Hash the PIN if provided, or set to null to remove
+          let pinHash: string | null = null;
+          if (pin && pin.length >= 4) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(pin + accountId);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            pinHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          }
+          
+          const { error: updateError } = await supabase
+            .from("integrations")
+            .update({ pin_hash: pinHash })
+            .eq("id", targetIntegrationId)
+            .eq("account_id", accountId);
+          
+          if (updateError) throw updateError;
+          
+          result = {
+            success: true,
+            message: pin ? "PIN updated successfully" : "PIN removed successfully",
+            has_pin: !!pinHash,
+          };
+          
+          console.log(`PIN ${pin ? 'updated' : 'removed'} for integration ${targetIntegrationId}`);
+        } catch (err) {
+          console.error("Failed to update PIN:", (err as Error).message);
+          return new Response(
+            JSON.stringify({ error: (err as Error).message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        break;
+      }
+
+      case "verify_instance_pin": {
+        // Verify PIN for accessing an instance
+        const targetIntegrationId = payload.integration_id;
+        const pin = payload.pin;
+        
+        if (!targetIntegrationId || !pin) {
+          return new Response(
+            JSON.stringify({ error: "integration_id and pin are required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`Verifying PIN for integration ${targetIntegrationId}...`);
+        
+        try {
+          // Get the stored PIN hash
+          const { data: integration, error: fetchError } = await supabase
+            .from("integrations")
+            .select("pin_hash")
+            .eq("id", targetIntegrationId)
+            .eq("account_id", accountId)
+            .single();
+          
+          if (fetchError) throw fetchError;
+          
+          if (!integration?.pin_hash) {
+            result = { valid: true, message: "No PIN required" };
+            break;
+          }
+          
+          // Hash the input PIN and compare
+          const encoder = new TextEncoder();
+          const data = encoder.encode(pin + accountId);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          const isValid = integration.pin_hash === inputHash;
+          
+          result = {
+            valid: isValid,
+            message: isValid ? "PIN verified" : "Invalid PIN",
+          };
+          
+          console.log(`PIN verification for ${targetIntegrationId}: ${isValid ? 'success' : 'failed'}`);
+        } catch (err) {
+          console.error("Failed to verify PIN:", (err as Error).message);
+          return new Response(
+            JSON.stringify({ error: (err as Error).message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        break;
+      }
+
+      case "list_sector_instances": {
+        // List all instances for a specific sector
+        const targetSectorId = sector_id;
+        
+        console.log(`Listing instances for sector ${targetSectorId || 'all'}...`);
+        
+        try {
+          let query = supabase
+            .from("integrations")
+            .select("id, sector_id, status, display_name, pin_hash, config, created_at")
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp");
+          
+          if (targetSectorId) {
+            query = query.eq("sector_id", targetSectorId);
+          }
+          
+          const { data: integrations, error: fetchError } = await query;
+          
+          if (fetchError) throw fetchError;
+          
+          result = {
+            instances: (integrations || []).map(int => ({
+              id: int.id,
+              sector_id: int.sector_id,
+              status: int.status,
+              display_name: int.display_name,
+              has_pin: !!int.pin_hash,
+              instance_name: (int.config as { instance_name?: string })?.instance_name || "",
+              phone_number: (int.config as { phone_number?: string; owner?: string })?.phone_number || (int.config as { owner?: string })?.owner || "",
+              profile_name: (int.config as { profile_name?: string; profileName?: string })?.profile_name || (int.config as { profileName?: string })?.profileName || "",
+              profile_pic_url: (int.config as { profile_pic_url?: string; profilePicUrl?: string })?.profile_pic_url || (int.config as { profilePicUrl?: string })?.profilePicUrl || "",
+              created_at: int.created_at,
+            })),
+          };
+          
+          console.log(`Found ${(integrations || []).length} instances for sector ${targetSectorId || 'all'}`);
+        } catch (err) {
+          console.error("Failed to list sector instances:", (err as Error).message);
           return new Response(
             JSON.stringify({ error: (err as Error).message }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
