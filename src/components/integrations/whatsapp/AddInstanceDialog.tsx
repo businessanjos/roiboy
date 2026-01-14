@@ -91,13 +91,15 @@ export function AddInstanceDialog({
       console.log("[AddInstanceDialog] Raw instances from API:", allInstances.length);
       console.log("[AddInstanceDialog] Existing instances in sector:", existingInstanceNames);
 
-      // Show ALL instances EXCEPT those already in THIS sector
-      // Instances linked to OTHER sectors will be shown with indication
+      // SECURITY FIX: Mostrar APENAS instâncias que NÃO estão vinculadas a NENHUM setor
+      // Isso previne a "propagação" de instâncias entre setores sem remoção explícita
       const instances = allInstances.filter(
         (inst: UazapiInstance) => {
+          const isNotLinkedToAnySector = inst.linked_sector_id === null;
           const isNotInThisSector = !existingInstanceNames.includes(inst.name);
-          console.log(`[AddInstanceDialog] Instance ${inst.name}: linked_sector_id=${inst.linked_sector_id}, isNotInThisSector=${isNotInThisSector}`);
-          return isNotInThisSector;
+          console.log(`[AddInstanceDialog] Instance ${inst.name}: linked_sector_id=${inst.linked_sector_id}, isNotLinkedToAnySector=${isNotLinkedToAnySector}`);
+          // Só mostrar instâncias completamente livres
+          return isNotLinkedToAnySector && isNotInThisSector;
         }
       );
       

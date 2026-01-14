@@ -320,7 +320,9 @@ serve(async (req) => {
     // SECURITY: Define admin-only actions for WhatsApp management
     const adminOnlyActions = ["create", "connect", "disconnect", "qrcode", "paircode", "configure_webhook", "link_instance", "add_instance_to_sector", "update_instance_pin", "unlink_instance"];
     const isAdminAction = adminOnlyActions.includes(payload.action);
-    const isAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
+    // CRITICAL: Para ações de WhatsApp, APENAS role admin/super_admin tem permissão
+    // is_also_admin NÃO deve dar acesso a gerenciamento de instâncias para prevenir propagação indevida
+    const isAdmin = userData.role === "admin" || userData.role === "super_admin";
     
     // Block non-admins from admin-only actions
     if (isAdminAction && !isAdmin) {
@@ -1305,45 +1307,59 @@ serve(async (req) => {
           const instanceToken = targetInstance.token || "";
           const isConnected = targetInstance.status === "connected";
           
-          // Check if instance is already linked to ANY sector (within this account)
-          const { data: existingLinkData } = await supabase
+          // CRITICAL FIX: Buscar TODAS as integrações com este instance_name (não usar maybeSingle)
+          // Isso previne duplicatas quando múltiplas integrações existem com o mesmo nome
+          const { data: existingLinks, error: existingLinksError } = await supabase
             .from("integrations")
             .select("id, sector_id, display_name, pin_hash")
             .eq("account_id", accountId)
             .eq("type", "whatsapp")
-            .ilike("config->>instance_name", targetInstanceName)
-            .maybeSingle();
+            .ilike("config->>instance_name", targetInstanceName);
           
-          let previousSectorId: string | null = null;
-          let isMove = false;
-          
-          if (existingLinkData) {
-            // Instance is already linked to a sector
-            if (existingLinkData.sector_id === sector_id) {
-              // Already in this sector - nothing to do
-              return new Response(
-                JSON.stringify({ error: "Instância já está vinculada a este setor" }),
-                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
-            }
-            
-            // Move operation: DELETE old integration first
-            previousSectorId = existingLinkData.sector_id;
-            isMove = true;
-            console.log(`Moving instance from sector ${previousSectorId} to ${sector_id}`);
-            
-            const { error: deleteError } = await supabase
-              .from("integrations")
-              .delete()
-              .eq("id", existingLinkData.id);
-            
-            if (deleteError) {
-              console.error("Failed to delete old integration:", deleteError.message);
-              throw new Error("Falha ao mover instância: " + deleteError.message);
-            }
-            
-            console.log(`Deleted old integration ${existingLinkData.id} from sector ${previousSectorId}`);
+          if (existingLinksError) {
+            console.error("Error checking existing links:", existingLinksError.message);
+            throw new Error("Erro ao verificar vínculos existentes: " + existingLinksError.message);
           }
+          
+          console.log(`[SECURITY] Found ${existingLinks?.length || 0} existing links for instance ${targetInstanceName}`);
+          
+          // Verificar se já existe neste setor específico
+          const existingInThisSector = existingLinks?.find(l => l.sector_id === sector_id);
+          if (existingInThisSector) {
+            return new Response(
+              JSON.stringify({ error: "Instância já está vinculada a este setor" }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          // CRITICAL: BLOQUEAR duplicação - NÃO permitir mesma instância em múltiplos setores
+          // Uma instância SÓ pode existir em UM setor por vez
+          // Se já existe em outro setor, deve ser REMOVIDA primeiro (não mover automaticamente)
+          if (existingLinks && existingLinks.length > 0) {
+            const linkedSectors = existingLinks.map(l => l.sector_id).filter(Boolean);
+            const sectorNames = linkedSectors.map(s => {
+              const names: Record<string, string> = {
+                operacoes: "Operações",
+                financeiro: "Finanças", 
+                vendas: "Vendas",
+                diretoria: "Diretoria"
+              };
+              return names[s as string] || s;
+            });
+            
+            console.log(`[SECURITY] BLOCKED: Instance ${targetInstanceName} is already linked to sectors: ${linkedSectors.join(", ")}`);
+            
+            return new Response(
+              JSON.stringify({ 
+                error: `Esta instância já está vinculada ao setor "${sectorNames.join(", ")}". Remova-a desse setor antes de adicionar a outro.`,
+                linked_sectors: linkedSectors
+              }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          // Se chegou aqui, a instância NÃO está vinculada a nenhum setor - pode adicionar
+          console.log(`[SECURITY] OK: Instance ${targetInstanceName} is not linked to any sector, proceeding to add to ${sector_id}`);
           
           // Hash the PIN if provided (simple hash for now - can be replaced with bcrypt)
           let pinHash: string | null = null;
