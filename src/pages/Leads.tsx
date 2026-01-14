@@ -68,6 +68,7 @@ import {
   DollarSign,
   ChevronRight,
   Upload,
+  GitMerge,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -78,6 +79,8 @@ import { LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type Field
 import { CustomField } from "@/components/custom-fields";
 import { LeadImportPreview, ImportLeadRow, ExistingLeadInfo, DuplicateMatchType } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
+import { MergeLeadDialog, MergedLeadData } from "@/components/leads/MergeLeadDialog";
+import { useLeadMerge } from "@/hooks/useLeadMerge";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -133,9 +136,11 @@ export default function Leads() {
     updateLead,
     deleteLead,
     markAsConvertedToDeal,
+    refetch: refetchLeads,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
+  const { mergeLeads } = useLeadMerge();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
@@ -144,6 +149,10 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
+  
+  // Merge lead state
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [leadToMerge, setLeadToMerge] = useState<Lead | null>(null);
   
   // Import state
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
@@ -1288,6 +1297,14 @@ export default function Leads() {
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setLeadToMerge(lead);
+                                setMergeDialogOpen(true);
+                              }}>
+                                <GitMerge className="h-4 w-4 mr-2" />
+                                Mesclar
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive"
                                 onClick={(e) => {
@@ -1761,6 +1778,25 @@ export default function Leads() {
       {/* Dialogs for WhatsApp instance selection and PIN */}
       {InstanceSelectorDialog}
       {PinDialog}
+
+      {/* Merge Lead Dialog */}
+      {leadToMerge && (
+        <MergeLeadDialog
+          open={mergeDialogOpen}
+          onOpenChange={(open) => {
+            setMergeDialogOpen(open);
+            if (!open) setLeadToMerge(null);
+          }}
+          sourceLead={leadToMerge}
+          leads={leads}
+          onMerge={async (sourceId, targetId, mergedData) => {
+            const success = await mergeLeads(sourceId, targetId, mergedData);
+            if (success) {
+              await refetchLeads();
+            }
+          }}
+        />
+      )}
     </>
   );
 }
