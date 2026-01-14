@@ -54,7 +54,7 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
 
       if (error) throw error;
       
-      const instancesList = (data?.instances || []) as SectorInstance[];
+      const instancesList = (data?.data?.instances || data?.instances || []) as SectorInstance[];
       console.log("Loaded sector instances:", instancesList);
       
       // Group instances by sector_id
