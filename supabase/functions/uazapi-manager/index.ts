@@ -1391,7 +1391,6 @@ serve(async (req) => {
                 phone_number: targetInstance.owner || "",
                 profile_name: targetInstance.profileName || "",
                 profile_pic_url: targetInstance.profilePicUrl || "",
-                moved_from_sector: previousSectorId, // Track move history
               },
             })
             .select()
@@ -1405,19 +1404,16 @@ serve(async (req) => {
             await configureWebhook(instanceToken, targetInstanceName, supabaseUrl);
           }
           
-          const actionVerb = isMove ? "moved" : "added";
           result = {
-            message: `Instance ${targetInstanceName} ${actionVerb} to sector ${sector_id}`,
+            message: `Instance ${targetInstanceName} added to sector ${sector_id}`,
             integration_id: newIntegration?.id,
             instance_name: targetInstanceName,
             status: isConnected ? "connected" : "disconnected",
             profile_name: targetInstance.profileName || "",
             has_pin: !!pinHash,
-            was_moved: isMove,
-            previous_sector: previousSectorId,
           };
           
-          console.log(`Successfully ${actionVerb} ${targetInstanceName} to sector ${sector_id}`);
+          console.log(`Successfully added ${targetInstanceName} to sector ${sector_id}`);
           
           // Audit and notify other admins about this change
           await logWhatsAppChangeAndNotify(
@@ -1425,7 +1421,7 @@ serve(async (req) => {
             accountId,
             userData.id,
             userData.name || "Admin",
-            isMove ? "move_instance_to_sector" : "add_instance_to_sector",
+            "add_instance_to_sector",
             sector_id || null,
             targetInstanceName,
             targetInstance.owner || ""
