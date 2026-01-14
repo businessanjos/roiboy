@@ -19,9 +19,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Loader2, Phone, Wifi, WifiOff } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Phone, Wifi, WifiOff, ArrowRightLeft, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+// Sector name mapping for display
+const SECTOR_NAMES: Record<string, string> = {
+  operacoes: "Operações",
+  financeiro: "Finanças",
+  vendas: "Vendas",
+  diretoria: "Diretoria",
+};
 
 interface UazapiInstance {
   name: string;
@@ -82,14 +91,13 @@ export function AddInstanceDialog({
       console.log("[AddInstanceDialog] Raw instances from API:", allInstances.length);
       console.log("[AddInstanceDialog] Existing instances in sector:", existingInstanceNames);
 
-      // Filter to show only instances NOT linked to ANY sector (available for linking)
-      // Also exclude instances already in this sector
+      // Show ALL instances EXCEPT those already in THIS sector
+      // Instances linked to OTHER sectors will be shown with indication
       const instances = allInstances.filter(
         (inst: UazapiInstance) => {
-          const isNotLinked = inst.linked_sector_id === null;
           const isNotInThisSector = !existingInstanceNames.includes(inst.name);
-          console.log(`[AddInstanceDialog] Instance ${inst.name}: linked_sector_id=${inst.linked_sector_id}, isNotLinked=${isNotLinked}, isNotInThisSector=${isNotInThisSector}`);
-          return isNotLinked && isNotInThisSector;
+          console.log(`[AddInstanceDialog] Instance ${inst.name}: linked_sector_id=${inst.linked_sector_id}, isNotInThisSector=${isNotInThisSector}`);
+          return isNotInThisSector;
         }
       );
       
@@ -101,6 +109,12 @@ export function AddInstanceDialog({
     } finally {
       setLoadingInstances(false);
     }
+  };
+
+  // Get display name for a sector
+  const getSectorDisplayName = (sectorId: string | null): string => {
+    if (!sectorId) return "Desconhecido";
+    return SECTOR_NAMES[sectorId] || sectorId;
   };
 
   const handleSubmit = async () => {
@@ -148,14 +162,21 @@ export function AddInstanceDialog({
   };
 
   const selectedInstanceData = availableInstances.find(i => i.name === selectedInstance);
+  
+  // Check if selected instance is linked to another sector
+  const isLinkedToOtherSector = selectedInstanceData && 
+    selectedInstanceData.linked_sector_id !== null && 
+    selectedInstanceData.linked_sector_id !== sectorId;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adicionar Instância ao Setor</DialogTitle>
+          <DialogTitle>
+            {isLinkedToOtherSector ? "Mover Instância para Setor" : "Adicionar Instância ao Setor"}
+          </DialogTitle>
           <DialogDescription>
-            Selecione uma instância UAZAPI para adicionar ao setor <strong>{sectorName}</strong>
+            Selecione uma instância UAZAPI para {isLinkedToOtherSector ? "mover para" : "adicionar ao"} setor <strong>{sectorName}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -179,25 +200,50 @@ export function AddInstanceDialog({
                   <SelectValue placeholder="Selecione uma instância..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableInstances.map((instance) => (
-                    <SelectItem key={instance.name} value={instance.name}>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          instance.status === "connected" ? "bg-green-500" : "bg-red-500"
-                        }`} />
-                        <span>{instance.profileName || instance.name}</span>
-                        {instance.owner && (
-                          <span className="text-xs text-muted-foreground">
-                            ({instance.owner.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, "+$1 $2 $3-$4")})
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {availableInstances.map((instance) => {
+                    const isLinked = instance.linked_sector_id !== null;
+                    const linkedSectorName = isLinked ? getSectorDisplayName(instance.linked_sector_id) : null;
+                    
+                    return (
+                      <SelectItem key={instance.name} value={instance.name}>
+                        <div className="flex items-center gap-2 w-full">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            instance.status === "connected" ? "bg-green-500" : "bg-red-500"
+                          }`} />
+                          <span className="truncate">{instance.profileName || instance.name}</span>
+                          {instance.owner && (
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              ({instance.owner.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, "+$1 $2 $3-$4")})
+                            </span>
+                          )}
+                          {isLinked ? (
+                            <span className="ml-auto flex items-center gap-1 text-xs text-amber-600 flex-shrink-0">
+                              <ArrowRightLeft className="h-3 w-3" />
+                              {linkedSectorName}
+                            </span>
+                          ) : (
+                            <span className="ml-auto text-xs text-green-600 flex-shrink-0">✓ Disponível</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             )}
           </div>
+
+          {/* Warning for instances linked to other sectors */}
+          {isLinkedToOtherSector && (
+            <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200">
+                Esta instância está atualmente vinculada ao setor <strong>"{getSectorDisplayName(selectedInstanceData.linked_sector_id)}"</strong>.
+                <br />
+                Ao confirmar, ela será <strong>MOVIDA</strong> para "{sectorName}".
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Selected instance preview */}
           {selectedInstanceData && (
@@ -269,9 +315,16 @@ export function AddInstanceDialog({
           <Button variant="outline" onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !selectedInstance}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || !selectedInstance}
+            variant={isLinkedToOtherSector ? "default" : "default"}
+            className={isLinkedToOtherSector ? "bg-amber-600 hover:bg-amber-700" : ""}
+          >
             {loading ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Adicionando...</>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {isLinkedToOtherSector ? "Movendo..." : "Adicionando..."}</>
+            ) : isLinkedToOtherSector ? (
+              <><ArrowRightLeft className="h-4 w-4 mr-2" /> Mover para este setor</>
             ) : (
               "Adicionar"
             )}

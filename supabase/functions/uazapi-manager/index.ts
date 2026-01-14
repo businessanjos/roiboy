@@ -1261,7 +1261,7 @@ serve(async (req) => {
       }
 
       case "add_instance_to_sector": {
-        // Add an instance to a sector - allows multiple instances per sector
+        // Add an instance to a sector - or MOVE if already linked to another sector
         const targetInstanceName = payload.instance_name;
         const displayName = payload.display_name;
         const pin = payload.pin;
@@ -1280,7 +1280,7 @@ serve(async (req) => {
           );
         }
         
-        console.log(`Adding instance ${targetInstanceName} to sector ${sector_id}...`);
+        console.log(`Adding/Moving instance ${targetInstanceName} to sector ${sector_id}...`);
         
         try {
           // Get the instance details from UAZAPI
@@ -1305,6 +1305,46 @@ serve(async (req) => {
           const instanceToken = targetInstance.token || "";
           const isConnected = targetInstance.status === "connected";
           
+          // Check if instance is already linked to ANY sector (within this account)
+          const { data: existingLinkData } = await supabase
+            .from("integrations")
+            .select("id, sector_id, display_name, pin_hash")
+            .eq("account_id", accountId)
+            .eq("type", "whatsapp")
+            .ilike("config->>instance_name", targetInstanceName)
+            .maybeSingle();
+          
+          let previousSectorId: string | null = null;
+          let isMove = false;
+          
+          if (existingLinkData) {
+            // Instance is already linked to a sector
+            if (existingLinkData.sector_id === sector_id) {
+              // Already in this sector - nothing to do
+              return new Response(
+                JSON.stringify({ error: "Instância já está vinculada a este setor" }),
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+            
+            // Move operation: DELETE old integration first
+            previousSectorId = existingLinkData.sector_id;
+            isMove = true;
+            console.log(`Moving instance from sector ${previousSectorId} to ${sector_id}`);
+            
+            const { error: deleteError } = await supabase
+              .from("integrations")
+              .delete()
+              .eq("id", existingLinkData.id);
+            
+            if (deleteError) {
+              console.error("Failed to delete old integration:", deleteError.message);
+              throw new Error("Falha ao mover instância: " + deleteError.message);
+            }
+            
+            console.log(`Deleted old integration ${existingLinkData.id} from sector ${previousSectorId}`);
+          }
+          
           // Hash the PIN if provided (simple hash for now - can be replaced with bcrypt)
           let pinHash: string | null = null;
           if (pin && pin.length >= 4) {
@@ -1316,7 +1356,7 @@ serve(async (req) => {
             pinHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
           }
           
-          // INSERT new integration (not update - allows multiple per sector)
+          // INSERT new integration
           const { data: newIntegration, error: insertError } = await supabase
             .from("integrations")
             .insert({
@@ -1335,6 +1375,7 @@ serve(async (req) => {
                 phone_number: targetInstance.owner || "",
                 profile_name: targetInstance.profileName || "",
                 profile_pic_url: targetInstance.profilePicUrl || "",
+                moved_from_sector: previousSectorId, // Track move history
               },
             })
             .select()
@@ -1348,16 +1389,19 @@ serve(async (req) => {
             await configureWebhook(instanceToken, targetInstanceName, supabaseUrl);
           }
           
+          const actionVerb = isMove ? "moved" : "added";
           result = {
-            message: `Instance ${targetInstanceName} added to sector ${sector_id}`,
+            message: `Instance ${targetInstanceName} ${actionVerb} to sector ${sector_id}`,
             integration_id: newIntegration?.id,
             instance_name: targetInstanceName,
             status: isConnected ? "connected" : "disconnected",
             profile_name: targetInstance.profileName || "",
             has_pin: !!pinHash,
+            was_moved: isMove,
+            previous_sector: previousSectorId,
           };
           
-          console.log(`Successfully added ${targetInstanceName} to sector ${sector_id}`);
+          console.log(`Successfully ${actionVerb} ${targetInstanceName} to sector ${sector_id}`);
           
           // Audit and notify other admins about this change
           await logWhatsAppChangeAndNotify(
@@ -1365,13 +1409,13 @@ serve(async (req) => {
             accountId,
             userData.id,
             userData.name || "Admin",
-            "add_instance_to_sector",
+            isMove ? "move_instance_to_sector" : "add_instance_to_sector",
             sector_id || null,
             targetInstanceName,
             targetInstance.owner || ""
           );
         } catch (err) {
-          console.error("Failed to add instance to sector:", (err as Error).message);
+          console.error("Failed to add/move instance to sector:", (err as Error).message);
           return new Response(
             JSON.stringify({ error: (err as Error).message }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
