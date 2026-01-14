@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +17,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2, MessageSquare, Trash2, Link2, ShieldAlert } from "lucide-react";
+import { Loader2, MessageSquare, Link2, Link2Off, RefreshCw, ShieldAlert, Smartphone, WifiOff, Wifi, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sectors, SectorId } from "@/config/sectors";
@@ -34,7 +33,12 @@ interface UazapiInstance {
   status: string;
   owner: string;
   profileName: string;
+  profilePicUrl?: string;
   hasToken: boolean;
+  // Linking properties
+  linked_sector_id: string | null;
+  linked_integration_id: string | null;
+  linked_status: string | null;
 }
 
 interface WhatsAppSectorManagerProps {
@@ -53,30 +57,31 @@ const WHATSAPP_SECTORS: { id: SectorId; name: string; description: string; color
 export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: WhatsAppSectorManagerProps) {
   const { isAdmin } = usePermissions();
   const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [selectedSector, setSelectedSector] = useState<SectorId | "">("");
-  const [availableInstances, setAvailableInstances] = useState<UazapiInstance[]>([]);
-  const [selectedInstance, setSelectedInstance] = useState<string>("");
-  const [linkingSectorId, setLinkingSectorId] = useState<string>("");
   const [loadingInstances, setLoadingInstances] = useState(false);
+  const [instances, setInstances] = useState<UazapiInstance[]>([]);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [selectedInstance, setSelectedInstance] = useState<UazapiInstance | null>(null);
+  const [selectedSector, setSelectedSector] = useState<SectorId | "">("");
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
 
-  // Filter WhatsApp integrations with sector
-  const whatsappIntegrations = integrations.filter(
-    (i) => (i.type as string) === "whatsapp"
-  );
+  // Fetch instances on mount
+  useEffect(() => {
+    fetchInstances();
+  }, []);
 
-  // Get sectors that already have a WhatsApp connection
-  const connectedSectors = whatsappIntegrations
-    .map((i) => i.sector_id)
-    .filter(Boolean) as string[];
+  // Get sectors that are already linked to an instance
+  const linkedSectors = useMemo(() => {
+    return instances
+      .filter(i => i.linked_sector_id)
+      .map(i => i.linked_sector_id as string);
+  }, [instances]);
 
-  // Available sectors (not yet connected)
-  const availableSectors = WHATSAPP_SECTORS.filter(
-    (s) => !connectedSectors.includes(s.id)
-  );
+  // Available sectors (not yet linked)
+  const availableSectors = useMemo(() => {
+    return WHATSAPP_SECTORS.filter(s => !linkedSectors.includes(s.id));
+  }, [linkedSectors]);
 
-  const fetchAvailableInstances = async () => {
+  const fetchInstances = async () => {
     setLoadingInstances(true);
     try {
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
@@ -85,48 +90,69 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
 
       if (error) throw error;
       
-      // Handle nested response structure: data.data.instances or data.instances
-      const instances = (data?.data?.instances || data?.instances || []) as UazapiInstance[];
-      console.log("Available instances:", instances);
-      setAvailableInstances(instances);
+      const instancesList = (data?.data?.instances || data?.instances || []) as UazapiInstance[];
+      console.log("Loaded instances with linking info:", instancesList);
+      setInstances(instancesList);
     } catch (error) {
       console.error("Error fetching instances:", error);
-      toast.error("Erro ao buscar instâncias disponíveis");
+      toast.error("Erro ao buscar instâncias da UAZAPI");
     } finally {
       setLoadingInstances(false);
     }
   };
 
-  const handleOpenLinkDialog = (sectorId: string) => {
-    setLinkingSectorId(sectorId);
-    setSelectedInstance("");
+  const handleOpenLinkDialog = (instance: UazapiInstance) => {
+    setSelectedInstance(instance);
+    setSelectedSector("");
     setLinkDialogOpen(true);
-    fetchAvailableInstances();
   };
 
   const handleLinkInstance = async () => {
-    if (!selectedInstance || !linkingSectorId) {
-      toast.error("Selecione uma instância");
+    if (!selectedInstance || !selectedSector) {
+      toast.error("Selecione um setor");
       return;
     }
 
     setLoading(true);
 
     try {
+      // First, check if there's an existing integration for this sector
+      // If not, we need to create one first
+      const existingIntegration = integrations.find(
+        i => (i.type as string) === "whatsapp" && i.sector_id === selectedSector
+      );
+
+      if (!existingIntegration && accountId) {
+        // Create the integration first
+        const { error: createError } = await supabase.from("integrations").insert({
+          account_id: accountId,
+          type: "whatsapp" as any,
+          status: "disconnected",
+          sector_id: selectedSector,
+          config: {
+            sector_name: WHATSAPP_SECTORS.find(s => s.id === selectedSector)?.name,
+          },
+        });
+
+        if (createError) throw createError;
+      }
+
+      // Now link the instance
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
         body: { 
           action: "link_instance",
-          instance_name: selectedInstance,
-          sector_id: linkingSectorId,
+          instance_name: selectedInstance.name,
+          sector_id: selectedSector,
         },
       });
 
       if (error) throw error;
 
-      toast.success(`Instância ${selectedInstance} vinculada com sucesso!`);
+      toast.success(`Instância ${selectedInstance.profileName || selectedInstance.name} vinculada com sucesso!`);
       setLinkDialogOpen(false);
-      setSelectedInstance("");
-      setLinkingSectorId("");
+      setSelectedInstance(null);
+      setSelectedSector("");
+      fetchInstances();
       onRefresh();
     } catch (error: any) {
       console.error("Error linking instance:", error);
@@ -136,63 +162,77 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
     }
   };
 
-  const handleCreateConnection = async () => {
-    if (!selectedSector || !accountId) {
-      toast.error("Selecione um setor");
+  const handleUnlinkInstance = async (instance: UazapiInstance) => {
+    if (!instance.linked_integration_id) {
+      toast.error("Instância não está vinculada");
       return;
     }
 
-    setLoading(true);
+    if (!confirm(`Tem certeza que deseja desvincular ${instance.profileName || instance.name}?`)) {
+      return;
+    }
+
+    setActionInProgress(instance.name);
 
     try {
-      // Create a new WhatsApp integration for this sector
-      const { error } = await supabase.from("integrations").insert({
-        account_id: accountId,
-        type: "whatsapp" as any,
-        status: "disconnected",
-        sector_id: selectedSector,
-        config: {
-          sector_name: WHATSAPP_SECTORS.find((s) => s.id === selectedSector)?.name,
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { 
+          action: "unlink_instance",
+          integration_id: instance.linked_integration_id,
         },
       });
 
       if (error) throw error;
 
-      toast.success(`Conexão WhatsApp para ${WHATSAPP_SECTORS.find((s) => s.id === selectedSector)?.name} criada!`);
-      setDialogOpen(false);
-      setSelectedSector("");
+      toast.success(`Instância ${instance.profileName || instance.name} desvinculada com sucesso!`);
+      fetchInstances();
       onRefresh();
     } catch (error: any) {
-      console.error("Error creating WhatsApp connection:", error);
-      toast.error(error.message || "Erro ao criar conexão");
+      console.error("Error unlinking instance:", error);
+      toast.error(error.message || "Erro ao desvincular instância");
     } finally {
-      setLoading(false);
+      setActionInProgress(null);
     }
   };
 
-  const handleDeleteConnection = async (integrationId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta conexão?")) return;
+  const getSectorInfo = (sectorId: string | null) => {
+    if (!sectorId) return null;
+    return WHATSAPP_SECTORS.find(s => s.id === sectorId);
+  };
 
-    try {
-      const { error } = await supabase
-        .from("integrations")
-        .delete()
-        .eq("id", integrationId);
-
-      if (error) throw error;
-
-      toast.success("Conexão excluída");
-      onRefresh();
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao excluir conexão");
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "connected":
+        return <Wifi className="h-4 w-4 text-green-500" />;
+      case "disconnected":
+        return <WifiOff className="h-4 w-4 text-destructive" />;
+      default:
+        return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />;
     }
   };
 
-  const getConnectionStatus = (integration: Integration) => {
-    const config = integration.config as Record<string, unknown> | null;
-    const connectionState = config?.connection_state as string | undefined;
-    const isConnected = integration.status === "connected" || connectionState === "open";
-    return isConnected;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "connected":
+        return (
+          <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+            Conectado
+          </Badge>
+        );
+      case "disconnected":
+        return (
+          <Badge variant="outline" className="text-destructive border-destructive/20">
+            Desconectado
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary">
+            {status}
+          </Badge>
+        );
+    }
   };
 
   return (
@@ -206,63 +246,19 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
             <div>
               <CardTitle>WhatsApp por Setor</CardTitle>
               <CardDescription>
-                Configure um número de WhatsApp diferente para cada setor
+                Vincule suas instâncias da UAZAPI aos setores do ROY APP
               </CardDescription>
             </div>
           </div>
-          {isAdmin && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" disabled={availableSectors.length === 0}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Conexão
-                </Button>
-              </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nova Conexão WhatsApp</DialogTitle>
-                <DialogDescription>
-                  Escolha qual setor terá esta conexão de WhatsApp
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Setor</Label>
-                  <Select
-                    value={selectedSector}
-                    onValueChange={(value) => setSelectedSector(value as SectorId)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o setor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSectors.map((sector) => (
-                        <SelectItem key={sector.id} value={sector.id}>
-                          <div className="flex flex-col">
-                            <span className={sector.color}>{sector.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {sector.description}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleCreateConnection} disabled={loading || !selectedSector}>
-                    {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Criar Conexão
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchInstances}
+            disabled={loadingInstances}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loadingInstances ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -275,78 +271,116 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
             </AlertDescription>
           </Alert>
         )}
-        {whatsappIntegrations.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">Nenhuma conexão WhatsApp configurada</p>
-            <p className="text-sm">Clique em "Nova Conexão" para adicionar</p>
+
+        {loadingInstances ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Carregando instâncias...</p>
+            </div>
+          </div>
+        ) : instances.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Smartphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Nenhuma instância encontrada na UAZAPI</p>
+            <p className="text-sm mt-1">Crie uma instância no painel da UAZAPI primeiro</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {whatsappIntegrations.map((integration) => {
-              const sectorInfo = WHATSAPP_SECTORS.find(
-                (s) => s.id === integration.sector_id
-              );
-              const isConnected = getConnectionStatus(integration);
-              const config = integration.config as Record<string, unknown> | null;
-              const phoneNumber = config?.owner as string | undefined;
-              const instanceName = config?.instance_name as string | undefined;
-              const profileName = config?.profileName as string | undefined;
+            {instances.map((instance) => {
+              const sectorInfo = getSectorInfo(instance.linked_sector_id);
+              const isLinked = !!instance.linked_sector_id;
+              const isActionLoading = actionInProgress === instance.name;
 
               return (
                 <div
-                  key={integration.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card"
+                  key={instance.name}
+                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        isConnected ? "bg-green-500/10" : "bg-muted"
-                      }`}
-                    >
-                      <MessageSquare
-                        className={`h-5 w-5 ${
-                          isConnected ? "text-green-500" : "text-muted-foreground"
-                        }`}
-                      />
+                  <div className="flex items-center gap-4">
+                    {/* Profile picture or icon */}
+                    <div className="relative">
+                      {instance.profilePicUrl ? (
+                        <img 
+                          src={instance.profilePicUrl} 
+                          alt={instance.profileName || instance.name}
+                          className="h-12 w-12 rounded-full object-cover border-2 border-background"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                          <User className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      {/* Status indicator */}
+                      <div className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background flex items-center justify-center ${
+                        instance.status === 'connected' ? 'bg-green-500' : 'bg-muted'
+                      }`}>
+                        {instance.status === 'connected' ? (
+                          <span className="h-2 w-2 rounded-full bg-white" />
+                        ) : (
+                          <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+                        )}
+                      </div>
                     </div>
+
+                    {/* Instance info */}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium ${sectorInfo?.color || ""}`}>
-                          {sectorInfo?.name || "Setor não definido"}
+                        <span className="font-medium">
+                          {instance.profileName || instance.name}
                         </span>
-                        <Badge
-                          variant={isConnected ? "default" : "outline"}
-                          className="text-xs"
-                        >
-                          {isConnected ? "Conectado" : "Desconectado"}
-                        </Badge>
+                        {getStatusBadge(instance.status)}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {profileName || instanceName || phoneNumber || sectorInfo?.description || "Configure a conexão"}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {instance.owner && (
+                          <span className="text-xs text-muted-foreground">
+                            {instance.owner}
+                          </span>
+                        )}
+                        {isLinked && sectorInfo && (
+                          <>
+                            <span className="text-xs text-muted-foreground">•</span>
+                            <Badge variant="secondary" className={`text-xs ${sectorInfo.color}`}>
+                              <Link2 className="h-3 w-3 mr-1" />
+                              {sectorInfo.name}
+                            </Badge>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Actions */}
                   {isAdmin && (
                     <div className="flex items-center gap-2">
-                      {!isConnected && (
+                      {isLinked ? (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleOpenLinkDialog(integration.sector_id || "")}
+                          onClick={() => handleUnlinkInstance(instance)}
+                          disabled={isActionLoading}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          {isActionLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Link2Off className="h-4 w-4 mr-2" />
+                              Desvincular
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenLinkDialog(instance)}
+                          disabled={availableSectors.length === 0}
                         >
                           <Link2 className="h-4 w-4 mr-2" />
-                          Vincular
+                          Vincular a setor
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteConnection(integration.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   )}
                 </div>
@@ -355,66 +389,77 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
           </div>
         )}
 
-        {availableSectors.length > 0 && whatsappIntegrations.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-4 text-center">
-            {availableSectors.length} setor(es) disponível(eis) para nova conexão
+        {/* Info text */}
+        <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-muted">
+          <p className="text-xs text-muted-foreground">
+            💡 As instâncias são gerenciadas no painel da UAZAPI. 
+            Aqui você apenas vincula cada instância ao setor correspondente no ROY APP.
           </p>
-        )}
+        </div>
       </CardContent>
 
-      {/* Dialog for linking existing instance */}
+      {/* Dialog for linking instance to sector */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Vincular Instância Existente</DialogTitle>
+            <DialogTitle>Vincular Instância a Setor</DialogTitle>
             <DialogDescription>
-              Escolha uma instância da UAZAPI para vincular a este setor
+              Escolha qual setor do ROY APP receberá as mensagens desta instância
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            {loadingInstances ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            {selectedInstance && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+                {selectedInstance.profilePicUrl ? (
+                  <img 
+                    src={selectedInstance.profilePicUrl} 
+                    alt={selectedInstance.profileName || selectedInstance.name}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium">{selectedInstance.profileName || selectedInstance.name}</p>
+                  {selectedInstance.owner && (
+                    <p className="text-xs text-muted-foreground">{selectedInstance.owner}</p>
+                  )}
+                </div>
+                {getStatusBadge(selectedInstance.status)}
               </div>
-            ) : availableInstances.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Nenhuma instância disponível na UAZAPI</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label>Instância</Label>
+            )}
+
+            <div className="space-y-2">
+              <Label>Setor</Label>
+              {availableSectors.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  Todos os setores já estão vinculados a outras instâncias.
+                </p>
+              ) : (
                 <Select
-                  value={selectedInstance}
-                  onValueChange={setSelectedInstance}
+                  value={selectedSector}
+                  onValueChange={(value) => setSelectedSector(value as SectorId)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma instância" />
+                    <SelectValue placeholder="Selecione o setor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableInstances.map((instance) => (
-                      <SelectItem key={instance.name} value={instance.name}>
+                    {availableSectors.map((sector) => (
+                      <SelectItem key={sector.id} value={sector.id}>
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span>{instance.profileName || instance.name}</span>
-                            <Badge 
-                              variant={instance.status === "connected" ? "default" : "outline"}
-                              className="text-xs"
-                            >
-                              {instance.status}
-                            </Badge>
-                          </div>
-                          {instance.owner && (
-                            <span className="text-xs text-muted-foreground">
-                              {instance.owner}
-                            </span>
-                          )}
+                          <span className={sector.color}>{sector.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {sector.description}
+                          </span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
@@ -422,7 +467,7 @@ export function WhatsAppSectorManager({ integrations, accountId, onRefresh }: Wh
               </Button>
               <Button 
                 onClick={handleLinkInstance} 
-                disabled={loading || !selectedInstance || loadingInstances}
+                disabled={loading || !selectedSector || availableSectors.length === 0}
               >
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Vincular Instância
