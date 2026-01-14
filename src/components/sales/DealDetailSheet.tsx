@@ -306,6 +306,7 @@ export function DealDetailSheet({
               case "multi_select":
               case "user":
               case "location":
+              case "multi_instagram":
                 valuesMap[v.field_id] = v.value_json;
                 break;
             }

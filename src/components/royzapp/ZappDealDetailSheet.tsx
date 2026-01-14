@@ -300,7 +300,8 @@ export function ZappDealDetailSheet({
       case "date": return fv.value_date;
       case "multi_select":
       case "user":
-      case "location": return fv.value_json;
+      case "location":
+      case "multi_instagram": return fv.value_json;
       default: return fv.value_text;
     }
   };
