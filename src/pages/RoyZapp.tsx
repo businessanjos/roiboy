@@ -302,7 +302,7 @@ export default function RoyZapp() {
         zappConvId = newConv.id;
       }
       
-      // Create assignment for current agent
+      // Create assignment for current agent with assigned_at to mark official assignment
       const { error: assignError } = await supabase
         .from("zapp_conversation_assignments")
         .insert({
@@ -311,6 +311,7 @@ export default function RoyZapp() {
           agent_id: currentAgent.id,
           status: "active",
           department_id: currentSectorDepartmentId, // Associate with sector's department
+          assigned_at: new Date().toISOString(), // Mark as officially assigned
         });
       
       if (assignError) throw assignError;
@@ -2490,7 +2491,7 @@ export default function RoyZapp() {
         zappConvId = newConv.id;
       }
       
-      // Create assignment for current agent
+      // Create assignment for current agent with assigned_at to mark official assignment
       const { error: assignError } = await supabase
         .from("zapp_conversation_assignments")
         .insert({
@@ -2499,6 +2500,7 @@ export default function RoyZapp() {
           agent_id: currentAgent.id,
           status: "active",
           department_id: currentSectorDepartmentId, // Associate with sector's department
+          assigned_at: new Date().toISOString(), // Mark as officially assigned
         });
       
       if (assignError) throw assignError;
