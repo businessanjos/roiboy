@@ -163,7 +163,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
           agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
           department:zapp_departments(*),
           conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url), lead:leads(id, full_name, phone, email, status))
+          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, sector_id, integration_id, client:clients(id, full_name, phone_e164, avatar_url), lead:leads(id, full_name, phone, email, status))
         `)
         .eq("account_id", currentUser.account_id)
         .eq("department_id", dept.id) // CRITICAL: Filter by department
@@ -315,7 +315,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
           agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
           department:zapp_departments(*),
           conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url)),
-          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, client:clients(id, full_name, phone_e164, avatar_url), lead:leads(id, full_name, phone, email, status))
+          zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, sector_id, integration_id, client:clients(id, full_name, phone_e164, avatar_url), lead:leads(id, full_name, phone, email, status))
         `)
         .eq("account_id", currentUser.account_id)
         .order("updated_at", { ascending: false })
@@ -782,7 +782,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     };
   }, [currentUser?.account_id, debouncedFetchAssignments, fetchAssignmentsOnly]);
 
-  // CRITICAL: Extra security layer - filter assignments by sector
+  // CRITICAL: Extra security layer - filter assignments by sector AND integration
   // Data should already be filtered at query level, but this is a safety check
   const filteredAssignments = useMemo(() => {
     // CRITICAL: If no sector selected, return EMPTY array - never return all data
@@ -802,14 +802,30 @@ export function useZappData(options: UseZappDataOptions = {}) {
     
     // Double-check: Only return assignments that belong to this department
     // This is a safety net in case data somehow got through without proper filtering
-    const filtered = assignments.filter(a => a.department_id === sectorDepartment.id);
+    let filtered = assignments.filter(a => a.department_id === sectorDepartment.id);
     
     if (filtered.length !== assignments.length) {
       console.warn(`[ZappData] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
     }
     
+    // CRITICAL: If integrationId is specified, further filter by conversation's integration_id
+    // This ensures multi-instance isolation within the same sector
+    if (integrationId) {
+      const beforeCount = filtered.length;
+      filtered = filtered.filter(a => {
+        // Access integration_id via type assertion since it's queried but not in static type
+        const zappConv = a.zapp_conversation as { integration_id?: string } | null;
+        const convIntegrationId = zappConv?.integration_id;
+        return convIntegrationId === integrationId;
+      });
+      
+      if (filtered.length !== beforeCount) {
+        console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length} assignments for integration ${integrationId} (from ${beforeCount})`);
+      }
+    }
+    
     return filtered;
-  }, [assignments, departments, sectorId]);
+  }, [assignments, departments, sectorId, integrationId]);
 
   return {
     // Data
