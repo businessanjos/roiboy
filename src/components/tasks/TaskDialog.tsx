@@ -175,13 +175,19 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       setMeetingPlatform(task.meeting_platform || null);
     } else {
       const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
+      
+      // Get current date in YYYY-MM-DD format
+      const now = new Date();
+      const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
       setFormData({
         title: suggestedTitle || "",
         description: "",
         custom_status_id: defaultStatusId,
         priority: "medium",
-        due_date: "",
-        due_time: "",
+        due_date: currentDate,
+        due_time: currentTime,
         client_id: clientId || "",
         deal_id: dealId || "",
         lead_id: leadId || "",
