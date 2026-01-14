@@ -6,7 +6,7 @@ export interface DealCustomField {
   id: string;
   account_id?: string;
   name: string;
-  field_type: "text" | "number" | "currency" | "date" | "boolean" | "select" | "multi_select" | "user" | "instagram" | "location";
+  field_type: "text" | "number" | "currency" | "date" | "boolean" | "select" | "multi_select" | "user" | "instagram" | "multi_instagram" | "location";
   options: { value: string; label: string; color: string }[];
   display_order: number;
   is_active: boolean;
@@ -100,6 +100,7 @@ export function useDealCustomFields(dealId?: string) {
             case "multi_select":
             case "user":
             case "location":
+            case "multi_instagram":
               valuesMap[v.field_id] = v.value_json;
               break;
           }
