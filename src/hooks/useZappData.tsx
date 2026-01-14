@@ -49,10 +49,11 @@ const MIN_FETCH_INTERVAL_MS = 3000;
 
 interface UseZappDataOptions {
   sectorId?: SectorId;
+  integrationId?: string;
 }
 
 export function useZappData(options: UseZappDataOptions = {}) {
-  const { sectorId } = options;
+  const { sectorId, integrationId } = options;
   const { currentUser } = useCurrentUser();
   
   // Core data state

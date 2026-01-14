@@ -7947,6 +7947,51 @@ export type Database = {
           },
         ]
       }
+      user_instance_preferences: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          id: string
+          integration_id: string
+          sector_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          id?: string
+          integration_id: string
+          sector_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          id?: string
+          integration_id?: string
+          sector_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_instance_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_instance_preferences_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_integrations: {
         Row: {
           access_token: string
@@ -8786,6 +8831,7 @@ export type Database = {
           external_thread_id: string | null
           group_jid: string | null
           id: string
+          integration_id: string | null
           is_archived: boolean
           is_blocked: boolean
           is_favorite: boolean
@@ -8814,6 +8860,7 @@ export type Database = {
           external_thread_id?: string | null
           group_jid?: string | null
           id?: string
+          integration_id?: string | null
           is_archived?: boolean
           is_blocked?: boolean
           is_favorite?: boolean
@@ -8842,6 +8889,7 @@ export type Database = {
           external_thread_id?: string | null
           group_jid?: string | null
           id?: string
+          integration_id?: string | null
           is_archived?: boolean
           is_blocked?: boolean
           is_favorite?: boolean
@@ -8878,6 +8926,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_conversations_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integrations"
             referencedColumns: ["id"]
           },
           {

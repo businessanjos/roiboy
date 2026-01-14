@@ -15,8 +15,11 @@ import { toast } from "sonner";
 interface ZappPinDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sectorId: string;
-  sectorName: string;
+  // Support both old sector-based and new instance-based verification
+  sectorId?: string;
+  sectorName?: string;
+  integrationId?: string;
+  instanceName?: string;
   onSuccess: () => void;
 }
 
@@ -25,6 +28,8 @@ export function ZappPinDialog({
   onOpenChange,
   sectorId,
   sectorName,
+  integrationId,
+  instanceName,
   onSuccess,
 }: ZappPinDialogProps) {
   const [pin, setPin] = useState("");
@@ -32,6 +37,10 @@ export function ZappPinDialog({
   const [error, setError] = useState<string | null>(null);
   const [attempts, setAttempts] = useState(0);
   const MAX_ATTEMPTS = 3;
+
+  // Determine which mode we're in
+  const isInstanceMode = !!integrationId;
+  const displayName = isInstanceMode ? instanceName : sectorName;
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -52,9 +61,23 @@ export function ZappPinDialog({
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase.functions.invoke("verify-sector-pin", {
-        body: { sector_id: sectorId, pin },
-      });
+      let data, fetchError;
+
+      if (isInstanceMode) {
+        // Verify PIN for specific instance
+        const response = await supabase.functions.invoke("verify-instance-pin", {
+          body: { integration_id: integrationId, pin },
+        });
+        data = response.data;
+        fetchError = response.error;
+      } else {
+        // Legacy: Verify PIN for sector
+        const response = await supabase.functions.invoke("verify-sector-pin", {
+          body: { sector_id: sectorId, pin },
+        });
+        data = response.data;
+        fetchError = response.error;
+      }
 
       if (fetchError) {
         throw fetchError;
@@ -95,7 +118,7 @@ export function ZappPinDialog({
           </div>
           <DialogTitle className="text-center">Acesso Restrito</DialogTitle>
           <DialogDescription className="text-center">
-            Digite o PIN de 6 dígitos para acessar a área da {sectorName}
+            Digite o PIN de 6 dígitos para acessar {isInstanceMode ? "a instância" : "a área da"} <strong>{displayName}</strong>
           </DialogDescription>
         </DialogHeader>
 

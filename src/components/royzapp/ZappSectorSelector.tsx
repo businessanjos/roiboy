@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft, Lock } from "lucide-react";
+import { Loader2, MessageSquare, Wifi, WifiOff, ArrowLeft, Lock, ChevronDown, Check } from "lucide-react";
 import { SectorId, sectors } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -11,9 +11,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ZappPinDialog } from "./dialogs/ZappPinDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Setores que têm WhatsApp configurável
 const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing", "diretoria"];
+
+interface SectorInstance {
+  id: string;
+  status: string;
+  sector_id: string;
+  display_name: string | null;
+  phone_number: string | null;
+  instance_name: string | null;
+  connected: boolean;
+  has_pin: boolean;
+  pin_hash: string | null;
+}
 
 interface WhatsAppSectorStatus {
   sectorId: SectorId;
@@ -21,10 +39,11 @@ interface WhatsAppSectorStatus {
   instanceName: string | null;
   profileName: string | null;
   unreadCount: number;
+  instances: SectorInstance[];
 }
 
 interface ZappSectorSelectorProps {
-  onSelectSector: (sectorId: SectorId) => void;
+  onSelectSector: (sectorId: SectorId, integrationId?: string) => void;
 }
 
 export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) {
@@ -36,11 +55,61 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
   const [sectorStatuses, setSectorStatuses] = useState<WhatsAppSectorStatus[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Estado para PIN do setor Diretoria
+  // User's selected instance per sector (persisted to database)
+  const [selectedInstances, setSelectedInstances] = useState<Partial<Record<SectorId, string>>>({});
+  
+  // Estado para PIN
   const [showPinDialog, setShowPinDialog] = useState(false);
-  const [pendingSectorId, setPendingSectorId] = useState<SectorId | null>(null);
-  const [pinVerifiedSectors, setPinVerifiedSectors] = useState<Set<SectorId>>(new Set());
-  const [sectorPinRequired, setSectorPinRequired] = useState<Record<string, boolean>>({});
+  const [pendingInstance, setPendingInstance] = useState<{ sectorId: SectorId; integrationId: string; instanceName: string } | null>(null);
+  const [pinVerifiedInstances, setPinVerifiedInstances] = useState<Set<string>>(new Set());
+
+  // Buscar preferências do usuário
+  const fetchUserPreferences = async () => {
+    if (!currentUser?.id || !currentUser?.account_id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("user_instance_preferences")
+        .select("sector_id, integration_id")
+        .eq("user_id", currentUser.id)
+        .eq("account_id", currentUser.account_id);
+      
+      if (error) throw error;
+      
+      const prefs: Partial<Record<SectorId, string>> = {};
+      (data || []).forEach((p: any) => {
+        prefs[p.sector_id as SectorId] = p.integration_id;
+      });
+      setSelectedInstances(prefs);
+    } catch (error) {
+      console.error("Error fetching user preferences:", error);
+    }
+  };
+
+  // Salvar preferência do usuário
+  const saveUserPreference = async (sectorId: SectorId, integrationId: string) => {
+    if (!currentUser?.id || !currentUser?.account_id) return;
+    
+    try {
+      const { error } = await supabase
+        .from("user_instance_preferences")
+        .upsert({
+          user_id: currentUser.id,
+          account_id: currentUser.account_id,
+          sector_id: sectorId,
+          integration_id: integrationId,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: "user_id,account_id,sector_id",
+        });
+      
+      if (error) throw error;
+      
+      setSelectedInstances(prev => ({ ...prev, [sectorId]: integrationId }));
+    } catch (error) {
+      console.error("Error saving user preference:", error);
+    }
+  };
 
   // Buscar status de conexão WhatsApp e contagem de mensagens por setor
   useEffect(() => {
@@ -49,10 +118,10 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       
       setLoading(true);
       try {
-        // Buscar integrações WhatsApp por setor
+        // Buscar TODAS as integrações WhatsApp por setor
         const { data: integrations, error } = await supabase
           .from("integrations")
-          .select("sector_id, status, config")
+          .select("id, sector_id, status, config, pin_hash")
           .eq("account_id", currentUser.account_id)
           .eq("type", "whatsapp")
           .in("sector_id", WHATSAPP_SECTOR_IDS);
@@ -83,39 +152,53 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           }
         });
 
+        // Agrupar instâncias por setor
+        const instancesBySector: Record<SectorId, SectorInstance[]> = {} as any;
+        WHATSAPP_SECTOR_IDS.forEach(sid => {
+          instancesBySector[sid] = [];
+        });
+        
+        (integrations || []).forEach((integration: any) => {
+          const sectorId = integration.sector_id as SectorId;
+          const config = integration.config as any;
+          const connected = integration.status === "connected" || !!config?.instance_name;
+          
+          instancesBySector[sectorId].push({
+            id: integration.id,
+            status: integration.status,
+            sector_id: sectorId,
+            display_name: config?.display_name || config?.profile_name || config?.profileName || config?.instance_name || null,
+            phone_number: config?.phone_number || null,
+            instance_name: config?.instance_name || null,
+            connected,
+            has_pin: !!integration.pin_hash || !!config?.pin_hash,
+            pin_hash: integration.pin_hash || config?.pin_hash || null,
+          });
+        });
+
         // Mapear para setores
         const statuses: WhatsAppSectorStatus[] = WHATSAPP_SECTOR_IDS.map(sectorId => {
-          const integration = integrations?.find(i => i.sector_id === sectorId);
+          const instances = instancesBySector[sectorId] || [];
           const dept = departments?.find(d => d.sector_id === sectorId);
           const unreadCount = dept ? (unreadByDept[dept.id] || 0) : 0;
           
-          const config = integration?.config as any;
-          // Considerar conectado se status === "connected" OU se tem instance_name
-          const connected = integration?.status === "connected" || !!config?.instance_name;
+          // A instância "principal" é a primeira conectada ou a primeira da lista
+          const primaryInstance = instances.find(i => i.connected) || instances[0];
           
           return {
             sectorId,
-            connected: !!connected,
-            instanceName: config?.instance_name || null,
-            // PRIORITY: display_name (custom) > profile_name (from API) > profileName (camelCase fallback)
-            profileName: config?.display_name || config?.profile_name || config?.profileName || null,
+            connected: instances.some(i => i.connected),
+            instanceName: primaryInstance?.instance_name || null,
+            profileName: primaryInstance?.display_name || null,
             unreadCount,
+            instances,
           };
         });
 
         setSectorStatuses(statuses);
         
-        // Buscar quais setores têm PIN configurado
-        const { data: sectorSettings } = await supabase
-          .from("sector_settings")
-          .select("sector_id, pin_hash")
-          .in("sector_id", WHATSAPP_SECTOR_IDS);
-        
-        const pinRequired: Record<string, boolean> = {};
-        (sectorSettings || []).forEach((setting: any) => {
-          pinRequired[setting.sector_id] = !!setting.pin_hash;
-        });
-        setSectorPinRequired(pinRequired);
+        // Buscar preferências do usuário
+        await fetchUserPreferences();
         
       } catch (error) {
         console.error("Error fetching sector statuses:", error);
@@ -125,7 +208,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
     };
 
     fetchSectorStatuses();
-  }, [currentUser?.account_id]);
+  }, [currentUser?.account_id, currentUser?.id]);
 
   // Filtrar setores que o usuário tem acesso
   const accessibleSectors = WHATSAPP_SECTOR_IDS.filter(sectorId => {
@@ -142,31 +225,75 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
     return sectorStatuses.find(s => s.sectorId === sectorId);
   };
 
-  // Handler para clique no setor - verifica se precisa de PIN
-  const handleSectorClick = (sectorId: SectorId) => {
-    // Verificar se o setor requer PIN e ainda não foi verificado nesta sessão
-    if (sectorPinRequired[sectorId] && !pinVerifiedSectors.has(sectorId)) {
-      setPendingSectorId(sectorId);
+  // Obter a instância selecionada para um setor
+  const getSelectedInstance = (sectorId: SectorId): SectorInstance | null => {
+    const status = getStatusForSector(sectorId);
+    if (!status || status.instances.length === 0) return null;
+    
+    const selectedId = selectedInstances[sectorId];
+    if (selectedId) {
+      const found = status.instances.find(i => i.id === selectedId);
+      if (found) return found;
+    }
+    
+    // Fallback: primeira instância conectada ou primeira da lista
+    return status.instances.find(i => i.connected) || status.instances[0];
+  };
+
+  // Handler para selecionar instância no dropdown
+  const handleInstanceSelect = (sectorId: SectorId, instance: SectorInstance) => {
+    // Verificar se a instância requer PIN e ainda não foi verificada
+    if (instance.has_pin && !pinVerifiedInstances.has(instance.id)) {
+      setPendingInstance({
+        sectorId,
+        integrationId: instance.id,
+        instanceName: instance.display_name || instance.instance_name || "Instância",
+      });
       setShowPinDialog(true);
       return;
     }
     
-    onSelectSector(sectorId);
+    // Salvar preferência e selecionar
+    saveUserPreference(sectorId, instance.id);
+  };
+
+  // Handler para clique no setor - abre o zAPP com a instância selecionada
+  const handleSectorClick = (sectorId: SectorId) => {
+    const selectedInstance = getSelectedInstance(sectorId);
+    
+    // Se não há instância selecionada ou não há instâncias, apenas abrir o setor
+    if (!selectedInstance) {
+      onSelectSector(sectorId);
+      return;
+    }
+    
+    // Verificar se a instância selecionada requer PIN
+    if (selectedInstance.has_pin && !pinVerifiedInstances.has(selectedInstance.id)) {
+      setPendingInstance({
+        sectorId,
+        integrationId: selectedInstance.id,
+        instanceName: selectedInstance.display_name || selectedInstance.instance_name || "Instância",
+      });
+      setShowPinDialog(true);
+      return;
+    }
+    
+    onSelectSector(sectorId, selectedInstance.id);
   };
 
   // Callback quando o PIN é verificado com sucesso
   const handlePinSuccess = () => {
-    if (pendingSectorId) {
-      // Marcar setor como verificado nesta sessão
-      setPinVerifiedSectors(prev => new Set([...prev, pendingSectorId]));
-      onSelectSector(pendingSectorId);
-      setPendingSectorId(null);
+    if (pendingInstance) {
+      // Marcar instância como verificada nesta sessão
+      setPinVerifiedInstances(prev => new Set([...prev, pendingInstance.integrationId]));
+      
+      // Salvar preferência
+      saveUserPreference(pendingInstance.sectorId, pendingInstance.integrationId);
+      
+      // Abrir o setor
+      onSelectSector(pendingInstance.sectorId, pendingInstance.integrationId);
+      setPendingInstance(null);
     }
-  };
-
-  // Verificar se setor requer PIN (para exibir ícone de cadeado)
-  const sectorRequiresPin = (sectorId: SectorId) => {
-    return sectorPinRequired[sectorId] && !pinVerifiedSectors.has(sectorId);
   };
 
   if (permissionsLoading || accessLoading || loading) {
@@ -216,6 +343,9 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           {accessibleSectors.map(sectorId => {
             const sector = getSectorInfo(sectorId);
             const status = getStatusForSector(sectorId);
+            const selectedInstance = getSelectedInstance(sectorId);
+            const instances = status?.instances || [];
+            const hasMultipleInstances = instances.length > 1;
             
             if (!sector) return null;
             
@@ -225,20 +355,10 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
               <Card
                 key={sectorId}
                 className={cn(
-                  "cursor-pointer transition-all hover:shadow-lg hover:border-primary/50",
+                  "transition-all hover:shadow-lg hover:border-primary/50",
                   "group relative overflow-hidden"
                 )}
-                onClick={() => handleSectorClick(sectorId)}
               >
-                {/* PIN lock badge */}
-                {sectorRequiresPin(sectorId) && (
-                  <div className="absolute top-3 left-3">
-                    <div className="p-1 rounded-full bg-amber-100 dark:bg-amber-900/30">
-                      <Lock className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                    </div>
-                  </div>
-                )}
-                
                 {/* Unread badge */}
                 {status && status.unreadCount > 0 && (
                   <div className="absolute top-3 right-3">
@@ -248,7 +368,10 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                   </div>
                 )}
                 
-                <CardHeader className="pb-2">
+                <CardHeader 
+                  className="pb-2 cursor-pointer"
+                  onClick={() => handleSectorClick(sectorId)}
+                >
                   <div className="flex items-center gap-3">
                     <div className={cn("p-2 rounded-lg", sector.bgColor)}>
                       <Icon className={cn("h-5 w-5", sector.color)} />
@@ -263,9 +386,10 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                 </CardHeader>
                 
                 <CardContent className="pt-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Connection status */}
                     <div className="flex items-center gap-2">
-                      {status?.connected ? (
+                      {selectedInstance?.connected ? (
                         <>
                           <Wifi className="h-4 w-4 text-emerald-500" />
                           <span className="text-xs text-emerald-600 font-medium">Online</span>
@@ -278,10 +402,75 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                       )}
                     </div>
                     
-                    {status?.profileName && (
-                      <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                        {status.profileName}
-                      </span>
+                    {/* Instance selector dropdown */}
+                    {instances.length > 0 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-xs gap-1 max-w-[140px]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {selectedInstance?.has_pin && !pinVerifiedInstances.has(selectedInstance.id) && (
+                              <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                            )}
+                            <span className="truncate">
+                              {selectedInstance?.display_name || selectedInstance?.instance_name || "Selecionar"}
+                            </span>
+                            {hasMultipleInstances && <ChevronDown className="h-3 w-3 shrink-0" />}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        {hasMultipleInstances && (
+                          <DropdownMenuContent align="end" className="w-56">
+                            {instances.map((instance) => {
+                              const isSelected = selectedInstance?.id === instance.id;
+                              const isVerified = pinVerifiedInstances.has(instance.id);
+                              
+                              return (
+                                <DropdownMenuItem
+                                  key={instance.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleInstanceSelect(sectorId, instance);
+                                  }}
+                                  className="flex items-center gap-2"
+                                >
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    {/* Connection indicator */}
+                                    <div className={cn(
+                                      "w-2 h-2 rounded-full shrink-0",
+                                      instance.connected ? "bg-emerald-500" : "bg-muted-foreground"
+                                    )} />
+                                    
+                                    {/* PIN lock indicator */}
+                                    {instance.has_pin && !isVerified && (
+                                      <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                                    )}
+                                    
+                                    {/* Instance name */}
+                                    <span className="truncate flex-1">
+                                      {instance.display_name || instance.instance_name || "Sem nome"}
+                                    </span>
+                                    
+                                    {/* Phone number */}
+                                    {instance.phone_number && (
+                                      <span className="text-xs text-muted-foreground shrink-0">
+                                        {instance.phone_number}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Selected check */}
+                                  {isSelected && (
+                                    <Check className="h-4 w-4 text-primary shrink-0" />
+                                  )}
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        )}
+                      </DropdownMenu>
                     )}
                   </div>
                 </CardContent>
@@ -291,12 +480,12 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
         </div>
       </div>
       
-      {/* PIN Dialog */}
+      {/* PIN Dialog - now for instance */}
       <ZappPinDialog
         open={showPinDialog}
         onOpenChange={setShowPinDialog}
-        sectorId={pendingSectorId || ""}
-        sectorName={pendingSectorId ? getSectorInfo(pendingSectorId)?.name || "Setor" : "Setor"}
+        integrationId={pendingInstance?.integrationId || ""}
+        instanceName={pendingInstance?.instanceName || "Instância"}
         onSuccess={handlePinSuccess}
       />
     </div>
