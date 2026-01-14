@@ -57,6 +57,7 @@ interface ZappChatViewProps {
   onOpenCloseTicket?: () => void;
   onOpenLinkClient?: () => void;
   onClientLinked?: () => void;
+  onDeleteConversation?: () => void;
   accountId?: string;
   showLeadOption?: boolean;
   onMessageChange: (value: string) => void;
@@ -122,6 +123,7 @@ export function ZappChatView({
   onOpenCloseTicket,
   onOpenLinkClient,
   onClientLinked,
+  onDeleteConversation,
   accountId,
   showLeadOption = false,
   onMessageChange,
@@ -242,6 +244,7 @@ export function ZappChatView({
         onOpenCloseTicket={onOpenCloseTicket}
         onOpenLinkClient={onOpenLinkClient}
         onClientLinked={onClientLinked}
+        onDeleteConversation={onDeleteConversation}
         accountId={accountId}
       />
 
