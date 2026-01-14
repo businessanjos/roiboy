@@ -108,6 +108,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
         case "multi_select":
         case "user":
         case "location":
+        case "multi_instagram":
           valueData.value_json = newValue;
           break;
       }
@@ -395,6 +396,83 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
               </Button>
               <Button size="sm" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // Multi-Instagram field
+  if (field.field_type === "multi_instagram") {
+    const instagrams = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
+    const [newHandle, setNewHandle] = useState("");
+
+    const addInstagram = () => {
+      if (!newHandle.trim()) return;
+      const handle = newHandle.replace(/^@/, '').trim();
+      if (handle && !instagrams.includes(handle)) {
+        saveValue([...instagrams, handle]);
+        setNewHandle("");
+      }
+    };
+
+    const removeInstagram = (index: number) => {
+      const newValues = instagrams.filter((_, i) => i !== index);
+      saveValue(newValues);
+    };
+
+    return (
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
+        <PopoverTrigger asChild>
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+            <FieldValueBadge field={field} value={currentValue} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3" align="start">
+          <div className="space-y-3">
+            {/* Existing instagrams */}
+            {instagrams.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {instagrams.map((ig, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 text-xs"
+                  >
+                    <Instagram className="h-3 w-3" />
+                    @{ig}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeInstagram(index);
+                      }}
+                      className="ml-0.5 hover:text-pink-800 dark:hover:text-pink-200"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            {/* Add new instagram */}
+            <div className="flex items-center gap-2">
+              <Instagram className="h-4 w-4 text-pink-500 flex-shrink-0" />
+              <Input
+                value={newHandle}
+                onChange={(e) => setNewHandle(e.target.value)}
+                placeholder="@usuario"
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addInstagram();
+                  }
+                }}
+              />
+              <Button size="sm" onClick={addInstagram} disabled={saving || !newHandle.trim()}>
+                +
               </Button>
             </div>
           </div>
