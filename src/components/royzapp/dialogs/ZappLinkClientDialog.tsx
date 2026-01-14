@@ -56,6 +56,33 @@ export function ZappLinkClientDialog({
   const [addPhoneToClient, setAddPhoneToClient] = useState(true);
   const [linking, setLinking] = useState(false);
 
+  // Generate phone variations for flexible search
+  const generatePhoneVariations = (phone: string): string[] => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 8) return [digits];
+    
+    const variations: string[] = [];
+    
+    // Full number (with country code)
+    if (digits.length >= 12) {
+      variations.push(digits); // e.g., 5511932784742
+    }
+    
+    // Without country code (with DDD)
+    if (digits.length >= 10) {
+      variations.push(digits.slice(-11)); // e.g., 11932784742
+      variations.push(digits.slice(-10)); // e.g., 1932784742
+    }
+    
+    // Local number only (last 8-9 digits)
+    if (digits.length >= 8) {
+      variations.push(digits.slice(-9)); // e.g., 932784742
+      variations.push(digits.slice(-8)); // e.g., 32784742
+    }
+    
+    return [...new Set(variations)].filter(v => v.length >= 8);
+  };
+
   // Search clients AND leads
   const searchClients = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
@@ -66,7 +93,17 @@ export function ZappLinkClientDialog({
     setLoading(true);
     try {
       const cleanQuery = query.trim();
-      const phoneQuery = cleanQuery.replace(/\D/g, "");
+      const phoneDigits = cleanQuery.replace(/\D/g, "");
+      
+      // Generate phone variations for more flexible search
+      const phoneVariations = phoneDigits.length >= 8 
+        ? generatePhoneVariations(phoneDigits)
+        : [phoneDigits];
+
+      // Build phone search conditions for clients
+      const clientPhoneConditions = phoneVariations
+        .map(v => `phone_e164.ilike.%${v}%`)
+        .join(',');
 
       // Search clients
       const { data: clientsData, error: clientsError } = await supabase
@@ -79,15 +116,20 @@ export function ZappLinkClientDialog({
         .eq("status", "active")
         .or(
           `full_name.ilike.%${cleanQuery}%,` +
-          `phone_e164.ilike.%${phoneQuery}%,` +
-          `cpf.ilike.%${phoneQuery}%,` +
-          `cnpj.ilike.%${phoneQuery}%`
+          clientPhoneConditions + `,` +
+          `cpf.ilike.%${phoneDigits}%,` +
+          `cnpj.ilike.%${phoneDigits}%`
         )
-        .limit(10);
+        .limit(15);
 
       if (clientsError) throw clientsError;
 
-      // Search leads (not converted)
+      // Build phone search conditions for leads
+      const leadPhoneConditions = phoneVariations
+        .map(v => `phone.ilike.%${v}%`)
+        .join(',');
+
+      // Search leads (not converted) - with more flexible phone matching
       const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
         .select("id, full_name, phone, email, status")
@@ -95,10 +137,10 @@ export function ZappLinkClientDialog({
         .neq("status", "converted")
         .or(
           `full_name.ilike.%${cleanQuery}%,` +
-          `phone.ilike.%${phoneQuery}%,` +
+          leadPhoneConditions + `,` +
           `email.ilike.%${cleanQuery}%`
         )
-        .limit(10);
+        .limit(15);
 
       if (leadsError) throw leadsError;
 
@@ -121,7 +163,27 @@ export function ZappLinkClientDialog({
         status: l.status,
       }));
 
-      setResults([...clientResults, ...leadResults]);
+      // Sort results: prioritize exact phone matches
+      const sortByPhoneMatch = (results: ClientResult[]) => {
+        if (!phoneDigits || phoneDigits.length < 8) return results;
+        
+        return results.sort((a, b) => {
+          const aPhone = (a.phone_e164 || "").replace(/\D/g, "");
+          const bPhone = (b.phone_e164 || "").replace(/\D/g, "");
+          
+          const aExact = aPhone.includes(phoneDigits) || phoneDigits.includes(aPhone.slice(-9));
+          const bExact = bPhone.includes(phoneDigits) || phoneDigits.includes(bPhone.slice(-9));
+          
+          if (aExact && !bExact) return -1;
+          if (!aExact && bExact) return 1;
+          return 0;
+        });
+      };
+
+      setResults([
+        ...sortByPhoneMatch(clientResults),
+        ...sortByPhoneMatch(leadResults)
+      ]);
     } catch (error) {
       console.error("Error searching:", error);
       setResults([]);
