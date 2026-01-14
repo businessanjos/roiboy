@@ -1086,7 +1086,7 @@ serve(async (req) => {
           // CRITICAL: Prioritize assignment with department_id to avoid duplicates
           const { data: existingAssignments } = await supabase
             .from("zapp_conversation_assignments")
-            .select("id, status, agent_id, department_id")
+            .select("id, status, agent_id, department_id, assigned_at")
             .eq("account_id", accountId)
             .eq("zapp_conversation_id", zappConversationId)
             .order("department_id", { nullsFirst: false }) // Prioritize with department
@@ -1109,8 +1109,10 @@ serve(async (req) => {
               // Outbound message: we're waiting for client response
               newStatus = "waiting";
             } else if (direction === "inbound") {
-              // Inbound message: client is waiting for our response
-              newStatus = existingAssignment.agent_id ? "active" : "pending";
+              // Inbound message: only go to "active" if officially assigned (has assigned_at)
+              // Otherwise, conversation should go to queue (pending)
+              const wasOfficiallyAssigned = existingAssignment.agent_id && existingAssignment.assigned_at;
+              newStatus = wasOfficiallyAssigned ? "active" : "pending";
             }
             
             await supabase
