@@ -760,7 +760,7 @@ export function DealDetailSheet({
                         {dealCustomFields.map(field => {
                           const value = dealFieldValues[field.id];
                           return (
-                            <div key={field.id}>
+                            <div key={field.id} className="min-w-0 overflow-hidden">
                               <p className="text-[10px] text-muted-foreground mb-0.5">{field.name}</p>
                               <DealFieldValueEditor
                                 field={field}

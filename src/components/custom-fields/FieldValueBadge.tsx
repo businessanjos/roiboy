@@ -188,10 +188,10 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} break-all`}
+        className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} max-w-full overflow-hidden`}
       >
         <Instagram className="h-3 w-3 flex-shrink-0" />
-        <span className="break-all">@{handle}</span>
+        <span className="truncate">@{handle}</span>
       </a>
     );
   }
@@ -208,16 +208,16 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
           const handle = String(ig).replace(/^@/, '').trim();
           const instagramUrl = `https://instagram.com/${handle}`;
           return (
-            <div key={index} className="relative group inline-flex">
+            <div key={index} className="relative group inline-flex max-w-full overflow-hidden">
               <a
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} ${onRemoveInstagram ? 'pr-5' : ''}`}
+                className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} max-w-full overflow-hidden ${onRemoveInstagram ? 'pr-5' : ''}`}
               >
                 <Instagram className="h-3 w-3 flex-shrink-0" />
-                @{handle}
+                <span className="truncate">@{handle}</span>
               </a>
               {onRemoveInstagram && (
                 <button
