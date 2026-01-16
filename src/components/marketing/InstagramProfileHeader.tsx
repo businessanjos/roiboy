@@ -1,21 +1,27 @@
-import { Instagram, ExternalLink, Settings, Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { Instagram, ExternalLink, Settings, Pencil, Camera } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InstagramProfile } from '@/hooks/useSocialMediaData';
+import { InstagramProfileAvatarUpload } from './InstagramProfileAvatarUpload';
 
 interface InstagramProfileHeaderProps {
   profile: InstagramProfile | undefined;
   isLoading?: boolean;
   onEditProfile?: () => void;
+  onProfilePictureChange?: (url: string | null) => void;
 }
 
 export function InstagramProfileHeader({ 
   profile, 
   isLoading,
-  onEditProfile 
+  onEditProfile,
+  onProfilePictureChange
 }: InstagramProfileHeaderProps) {
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
@@ -82,16 +88,28 @@ export function InstagramProfileHeader({
               </AvatarFallback>
             </Avatar>
           </div>
-          {/* Edit button overlay */}
-          {onEditProfile && (
+          {/* Edit photo button overlay */}
+          {onProfilePictureChange && (
             <button
-              onClick={onEditProfile}
-              className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              onClick={() => setAvatarDialogOpen(true)}
+              className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
             >
-              <Pencil className="h-5 w-5 text-white" />
+              <Camera className="h-6 w-6 text-white" />
             </button>
           )}
         </div>
+
+        {/* Avatar Upload Dialog */}
+        {profile && onProfilePictureChange && (
+          <InstagramProfileAvatarUpload
+            profileId={profile.id}
+            username={profile.username}
+            currentAvatarUrl={profile.profile_picture_url}
+            onAvatarChange={onProfilePictureChange}
+            open={avatarDialogOpen}
+            onOpenChange={setAvatarDialogOpen}
+          />
+        )}
 
         {/* Profile Info */}
         <div className="flex-1 text-center sm:text-left space-y-4">

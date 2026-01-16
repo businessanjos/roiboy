@@ -24,6 +24,9 @@ import {
   List,
   PieChart,
   BarChart3,
+  CalendarRange,
+  GitCompare,
+  CheckSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +58,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useSocialMediaData, InstagramPost } from '@/hooks/useSocialMediaData';
 import { SocialMediaKPICard } from './SocialMediaKPICard';
 import { PostFormatBadge } from './PostFormatBadge';
@@ -66,6 +70,8 @@ import { EditPostDialog, EditPostFormData } from './EditPostDialog';
 import { DeletePostDialog } from './DeletePostDialog';
 import { ContentDistributionCharts } from './ContentDistributionCharts';
 import { ProfileInsightsDashboard } from './ProfileInsightsDashboard';
+import { PostComparisonDialog } from './PostComparisonDialog';
+import { WeeklyAnalysisDashboard } from './WeeklyAnalysisDashboard';
 import { cn } from '@/lib/utils';
 
 export function SocialMediaTab() {
@@ -73,7 +79,9 @@ export function SocialMediaTab() {
   const [addPostDialogOpen, setAddPostDialogOpen] = useState(false);
   const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
   const [deletePostDialogOpen, setDeletePostDialogOpen] = useState(false);
+  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<InstagramPost | null>(null);
+  const [selectedPostsForComparison, setSelectedPostsForComparison] = useState<string[]>([]);
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [objectiveFilter, setObjectiveFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
@@ -95,7 +103,33 @@ export function SocialMediaTab() {
     deletePost,
     refetchData,
     syncProfiles,
+    updateProfilePicture,
   } = useSocialMediaData();
+
+  // Toggle post selection for comparison
+  const togglePostSelection = (postId: string) => {
+    setSelectedPostsForComparison(prev => {
+      if (prev.includes(postId)) {
+        return prev.filter(id => id !== postId);
+      }
+      if (prev.length >= 2) {
+        return [prev[1], postId]; // Replace oldest selection
+      }
+      return [...prev, postId];
+    });
+  };
+
+  // Get posts for comparison
+  const postsForComparison = selectedPostsForComparison
+    .map(id => posts.find(p => p.id === id))
+    .filter(Boolean) as InstagramPost[];
+
+  // Handle profile picture change
+  const handleProfilePictureChange = (url: string | null) => {
+    if (currentProfile) {
+      updateProfilePicture.mutate({ profileId: currentProfile.id, avatarUrl: url });
+    }
+  };
 
   // Filter posts based on selected filters
   const filteredPosts = posts.filter((post) => {
@@ -201,7 +235,11 @@ export function SocialMediaTab() {
   return (
     <div className="space-y-6 p-1">
       {/* Instagram Profile Header */}
-      <InstagramProfileHeader profile={currentProfile} isLoading={isLoading} />
+      <InstagramProfileHeader 
+        profile={currentProfile} 
+        isLoading={isLoading}
+        onProfilePictureChange={handleProfilePictureChange}
+      />
 
       {/* Header with Profile Selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -319,6 +357,10 @@ export function SocialMediaTab() {
                     <PieChart className="h-3.5 w-3.5" />
                     Divisão
                   </TabsTrigger>
+                  <TabsTrigger value="weekly" className="gap-1.5 text-xs px-3">
+                    <CalendarRange className="h-3.5 w-3.5" />
+                    Semanal
+                  </TabsTrigger>
                   <TabsTrigger value="insights" className="gap-1.5 text-xs px-3">
                     <BarChart3 className="h-3.5 w-3.5" />
                     Insights
@@ -421,6 +463,19 @@ export function SocialMediaTab() {
                   </SelectContent>
                 </Select>
 
+                {/* Compare Button */}
+                {selectedPostsForComparison.length === 2 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="gap-1.5 h-9"
+                    onClick={() => setComparisonDialogOpen(true)}
+                  >
+                    <GitCompare className="h-4 w-4" />
+                    Comparar ({selectedPostsForComparison.length})
+                  </Button>
+                )}
+
                 {/* Add Post Button */}
                 <Button
                   size="sm"
@@ -442,6 +497,14 @@ export function SocialMediaTab() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30">
+                      <TableHead className="w-[40px]">
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <CheckSquare className="h-3.5 w-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Selecionar para comparar</TooltipContent>
+                        </Tooltip>
+                      </TableHead>
                       <TableHead className="w-[100px]">Data</TableHead>
                       <TableHead className="w-[100px]">Formato</TableHead>
                       <TableHead className="w-[120px]">Categoria</TableHead>
@@ -515,14 +578,33 @@ export function SocialMediaTab() {
                   <TableBody>
                     {filteredPosts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={15} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={16} className="text-center py-12 text-muted-foreground">
                           {posts.length === 0 
                             ? 'Nenhum post encontrado para este perfil.'
                             : 'Nenhum post encontrado com os filtros selecionados.'}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredPosts.map((post) => (
+                      filteredPosts.map((post) => {
+                        const isSelected = selectedPostsForComparison.includes(post.id);
+                        return (
+                        <TableRow 
+                          key={post.id}
+                          className={cn(
+                            'group transition-colors',
+                            post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10',
+                            isSelected && 'bg-primary/5'
+                          )}
+                        >
+                          <TableCell>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => togglePostSelection(post.id)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium text-sm">
+                            {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
+                          </TableCell>
                         <TableRow 
                           key={post.id}
                           className={cn(
@@ -654,7 +736,7 @@ export function SocialMediaTab() {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      ))
+                      );})
                     )}
                   </TableBody>
                 </Table>
@@ -665,6 +747,12 @@ export function SocialMediaTab() {
           <TabsContent value="charts" className="mt-0">
             <CardContent className="pt-2">
               <ContentDistributionCharts posts={filteredPosts} />
+            </CardContent>
+          </TabsContent>
+
+          <TabsContent value="weekly" className="mt-0">
+            <CardContent className="pt-2">
+              <WeeklyAnalysisDashboard posts={filteredPosts} isLoading={isLoading} />
             </CardContent>
           </TabsContent>
 
@@ -715,6 +803,14 @@ export function SocialMediaTab() {
         onConfirm={handleDeletePost}
         isLoading={deletePost.isPending}
         post={selectedPost}
+      />
+
+      {/* Post Comparison Dialog */}
+      <PostComparisonDialog
+        open={comparisonDialogOpen}
+        onOpenChange={setComparisonDialogOpen}
+        postA={postsForComparison[0] || null}
+        postB={postsForComparison[1] || null}
       />
     </div>
   );
