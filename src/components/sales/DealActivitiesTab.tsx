@@ -64,6 +64,27 @@ const PRIORITY_CONFIG = {
   urgent: { label: "Urgente", color: "bg-red-500" },
 };
 
+const COMPUTED_STATUS_CONFIG = {
+  pending: { label: "Pendente", color: "text-gray-600", bgColor: "bg-gray-100", borderColor: "border-gray-300" },
+  overdue: { label: "Atrasada", color: "text-red-600", bgColor: "bg-red-100", borderColor: "border-red-300" },
+  done: { label: "Feita", color: "text-emerald-600", bgColor: "bg-emerald-100", borderColor: "border-emerald-300" },
+};
+
+const getComputedStatus = (task: Task): "pending" | "overdue" | "done" => {
+  if (task.completed_at) return "done";
+  
+  if (task.due_date) {
+    const date = parseLocalDate(task.due_date);
+    if (date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (date < today) return "overdue";
+    }
+  }
+  
+  return "pending";
+};
+
 export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,18 +269,18 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                             {formatLocalDate(task.due_date)}
                           </span>
                         )}
-                        {task.custom_status && (
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] h-4 px-1"
-                            style={{
-                              borderColor: task.custom_status.color,
-                              color: task.custom_status.color,
-                            }}
-                          >
-                            {task.custom_status.name}
-                          </Badge>
-                        )}
+                        {(() => {
+                          const computedStatus = getComputedStatus(task);
+                          const config = COMPUTED_STATUS_CONFIG[computedStatus];
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[9px] h-4 px-1", config.bgColor, config.color, config.borderColor)}
+                            >
+                              {config.label}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                     </div>
                     {task.assigned_user && (
