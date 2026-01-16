@@ -260,6 +260,19 @@ async function uazapiInstanceRequest(endpoint: string, method: string, instanceT
     throw new Error(`UAZAPI retornou resposta inválida: ${responseText.slice(0, 200)}`);
   }
   
+  // Handle 503 specifically for WhatsApp disconnected state
+  if (response.status === 503) {
+    const errorMsg = (data as { message?: string })?.message || "";
+    const isDisconnected = errorMsg.toLowerCase().includes("disconnected") || 
+                           errorMsg.toLowerCase().includes("desconectado") ||
+                           errorMsg.toLowerCase().includes("not connected");
+    
+    if (isDisconnected) {
+      console.error(`[UAZAPI] WhatsApp disconnected detected: ${errorMsg}`);
+      throw new Error("WHATSAPP_DISCONNECTED: WhatsApp desconectado. Reconecte sua integração nas configurações.");
+    }
+  }
+  
   if (!response.ok) {
     const errorMsg = (data as { message?: string })?.message || 
                      (data as { error?: string })?.error || 

@@ -4,7 +4,8 @@ import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput, MentionData } from "./ZappMessageInput";
 import { ZappAIAssistBar } from "./ZappAIAssistBar";
-import { ConversationAssignment, Message, ContactInfo } from "./types";
+import { ConversationAssignment, ContactInfo } from "./types";
+import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
 
 interface ReplyingToMessage {
@@ -76,6 +77,7 @@ interface ZappChatViewProps {
   onReplyMessage: (message: Message) => void;
   onCancelReply: () => void;
   onDeleteMessage?: (messageId: string) => void;
+  onRetryMessage?: (message: Message) => void;
   onMentionInsert?: (mention: MentionData) => void;
   // Signature
   signatureEnabled?: boolean;
@@ -142,6 +144,7 @@ export function ZappChatView({
   onReplyMessage,
   onCancelReply,
   onDeleteMessage,
+  onRetryMessage,
   onMentionInsert,
   signatureEnabled,
   hasSignature,
@@ -254,6 +257,7 @@ export function ZappChatView({
         isGroup={contactInfo.isGroup}
         onReplyMessage={onReplyMessage}
         onDeleteMessage={onDeleteMessage}
+        onRetryMessage={onRetryMessage}
       />
 
       {/* AI Assist Bar - above message input */}

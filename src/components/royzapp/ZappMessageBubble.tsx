@@ -13,6 +13,8 @@ import {
   Reply,
   Trash2,
   Sparkles,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -38,6 +40,7 @@ interface ZappMessageBubbleProps {
   isGroup: boolean;
   onReply?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
+  onRetry?: (message: Message) => void;
 }
 
 // Function to extract domain from URL for display
@@ -144,6 +147,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   isGroup,
   onReply,
   onDelete,
+  onRetry,
 }: ZappMessageBubbleProps) {
   const { toast } = useToast();
   const [showActions, setShowActions] = useState(false);
@@ -256,7 +260,9 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             "px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0",
             message.is_from_client
               ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
-              : "bg-zapp-message-out text-zapp-text rounded-tr-none"
+              : "bg-zapp-message-out text-zapp-text rounded-tr-none",
+            // Visual indicator for failed messages
+            message.send_status === "failed" && "ring-2 ring-red-500/50 bg-red-950/30"
           )}>
           {/* Sender name for group messages */}
           {message.is_from_client && isGroup && message.sender_name && (
@@ -446,7 +452,12 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             </span>
             {!message.is_from_client && (
               <>
-                {message.delivery_status === "failed" ? (
+                {/* Local send status (for optimistic messages) */}
+                {message.send_status === "failed" ? (
+                  <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                ) : message.send_status === "sending" ? (
+                  <Clock className="h-3 w-3 text-zapp-text-muted animate-pulse" />
+                ) : message.delivery_status === "failed" ? (
                   <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
                 ) : message.delivery_status === "read" ? (
                   <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
@@ -460,6 +471,27 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               </>
             )}
           </div>
+          
+          {/* Failed message error and retry button */}
+          {message.send_status === "failed" && (
+            <div className="mt-2 pt-2 border-t border-red-500/30 flex items-center justify-between gap-2">
+              <span className="text-[10px] text-red-400 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {message.send_error || "Falha ao enviar"}
+              </span>
+              {onRetry && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRetry(message)}
+                  className="h-6 px-2 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Tentar novamente
+                </Button>
+              )}
+            </div>
+          )}
         </div>
           
         {/* Action buttons - now positioned relative to message */}

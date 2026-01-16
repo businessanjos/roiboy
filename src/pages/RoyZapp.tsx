@@ -1282,6 +1282,9 @@ export default function RoyZapp() {
       quoted_sender_name: replyContext?.is_from_client 
         ? (replyContext.sender_name || "Cliente") 
         : "Você",
+      // Status de envio local
+      send_status: "sending",
+      send_error: null,
     };
     
     console.log("[RoyZapp] Adding optimistic message:", optimisticMessage.id);
@@ -1351,10 +1354,10 @@ export default function RoyZapp() {
               : "Você",
           }).select("id").single();
           
-          // Replace temp message with real one
+          // Replace temp message with real one and mark as sent
           if (insertedMessage) {
             setMessages(prev => prev.map(m => 
-              m.id === tempMessageId ? { ...m, id: insertedMessage.id } : m
+              m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const } : m
             ));
           }
           
@@ -1367,9 +1370,38 @@ export default function RoyZapp() {
         }
       } catch (error: any) {
         console.error("Error sending message:", error);
-        // Remove optimistic message on error
-        setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-        toast.error(error.message || "Erro ao enviar mensagem");
+        
+        // Parse error message for better UX
+        const errorMsg = error.message || "Erro ao enviar mensagem";
+        const isWhatsAppDisconnected = errorMsg.includes("WHATSAPP_DISCONNECTED") || 
+                                        errorMsg.includes("desconectado") ||
+                                        errorMsg.includes("disconnected");
+        
+        // Mark message as failed instead of removing it
+        setMessages(prev => prev.map(m => 
+          m.id === tempMessageId 
+            ? { 
+                ...m, 
+                send_status: "failed" as const, 
+                send_error: isWhatsAppDisconnected 
+                  ? "WhatsApp desconectado" 
+                  : errorMsg 
+              } 
+            : m
+        ));
+        
+        // Show appropriate error toast
+        if (isWhatsAppDisconnected) {
+          toast.error("WhatsApp desconectado. Reconecte nas configurações para enviar mensagens.", {
+            duration: 6000,
+            action: {
+              label: "Ir para Configurações",
+              onClick: () => navigate("/settings"),
+            },
+          });
+        } else {
+          toast.error(errorMsg);
+        }
       }
     })();
   };
@@ -3129,6 +3161,13 @@ export default function RoyZapp() {
           }}
           onCancelReply={() => setReplyingTo(null)}
           onDeleteMessage={handleDeleteMessage}
+          onRetryMessage={(msg) => {
+            // Remove the failed message and re-add its content to input for retry
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+            setMessageInput(msg.content || "");
+            messageInputRef.current?.focus();
+            toast.info("Mensagem restaurada para reenvio");
+          }}
           onMentionInsert={(mention) => {
             setPendingMentions(prev => [...prev, { phone: mention.phone, jid: mention.jid }]);
           }}
