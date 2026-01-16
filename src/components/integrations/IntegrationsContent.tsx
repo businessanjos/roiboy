@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2 } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,15 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Integration = Tables<"integrations">;
 
+interface UserIntegration {
+  id: string;
+  user_id: string;
+  provider: string;
+  user_email: string | null;
+  expires_at: number | null;
+  created_at: string;
+}
+
 const integrations_list = [
   { id: "whatsapp", name: "WhatsApp", description: "Conexão WhatsApp via UAZAPI", icon: MessageSquare },
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
@@ -33,12 +43,15 @@ const integrations_list = [
 export function IntegrationsContent() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [userIntegrations, setUserIntegrations] = useState<UserIntegration[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [newIntegrationOpen, setNewIntegrationOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("whatsapp");
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   
   // Zoom config state
   const [zoomSecretToken, setZoomSecretToken] = useState("");
@@ -53,10 +66,39 @@ export function IntegrationsContent() {
     ? `${supabaseUrl}/functions/v1/google-meet-webhook?account_id=${accountId}` 
     : `${supabaseUrl}/functions/v1/google-meet-webhook`;
 
+  // Handle OAuth callback status
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const provider = searchParams.get("provider");
+    const message = searchParams.get("message");
+    
+    if (status === "connected" && provider) {
+      toast({
+        title: "Conectado!",
+        description: `${provider === "google" ? "Google" : "Zoom"} conectado com sucesso.`,
+      });
+      // Clean up URL params
+      searchParams.delete("status");
+      searchParams.delete("provider");
+      setSearchParams(searchParams);
+      fetchUserIntegrations();
+    } else if (status === "error") {
+      toast({
+        title: "Erro na conexão",
+        description: message || "Não foi possível conectar. Tente novamente.",
+        variant: "destructive",
+      });
+      searchParams.delete("status");
+      searchParams.delete("message");
+      setSearchParams(searchParams);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (user) {
       fetchIntegrations();
       fetchAccountId();
+      fetchUserIntegrations();
     }
   }, [user]);
 
@@ -89,6 +131,71 @@ export function IntegrationsContent() {
       }
     }
     setLoading(false);
+  };
+
+  const fetchUserIntegrations = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from("user_integrations")
+      .select("id, user_id, provider, user_email, expires_at, created_at");
+    
+    if (error) {
+      console.error("Error fetching user integrations:", error);
+    } else {
+      setUserIntegrations(data || []);
+    }
+  };
+
+  const getUserIntegration = (provider: string) => {
+    return userIntegrations.find(i => i.provider === provider);
+  };
+
+  const handleOAuthConnect = async (provider: "google" | "zoom") => {
+    setConnectingProvider(provider);
+    try {
+      const { data, error } = await supabase.functions.invoke("oauth-init", {
+        body: { provider, redirect_path: "/settings?tab=integrations" }
+      });
+
+      if (error) throw error;
+      
+      if (data?.auth_url) {
+        window.location.href = data.auth_url;
+      }
+    } catch (error: any) {
+      console.error("OAuth init error:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível iniciar a conexão.",
+        variant: "destructive",
+      });
+      setConnectingProvider(null);
+    }
+  };
+
+  const handleDisconnect = async (provider: string) => {
+    const integration = getUserIntegration(provider);
+    if (!integration) return;
+
+    const { error } = await supabase
+      .from("user_integrations")
+      .delete()
+      .eq("id", integration.id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível desconectar.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Desconectado",
+        description: `${provider === "google" ? "Google" : "Zoom"} desconectado com sucesso.`,
+      });
+      fetchUserIntegrations();
+    }
   };
 
   const saveZoomConfig = async () => {
@@ -204,6 +311,8 @@ export function IntegrationsContent() {
 
   const zoomIntegration = getIntegration("zoom");
   const googleIntegration = getIntegration("google");
+  const googleUserIntegration = getUserIntegration("google");
+  const zoomUserIntegration = getUserIntegration("zoom");
 
   return (
     <div className="space-y-6">
@@ -380,6 +489,7 @@ export function IntegrationsContent() {
 
         {/* Google Meet Tab */}
         <TabsContent value="google" className="space-y-4">
+          {/* OAuth Connection Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -388,14 +498,14 @@ export function IntegrationsContent() {
                     <Calendar className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>Google Meet</CardTitle>
+                    <CardTitle>Conexão OAuth - Google Calendar</CardTitle>
                     <CardDescription>
-                      Capture presença de reuniões do Google Meet
+                      Conecte sua conta Google para criar reuniões no Google Meet automaticamente
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant={googleIntegration?.status === "connected" ? "default" : "secondary"}>
-                  {googleIntegration?.status === "connected" ? (
+                <Badge variant={googleUserIntegration ? "default" : "secondary"}>
+                  {googleUserIntegration ? (
                     <><CheckCircle2 className="h-3 w-3 mr-1" /> Conectado</>
                   ) : (
                     <><XCircle className="h-3 w-3 mr-1" /> Desconectado</>
@@ -404,31 +514,99 @@ export function IntegrationsContent() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Webhook URL</Label>
-                  <div className="flex gap-2">
-                    <Input value={googleMeetWebhookUrl} readOnly className="font-mono text-sm" />
+              {googleUserIntegration ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">Conectado como</p>
+                      <p className="text-sm text-muted-foreground">
+                        {googleUserIntegration.user_email || "Conta Google"}
+                      </p>
+                    </div>
                     <Button
                       variant="outline"
-                      size="icon"
-                      onClick={() => copyToClipboard(googleMeetWebhookUrl, "Google Meet Webhook URL")}
+                      size="sm"
+                      onClick={() => handleDisconnect("google")}
                     >
-                      {copied === "Google Meet Webhook URL" ? (
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Desconectar
                     </Button>
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    Reuniões do Google Meet serão criadas automaticamente ao agendar tarefas.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Conecte sua conta Google para permitir a criação automática de reuniões 
+                    no Google Meet com link de videoconferência.
+                  </p>
+                  <Button 
+                    onClick={() => handleOAuthConnect("google")}
+                    disabled={connectingProvider === "google"}
+                  >
+                    {connectingProvider === "google" ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                    )}
+                    Conectar com Google
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Webhook Card (for advanced users) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-muted rounded-lg">
+                    <Calendar className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Webhook (Avançado)</CardTitle>
+                    <CardDescription>
+                      Configure webhooks para capturar presença em reuniões
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge variant={googleIntegration?.status === "connected" ? "default" : "secondary"}>
+                  {googleIntegration?.status === "connected" ? (
+                    <><CheckCircle2 className="h-3 w-3 mr-1" /> Ativo</>
+                  ) : (
+                    <><XCircle className="h-3 w-3 mr-1" /> Inativo</>
+                  )}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Webhook URL</Label>
+                <div className="flex gap-2">
+                  <Input value={googleMeetWebhookUrl} readOnly className="font-mono text-sm" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(googleMeetWebhookUrl, "Google Meet Webhook URL")}
+                  >
+                    {copied === "Google Meet Webhook URL" ? (
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={() => toggleIntegration("google")}>
-                  {googleIntegration?.status === "connected" ? "Desconectar" : "Conectar"}
+                <Button variant="outline" size="sm" onClick={() => toggleIntegration("google")}>
+                  {googleIntegration?.status === "connected" ? "Desativar Webhook" : "Ativar Webhook"}
                 </Button>
-                <Button variant="outline" onClick={fetchIntegrations}>
+                <Button variant="ghost" size="sm" onClick={fetchIntegrations}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Atualizar
                 </Button>
