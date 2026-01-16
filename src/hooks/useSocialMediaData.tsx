@@ -429,6 +429,24 @@ export function useSocialMediaData() {
     },
   });
 
+  // Update profile picture mutation
+  const updateProfilePicture = useMutation({
+    mutationFn: async ({ profileId, avatarUrl }: { profileId: string; avatarUrl: string | null }) => {
+      const { error } = await supabase
+        .from('instagram_profiles')
+        .update({ profile_picture_url: avatarUrl })
+        .eq('id', profileId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] });
+      toast.success('Foto de perfil atualizada!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar foto: ' + error.message);
+    },
+  });
+
   const refetchData = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['instagram-profiles'] }),
@@ -453,5 +471,6 @@ export function useSocialMediaData() {
     deletePost,
     refetchData,
     syncProfiles,
+    updateProfilePicture,
   };
 }
