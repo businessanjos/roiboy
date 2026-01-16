@@ -141,6 +141,7 @@ export const sectors: Sector[] = [
     navItems: [
       { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
       { to: "/social-media", icon: Instagram, label: "Social Media" },
+      { to: "/marketing-tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
