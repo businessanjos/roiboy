@@ -95,26 +95,118 @@ async function createZoomMeeting(
   };
 }
 
+async function refreshGoogleToken(
+  refreshToken: string
+): Promise<{ access_token: string; expires_in: number } | null> {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+  
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to refresh Google token:", await response.text());
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error refreshing Google token:", error);
+    return null;
+  }
+}
+
 async function createGoogleMeetMeeting(
   startTime: string,
   endTime: string,
   title: string,
   participantEmail: string,
   supabaseClient: any,
-  accountId: string
+  accountId: string,
+  userId?: string
 ): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
-  // Check if Google OAuth is configured for this account
-  const { data: integration } = await supabaseClient
-    .from("integrations")
-    .select("config")
-    .eq("account_id", accountId)
-    .eq("type", "google_calendar")
-    .eq("is_active", true)
-    .maybeSingle();
+  let accessToken: string | null = null;
+  let refreshToken: string | null = null;
+  let expiresAt: number | null = null;
 
-  if (!integration?.config?.access_token) {
-    // If no Google OAuth configured, generate a simple Meet link
-    // In production, this would use the Google Calendar API
+  // First try to get user-level OAuth tokens from user_integrations
+  if (userId) {
+    const { data: userIntegration } = await supabaseClient
+      .from("user_integrations")
+      .select("access_token, refresh_token, expires_at")
+      .eq("user_id", userId)
+      .eq("provider", "google")
+      .maybeSingle();
+
+    if (userIntegration?.access_token) {
+      accessToken = userIntegration.access_token;
+      refreshToken = userIntegration.refresh_token;
+      expiresAt = userIntegration.expires_at;
+      console.log("Using user-level Google OAuth tokens");
+    }
+  }
+
+  // Fallback to account-level integration (legacy)
+  if (!accessToken) {
+    const { data: integration } = await supabaseClient
+      .from("integrations")
+      .select("config")
+      .eq("account_id", accountId)
+      .eq("type", "google_calendar")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (integration?.config?.access_token) {
+      accessToken = integration.config.access_token;
+      refreshToken = integration.config.refresh_token;
+      expiresAt = integration.config.expires_at;
+      console.log("Using account-level Google integration");
+    }
+  }
+
+  // Check if token needs refresh
+  if (accessToken && expiresAt && refreshToken) {
+    const now = Math.floor(Date.now() / 1000);
+    if (expiresAt < now + 300) { // Refresh if expires in less than 5 minutes
+      console.log("Token expired or expiring soon, refreshing...");
+      const newTokens = await refreshGoogleToken(refreshToken);
+      if (newTokens) {
+        accessToken = newTokens.access_token;
+        const newExpiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
+        
+        // Update the stored token
+        if (userId) {
+          await supabaseClient
+            .from("user_integrations")
+            .update({ 
+              access_token: accessToken, 
+              expires_at: newExpiresAt,
+              updated_at: new Date().toISOString()
+            })
+            .eq("user_id", userId)
+            .eq("provider", "google");
+        }
+        console.log("Token refreshed successfully");
+      }
+    }
+  }
+
+  if (!accessToken) {
+    // If no OAuth configured, generate a simple Meet link (fallback)
+    console.log("No Google OAuth configured, using fallback link");
     const meetCode = crypto.randomUUID().split("-").slice(0, 3).join("-");
     return {
       meeting_url: `https://meet.google.com/${meetCode}`,
@@ -124,8 +216,6 @@ async function createGoogleMeetMeeting(
   }
 
   // Use Google Calendar API to create event with Meet link
-  const accessToken = integration.config.access_token;
-  
   const calendarResponse = await fetch(
     "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1",
     {
@@ -151,7 +241,7 @@ async function createGoogleMeetMeeting(
 
   if (!calendarResponse.ok) {
     // Fallback to simple link if API fails
-    console.error("Google Calendar API error, using fallback");
+    console.error("Google Calendar API error, using fallback:", await calendarResponse.text());
     const meetCode = crypto.randomUUID().split("-").slice(0, 3).join("-");
     return {
       meeting_url: `https://meet.google.com/${meetCode}`,
@@ -161,6 +251,7 @@ async function createGoogleMeetMeeting(
   }
 
   const eventData = await calendarResponse.json();
+  console.log("Google Calendar event created successfully");
   return {
     meeting_url: eventData.hangoutLink || eventData.conferenceData?.entryPoints?.[0]?.uri || "",
     meeting_id: eventData.id,
@@ -198,12 +289,23 @@ serve(async (req) => {
     // Get task to find account_id
     const { data: task, error: taskError } = await supabase
       .from("internal_tasks")
-      .select("account_id")
+      .select("account_id, created_by")
       .eq("id", task_id)
       .single();
 
     if (taskError || !task) {
       throw new Error("Task not found");
+    }
+
+    // Get the auth user_id from the users table
+    let authUserId: string | undefined;
+    if (task.created_by) {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("auth_user_id")
+        .eq("id", task.created_by)
+        .maybeSingle();
+      authUserId = userData?.auth_user_id || undefined;
     }
 
     // Create meeting based on platform
@@ -218,7 +320,8 @@ serve(async (req) => {
         title,
         participant_email,
         supabase,
-        task.account_id
+        task.account_id,
+        authUserId
       );
     }
 

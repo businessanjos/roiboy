@@ -137,3 +137,9 @@ verify_jwt = false
 
 [functions.set-sector-pin]
 verify_jwt = false
+
+[functions.oauth-init]
+verify_jwt = false
+
+[functions.oauth-callback]
+verify_jwt = false
