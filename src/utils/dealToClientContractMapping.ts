@@ -1,13 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Field IDs for deal custom fields
+// Field IDs for deal custom fields - IDs corretos do banco de dados
 export const DEAL_FIELD_IDS = {
   INSTAGRAM: '47df969b-735e-414f-a25e-2a56e589551d',
   CIDADE: '5accffbd-3d87-4735-b890-bc6c361694b7',
   BONUS: '82f58c54-d7e3-4d33-b73a-e214e1205b22',
-  ITEM_VENDA: '033b91fb-0bdf-4ac6-ac45-6ebbb4f61f72',
-  FORMA_PAGAMENTO: 'b2cd2366-67f8-4cd1-99a9-d19e68c05fed',
-  DESCRICAO_NEGOCIACAO: 'ca39f0cf-a88b-4ee0-80a9-6ecc8df7bf29',
+  ITEM_VENDA: '033b91fb-3add-4c96-aec9-567fefbd0fb2',
+  FORMA_PAGAMENTO: 'b2cd2366-b990-43d9-a0b7-1b567fbed729',
+  DESCRICAO_NEGOCIACAO: 'ca39f0cf-d071-4271-a2a9-23d9d6993780',
 };
 
 // Mapping from "Item da Venda" select values to product names
