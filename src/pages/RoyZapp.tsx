@@ -313,21 +313,21 @@ export default function RoyZapp() {
         zappConvId = newConv.id;
       }
       
-      // Create assignment for current agent with assigned_at to mark official assignment
+      // Create assignment in queue (triage) - agent must pull from queue
       const { error: assignError } = await supabase
         .from("zapp_conversation_assignments")
         .insert({
           account_id: currentUser.account_id,
           zapp_conversation_id: zappConvId,
-          agent_id: currentAgent.id,
-          status: "active",
-          department_id: currentSectorDepartmentId, // Associate with sector's department
-          assigned_at: new Date().toISOString(), // Mark as officially assigned
+          agent_id: null, // No agent assigned - goes to queue
+          status: "triage", // Triage status for queue
+          department_id: currentSectorDepartmentId,
         });
       
       if (assignError) throw assignError;
       
-      toast.success("Conversa criada!");
+      toast.success("Conversa criada na Fila! Puxe-a para iniciar o atendimento.");
+      setInboxTab("queue"); // Switch to queue tab
       
       // Fetch the new assignment directly to avoid stale closure
       const { data: newAssignmentData } = await supabase
@@ -338,7 +338,7 @@ export default function RoyZapp() {
           agent:zapp_agents(*)
         `)
         .eq("zapp_conversation_id", zappConvId)
-        .eq("agent_id", currentAgent.id)
+        .is("agent_id", null)
         .neq("status", "closed")
         .single();
       
@@ -2540,22 +2540,22 @@ export default function RoyZapp() {
         zappConvId = newConv.id;
       }
       
-      // Create assignment for current agent with assigned_at to mark official assignment
+      // Create assignment in queue (triage) - agent must pull from queue
       const { error: assignError } = await supabase
         .from("zapp_conversation_assignments")
         .insert({
           account_id: currentUser.account_id,
           zapp_conversation_id: zappConvId,
-          agent_id: currentAgent.id,
-          status: "active",
-          department_id: currentSectorDepartmentId, // Associate with sector's department
-          assigned_at: new Date().toISOString(), // Mark as officially assigned
+          agent_id: null, // No agent assigned - goes to queue
+          status: "triage", // Triage status for queue
+          department_id: currentSectorDepartmentId,
         });
       
       if (assignError) throw assignError;
       
-      toast.success("Conversa criada!");
+      toast.success("Conversa criada na Fila! Puxe-a para iniciar o atendimento.");
       setNewConversationDialogOpen(false);
+      setInboxTab("queue"); // Switch to queue tab
       
       // Fetch the new assignment directly to avoid stale closure
       const { data: newAssignmentData } = await supabase
@@ -2566,7 +2566,7 @@ export default function RoyZapp() {
           agent:zapp_agents(*)
         `)
         .eq("zapp_conversation_id", zappConvId)
-        .eq("agent_id", currentAgent.id)
+        .is("agent_id", null)
         .neq("status", "closed")
         .single();
       
