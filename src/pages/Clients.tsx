@@ -401,17 +401,25 @@ export default function Clients() {
         });
         setScoreMap(scoresGrouped);
 
-        // Fetch contracts for each client (all statuses now, not filtered)
+        // Fetch contracts for each client (all statuses to show contracts correctly)
         const { data: contractsData } = await supabase
           .from("client_contracts")
           .select("client_id, status, start_date, end_date")
           .in("client_id", clientIds)
-          .in("status", ["active", "pending", "paused", "suspended"])
           .order("end_date", { ascending: false });
 
-        // Group by client_id - prioritize active over pending over suspended over paused
+        // Group by client_id - prioritize by status importance
         const contractsGrouped: Record<string, { status: string; start_date: string | null; end_date: string | null }> = {};
-        const statusPriority: Record<string, number> = { active: 4, pending: 3, suspended: 2, paused: 1 };
+        const statusPriority: Record<string, number> = { 
+          active: 6, 
+          pending: 5, 
+          paused: 4, 
+          suspended: 3, 
+          ended: 2, 
+          cancelled: 1, 
+          dismissed: 0, 
+          dropout_7d: 0 
+        };
         (contractsData || []).forEach((c: any) => {
           const existing = contractsGrouped[c.client_id];
           const newPriority = statusPriority[c.status] ?? 0;
