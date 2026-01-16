@@ -19,7 +19,7 @@ interface TeamUser {
   } | null;
 }
 
-interface Message {
+export interface Message {
   id: string;
   content: string | null;
   is_from_client: boolean;
@@ -41,6 +41,9 @@ interface Message {
   quoted_message_id?: string | null;
   quoted_content?: string | null;
   quoted_sender_name?: string | null;
+  // Status de envio local (para mensagens otimistas)
+  send_status?: "sending" | "sent" | "failed";
+  send_error?: string | null;
 }
 
 const HEARTBEAT_INTERVAL_MS = 60000;
@@ -858,4 +861,4 @@ export function useZappData(options: UseZappDataOptions = {}) {
   };
 }
 
-export type { TeamUser, Message };
+export type { TeamUser };

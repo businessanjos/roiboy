@@ -85,6 +85,9 @@ export interface Message {
   quoted_message_id?: string | null;
   quoted_content?: string | null;
   quoted_sender_name?: string | null;
+  // Status de envio local (para mensagens otimistas)
+  send_status?: "sending" | "sent" | "failed";
+  send_error?: string | null;
 }
 
 export interface ConversationAssignment {

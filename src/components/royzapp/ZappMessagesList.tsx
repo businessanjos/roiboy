@@ -1,7 +1,7 @@
 import { useRef, useLayoutEffect, useMemo } from "react";
 import { MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Message } from "./types";
+import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
 
 interface ZappMessagesListProps {
@@ -9,6 +9,7 @@ interface ZappMessagesListProps {
   isGroup: boolean;
   onReplyMessage?: (message: Message) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onRetryMessage?: (message: Message) => void;
 }
 
 export function ZappMessagesList({
@@ -16,6 +17,7 @@ export function ZappMessagesList({
   isGroup,
   onReplyMessage,
   onDeleteMessage,
+  onRetryMessage,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -123,6 +125,7 @@ export function ZappMessagesList({
                 isGroup={isGroup}
                 onReply={onReplyMessage}
                 onDelete={onDeleteMessage}
+                onRetry={onRetryMessage}
               />
             );
           })
