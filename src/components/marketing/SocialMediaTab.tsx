@@ -588,155 +588,146 @@ export function SocialMediaTab() {
                       filteredPosts.map((post) => {
                         const isSelected = selectedPostsForComparison.includes(post.id);
                         return (
-                        <TableRow 
-                          key={post.id}
-                          className={cn(
-                            'group transition-colors',
-                            post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10',
-                            isSelected && 'bg-primary/5'
-                          )}
-                        >
-                          <TableCell>
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => togglePostSelection(post.id)}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium text-sm">
-                            {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
-                          </TableCell>
-                        <TableRow 
-                          key={post.id}
-                          className={cn(
-                            'group transition-colors',
-                            post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10'
-                          )}
-                        >
-                          <TableCell className="font-medium text-sm">
-                            {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
-                          </TableCell>
-                          <TableCell>
-                            <PostFormatBadge format={post.post_type} />
-                          </TableCell>
-                          <TableCell>
-                            {post.theme ? (
-                              <Badge variant="outline" className="text-xs">
-                                {getThemeLabel(post.theme)}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">-</span>
+                          <TableRow 
+                            key={post.id}
+                            className={cn(
+                              'group transition-colors',
+                              post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10',
+                              isSelected && 'bg-primary/5'
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              <PostObjectiveBadge 
-                                objective={post.ai_objective} 
-                                confidence={post.ai_objective_confidence}
+                          >
+                            <TableCell>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => togglePostSelection(post.id)}
                               />
-                              {post.is_trending && (
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    Em tendência!
-                                  </TooltipContent>
-                                </Tooltip>
+                            </TableCell>
+                            <TableCell className="font-medium text-sm">
+                              {format(new Date(post.posted_at), 'dd/MM', { locale: ptBR })}
+                            </TableCell>
+                            <TableCell>
+                              <PostFormatBadge format={post.post_type} />
+                            </TableCell>
+                            <TableCell>
+                              {post.theme ? (
+                                <Badge variant="outline" className="text-xs">
+                                  {getThemeLabel(post.theme)}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
                               )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-start gap-2">
-                              <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                                {post.caption || 'Sem legenda'}
-                              </p>
-                              {post.permalink && (
-                                <a
-                                  href={post.permalink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                                </a>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatNumber(post.reach)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatNumber(post.likes)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatNumber(post.comments)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatNumber(post.shares)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatNumber(post.saves)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatNumber(post.link_clicks || 0)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatNumber(post.views || 0)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge
-                              variant="outline" 
-                              className={cn(
-                                'font-medium',
-                                post.engagement_rate >= 5 && 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                post.engagement_rate >= 3 && post.engagement_rate < 5 && 'bg-blue-50 text-blue-700 border-blue-200',
-                                post.engagement_rate < 3 && 'bg-gray-50 text-gray-600 border-gray-200'
-                              )}
-                            >
-                              {post.engagement_rate?.toFixed(1)}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'font-medium',
-                                post.virality_rate >= 10 && 'bg-purple-50 text-purple-700 border-purple-200',
-                                post.virality_rate >= 5 && post.virality_rate < 10 && 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                                post.virality_rate < 5 && 'bg-gray-50 text-gray-600 border-gray-200'
-                              )}
-                            >
-                              {post.virality_rate?.toFixed(1)}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditDialog(post)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => openDeleteDialog(post)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );})
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5">
+                                <PostObjectiveBadge 
+                                  objective={post.ai_objective} 
+                                  confidence={post.ai_objective_confidence}
+                                />
+                                {post.is_trending && (
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Em tendência!
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-start gap-2">
+                                <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
+                                  {post.caption || 'Sem legenda'}
+                                </p>
+                                {post.permalink && (
+                                  <a
+                                    href={post.permalink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                                  </a>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatNumber(post.reach)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatNumber(post.likes)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatNumber(post.comments)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatNumber(post.shares)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatNumber(post.saves)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatNumber(post.link_clicks || 0)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatNumber(post.views || 0)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge
+                                variant="outline" 
+                                className={cn(
+                                  'font-medium',
+                                  post.engagement_rate >= 5 && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                  post.engagement_rate >= 3 && post.engagement_rate < 5 && 'bg-blue-50 text-blue-700 border-blue-200',
+                                  post.engagement_rate < 3 && 'bg-gray-50 text-gray-600 border-gray-200'
+                                )}
+                              >
+                                {post.engagement_rate?.toFixed(1)}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'font-medium',
+                                  post.virality_rate >= 10 && 'bg-purple-50 text-purple-700 border-purple-200',
+                                  post.virality_rate >= 5 && post.virality_rate < 10 && 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                                  post.virality_rate < 5 && 'bg-gray-50 text-gray-600 border-gray-200'
+                                )}
+                              >
+                                {post.virality_rate?.toFixed(1)}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => openEditDialog(post)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => openDeleteDialog(post)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
