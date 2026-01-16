@@ -30,6 +30,17 @@ import {
 import { InstagramPost } from '@/hooks/useSocialMediaData';
 import { cn } from '@/lib/utils';
 
+// Vibrant chart color palette
+const CHART_COLORS = {
+  primary: '#8B5CF6',      // Violet - primary
+  secondary: '#06B6D4',    // Cyan - engagement
+  likes: '#EC4899',        // Pink - likes
+  comments: '#6366F1',     // Indigo - comments
+  shares: '#10B981',       // Emerald - shares
+  saves: '#F59E0B',        // Amber - saves
+  reach: '#8B5CF6',        // Violet - reach
+};
+
 interface WeeklyAnalysisDashboardProps {
   posts: InstagramPost[];
   isLoading?: boolean;
@@ -244,31 +255,41 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="hsl(var(--border))" 
+                  opacity={0.5}
+                  vertical={false}
+                />
                 <XAxis 
                   dataKey="weekLabel" 
-                  tick={{ fontSize: 12 }}
-                  className="text-muted-foreground"
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                  tickLine={false}
                 />
                 <YAxis 
-                  tick={{ fontSize: 12 }}
-                  className="text-muted-foreground"
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={false}
+                  tickLine={false}
                   allowDecimals={false}
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
+                    backgroundColor: 'hsl(var(--popover))',
                     border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                   }}
                   formatter={(value: number) => [value, 'Posts']}
                   labelFormatter={(label) => `Semana de ${label}`}
+                  cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
                 />
                 <Bar 
                   dataKey="postCount" 
-                  fill="hsl(var(--primary))" 
-                  radius={[4, 4, 0, 0]}
+                  fill={CHART_COLORS.primary}
+                  radius={[6, 6, 0, 0]}
                   name="Posts"
+                  animationDuration={800}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -283,22 +304,30 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="hsl(var(--border))" 
+                  opacity={0.5}
+                  vertical={false}
+                />
                 <XAxis 
                   dataKey="weekLabel" 
-                  tick={{ fontSize: 12 }}
-                  className="text-muted-foreground"
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                  tickLine={false}
                 />
                 <YAxis 
-                  tick={{ fontSize: 12 }}
-                  className="text-muted-foreground"
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={false}
+                  tickLine={false}
                   unit="%"
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
+                    backgroundColor: 'hsl(var(--popover))',
                     border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                   }}
                   formatter={(value: number) => [`${value.toFixed(1)}%`, 'Engajamento']}
                   labelFormatter={(label) => `Semana de ${label}`}
@@ -306,11 +335,12 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
                 <Line 
                   type="monotone" 
                   dataKey="avgEngagement" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
-                  activeDot={{ r: 6 }}
+                  stroke={CHART_COLORS.secondary}
+                  strokeWidth={3}
+                  dot={{ fill: CHART_COLORS.secondary, strokeWidth: 2, r: 5 }}
+                  activeDot={{ r: 8, strokeWidth: 0, fill: CHART_COLORS.secondary }}
                   name="Engajamento %"
+                  animationDuration={800}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -326,28 +356,37 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
         <CardContent>
           <ResponsiveContainer width="100%" height={320}>
             <ComposedChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="hsl(var(--border))" 
+                opacity={0.5}
+                vertical={false}
+              />
               <XAxis 
                 dataKey="weekLabel" 
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                axisLine={{ stroke: 'hsl(var(--border))' }}
+                tickLine={false}
               />
               <YAxis 
                 yAxisId="left"
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                axisLine={false}
+                tickLine={false}
               />
               <YAxis 
                 yAxisId="right"
                 orientation="right"
-                tick={{ fontSize: 12 }}
-                className="text-muted-foreground"
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                axisLine={false}
+                tickLine={false}
               />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))',
+                  backgroundColor: 'hsl(var(--popover))',
                   border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px'
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                 }}
                 formatter={(value: number, name: string) => {
                   const formatted = value >= 1000 ? `${(value / 1000).toFixed(1)}K` : value;
@@ -355,45 +394,54 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
                 }}
                 labelFormatter={(label) => `Semana de ${label}`}
               />
-              <Legend />
+              <Legend 
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="circle"
+              />
               <Bar 
                 yAxisId="left"
                 dataKey="totalLikes" 
-                fill="hsl(346, 77%, 50%)" 
+                fill={CHART_COLORS.likes}
                 name="Curtidas"
                 stackId="a"
                 radius={[0, 0, 0, 0]}
+                animationDuration={800}
               />
               <Bar 
                 yAxisId="left"
                 dataKey="totalComments" 
-                fill="hsl(217, 91%, 60%)" 
+                fill={CHART_COLORS.comments}
                 name="Comentários"
                 stackId="a"
+                animationDuration={800}
               />
               <Bar 
                 yAxisId="left"
                 dataKey="totalShares" 
-                fill="hsl(142, 71%, 45%)" 
+                fill={CHART_COLORS.shares}
                 name="Compartilhamentos"
                 stackId="a"
+                animationDuration={800}
               />
               <Bar 
                 yAxisId="left"
                 dataKey="totalSaves" 
-                fill="hsl(48, 96%, 53%)" 
+                fill={CHART_COLORS.saves}
                 name="Salvamentos"
                 stackId="a"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
+                animationDuration={800}
               />
               <Line 
                 yAxisId="right"
                 type="monotone" 
                 dataKey="avgReach" 
-                stroke="hsl(var(--primary))" 
+                stroke={CHART_COLORS.reach}
                 strokeWidth={3}
-                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
+                dot={{ fill: CHART_COLORS.reach, strokeWidth: 2, r: 5 }}
+                activeDot={{ r: 8, strokeWidth: 0, fill: CHART_COLORS.reach }}
                 name="Alcance Médio"
+                animationDuration={800}
               />
             </ComposedChart>
           </ResponsiveContainer>
