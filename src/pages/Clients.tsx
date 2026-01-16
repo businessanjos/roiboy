@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban, PauseCircle, Ban } from "lucide-react";
 import { ClientKanban } from "@/components/client/ClientKanban";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -2292,33 +2292,57 @@ export default function Clients() {
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                           >
                             {contractMap[client.id] ? (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                      <CheckCircle2 className="h-3 w-3" />
-                                      <span>Ativo</span>
-                                      {contractMap[client.id].end_date && (
-                                        <span className="text-[10px] opacity-75">
-                                          até {format(new Date(contractMap[client.id].end_date!), "dd/MM/yy", { locale: ptBR })}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">
-                                      <p className="font-medium text-green-600 dark:text-green-400">Contrato Ativo</p>
-                                      {contractMap[client.id].start_date && (
-                                        <p>Início: {format(new Date(contractMap[client.id].start_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
-                                      )}
-                                      {contractMap[client.id].end_date && (
-                                        <p>Fim: {format(new Date(contractMap[client.id].end_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
-                                      )}
-                                      <p className="mt-1 text-primary">Clique para gerenciar</p>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              (() => {
+                                const contractStatus = contractMap[client.id].status || 'active';
+                                const statusConfig: Record<string, { 
+                                  label: string; 
+                                  labelTooltip: string; 
+                                  icon: typeof CheckCircle2; 
+                                  bgClass: string; 
+                                  textClass: string 
+                                }> = {
+                                  active: { label: "Ativo", labelTooltip: "Contrato Ativo", icon: CheckCircle2, bgClass: "bg-green-100 dark:bg-green-900/30", textClass: "text-green-700 dark:text-green-400" },
+                                  pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-blue-100 dark:bg-blue-900/30", textClass: "text-blue-700 dark:text-blue-400" },
+                                  paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-amber-100 dark:bg-amber-900/30", textClass: "text-amber-700 dark:text-amber-400" },
+                                  suspended: { label: "Suspenso", labelTooltip: "Contrato Suspenso", icon: AlertTriangle, bgClass: "bg-amber-100 dark:bg-amber-900/30", textClass: "text-amber-700 dark:text-amber-400" },
+                                  cancelled: { label: "Cancelado", labelTooltip: "Contrato Cancelado", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
+                                  ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-slate-100 dark:bg-slate-900/30", textClass: "text-slate-700 dark:text-slate-400" },
+                                  dismissed: { label: "Dispensado", labelTooltip: "Contrato Dispensado", icon: XCircle, bgClass: "bg-slate-100 dark:bg-slate-900/30", textClass: "text-slate-700 dark:text-slate-400" },
+                                  dropout_7d: { label: "Desistência", labelTooltip: "Desistência em 7 dias", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
+                                };
+                                const config = statusConfig[contractStatus] || statusConfig.active;
+                                const StatusIcon = config.icon;
+                                
+                                return (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className={cn("inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium", config.bgClass, config.textClass)}>
+                                          <StatusIcon className="h-3 w-3" />
+                                          <span>{config.label}</span>
+                                          {contractMap[client.id].end_date && (
+                                            <span className="text-[10px] opacity-75">
+                                              até {format(new Date(contractMap[client.id].end_date!), "dd/MM/yy", { locale: ptBR })}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="text-xs">
+                                          <p className={cn("font-medium", config.textClass)}>{config.labelTooltip}</p>
+                                          {contractMap[client.id].start_date && (
+                                            <p>Início: {format(new Date(contractMap[client.id].start_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                          )}
+                                          {contractMap[client.id].end_date && (
+                                            <p>Fim: {format(new Date(contractMap[client.id].end_date!), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                          )}
+                                          <p className="mt-1 text-primary">Clique para gerenciar</p>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                );
+                              })()
                             ) : (
                               <TooltipProvider>
                                 <Tooltip>
