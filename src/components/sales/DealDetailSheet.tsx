@@ -58,6 +58,7 @@ import {
   FileText,
   ListTodo,
   Settings,
+  Copy,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
@@ -473,7 +474,17 @@ export function DealDetailSheet({
   const currentStage = stages.find(s => s.id === deal.stage_id);
   const daysSinceCreation = differenceInDays(new Date(), new Date(deal.created_at));
   const contactName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato';
+  const contactPhone = deal.client?.phone_e164 || deal.lead?.phone || null;
   const isClosed = deal.status !== 'open';
+
+  const handleCopyPhone = async (phone: string) => {
+    try {
+      await navigator.clipboard.writeText(phone);
+      toast.success("Telefone copiado!");
+    } catch (err) {
+      toast.error("Erro ao copiar telefone");
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -539,10 +550,20 @@ export function DealDetailSheet({
                   ) : (
                     <span>{contactName}</span>
                   )}
-                  {deal.client?.phone_e164 && (
+                  {contactPhone && (
                     <>
                       <span>·</span>
-                      <span>{deal.client.phone_e164}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyPhone(contactPhone);
+                        }}
+                        className="text-primary/70 hover:text-primary hover:underline flex items-center gap-1 transition-colors"
+                        title="Clique para copiar"
+                      >
+                        {contactPhone}
+                        <Copy className="h-3 w-3 opacity-60" />
+                      </button>
                     </>
                   )}
                 </div>
