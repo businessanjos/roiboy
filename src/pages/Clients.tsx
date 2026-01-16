@@ -364,32 +364,55 @@ export default function Clients() {
       if (data && data.length > 0) {
         const clientIds = data.map(c => c.id);
         
-        // Fetch V-NPS
-        const { data: vnpsData } = await supabase
-          .from("vnps_snapshots")
-          .select("*")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false });
+        // Função para buscar dados em batches para evitar URLs muito longas (erro 400)
+        const fetchInBatches = async <T,>(
+          ids: string[],
+          fetchFn: (batchIds: string[]) => Promise<T[]>
+        ): Promise<T[]> => {
+          const BATCH_SIZE = 100;
+          const results: T[] = [];
+          
+          for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+            const batchIds = ids.slice(i, i + BATCH_SIZE);
+            const batchResults = await fetchFn(batchIds);
+            results.push(...batchResults);
+          }
+          
+          return results;
+        };
+        
+        // Fetch V-NPS em batches
+        const vnpsData = await fetchInBatches(clientIds, async (batchIds) => {
+          const { data } = await supabase
+            .from("vnps_snapshots")
+            .select("*")
+            .in("client_id", batchIds)
+            .order("computed_at", { ascending: false });
+          return data || [];
+        });
         
         // Group by client_id and take latest
         const vnpsGrouped: Record<string, any> = {};
-        (vnpsData || []).forEach((v: any) => {
+        vnpsData.forEach((v: any) => {
           if (!vnpsGrouped[v.client_id]) {
             vnpsGrouped[v.client_id] = v;
           }
         });
         setVnpsMap(vnpsGrouped);
 
-        // Fetch score snapshots (Roizômetro, E-Score)
-        const { data: scoresData } = await supabase
-          .from("score_snapshots")
-          .select("*")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false });
+        // Fetch score snapshots em batches (Roizômetro, E-Score)
+        const scoresData = await fetchInBatches(clientIds, async (batchIds) => {
+          const { data } = await supabase
+            .from("score_snapshots")
+            .select("*")
+            .in("client_id", batchIds)
+            .order("computed_at", { ascending: false });
+          return data || [];
+        });
 
         // Group by client_id and take latest
         const scoresGrouped: Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }> = {};
-        (scoresData || []).forEach((s: any) => {
+        scoresData.forEach((s: any) => {
           if (!scoresGrouped[s.client_id]) {
             scoresGrouped[s.client_id] = {
               escore: s.escore,
@@ -401,12 +424,15 @@ export default function Clients() {
         });
         setScoreMap(scoresGrouped);
 
-        // Fetch contracts for each client (all statuses to show contracts correctly)
-        const { data: contractsData } = await supabase
-          .from("client_contracts")
-          .select("client_id, status, start_date, end_date")
-          .in("client_id", clientIds)
-          .order("end_date", { ascending: false });
+        // Fetch contracts em batches para cada cliente (todos os status)
+        const contractsData = await fetchInBatches(clientIds, async (batchIds) => {
+          const { data } = await supabase
+            .from("client_contracts")
+            .select("client_id, status, start_date, end_date")
+            .in("client_id", batchIds)
+            .order("end_date", { ascending: false });
+          return data || [];
+        });
 
         // Group by client_id - prioritize by status importance
         const contractsGrouped: Record<string, { status: string; start_date: string | null; end_date: string | null }> = {};
@@ -420,7 +446,7 @@ export default function Clients() {
           dismissed: 0, 
           dropout_7d: 0 
         };
-        (contractsData || []).forEach((c: any) => {
+        contractsData.forEach((c: any) => {
           const existing = contractsGrouped[c.client_id];
           const newPriority = statusPriority[c.status] ?? 0;
           const existingPriority = existing ? (statusPriority[existing.status] ?? 0) : -1;
@@ -435,24 +461,30 @@ export default function Clients() {
         });
         setContractMap(contractsGrouped);
         
-        // Fetch WhatsApp conversations and message counts
-        const { data: conversationsData } = await supabase
-          .from("conversations")
-          .select("client_id")
-          .in("client_id", clientIds);
+        // Fetch WhatsApp conversations em batches
+        const conversationsData = await fetchInBatches(clientIds, async (batchIds) => {
+          const { data } = await supabase
+            .from("conversations")
+            .select("client_id")
+            .in("client_id", batchIds);
+          return data || [];
+        });
         
-        // Fetch latest message per client
-        const { data: messagesData } = await supabase
-          .from("message_events")
-          .select("client_id, sent_at")
-          .in("client_id", clientIds)
-          .order("sent_at", { ascending: false });
+        // Fetch latest message per client em batches
+        const messagesData = await fetchInBatches(clientIds, async (batchIds) => {
+          const { data } = await supabase
+            .from("message_events")
+            .select("client_id, sent_at")
+            .in("client_id", batchIds)
+            .order("sent_at", { ascending: false });
+          return data || [];
+        });
         
         // Build WhatsApp status map
         const whatsappGrouped: Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }> = {};
         
         // Initialize with conversation data
-        (conversationsData || []).forEach((c: any) => {
+        conversationsData.forEach((c: any) => {
           if (!whatsappGrouped[c.client_id]) {
             whatsappGrouped[c.client_id] = { hasConversation: true, messageCount: 0, lastMessageAt: null };
           }
@@ -462,7 +494,7 @@ export default function Clients() {
         const messageCountMap = new Map<string, number>();
         const lastMessageMap = new Map<string, string>();
         
-        (messagesData || []).forEach((m: any) => {
+        messagesData.forEach((m: any) => {
           messageCountMap.set(m.client_id, (messageCountMap.get(m.client_id) || 0) + 1);
           if (!lastMessageMap.has(m.client_id)) {
             lastMessageMap.set(m.client_id, m.sent_at);
