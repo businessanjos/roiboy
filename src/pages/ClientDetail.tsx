@@ -801,7 +801,7 @@ export default function ClientDetail() {
         timelineItems.push({
           id: followup.id,
           type: isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup",
-          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : "Arquivo anexado"),
+          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : followup.file_name || "Arquivo anexado"),
           description: followup.content,
           timestamp: followup.created_at,
           metadata: {
@@ -1092,7 +1092,7 @@ export default function ClientDetail() {
             const newEvent: TimelineEvent = {
               id: followup.id,
               type: isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup",
-              title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : "Arquivo anexado"),
+              title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : followup.file_name || "Arquivo anexado"),
               description: followup.content,
               timestamp: followup.created_at,
               metadata: {

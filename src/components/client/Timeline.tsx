@@ -259,7 +259,15 @@ const getFileTypeLabel = (fileName?: string) => {
   return types[ext || ""] || "Arquivo";
 };
 
-function CommentItem({ event, highlightState }: { event: TimelineEvent; highlightState?: "glow" | "fading" | null }) {
+function CommentItem({ 
+  event, 
+  highlightState,
+  onDeleteClick 
+}: { 
+  event: TimelineEvent; 
+  highlightState?: "glow" | "fading" | null;
+  onDeleteClick?: (event: TimelineEvent) => void;
+}) {
   const userName = event.metadata?.user_name || "Usuário";
   const userAvatar = event.metadata?.user_avatar;
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -268,7 +276,7 @@ function CommentItem({ event, highlightState }: { event: TimelineEvent; highligh
     <div 
       id={`comment-${event.id}`}
       className={cn(
-        "flex gap-3 p-3 -mx-3 rounded-lg",
+        "group flex gap-3 p-3 -mx-3 rounded-lg",
         highlightState === "glow" && "animate-highlight-glow",
         highlightState === "fading" && "animate-highlight-fade"
       )}
@@ -286,6 +294,14 @@ function CommentItem({ event, highlightState }: { event: TimelineEvent; highligh
           <span className="text-sm text-muted-foreground">
             {formatDistanceToNow(new Date(event.timestamp), { locale: ptBR, addSuffix: false })}
           </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+            onClick={() => onDeleteClick?.(event)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
         
         {event.description && (
@@ -402,8 +418,8 @@ function SystemEventItem({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Delete button for followup files */}
-            {event.type === "followup" && event.metadata?.file_url && (
+            {/* Delete button for followup, financial, sales items */}
+            {(event.type === "followup" || event.type === "financial" || event.type === "sales") && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -834,8 +850,8 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
         <div className="space-y-4">
           {visibleEvents.map((event, index) => (
             <div key={event.id} className="relative">
-              {event.type === "comment" ? (
-                <CommentItem event={event} highlightState={highlightedId === event.id ? highlightState : null} />
+          {event.type === "comment" ? (
+                <CommentItem event={event} highlightState={highlightedId === event.id ? highlightState : null} onDeleteClick={openDeleteDialog} />
               ) : event.type === "field_change" ? (
                 <SystemEventItem event={event} onDeleteClick={openDeleteDialog} />
               ) : (
@@ -936,9 +952,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir arquivo?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir item?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O arquivo será permanentemente excluído.
+              Esta ação não pode ser desfeita. O item será permanentemente excluído.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
