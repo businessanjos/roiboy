@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Loader2, Video, ExternalLink } from "lucide-react";
+import { Loader2, Video, ExternalLink, RefreshCw } from "lucide-react";
 import { MeetingConfigDialog } from "./MeetingConfigDialog";
 
 interface User {
@@ -619,6 +619,15 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                   <span className="text-sm flex-1">
                     {meetingPlatform === "zoom" ? "🔵 Zoom" : "🟢 Google Meet"} configurado
                   </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMeetingDialogOpen(true)}
+                    title="Recriar reunião"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
