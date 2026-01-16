@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, CalendarDays, Bell, Users } from 'lucide-react';
+import { Plus, Calendar, CalendarDays, Bell, Users, ClipboardList } from 'lucide-react';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MarketingCalendar, MarketingEventDialog, MarketingEventSheet } from '@/components/marketing';
 import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
 import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab';
+import MarketingTasksTab from '@/components/marketing/MarketingTasksTab';
 import AttendanceReport from '@/components/events/AttendanceReport';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -113,6 +114,10 @@ export default function Marketing() {
             <Bell className="h-4 w-4" />
             Lembretes
           </TabsTrigger>
+          <TabsTrigger value="tasks" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Tarefas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-4">
@@ -141,6 +146,10 @@ export default function Marketing() {
 
         <TabsContent value="reminders">
           <MarketingRemindersTab />
+        </TabsContent>
+
+        <TabsContent value="tasks">
+          <MarketingTasksTab />
         </TabsContent>
       </Tabs>
 
