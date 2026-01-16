@@ -127,12 +127,20 @@ export function useClientEnrichments(clientIds: string[]) {
         }
       });
 
-      // Group contracts by client, prioritize active ones
+      // Group contracts by client, prioritize by status importance
       const contractsMap: Record<string, any> = {};
+      const statusPriority: Record<string, number> = { 
+        active: 6, 
+        pending: 5, 
+        paused: 4, 
+        suspended: 3, 
+        ended: 2, 
+        cancelled: 1, 
+        dismissed: 0, 
+        dropout_7d: 0 
+      };
       (contractsRes.data || []).forEach((c: any) => {
         const existing = contractsMap[c.client_id];
-        // Prioritize: active > pending > paused > ended/cancelled
-        const statusPriority: Record<string, number> = { active: 4, pending: 3, paused: 2, ended: 1, cancelled: 0 };
         const newPriority = statusPriority[c.status] ?? 0;
         const existingPriority = existing ? (statusPriority[existing.status] ?? 0) : -1;
         
