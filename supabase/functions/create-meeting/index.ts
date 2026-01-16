@@ -297,16 +297,10 @@ serve(async (req) => {
       throw new Error("Task not found");
     }
 
-    // Get the auth user_id from the users table
-    let authUserId: string | undefined;
-    if (task.created_by) {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("auth_user_id")
-        .eq("id", task.created_by)
-        .maybeSingle();
-      authUserId = userData?.auth_user_id || undefined;
-    }
+    // Use the internal user_id directly (task.created_by is already the internal ID from public.users)
+    // This matches the user_id stored in user_integrations table
+    const internalUserId = task.created_by || undefined;
+    console.log(`Creating meeting for internal user_id: ${internalUserId}`);
 
     // Create meeting based on platform
     let meetingResult: { meeting_url: string; meeting_id: string; meeting_password: string };
@@ -321,7 +315,7 @@ serve(async (req) => {
         participant_email,
         supabase,
         task.account_id,
-        authUserId
+        internalUserId
       );
     }
 
