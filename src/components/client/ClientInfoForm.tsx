@@ -604,18 +604,25 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             </div>
             {data.emails.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {data.emails.map((email) => (
-                  <Badge key={email} variant="secondary" className="gap-1 pr-1 text-xs h-6">
-                    {email}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveEmail(email)}
-                      className="ml-0.5 hover:bg-background/50 rounded p-0.5"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
+                {data.emails.map((emailItem, idx) => {
+                  // Handle both string and object formats for backwards compatibility
+                  const emailValue = typeof emailItem === 'string' 
+                    ? emailItem 
+                    : (emailItem as { email?: string; label?: string })?.email || '';
+                  if (!emailValue) return null;
+                  return (
+                    <Badge key={emailValue + idx} variant="secondary" className="gap-1 pr-1 text-xs h-6">
+                      {emailValue}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEmail(emailItem)}
+                        className="ml-0.5 hover:bg-background/50 rounded p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
               </div>
             )}
             <div className="flex gap-2">
