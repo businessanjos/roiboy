@@ -1657,22 +1657,10 @@ serve(async (req) => {
         // Body: { number: "5511999999999", text: "mensagem", quoted?: { key: { id: "...", fromMe: bool, remoteJid: "..." } } }
         const messageBody: Record<string, unknown> = { number: cleanPhone, text: message };
         
-        // Add quoted message for replies - UAZAPI requires complete key with remoteJid and fromMe
+        // Add quoted message for replies - UAZAPI GO v2 documentação oficial: campo "replyid"
         if (quotedMessageId) {
-          const remoteJid = `${cleanPhone}@s.whatsapp.net`;
-          messageBody.quoted = { 
-            key: { 
-              id: quotedMessageId,
-              fromMe: quotedFromMe,
-              remoteJid: remoteJid
-            }
-          };
-          // Also add contextInfo for some UAZAPI versions
-          messageBody.contextInfo = {
-            stanzaId: quotedMessageId,
-            participant: quotedFromMe ? "" : remoteJid
-          };
-          console.log(`[send_text] Quote payload: id=${quotedMessageId}, fromMe=${quotedFromMe}, remoteJid=${remoteJid}`);
+          messageBody.replyid = quotedMessageId;
+          console.log(`[send_text] Reply with replyid: ${quotedMessageId}`);
         }
         
         if (instanceToken) {
@@ -3546,90 +3534,26 @@ serve(async (req) => {
         console.log("Original Message ID:", message_id);
         console.log("Actual Message ID (extracted):", actualMessageId);
         
-        // Try different endpoints for deleting message
-        // UAZAPI GO uses POST /chat/delete with PascalCase parameters
-        const deleteEndpoints = [
-          // UAZAPI GO - Official documented format (PascalCase) - PRIMARY
-          { 
-            url: `/chat/delete`, 
-            method: "POST", 
-            body: { Phone: cleanPhone, Id: actualMessageId }
-          },
-          // UAZAPI GO - Alternative with remoteJid format
-          { 
-            url: `/chat/delete`, 
-            method: "POST", 
-            body: { Phone: remoteJid, Id: actualMessageId }
-          },
-          // UAZAPI GO - camelCase variant
-          { 
-            url: `/chat/delete`, 
-            method: "POST", 
-            body: { phone: cleanPhone, id: actualMessageId }
-          },
-          // Evolution API v2 - Primary endpoint
-          { 
-            url: deleteInstanceName ? `/chat/deleteMessageForEveryone/${deleteInstanceName}` : `/chat/deleteMessageForEveryone`, 
-            method: "DELETE", 
-            body: { remoteJid, id: actualMessageId, fromMe: true, participant: ownerJid || undefined }
-          },
-          // UAZAPI GO v2 - DELETE method variant
-          { 
-            url: `/message/delete`, 
-            method: "DELETE", 
-            body: { remoteJid, messageId: actualMessageId, fromMe: true }
-          },
-          // Legacy fallbacks (POST)
-          { 
-            url: `/message/${actualMessageId}/delete`, 
-            method: "POST", 
-            body: { phone: cleanPhone, remoteJid, fromMe: true }
-          },
-          { 
-            url: `/chat/delete-message`, 
-            method: "POST", 
-            body: { messageId: actualMessageId, remoteJid, fromMe: true }
-          },
-        ];
+        // UAZAPI GO v2 - Documentação oficial: POST /message/delete
+        // Body: { "id": "message_id" }
+        console.log(`[delete_message] Attempting delete via POST /message/delete with id: ${actualMessageId}`);
         
         let deleted = false;
-        const attemptErrors: string[] = [];
-        
-        for (const endpoint of deleteEndpoints) {
-          if (deleted) break;
-          try {
-            console.log(`Trying delete: ${endpoint.method} ${endpoint.url}`);
-            console.log("Payload:", JSON.stringify(endpoint.body, null, 2));
-            result = await uazapiInstanceRequest(endpoint.url, endpoint.method, instanceToken, endpoint.body);
-            console.log(`Delete successful via ${endpoint.url}`, JSON.stringify(result));
-            deleted = true;
-          } catch (err) {
-            const errorMsg = (err as Error).message;
-            console.log(`Delete ${endpoint.url} failed:`, errorMsg);
-            attemptErrors.push(`${endpoint.method} ${endpoint.url}: ${errorMsg}`);
-          }
+        try {
+          result = await uazapiInstanceRequest(`/message/delete`, "POST", instanceToken, { id: actualMessageId });
+          console.log(`[delete_message] Delete successful:`, JSON.stringify(result));
+          deleted = true;
+        } catch (err) {
+          const errorMsg = (err as Error).message;
+          console.error(`[delete_message] Delete failed:`, errorMsg);
         }
         
         if (!deleted) {
-          console.error("=== ALL DELETE ATTEMPTS FAILED ===");
-          console.error("Tried endpoints:", deleteEndpoints.map(e => `${e.method} ${e.url}`).join(", "));
-          console.error("Errors:", attemptErrors.join(" | "));
-          
-          // Check if it might be time limit issue
-          const timeoutHint = attemptErrors.some(e => 
-            e.toLowerCase().includes("time") || 
-            e.toLowerCase().includes("expired") || 
-            e.toLowerCase().includes("revoke")
-          );
-          
           result = { 
             deleted: false, 
             message_id, 
             soft_delete_only: true,
-            error: timeoutHint 
-              ? "Mensagens só podem ser apagadas para todos em até 7 minutos após o envio"
-              : "Não foi possível deletar no WhatsApp - apagada apenas localmente",
-            attemptErrors
+            error: "Não foi possível deletar no WhatsApp - apagada apenas localmente"
           };
         } else {
           result = { deleted: true, message_id, success: true };
