@@ -8,16 +8,16 @@ interface ContentDistributionChartsProps {
 }
 
 const FORMAT_COLORS: Record<string, string> = {
-  reels: '#f97316', // orange-500
-  carousel: '#3b82f6', // blue-500
-  static: '#a855f7', // purple-500
+  reels: '#8B5CF6', // Violet - vibrant
+  carousel: '#06B6D4', // Cyan - vibrant
+  static: '#F59E0B', // Amber - vibrant
 };
 
 const OBJECTIVE_COLORS: Record<string, string> = {
-  growth: '#22c55e', // green-500
-  connection: '#ec4899', // pink-500
-  authority: '#6366f1', // indigo-500
-  sales: '#eab308', // yellow-500
+  growth: '#10B981', // Emerald - vibrant
+  connection: '#EC4899', // Pink - vibrant
+  authority: '#6366F1', // Indigo - vibrant
+  sales: '#F59E0B', // Amber - vibrant
 };
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -82,13 +82,14 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                   data={formatData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={4}
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={5}
                   dataKey="value"
+                  animationDuration={800}
                   label={({ name, percent, cx, cy, midAngle, outerRadius }) => {
                     const RADIAN = Math.PI / 180;
-                    const radius = outerRadius + 25;
+                    const radius = outerRadius + 28;
                     const x = cx + radius * Math.cos(-midAngle * RADIAN);
                     const y = cy + radius * Math.sin(-midAngle * RADIAN);
                     return (
@@ -98,7 +99,7 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                         fill="hsl(var(--foreground))"
                         textAnchor={x > cx ? 'start' : 'end'}
                         dominantBaseline="central"
-                        className="text-xs"
+                        className="text-xs font-medium"
                       >
                         {`${name} ${(percent * 100).toFixed(0)}%`}
                       </text>
@@ -107,7 +108,11 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                   labelLine={false}
                 >
                   {formatData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.fill}
+                      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+                    />
                   ))}
                 </Pie>
                 <Tooltip
@@ -115,10 +120,11 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                   contentStyle={{
                     backgroundColor: 'hsl(var(--popover))',
                     border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                   }}
                 />
-                <Legend />
+                <Legend iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -137,13 +143,14 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                   data={objectiveData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={4}
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={5}
                   dataKey="value"
+                  animationDuration={800}
                   label={({ name, percent, cx, cy, midAngle, outerRadius }) => {
                     const RADIAN = Math.PI / 180;
-                    const radius = outerRadius + 25;
+                    const radius = outerRadius + 28;
                     const x = cx + radius * Math.cos(-midAngle * RADIAN);
                     const y = cy + radius * Math.sin(-midAngle * RADIAN);
                     return (
@@ -153,7 +160,7 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                         fill="hsl(var(--foreground))"
                         textAnchor={x > cx ? 'start' : 'end'}
                         dominantBaseline="central"
-                        className="text-xs"
+                        className="text-xs font-medium"
                       >
                         {`${name} ${(percent * 100).toFixed(0)}%`}
                       </text>
@@ -162,7 +169,11 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                   labelLine={false}
                 >
                   {objectiveData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.fill}
+                      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+                    />
                   ))}
                 </Pie>
                 <Tooltip
@@ -170,10 +181,11 @@ export function ContentDistributionCharts({ posts }: ContentDistributionChartsPr
                   contentStyle={{
                     backgroundColor: 'hsl(var(--popover))',
                     border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                   }}
                 />
-                <Legend />
+                <Legend iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
