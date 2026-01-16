@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ConversationView } from "./ConversationView";
+import { linkifyText } from "@/lib/linkify";
 
 export interface TimelineEvent {
   id: string;
@@ -288,7 +289,7 @@ function CommentItem({ event, highlightState }: { event: TimelineEvent; highligh
         </div>
         
         {event.description && (
-          <p className="text-foreground mt-1 whitespace-pre-wrap">{event.description}</p>
+          <p className="text-foreground mt-1 whitespace-pre-wrap">{linkifyText(event.description)}</p>
         )}
         
         {/* File Attachment */}
@@ -593,8 +594,15 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       onCommentAdded?.();
       toast.success("Comentário adicionado!");
     } catch (error: any) {
-      console.error("Error adding comment:", error);
-      toast.error("Erro ao adicionar comentário");
+      console.error("Error adding comment:", {
+        error,
+        message: error?.message,
+        details: error?.details,
+        code: error?.code,
+        hint: error?.hint,
+        commentLength: comment.length,
+      });
+      toast.error(error?.message || "Erro ao adicionar comentário");
     } finally {
       setSubmitting(false);
     }
