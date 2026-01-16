@@ -216,8 +216,8 @@ export function ContractDialog({
         toast.error("Apenas arquivos PDF são permitidos");
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("Arquivo muito grande. Máximo 10MB");
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Máximo 50MB");
         return;
       }
       setFormData((prev) => ({ ...prev, file, file_name: file.name }));

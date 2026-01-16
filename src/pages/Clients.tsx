@@ -680,8 +680,8 @@ export default function Clients() {
       toast.error("Por favor, selecione uma imagem válida");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 10MB");
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 50MB");
       return;
     }
     
