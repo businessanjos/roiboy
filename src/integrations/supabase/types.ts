@@ -5031,6 +5031,7 @@ export type Database = {
           posted_at: string
           profile_id: string
           reach: number | null
+          reposts: number | null
           saves: number | null
           shares: number | null
           specialist_version: string | null
@@ -5060,6 +5061,7 @@ export type Database = {
           posted_at: string
           profile_id: string
           reach?: number | null
+          reposts?: number | null
           saves?: number | null
           shares?: number | null
           specialist_version?: string | null
@@ -5089,6 +5091,7 @@ export type Database = {
           posted_at?: string
           profile_id?: string
           reach?: number | null
+          reposts?: number | null
           saves?: number | null
           shares?: number | null
           specialist_version?: string | null

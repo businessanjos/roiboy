@@ -58,6 +58,8 @@ export interface EditPostFormData {
   shares: number;
   saves: number;
   views: number;
+  reposts: number;
+  followers_gained: number;
   specialist_version?: string;
   composition?: string[];
 }
@@ -88,6 +90,8 @@ export function EditPostDialog({
   const [shares, setShares] = useState('');
   const [saves, setSaves] = useState('');
   const [views, setViews] = useState('');
+  const [reposts, setReposts] = useState('');
+  const [followersGained, setFollowersGained] = useState('');
   const [specialistVersion, setSpecialistVersion] = useState('');
   const [composition, setComposition] = useState<string[]>([]);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
@@ -107,6 +111,8 @@ export function EditPostDialog({
       setShares(post.shares.toString());
       setSaves(post.saves.toString());
       setViews((post.views || 0).toString());
+      setReposts((post.reposts || 0).toString());
+      setFollowersGained((post.followers_gained || 0).toString());
       setSpecialistVersion(post.specialist_version || '');
       setComposition(post.composition || []);
     }
@@ -127,6 +133,8 @@ export function EditPostDialog({
     const sharesNum = parseInt(shares) || 0;
     const savesNum = parseInt(saves) || 0;
     const viewsNum = parseInt(views) || 0;
+    const repostsNum = parseInt(reposts) || 0;
+    const followersGainedNum = parseInt(followersGained) || 0;
 
     onSubmit(post.id, {
       permalink,
@@ -141,6 +149,8 @@ export function EditPostDialog({
       shares: sharesNum,
       saves: savesNum,
       views: viewsNum,
+      reposts: repostsNum,
+      followers_gained: followersGainedNum,
       specialist_version: specialistVersion || undefined,
       composition: composition.length > 0 ? composition : undefined,
     });
@@ -293,7 +303,7 @@ export function EditPostDialog({
               {/* Métricas */}
               <div className="space-y-2">
                 <Label className="text-base font-medium">Métricas</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div className="space-y-1">
                     <Label htmlFor="edit-reach" className="text-xs text-muted-foreground">
                       Alcance *
@@ -375,6 +385,34 @@ export function EditPostDialog({
                       placeholder="0"
                       value={views}
                       onChange={(e) => setViews(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-reposts" className="text-xs text-muted-foreground">
+                      Reposts
+                    </Label>
+                    <Input
+                      id="edit-reposts"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={reposts}
+                      onChange={(e) => setReposts(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-followers" className="text-xs text-muted-foreground">
+                      Seguidores
+                    </Label>
+                    <Input
+                      id="edit-followers"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={followersGained}
+                      onChange={(e) => setFollowersGained(e.target.value)}
                       className="h-8"
                     />
                   </div>
