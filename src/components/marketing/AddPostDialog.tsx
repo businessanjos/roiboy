@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Link2, Plus, AtSign, Bookmark } from 'lucide-react';
@@ -59,6 +59,7 @@ export interface PostFormData {
   link_clicks: number;
   views: number;
   followers_gained: number;
+  reposts: number;
   collaborator: string;
   specialist_version?: string;
   composition?: string[];
@@ -97,16 +98,21 @@ export function AddPostDialog({
   const [linkClicks, setLinkClicks] = useState('');
   const [views, setViews] = useState('');
   const [followersGained, setFollowersGained] = useState('');
+  const [reposts, setReposts] = useState('');
   const [collaborator, setCollaborator] = useState('');
   const [specialistVersion, setSpecialistVersion] = useState('');
   const [composition, setComposition] = useState<string[]>([]);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
   const [editCompositionOpen, setEditCompositionOpen] = useState(false);
+  const hasInitialized = useRef(false);
 
-  // Reset form when dialog opens
+  // Reset form only on first open, not every time
   useEffect(() => {
-    if (open) {
+    if (open && !hasInitialized.current) {
       handleReset();
+      hasInitialized.current = true;
+    } else if (!open) {
+      hasInitialized.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -126,6 +132,7 @@ export function AddPostDialog({
     setLinkClicks('');
     setViews('');
     setFollowersGained('');
+    setReposts('');
     setCollaborator('');
     setSpecialistVersion('');
     setComposition([]);
@@ -153,6 +160,7 @@ export function AddPostDialog({
     const linkClicksNum = parseInt(linkClicks) || 0;
     const viewsNum = parseInt(views) || 0;
     const followersGainedNum = parseInt(followersGained) || 0;
+    const repostsNum = parseInt(reposts) || 0;
 
     onSubmit({
       permalink,
@@ -169,6 +177,7 @@ export function AddPostDialog({
       link_clicks: linkClicksNum,
       views: viewsNum,
       followers_gained: followersGainedNum,
+      reposts: repostsNum,
       collaborator: collaborator.trim(),
       specialist_version: specialistVersion || undefined,
       composition: composition.length > 0 ? composition : undefined,
@@ -476,8 +485,22 @@ export function AddPostDialog({
                     />
                   </div>
                   <div className="space-y-1">
+                    <Label htmlFor="reposts" className="text-xs text-muted-foreground">
+                      Reposts
+                    </Label>
+                    <Input
+                      id="reposts"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={reposts}
+                      onChange={(e) => setReposts(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
                     <Label htmlFor="followersGained" className="text-xs text-muted-foreground">
-                      Seg. Ganhos
+                      Seguidores
                     </Label>
                     <Input
                       id="followersGained"
