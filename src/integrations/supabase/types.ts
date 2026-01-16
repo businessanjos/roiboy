@@ -5929,6 +5929,133 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_task_sections: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_collapsed: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_collapsed?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_collapsed?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_task_sections_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_tasks: {
+        Row: {
+          account_id: string
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          custom_fields: Json | null
+          description: string | null
+          display_order: number
+          due_date: string | null
+          id: string
+          is_completed: boolean
+          priority: Database["public"]["Enums"]["marketing_task_priority"]
+          section_id: string | null
+          status: Database["public"]["Enums"]["marketing_task_status"]
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_fields?: Json | null
+          description?: string | null
+          display_order?: number
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          priority?: Database["public"]["Enums"]["marketing_task_priority"]
+          section_id?: string | null
+          status?: Database["public"]["Enums"]["marketing_task_status"]
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_fields?: Json | null
+          description?: string | null
+          display_order?: number
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          priority?: Database["public"]["Enums"]["marketing_task_priority"]
+          section_id?: string | null
+          status?: Database["public"]["Enums"]["marketing_task_status"]
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_tasks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_tasks_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_task_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members_book_settings: {
         Row: {
           access_password: string | null
@@ -9651,6 +9778,8 @@ export type Database = {
         | "reaction"
         | "speaking_estimate"
       live_platform: "zoom" | "google_meet"
+      marketing_task_priority: "low" | "medium" | "high"
+      marketing_task_status: "pending" | "in_progress" | "done"
       message_direction: "client_to_team" | "team_to_client"
       message_source: "whatsapp_text" | "whatsapp_audio_transcript"
       payment_status:
@@ -9956,6 +10085,8 @@ export const Constants = {
         "speaking_estimate",
       ],
       live_platform: ["zoom", "google_meet"],
+      marketing_task_priority: ["low", "medium", "high"],
+      marketing_task_status: ["pending", "in_progress", "done"],
       message_direction: ["client_to_team", "team_to_client"],
       message_source: ["whatsapp_text", "whatsapp_audio_transcript"],
       payment_status: [
