@@ -559,21 +559,14 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   };
 
   const handleSubmitComment = async () => {
-    if (!comment.trim() || !clientId || !currentUser) return;
+    if (!comment.trim() || !clientId || !currentUser || !currentUser.account_id) return;
     
     setSubmitting(true);
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-
-      if (!userData) throw new Error("Usuário não encontrado");
-
       const { data: newFollowup, error } = await supabase
         .from("client_followups")
         .insert({
-          account_id: userData.account_id,
+          account_id: currentUser.account_id,
           client_id: clientId,
           user_id: currentUser.id,
           type: "note",
