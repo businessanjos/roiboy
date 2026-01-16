@@ -404,7 +404,7 @@ export function EditPostDialog({
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="edit-followers" className="text-xs text-muted-foreground">
-                      Seguidores
+                      Seg. Ganhos
                     </Label>
                     <Input
                       id="edit-followers"

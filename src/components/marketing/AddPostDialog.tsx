@@ -500,7 +500,7 @@ export function AddPostDialog({
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="followersGained" className="text-xs text-muted-foreground">
-                      Seguidores
+                      Seg. Ganhos
                     </Label>
                     <Input
                       id="followersGained"
