@@ -1,4 +1,4 @@
-import { useRef, memo, useMemo } from "react";
+import { useRef, memo, useMemo, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -365,6 +365,7 @@ export function VirtualizedClientTable({
   onContractClick,
 }: VirtualizedClientTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(clients.length);
 
   const rowVirtualizer = useVirtualizer({
     count: clients.length,
@@ -372,6 +373,14 @@ export function VirtualizedClientTable({
     estimateSize: () => ROW_HEIGHT,
     overscan: 10,
   });
+
+  // Reset virtualizer when client count changes to prevent stale indices
+  useEffect(() => {
+    if (Math.abs(clients.length - prevCountRef.current) > 0) {
+      rowVirtualizer.measure();
+      prevCountRef.current = clients.length;
+    }
+  }, [clients.length, rowVirtualizer]);
 
   if (clients.length === 0) {
     return (
@@ -411,6 +420,10 @@ export function VirtualizedClientTable({
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
             const client = clients[virtualRow.index];
+            
+            // Protection against invalid index during transitions
+            if (!client) return null;
+            
             return (
               <ClientRow
                 key={client.id}
