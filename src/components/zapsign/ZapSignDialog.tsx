@@ -82,8 +82,8 @@ export function ZapSignDialog({
         toast.error('Apenas arquivos PDF ou DOCX são aceitos');
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('Arquivo deve ter no máximo 10MB');
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('Arquivo deve ter no máximo 50MB');
         return;
       }
       setSelectedFile(file);

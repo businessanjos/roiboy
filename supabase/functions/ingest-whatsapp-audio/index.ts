@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Security constants
-const MAX_AUDIO_BASE64_LENGTH = 10 * 1024 * 1024; // 10MB max for base64 audio
+const MAX_AUDIO_BASE64_LENGTH = 50 * 1024 * 1024; // 50MB max for base64 audio
 const MAX_PHONE_LENGTH = 16;
 const MAX_DURATION_SEC = 600; // 10 minutes max
 

@@ -152,8 +152,8 @@ export function ClientAvatarUpload({
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 10MB");
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 50MB");
       return;
     }
 

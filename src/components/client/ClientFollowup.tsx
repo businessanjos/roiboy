@@ -449,8 +449,8 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     const file = e.target.files?.[0];
     if (!file || !currentUser) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo 10MB.");
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 50MB.");
       return;
     }
 
@@ -516,9 +516,9 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   };
 
   const processFile = (file: File) => {
-    // Max 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo 10MB.");
+    // Max 50MB
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 50MB.");
       return;
     }
     setSelectedFile(file);
@@ -537,8 +537,8 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
 
     // Filter out files that are too large
     const validFiles = files.filter((file) => {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} é muito grande. Máximo 10MB.`);
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(`${file.name} é muito grande. Máximo 50MB.`);
         return false;
       }
       return true;
