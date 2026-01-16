@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,8 +21,6 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle2,
-  XCircle,
-  ArrowRight,
   User2,
   TrendingUp,
   MessageCircle,
@@ -82,26 +79,39 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onToggleComplete: (task: Task) => void;
-  onStatusChange?: (taskId: string, status: Task["status"]) => void;
   showClient?: boolean;
 }
 
 const STATUS_CONFIG = {
-  pending: { label: "Pendente", icon: Clock, className: "text-muted-foreground" },
-  in_progress: { label: "Em andamento", icon: ArrowRight, className: "text-blue-500" },
-  done: { label: "Concluído", icon: CheckCircle2, className: "text-green-500" },
-  overdue: { label: "Atrasado", icon: AlertTriangle, className: "text-destructive" },
-  cancelled: { label: "Cancelado", icon: XCircle, className: "text-muted-foreground" },
+  pending: { label: "Pendente", icon: Clock, className: "bg-muted text-muted-foreground" },
+  done: { label: "Feita", icon: CheckCircle2, className: "bg-green-500/10 text-green-600 dark:text-green-400" },
+  overdue: { label: "Atrasada", icon: AlertTriangle, className: "bg-destructive/10 text-destructive" },
 };
 
-export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusChange, showClient = true }: TaskCardProps) {
+// Compute status based on completed_at and due_date
+const getComputedStatus = (task: { completed_at?: string | null; due_date: string | null }): "pending" | "done" | "overdue" => {
+  if (task.completed_at) return "done";
+  
+  if (task.due_date) {
+    const dueDate = parseLocalDate(task.due_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dueDate && dueDate < today) return "overdue";
+  }
+  
+  return "pending";
+};
+
+export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient = true }: TaskCardProps) {
   const navigate = useNavigate();
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
-  const statusConfig = STATUS_CONFIG[task.status];
+  
+  // Compute status automatically
+  const computedStatus = getComputedStatus(task);
+  const statusConfig = STATUS_CONFIG[computedStatus];
   const StatusIcon = statusConfig.icon;
-  const isCompleted = task.status === "done";
-  const isCancelled = task.status === "cancelled";
-  const isOverdue = task.status === "overdue";
+  const isCompleted = computedStatus === "done";
+  const isOverdue = computedStatus === "overdue";
 
   const getDueDateInfo = () => {
     if (!task.due_date) return null;
@@ -113,7 +123,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
     const daysDiff = differenceInDays(dueDate, today);
     const formattedDate = format(dueDate, "dd/MM", { locale: ptBR });
     
-    if (isCompleted || isCancelled) {
+    if (isCompleted) {
       return { text: formattedDate, className: "text-muted-foreground", urgent: false };
     }
     
@@ -157,7 +167,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
       className={cn(
         "group relative flex items-start gap-4 p-4 rounded-xl border bg-card transition-all duration-200",
         "hover:shadow-md hover:border-primary/20",
-        (isCompleted || isCancelled) && "opacity-60 hover:opacity-80",
+        isCompleted && "opacity-60 hover:opacity-80",
         isOverdue && "border-destructive/30 bg-destructive/5"
       )}
     >
@@ -170,7 +180,6 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
             "h-4 w-4 rounded-full border transition-colors",
             isCompleted ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/40"
           )}
-          disabled={isCancelled}
         />
       </div>
 
@@ -181,7 +190,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
           <div className="flex-1 min-w-0">
             <p className={cn(
               "font-medium leading-tight",
-              (isCompleted || isCancelled) && "line-through text-muted-foreground"
+              isCompleted && "line-through text-muted-foreground"
             )}>
               {task.activity_type?.name || task.title}
             </p>
@@ -249,51 +258,14 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, onStatusCha
 
         {/* Meta row */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Status badge with dropdown */}
-          {onStatusChange ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className={cn(
-                  "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity",
-                  task.status === "in_progress" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                  task.status === "pending" && "bg-muted text-muted-foreground",
-                  task.status === "overdue" && "bg-destructive/10 text-destructive",
-                  task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
-                  task.status === "cancelled" && "bg-muted text-muted-foreground"
-                )}>
-                  <StatusIcon className="h-3.5 w-3.5" />
-                  <span>{statusConfig.label}</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40">
-                {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-                  const Icon = config.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={status}
-                      onClick={() => onStatusChange(task.id, status as Task["status"])}
-                      className={cn(task.status === status && "bg-muted")}
-                    >
-                      <Icon className="mr-2 h-4 w-4" />
-                      {config.label}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className={cn(
-              "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
-              task.status === "in_progress" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-              task.status === "pending" && "bg-muted text-muted-foreground",
-              task.status === "overdue" && "bg-destructive/10 text-destructive",
-              task.status === "done" && "bg-green-500/10 text-green-600 dark:text-green-400",
-              task.status === "cancelled" && "bg-muted text-muted-foreground"
-            )}>
-              <StatusIcon className="h-3.5 w-3.5" />
-              <span>{statusConfig.label}</span>
-            </div>
-          )}
+          {/* Status badge (read-only, computed automatically) */}
+          <div className={cn(
+            "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+            statusConfig.className
+          )}>
+            <StatusIcon className="h-3.5 w-3.5" />
+            <span>{statusConfig.label}</span>
+          </div>
 
           {/* Due date */}
           {dueDateInfo && (

@@ -205,7 +205,6 @@ export function ClientTasks({ clientId }: ClientTasksProps) {
                   onEdit={openEditDialog}
                   onDelete={openDeleteDialog}
                   onToggleComplete={handleToggleComplete}
-                  onStatusChange={handleStatusChange}
                   showClient={false}
                 />
               ))}
@@ -224,7 +223,6 @@ export function ClientTasks({ clientId }: ClientTasksProps) {
                   onEdit={openEditDialog}
                   onDelete={openDeleteDialog}
                   onToggleComplete={handleToggleComplete}
-                  onStatusChange={handleStatusChange}
                   showClient={false}
                 />
               ))}
