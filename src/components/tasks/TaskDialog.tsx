@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
-import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,12 +87,12 @@ const PRIORITY_LABELS = {
   urgent: "Urgente",
 };
 
-export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialStatus, initialActivityTypeId, suggestedTitle, onSuccess }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialActivityTypeId, suggestedTitle, onSuccess }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
-  const { statuses: customStatuses } = useTaskStatuses();
   const { activityTypes } = useActivityTypes();
+  const [isCompleted, setIsCompleted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -107,7 +107,6 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    custom_status_id: "",
     priority: "medium" as Task["priority"],
     due_date: "",
     due_time: "",
@@ -160,7 +159,6 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       setFormData({
         title: task.title,
         description: task.description || "",
-        custom_status_id: task.custom_status_id || "",
         priority: task.priority,
         due_date: task.due_date || "",
         due_time: task.due_time ? task.due_time.slice(0, 5) : "",
@@ -170,12 +168,11 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         assigned_to: task.assigned_to || "",
         activity_type_id: task.activity_type_id || "",
       });
+      setIsCompleted(!!task.completed_at);
       setCurrentTaskId(task.id);
       setMeetingUrl(task.meeting_url || null);
       setMeetingPlatform(task.meeting_platform || null);
     } else {
-      const defaultStatusId = initialStatus || customStatuses[0]?.id || "";
-      
       // Get current date in YYYY-MM-DD format
       const now = new Date();
       const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -184,7 +181,6 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       setFormData({
         title: suggestedTitle || "",
         description: "",
-        custom_status_id: defaultStatusId,
         priority: "medium",
         due_date: currentDate,
         due_time: currentTime,
@@ -194,12 +190,13 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         assigned_to: currentUser?.id || "",
         activity_type_id: initialActivityTypeId || "",
       });
+      setIsCompleted(false);
       setCurrentTaskId(null);
       setMeetingUrl(null);
       setMeetingPlatform(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, task, clientId, dealId, leadId, initialStatus, customStatuses]);
+  }, [open, task, clientId, dealId, leadId]);
 
   // Fetch lead/deal email when selected for meeting
   useEffect(() => {
@@ -299,10 +296,6 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         return;
       }
 
-      // Check if selected status is a completed status
-      const selectedStatus = customStatuses.find(s => s.id === formData.custom_status_id);
-      const isCompleted = selectedStatus?.is_completed_status || false;
-
       // Save date and time separately
       const dueDate = formData.due_date || null;
       const dueTime = formData.due_time || null;
@@ -311,7 +304,6 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         const updateData = {
           title: taskTitle,
           description: formData.description.trim() || null,
-          custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
           due_date: dueDate,
           due_time: dueTime,
@@ -320,9 +312,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
           activity_type_id: formData.activity_type_id || null,
-          completed_at: isCompleted && !task.completed_at 
-            ? new Date().toISOString() 
-            : !isCompleted ? null : task.completed_at,
+          completed_at: isCompleted ? (task.completed_at || new Date().toISOString()) : null,
         };
         const { error } = await supabase
           .from("internal_tasks")
@@ -335,7 +325,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           entityType: "task",
           entityId: task.id,
           entityName: taskTitle,
-          details: { custom_status_id: formData.custom_status_id, priority: formData.priority, activity_type_id: formData.activity_type_id }
+          details: { priority: formData.priority, activity_type_id: formData.activity_type_id }
         });
         
         toast.success("Tarefa atualizada!");
@@ -344,7 +334,6 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           account_id: currentUser.account_id,
           title: taskTitle,
           description: formData.description.trim() || null,
-          custom_status_id: formData.custom_status_id || null,
           priority: formData.priority,
           due_date: dueDate,
           due_time: dueTime,
@@ -368,7 +357,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           entityType: "task",
           entityId: newTask.id,
           entityName: taskTitle,
-          details: { custom_status_id: formData.custom_status_id, priority: formData.priority, client_id: formData.client_id || null }
+          details: { priority: formData.priority, client_id: formData.client_id || null }
         });
         
         toast.success("Tarefa criada!");
@@ -534,54 +523,36 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           </div>
 
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Prioridade</Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value: Task["priority"]) => 
-                  setFormData({ ...formData, priority: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Prioridade</Label>
+            <Select
+              value={formData.priority}
+              onValueChange={(value: Task["priority"]) => 
+                setFormData({ ...formData, priority: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={formData.custom_status_id}
-                onValueChange={(value) => 
-                  setFormData({ ...formData, custom_status_id: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customStatuses.map((status) => (
-                    <SelectItem key={status.id} value={status.id}>
-                      <div className="flex items-center gap-2">
-                        <span 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: status.color }}
-                        />
-                        {status.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center gap-2 py-2">
+            <Checkbox
+              id="task-completed"
+              checked={isCompleted}
+              onCheckedChange={(checked) => setIsCompleted(!!checked)}
+            />
+            <Label htmlFor="task-completed" className="cursor-pointer">
+              Marcar como concluída
+            </Label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
