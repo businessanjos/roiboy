@@ -461,7 +461,7 @@ export function ZappCRMPanel({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm text-zapp-text truncate">
-                  {conversationContactName || leadInfo?.full_name || "Contato"}
+                  {leadInfo?.full_name || conversationContactName || "Contato"}
                 </p>
                 <div className="flex items-center gap-2 text-xs text-zapp-text-muted">
                   <Phone className="h-3 w-3" />
