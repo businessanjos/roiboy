@@ -404,6 +404,7 @@ export function IntegrationsContent() {
 
         {/* Zoom Tab */}
         <TabsContent value="zoom" className="space-y-4">
+          {/* OAuth Connection Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -412,14 +413,14 @@ export function IntegrationsContent() {
                     <Video className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>Zoom</CardTitle>
+                    <CardTitle>Conexão OAuth - Zoom</CardTitle>
                     <CardDescription>
-                      Capture presença e interações de reuniões do Zoom
+                      Conecte sua conta Zoom para criar reuniões automaticamente
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant={zoomIntegration?.status === "connected" ? "default" : "secondary"}>
-                  {zoomIntegration?.status === "connected" ? (
+                <Badge variant={zoomUserIntegration ? "default" : "secondary"}>
+                  {zoomUserIntegration ? (
                     <><CheckCircle2 className="h-3 w-3 mr-1" /> Conectado</>
                   ) : (
                     <><XCircle className="h-3 w-3 mr-1" /> Desconectado</>
@@ -428,60 +429,99 @@ export function IntegrationsContent() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Webhook URL</Label>
-                  <div className="flex gap-2">
-                    <Input value={zoomWebhookUrl} readOnly className="font-mono text-sm" />
+              {zoomUserIntegration ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">Conectado como</p>
+                      <p className="text-sm text-muted-foreground">
+                        {zoomUserIntegration.user_email || "Conta Zoom"}
+                      </p>
+                    </div>
                     <Button
                       variant="outline"
-                      size="icon"
-                      onClick={() => copyToClipboard(zoomWebhookUrl, "Zoom Webhook URL")}
+                      size="sm"
+                      onClick={() => handleDisconnect("zoom")}
                     >
-                      {copied === "Zoom Webhook URL" ? (
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Desconectar
                     </Button>
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    Reuniões do Zoom serão criadas automaticamente ao agendar tarefas.
+                  </p>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Conecte sua conta Zoom para permitir a criação automática de reuniões 
+                    com link de videoconferência.
+                  </p>
+                  <Button 
+                    onClick={() => handleOAuthConnect("zoom")}
+                    disabled={connectingProvider === "zoom"}
+                  >
+                    {connectingProvider === "zoom" ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>
+                    ) : (
+                      <><ExternalLink className="h-4 w-4 mr-2" /> Conectar com Zoom</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-                {zoomIntegration?.status === "connected" && (
-                  <div className="space-y-2 p-4 border rounded-lg">
-                    <Label htmlFor="zoom-secret">Secret Token do Zoom</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="zoom-secret"
-                        type="password"
-                        placeholder="Cole aqui o Secret Token"
-                        value={zoomSecretToken}
-                        onChange={(e) => setZoomSecretToken(e.target.value)}
-                        className="font-mono text-sm"
-                      />
-                      <Button 
-                        onClick={saveZoomConfig}
-                        disabled={savingZoomConfig}
-                      >
-                        {savingZoomConfig ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "Salvar"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
+          {/* Webhook Configuration Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Configuração de Webhook</CardTitle>
+              <CardDescription>
+                Configure o webhook para capturar eventos de reuniões do Zoom
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Webhook URL</Label>
+                <div className="flex gap-2">
+                  <Input value={zoomWebhookUrl} readOnly className="font-mono text-sm" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(zoomWebhookUrl, "Zoom Webhook URL")}
+                  >
+                    {copied === "Zoom Webhook URL" ? (
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
-
-              <div className="flex gap-2">
-                <Button onClick={() => toggleIntegration("zoom")}>
-                  {zoomIntegration?.status === "connected" ? "Desconectar" : "Conectar"}
-                </Button>
-                <Button variant="outline" onClick={fetchIntegrations}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Atualizar
-                </Button>
+              
+              <div className="space-y-2">
+                <Label htmlFor="zoom-secret">Secret Token do Zoom</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="zoom-secret"
+                    type="password"
+                    placeholder="Cole aqui o Secret Token"
+                    value={zoomSecretToken}
+                    onChange={(e) => setZoomSecretToken(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                  <Button 
+                    onClick={saveZoomConfig}
+                    disabled={savingZoomConfig}
+                  >
+                    {savingZoomConfig ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Salvar"
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
