@@ -34,8 +34,23 @@ serve(async (req) => {
       return Response.redirect(`${frontendUrl}/settings?tab=integrations&status=error&message=invalid_state`);
     }
 
-    const { user_id, redirect_path, provider } = state;
-    console.log(`Processing OAuth callback for provider: ${provider}, user: ${user_id}`);
+    const { user_id: authUserId, redirect_path, provider } = state;
+    console.log(`Processing OAuth callback for provider: ${provider}, auth_user_id: ${authUserId}`);
+
+    // Fetch the internal user ID from public.users table
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle();
+
+    if (userError || !userData) {
+      console.error("User not found in users table:", userError);
+      return Response.redirect(`${frontendUrl}/settings?tab=integrations&status=error&message=user_not_found`);
+    }
+
+    const internalUserId = userData.id;
+    console.log(`Internal user ID: ${internalUserId}`);
 
     const redirectUri = `${supabaseUrl}/functions/v1/oauth-callback`;
 
@@ -89,7 +104,7 @@ serve(async (req) => {
       const { error: upsertError } = await supabase
         .from("user_integrations")
         .upsert({
-          user_id,
+          user_id: internalUserId,
           provider: "google",
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || null,
@@ -165,7 +180,7 @@ serve(async (req) => {
       const { error: upsertError } = await supabase
         .from("user_integrations")
         .upsert({
-          user_id,
+          user_id: internalUserId,
           provider: "zoom",
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token || null,
