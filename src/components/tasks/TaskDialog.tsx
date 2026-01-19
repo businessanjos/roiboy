@@ -4,6 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { useSector } from "@/contexts/SectorContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +92,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
-  const { activityTypes } = useActivityTypes();
+  const { currentSector } = useSector();
+  const { activityTypes } = useActivityTypes(currentSector?.id);
   const [isCompleted, setIsCompleted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);

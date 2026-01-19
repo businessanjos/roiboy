@@ -18,9 +18,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Phone, Mail, Video, Calendar, FileText, MessageSquare, Users } from "lucide-react";
 import { toast } from "sonner";
+
+const SECTOR_OPTIONS = [
+  { value: "", label: "Todos os setores" },
+  { value: "vendas", label: "Vendas" },
+  { value: "operacoes", label: "Operações" },
+  { value: "marketing", label: "Marketing" },
+];
 
 const ICON_OPTIONS = [
   { value: "phone", label: "Telefone", icon: Phone },
@@ -46,6 +60,7 @@ const COLOR_OPTIONS = [
 ];
 
 export function ActivityTypesManager() {
+  // Fetch ALL activity types (no sector filter) for management
   const { activityTypes, isLoading } = useActivityTypes();
   const { createActivityType, updateActivityType, deleteActivityType } = useActivityTypeMutations();
   const { currentUser } = useCurrentUser();
@@ -56,6 +71,7 @@ export function ActivityTypesManager() {
     icon: "phone",
     color: "#6366f1",
     description: "",
+    sector_id: "",
   });
 
   const resetForm = () => {
@@ -64,6 +80,7 @@ export function ActivityTypesManager() {
       icon: "phone",
       color: "#6366f1",
       description: "",
+      sector_id: "",
     });
     setEditingType(null);
   };
@@ -76,6 +93,7 @@ export function ActivityTypesManager() {
         icon: type.icon || "phone",
         color: type.color || "#6366f1",
         description: type.description || "",
+        sector_id: type.sector_id || "",
       });
     } else {
       resetForm();
@@ -101,6 +119,7 @@ export function ActivityTypesManager() {
         icon: formData.icon,
         color: formData.color,
         description: formData.description.trim() || null,
+        sector_id: formData.sector_id || null,
       });
     } else {
       createActivityType.mutate({
@@ -109,6 +128,7 @@ export function ActivityTypesManager() {
         icon: formData.icon,
         color: formData.color,
         description: formData.description.trim() || null,
+        sector_id: formData.sector_id || null,
         is_active: true,
         display_order: activityTypes.length,
       });
@@ -214,6 +234,28 @@ export function ActivityTypesManager() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Setor</Label>
+                <Select
+                  value={formData.sector_id}
+                  onValueChange={(value) => setFormData({ ...formData, sector_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Visível em todos os setores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SECTOR_OPTIONS.map((sector) => (
+                      <SelectItem key={sector.value} value={sector.value}>
+                        {sector.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Define em qual setor este tipo de atividade será visível
+                </p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
@@ -249,7 +291,14 @@ export function ActivityTypesManager() {
                     {getIcon(type.icon)}
                   </div>
                   <div>
-                    <p className="font-medium">{type.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{type.name}</p>
+                      {type.sector_id && (
+                        <Badge variant="outline" className="text-xs">
+                          {SECTOR_OPTIONS.find(s => s.value === type.sector_id)?.label || type.sector_id}
+                        </Badge>
+                      )}
+                    </div>
                     {type.description && (
                       <p className="text-sm text-muted-foreground">{type.description}</p>
                     )}
