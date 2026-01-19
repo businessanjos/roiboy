@@ -56,6 +56,7 @@ import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet"
 interface Contract {
   id: string;
   client_id: string;
+  account_id: string;
   product_id: string | null;
   value: number;
   currency: string;
@@ -65,6 +66,9 @@ interface Contract {
   payment_method: string | null;
   installments_count: number | null;
   first_due_date: string | null;
+  negotiation_type: string | null;
+  negotiation_description: string | null;
+  notes: string | null;
   receivables_generated: boolean | null;
   receivables_generated_at: string | null;
   created_at: string;
@@ -479,6 +483,7 @@ export default function FinancialSalesReconciliationPage() {
                   <TableHead>Cliente</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
+                  <TableHead>Descrição</TableHead>
                   <TableHead>Pagamento</TableHead>
                   <TableHead>Parcelas</TableHead>
                   <TableHead>1ª Parcela</TableHead>
@@ -498,7 +503,7 @@ export default function FinancialSalesReconciliationPage() {
                   ))
                 ) : filteredPending.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Nenhum contrato pendente de conciliação
                     </TableCell>
                   </TableRow>
@@ -533,6 +538,18 @@ export default function FinancialSalesReconciliationPage() {
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(contract.value)}
+                      </TableCell>
+                      <TableCell className="max-w-[200px]">
+                        {contract.negotiation_description ? (
+                          <span 
+                            className="text-sm line-clamp-2" 
+                            title={contract.negotiation_description}
+                          >
+                            {contract.negotiation_description}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {contract.payment_method ? (

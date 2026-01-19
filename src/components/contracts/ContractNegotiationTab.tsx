@@ -76,7 +76,12 @@ export function ContractNegotiationTab({
 }: ContractNegotiationTabProps) {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [negotiationType, setNegotiationType] = useState(initialType || "standard");
+  // Detectar tipo automaticamente: se tem descrição mas não tem tipo, é custom
+  const [negotiationType, setNegotiationType] = useState(() => {
+    if (initialType) return initialType;
+    if (initialDescription) return "custom";
+    return "standard";
+  });
   const [description, setDescription] = useState(initialDescription || "");
   const [paymentMethod, setPaymentMethod] = useState(initialMethod || "");
   const [installments, setInstallments] = useState(initialInstallments || 1);
@@ -86,7 +91,12 @@ export function ContractNegotiationTab({
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
 
   useEffect(() => {
-    setNegotiationType(initialType || "standard");
+    // Detectar tipo automaticamente baseado nos dados existentes
+    let effectiveType = initialType;
+    if (!effectiveType && initialDescription) {
+      effectiveType = "custom";
+    }
+    setNegotiationType(effectiveType || "standard");
     setDescription(initialDescription || "");
     setPaymentMethod(initialMethod || "");
     setInstallments(initialInstallments || 1);
@@ -253,6 +263,14 @@ export function ContractNegotiationTab({
             placeholder="Descreva os termos da negociação personalizada..."
             rows={4}
           />
+        </div>
+      )}
+
+      {/* Mostrar descrição existente mesmo em modo standard */}
+      {negotiationType === "standard" && description && (
+        <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+          <Label className="text-sm font-medium">Observações da Negociação</Label>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{description}</p>
         </div>
       )}
 
