@@ -92,6 +92,11 @@ export default function PublicEventRegistration() {
       return;
     }
 
+    if (!rg.trim()) {
+      toast.error("Por favor, informe seu RG");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -100,7 +105,7 @@ export default function PublicEventRegistration() {
         p_name: name.trim(),
         p_phone: formatPhoneE164(phone),
         p_email: email.trim(),
-        p_rg: rg.trim() || null
+        p_rg: rg.trim()
       });
 
       if (error) throw error;
@@ -311,12 +316,13 @@ export default function PublicEventRegistration() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="rg">RG</Label>
+              <Label htmlFor="rg">RG *</Label>
               <Input
                 id="rg"
                 value={rg}
                 onChange={(e) => setRg(e.target.value)}
                 placeholder="00.000.000-0"
+                required
               />
             </div>
 
