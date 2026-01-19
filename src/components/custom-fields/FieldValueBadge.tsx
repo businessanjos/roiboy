@@ -208,13 +208,13 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
           const handle = String(ig).replace(/^@/, '').trim();
           const instagramUrl = `https://instagram.com/${handle}`;
           return (
-            <div key={index} className="relative group inline-flex max-w-full overflow-hidden">
+            <div key={index} className="group inline-flex items-center max-w-full">
               <a
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} max-w-full overflow-hidden ${onRemoveInstagram ? 'pr-5' : ''}`}
+                className={`inline-flex items-center gap-1 ${padding} ${onRemoveInstagram ? 'rounded-l' : 'rounded'} bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 ${onRemoveInstagram ? 'border-r-0' : ''} hover:bg-pink-500/25 transition-colors font-medium ${textSize} min-w-0 overflow-hidden`}
               >
                 <Instagram className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate">@{handle}</span>
@@ -226,7 +226,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
                     e.preventDefault();
                     onRemoveInstagram(index);
                   }}
-                  className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-pink-500/30 text-pink-600 dark:text-pink-400"
+                  className={`flex-shrink-0 ${padding} rounded-r bg-pink-500/15 border border-pink-500/30 border-l-0 hover:bg-pink-500/30 text-pink-600 dark:text-pink-400 transition-colors`}
                   title="Remover Instagram"
                 >
                   <X className="h-3 w-3" />
