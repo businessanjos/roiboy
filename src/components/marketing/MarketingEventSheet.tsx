@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +44,13 @@ interface MarketingEventSheetProps {
 export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelete, onDuplicate }: MarketingEventSheetProps) {
   const [visibilityOpen, setVisibilityOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [localVisibleSectors, setLocalVisibleSectors] = useState<string[]>([]);
   const queryClient = useQueryClient();
+
+  // Sincronizar estado local quando event mudar
+  useEffect(() => {
+    setLocalVisibleSectors(event?.visible_sectors || []);
+  }, [event?.id, event?.visible_sectors]);
 
   if (!event) return null;
 
@@ -63,13 +69,15 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
   const handleSectorToggle = async (sectorId: string, checked: boolean) => {
     if (!event) return;
     
+    // Atualização otimista imediata
+    const updated = checked 
+      ? [...localVisibleSectors, sectorId]
+      : localVisibleSectors.filter(id => id !== sectorId);
+    
+    setLocalVisibleSectors(updated); // Atualiza UI imediatamente
+    
     setIsUpdating(true);
     try {
-      const current = event.visible_sectors || [];
-      const updated = checked 
-        ? [...current, sectorId]
-        : current.filter(id => id !== sectorId);
-      
       const { error } = await supabase
         .from('events')
         .update({ visible_sectors: updated })
@@ -77,18 +85,19 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
 
       if (error) throw error;
 
-      // Update local state via query invalidation
       queryClient.invalidateQueries({ queryKey: ['events'] });
       toast.success('Visibilidade atualizada!');
     } catch (error) {
       console.error('Error updating visibility:', error);
+      // Reverter em caso de erro
+      setLocalVisibleSectors(event.visible_sectors || []);
       toast.error('Erro ao atualizar visibilidade');
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const selectedCount = event.visible_sectors?.length || 0;
+  const selectedCount = localVisibleSectors.length;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -177,7 +186,7 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
               </p>
               {availableSectors.map(sector => {
                 const SectorIcon = sector.icon;
-                const isChecked = event.visible_sectors?.includes(sector.id) || false;
+                const isChecked = localVisibleSectors.includes(sector.id);
                 
                 return (
                   <div 
