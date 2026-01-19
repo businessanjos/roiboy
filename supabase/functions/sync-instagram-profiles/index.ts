@@ -146,12 +146,19 @@ Deno.serve(async (req) => {
         const instagramData = await fetchInstagramProfile(profile.username);
         
         if (instagramData && (instagramData.followers_count > 0 || instagramData.display_name)) {
+          // Preservar imagem customizada (do nosso storage) se existir
+          // Imagens do Supabase Storage contêm 'supabase.co/storage' na URL
+          const isCustomAvatar = profile.profile_picture_url?.includes('supabase.co/storage');
+          const newProfilePictureUrl = isCustomAvatar 
+            ? profile.profile_picture_url 
+            : (instagramData.profile_picture_url || profile.profile_picture_url);
+
           // Update profile with new data
           const { error: updateError } = await supabase
             .from('instagram_profiles')
             .update({
               display_name: instagramData.display_name || profile.display_name,
-              profile_picture_url: instagramData.profile_picture_url || profile.profile_picture_url,
+              profile_picture_url: newProfilePictureUrl,
               followers_previous_count: profile.followers_count, // Store previous count
               followers_count: instagramData.followers_count,
               following_count: instagramData.following_count,
