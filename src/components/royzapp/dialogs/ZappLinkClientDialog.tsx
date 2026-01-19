@@ -83,6 +83,35 @@ export function ZappLinkClientDialog({
     return [...new Set(variations)].filter(v => v.length >= 8);
   };
 
+  // Score result for better ranking
+  const scoreResult = (result: ClientResult, query: string, phoneDigits: string): number => {
+    const name = result.full_name.toLowerCase();
+    const queryLower = query.toLowerCase().trim();
+    const firstName = name.split(/\s+/)[0];
+    
+    // Exact first name match = highest priority
+    if (firstName === queryLower) return 100;
+    // First name starts with query
+    if (firstName.startsWith(queryLower)) return 80;
+    // Name starts with query
+    if (name.startsWith(queryLower)) return 70;
+    // First name contains query
+    if (firstName.includes(queryLower)) return 50;
+    // Name contains query anywhere
+    if (name.includes(queryLower)) return 30;
+    
+    // Phone match (check if this was a phone-based match)
+    if (phoneDigits.length >= 8) {
+      const resultPhone = (result.phone_e164 || "").replace(/\D/g, "");
+      if (resultPhone.includes(phoneDigits) || phoneDigits.includes(resultPhone.slice(-9))) {
+        return 20;
+      }
+    }
+    
+    // Low score for CPF/CNPJ matches
+    return 10;
+  };
+
   // Search clients AND leads
   const searchClients = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
@@ -94,52 +123,64 @@ export function ZappLinkClientDialog({
     try {
       const cleanQuery = query.trim();
       const phoneDigits = cleanQuery.replace(/\D/g, "");
+      const isPhoneSearch = phoneDigits.length >= 8;
+
+      // Build conditions array dynamically for clients
+      const clientConditions: string[] = [];
       
-      // Generate phone variations for more flexible search
-      const phoneVariations = phoneDigits.length >= 8 
-        ? generatePhoneVariations(phoneDigits)
-        : [phoneDigits];
+      // Always include name search if query has at least 2 chars
+      if (cleanQuery.length >= 2) {
+        clientConditions.push(`full_name.ilike.%${cleanQuery}%`);
+      }
+      
+      // Only include phone/CPF/CNPJ search if query looks like a phone number
+      if (isPhoneSearch) {
+        const phoneVariations = generatePhoneVariations(phoneDigits);
+        phoneVariations.forEach(v => {
+          clientConditions.push(`phone_e164.ilike.%${v}%`);
+        });
+        clientConditions.push(`cpf.ilike.%${phoneDigits}%`);
+        clientConditions.push(`cnpj.ilike.%${phoneDigits}%`);
+      }
 
-      // Build phone search conditions for clients
-      const clientPhoneConditions = phoneVariations
-        .map(v => `phone_e164.ilike.%${v}%`)
-        .join(',');
-
-      // Search clients
+      // Search clients - exclude only churned (include active, churn_risk, pending, etc.)
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select(`
-          id, full_name, phone_e164, additional_phones, avatar_url, cpf, cnpj,
+          id, full_name, phone_e164, additional_phones, avatar_url, cpf, cnpj, status,
           client_products(product:products(id, name, color))
         `)
         .eq("account_id", accountId)
-        .eq("status", "active")
-        .or(
-          `full_name.ilike.%${cleanQuery}%,` +
-          clientPhoneConditions + `,` +
-          `cpf.ilike.%${phoneDigits}%,` +
-          `cnpj.ilike.%${phoneDigits}%`
-        )
-        .limit(15);
+        .neq("status", "churned")
+        .or(clientConditions.join(','))
+        .limit(20);
 
       if (clientsError) throw clientsError;
 
-      // Build phone search conditions for leads
-      const leadPhoneConditions = phoneVariations
-        .map(v => `phone.ilike.%${v}%`)
-        .join(',');
+      // Build conditions array dynamically for leads
+      const leadConditions: string[] = [];
+      
+      // Always include name search
+      if (cleanQuery.length >= 2) {
+        leadConditions.push(`full_name.ilike.%${cleanQuery}%`);
+        leadConditions.push(`email.ilike.%${cleanQuery}%`);
+      }
+      
+      // Only include phone search if query looks like a phone number
+      if (isPhoneSearch) {
+        const phoneVariations = generatePhoneVariations(phoneDigits);
+        phoneVariations.forEach(v => {
+          leadConditions.push(`phone.ilike.%${v}%`);
+        });
+      }
 
-      // Search ALL leads (including converted) - with more flexible phone matching
+      // Search leads
       const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
         .select("id, full_name, phone, email, status")
         .eq("account_id", accountId)
-        .or(
-          `full_name.ilike.%${cleanQuery}%,` +
-          leadPhoneConditions + `,` +
-          `email.ilike.%${cleanQuery}%`
-        )
-        .limit(15);
+        .or(leadConditions.join(','))
+        .limit(20);
 
       if (leadsError) throw leadsError;
 
@@ -148,6 +189,7 @@ export function ZappLinkClientDialog({
         ...c,
         additional_phones: Array.isArray(c.additional_phones) ? c.additional_phones as string[] : null,
         type: "client" as const,
+        status: c.status,
       }));
 
       const leadResults: ClientResult[] = (leadsData || []).map(l => ({
@@ -162,27 +204,19 @@ export function ZappLinkClientDialog({
         status: l.status,
       }));
 
-      // Sort results: prioritize exact phone matches
-      const sortByPhoneMatch = (results: ClientResult[]) => {
-        if (!phoneDigits || phoneDigits.length < 8) return results;
-        
-        return results.sort((a, b) => {
-          const aPhone = (a.phone_e164 || "").replace(/\D/g, "");
-          const bPhone = (b.phone_e164 || "").replace(/\D/g, "");
-          
-          const aExact = aPhone.includes(phoneDigits) || phoneDigits.includes(aPhone.slice(-9));
-          const bExact = bPhone.includes(phoneDigits) || phoneDigits.includes(bPhone.slice(-9));
-          
-          if (aExact && !bExact) return -1;
-          if (!aExact && bExact) return 1;
-          return 0;
-        });
-      };
+      // Sort all results by score (higher first)
+      const allResults = [...clientResults, ...leadResults];
+      const sortedResults = allResults.sort((a, b) => {
+        const scoreA = scoreResult(a, cleanQuery, phoneDigits);
+        const scoreB = scoreResult(b, cleanQuery, phoneDigits);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        // Secondary sort: clients before leads
+        if (a.type === "client" && b.type === "lead") return -1;
+        if (a.type === "lead" && b.type === "client") return 1;
+        return 0;
+      });
 
-      setResults([
-        ...sortByPhoneMatch(clientResults),
-        ...sortByPhoneMatch(leadResults)
-      ]);
+      setResults(sortedResults.slice(0, 15));
     } catch (error) {
       console.error("Error searching:", error);
       setResults([]);
