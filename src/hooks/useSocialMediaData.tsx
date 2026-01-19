@@ -40,6 +40,7 @@ export interface InstagramPost {
   views: number;
   followers_gained: number;
   reposts: number;
+  profile_visits: number;
   engagement_rate: number;
   virality_rate: number;
   ai_objective: 'growth' | 'connection' | 'authority' | 'sales' | null;
@@ -325,6 +326,7 @@ export function useSocialMediaData() {
         views: number;
         reposts: number;
         followers_gained: number;
+        profile_visits: number;
         specialist_version?: string;
         composition?: string[];
       };
@@ -361,6 +363,7 @@ export function useSocialMediaData() {
           views: data.views,
           reposts: data.reposts,
           followers_gained: data.followers_gained,
+          profile_visits: data.profile_visits || 0,
           specialist_version: data.specialist_version || null,
           composition: data.composition || [],
           engagement_rate: Math.round(engagementRate * 100) / 100,
