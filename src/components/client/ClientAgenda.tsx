@@ -172,42 +172,73 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   }, [accountId, clientProductIds, clientId]);
 
   const fetchAccountId = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("account_id")
-      .single();
-    
-    if (data) {
-      setAccountId(data.account_id);
+    try {
+      // Primeiro obter o usuário autenticado
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        console.error("Usuário não autenticado");
+        setLoading(false);
+        return;
+      }
+      
+      // Filtrar por auth_user_id para evitar erro de múltiplas linhas
+      const { data, error } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Erro ao buscar account_id:", error);
+        setLoading(false);
+        return;
+      }
+      
+      if (data) {
+        setAccountId(data.account_id);
+      } else {
+        console.error("Perfil de usuário não encontrado");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar accountId:", err);
+      setLoading(false);
     }
   };
 
   const fetchEvents = async () => {
     setLoading(true);
     
-    // Get events linked to the client's products
-    const { data, error } = await supabase
-      .from("events")
-      .select(`
-        *,
-        event_products (product_id)
-      `)
-      .order("scheduled_at", { ascending: true, nullsFirst: false });
+    try {
+      // Get events linked to the client's products
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          *,
+          event_products (product_id)
+        `)
+        .order("scheduled_at", { ascending: true, nullsFirst: false });
 
-    if (error) {
-      console.error("Error fetching events:", error);
+      if (error) {
+        console.error("Error fetching events:", error);
+        setEvents([]);
+      } else {
+        // Filter events that match client's products
+        const filteredEvents = (data || []).filter((event: EventWithProducts) => {
+          if (event.event_products.length === 0) return false;
+          return event.event_products.some((ep) => 
+            clientProductIds.includes(ep.product_id)
+          );
+        });
+        setEvents(filteredEvents as EventWithProducts[]);
+      }
+    } catch (err) {
+      console.error("Exception fetching events:", err);
       setEvents([]);
-    } else {
-      // Filter events that match client's products
-      const filteredEvents = (data || []).filter((event: EventWithProducts) => {
-        if (event.event_products.length === 0) return false;
-        return event.event_products.some((ep) => 
-          clientProductIds.includes(ep.product_id)
-        );
-      });
-      setEvents(filteredEvents as EventWithProducts[]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchDeliveries = async () => {
