@@ -2373,17 +2373,17 @@ export default function RoyZapp() {
 
     // Search in parallel across all sources
     const [clientsResult, leadsResult, conversationsResult] = await Promise.all([
-      // 1. Search clients
+      // 1. Search clients (include all relevant statuses, not just active)
       supabase
         .from("clients")
-        .select("id, full_name, phone_e164, avatar_url")
+        .select("id, full_name, phone_e164, avatar_url, status")
         .eq("account_id", currentUser.account_id)
-        .eq("status", "active")
+        .in("status", ["active", "churn_risk", "churned", "no_contract", "paused"])
         .or(isPhoneSearch && normalizedPhone.length >= 4 
           ? `phone_e164.ilike.%${normalizedPhone}%`
           : `full_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`)
         .order("full_name")
-        .limit(10),
+        .limit(15),
       
       // 2. Search unconverted leads
       supabase
@@ -2439,7 +2439,9 @@ export default function RoyZapp() {
         type: 'conversation' as const,
       }));
 
-    // Combine results removing phone duplicates
+    // Combine results removing phone duplicates - PRIORITIZE clients over leads
+    // Order: clients first (any status), then leads, then conversations
+    // This ensures if same phone exists as both client and lead, client wins
     const phonesSeen = new Set<string>();
     const combined = [...clients, ...leads, ...conversations].filter(contact => {
       const phone = contact.phone_e164?.replace(/\D/g, '');
@@ -2563,9 +2565,25 @@ export default function RoyZapp() {
         };
         
         // Determinar qual ID usar baseado no TIPO do contato
+        // IMPORTANTE: Se for lead, verificar se existe cliente com mesmo telefone para evitar FK violation
         let insertData: typeof baseData & { lead_id?: string; client_id?: string } = { ...baseData };
+        
         if (isLeadContact) {
-          insertData = { ...baseData, lead_id: contact.id };
+          // Verificar se existe cliente com mesmo telefone (qualquer status)
+          const { data: existingClient } = await supabase
+            .from("clients")
+            .select("id")
+            .eq("account_id", currentUser.account_id)
+            .eq("phone_e164", normalizedPhone)
+            .maybeSingle();
+          
+          if (existingClient) {
+            // Cliente existe - usar client_id ao invés de lead_id
+            console.log("Lead tem cliente correspondente, usando client_id:", existingClient.id);
+            insertData = { ...baseData, client_id: existingClient.id };
+          } else {
+            insertData = { ...baseData, lead_id: contact.id };
+          }
         } else if (isClientContact) {
           insertData = { ...baseData, client_id: contact.id };
         }
