@@ -27,6 +27,7 @@ import {
   CalendarRange,
   GitCompare,
   CheckSquare,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,6 +88,7 @@ export function SocialMediaTab() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [insightsPeriod, setInsightsPeriod] = useState<string>('28');
+  const [sortBy, setSortBy] = useState<string | null>(null);
   
   const {
     profiles,
@@ -142,6 +144,19 @@ export function SocialMediaTab() {
     
     return matchesFormat && matchesObjective && matchesDateFrom && matchesDateTo;
   });
+
+  // Sort posts based on selected column (descending)
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (!sortBy) return 0;
+    const aValue = (a[sortBy as keyof InstagramPost] as number) || 0;
+    const bValue = (b[sortBy as keyof InstagramPost] as number) || 0;
+    return bValue - aValue; // Descending order
+  });
+
+  // Toggle sort by column
+  const handleSortToggle = (field: string) => {
+    setSortBy(prev => prev === field ? null : field);
+  };
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
@@ -512,65 +527,156 @@ export function SocialMediaTab() {
                       <TableHead className="min-w-[200px]">Conteúdo</TableHead>
                       <TableHead className="text-right w-[80px]">
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            <Eye className="h-3.5 w-3.5" />
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('reach')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                sortBy === 'reach' && "text-primary"
+                              )}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              {sortBy === 'reach' && <ChevronDown className="h-3 w-3" />}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>Alcance</TooltipContent>
+                          <TooltipContent>Alcance (clique para ordenar)</TooltipContent>
                         </Tooltip>
                       </TableHead>
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            <Heart className="h-3.5 w-3.5" />
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('likes')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                sortBy === 'likes' && "text-primary"
+                              )}
+                            >
+                              <Heart className="h-3.5 w-3.5" />
+                              {sortBy === 'likes' && <ChevronDown className="h-3 w-3" />}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>Curtidas</TooltipContent>
+                          <TooltipContent>Curtidas (clique para ordenar)</TooltipContent>
                         </Tooltip>
                       </TableHead>
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            <MessageCircle className="h-3.5 w-3.5" />
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('comments')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                sortBy === 'comments' && "text-primary"
+                              )}
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                              {sortBy === 'comments' && <ChevronDown className="h-3 w-3" />}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>Comentários</TooltipContent>
+                          <TooltipContent>Comentários (clique para ordenar)</TooltipContent>
                         </Tooltip>
                       </TableHead>
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            <Share2 className="h-3.5 w-3.5" />
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('shares')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                sortBy === 'shares' && "text-primary"
+                              )}
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                              {sortBy === 'shares' && <ChevronDown className="h-3 w-3" />}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>Compartilhamentos</TooltipContent>
+                          <TooltipContent>Compartilhamentos (clique para ordenar)</TooltipContent>
                         </Tooltip>
                       </TableHead>
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            <Bookmark className="h-3.5 w-3.5" />
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('saves')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                sortBy === 'saves' && "text-primary"
+                              )}
+                            >
+                              <Bookmark className="h-3.5 w-3.5" />
+                              {sortBy === 'saves' && <ChevronDown className="h-3 w-3" />}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>Salvamentos</TooltipContent>
+                          <TooltipContent>Salvamentos (clique para ordenar)</TooltipContent>
                         </Tooltip>
                       </TableHead>
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            <Link2 className="h-3.5 w-3.5" />
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('link_clicks')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                sortBy === 'link_clicks' && "text-primary"
+                              )}
+                            >
+                              <Link2 className="h-3.5 w-3.5" />
+                              {sortBy === 'link_clicks' && <ChevronDown className="h-3 w-3" />}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>Cliques no Link</TooltipContent>
+                          <TooltipContent>Cliques no Link (clique para ordenar)</TooltipContent>
                         </Tooltip>
                       </TableHead>
                       <TableHead className="text-right w-[70px]">
                         <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            <Play className="h-3.5 w-3.5" />
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('views')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto hover:text-primary transition-colors",
+                                sortBy === 'views' && "text-primary"
+                              )}
+                            >
+                              <Play className="h-3.5 w-3.5" />
+                              {sortBy === 'views' && <ChevronDown className="h-3 w-3" />}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>Views</TooltipContent>
+                          <TooltipContent>Views (clique para ordenar)</TooltipContent>
                         </Tooltip>
                       </TableHead>
-                      <TableHead className="text-right w-[90px] font-semibold text-primary">
-                        Engaj. %
+                      <TableHead className="text-right w-[90px]">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('engagement_rate')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto font-semibold hover:text-primary transition-colors",
+                                sortBy === 'engagement_rate' ? "text-primary" : "text-primary"
+                              )}
+                            >
+                              Engaj. %
+                              {sortBy === 'engagement_rate' && <ChevronDown className="h-3 w-3" />}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Engajamento (clique para ordenar)</TooltipContent>
+                        </Tooltip>
                       </TableHead>
-                      <TableHead className="text-right w-[90px] font-semibold text-primary">
-                        Viral %
+                      <TableHead className="text-right w-[90px]">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleSortToggle('virality_rate')}
+                              className={cn(
+                                "flex items-center gap-1 ml-auto font-semibold hover:text-primary transition-colors",
+                                sortBy === 'virality_rate' ? "text-primary" : "text-primary"
+                              )}
+                            >
+                              Viral %
+                              {sortBy === 'virality_rate' && <ChevronDown className="h-3 w-3" />}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Viralidade (clique para ordenar)</TooltipContent>
+                        </Tooltip>
                       </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -585,7 +691,7 @@ export function SocialMediaTab() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredPosts.map((post) => {
+                      sortedPosts.map((post) => {
                         const isSelected = selectedPostsForComparison.includes(post.id);
                         return (
                           <TableRow 
