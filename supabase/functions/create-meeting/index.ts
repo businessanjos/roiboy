@@ -18,6 +18,7 @@ interface CreateMeetingRequest {
   email_message: string;
   email_subject: string;
   lead_id?: string;
+  send_email?: boolean;
 }
 
 async function createZoomMeeting(
@@ -284,6 +285,7 @@ serve(async (req) => {
       email_message,
       email_subject,
       lead_id,
+      send_email,
     } = body;
 
     // Get task to find account_id
@@ -334,31 +336,36 @@ serve(async (req) => {
       console.error("Error updating task:", updateError);
     }
 
-    // Prepare HTML email content - replace placeholders with actual values
-    const passwordDisplay = meetingResult.meeting_password || "Não requer senha";
-    const emailHtml = email_message
-      .replace("{MEETING_URL}", meetingResult.meeting_url)
-      .replace("{MEETING_PASSWORD}", passwordDisplay)
-      .replace(/\n/g, "<br>");
+    // Only schedule email if send_email is not false
+    if (send_email !== false) {
+      // Prepare HTML email content - replace placeholders with actual values
+      const passwordDisplay = meetingResult.meeting_password || "Não requer senha";
+      const emailHtml = email_message
+        .replace("{MEETING_URL}", meetingResult.meeting_url)
+        .replace("{MEETING_PASSWORD}", passwordDisplay)
+        .replace(/\n/g, "<br>");
 
-    // Schedule email
-    const { error: emailError } = await supabase
-      .from("email_queue")
-      .insert({
-        account_id: task.account_id,
-        task_id: task_id,
-        lead_id: lead_id || null,
-        recipient_email: participant_email,
-        recipient_name: participant_name,
-        subject: email_subject,
-        html_content: emailHtml,
-        meeting_url: meetingResult.meeting_url,
-        send_at: email_send_at,
-        status: "pending",
-      });
+      // Schedule email
+      const { error: emailError } = await supabase
+        .from("email_queue")
+        .insert({
+          account_id: task.account_id,
+          task_id: task_id,
+          lead_id: lead_id || null,
+          recipient_email: participant_email,
+          recipient_name: participant_name,
+          subject: email_subject,
+          html_content: emailHtml,
+          meeting_url: meetingResult.meeting_url,
+          send_at: email_send_at,
+          status: "pending",
+        });
 
-    if (emailError) {
-      console.error("Error scheduling email:", emailError);
+      if (emailError) {
+        console.error("Error scheduling email:", emailError);
+      }
+    } else {
+      console.log("Email sending skipped as requested");
     }
 
     return new Response(
@@ -366,6 +373,7 @@ serve(async (req) => {
         success: true,
         meeting_url: meetingResult.meeting_url,
         meeting_id: meetingResult.meeting_id,
+        meeting_password: meetingResult.meeting_password || "",
         platform,
       }),
       {
