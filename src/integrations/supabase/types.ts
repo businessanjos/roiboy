@@ -3858,6 +3858,7 @@ export type Database = {
           guest_email: string | null
           guest_name: string | null
           guest_phone: string | null
+          guest_rg: string | null
           id: string
           invited_at: string | null
           invited_by: string | null
@@ -3876,6 +3877,7 @@ export type Database = {
           guest_email?: string | null
           guest_name?: string | null
           guest_phone?: string | null
+          guest_rg?: string | null
           id?: string
           invited_at?: string | null
           invited_by?: string | null
@@ -3894,6 +3896,7 @@ export type Database = {
           guest_email?: string | null
           guest_name?: string | null
           guest_phone?: string | null
+          guest_rg?: string | null
           id?: string
           invited_at?: string | null
           invited_by?: string | null
@@ -9984,15 +9987,26 @@ export type Database = {
         Returns: undefined
       }
       refresh_client_latest_metrics: { Args: never; Returns: undefined }
-      register_for_event: {
-        Args: {
-          p_code: string
-          p_email?: string
-          p_name: string
-          p_phone: string
-        }
-        Returns: Json
-      }
+      register_for_event:
+        | {
+            Args: {
+              p_code: string
+              p_email?: string
+              p_name: string
+              p_phone: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_code: string
+              p_email?: string
+              p_name: string
+              p_phone: string
+              p_rg?: string
+            }
+            Returns: Json
+          }
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json

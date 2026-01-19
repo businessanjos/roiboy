@@ -40,6 +40,7 @@ export default function PublicEventRegistration() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [rg, setRg] = useState("");
 
   useEffect(() => {
     if (code) {
@@ -86,6 +87,11 @@ export default function PublicEventRegistration() {
       return;
     }
 
+    if (!email.trim()) {
+      toast.error("Por favor, informe seu e-mail");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -93,7 +99,8 @@ export default function PublicEventRegistration() {
         p_code: code!,
         p_name: name.trim(),
         p_phone: formatPhoneE164(phone),
-        p_email: email.trim() || null
+        p_email: email.trim(),
+        p_rg: rg.trim() || null
       });
 
       if (error) throw error;
@@ -292,13 +299,24 @@ export default function PublicEventRegistration() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail (opcional)</Label>
+              <Label htmlFor="email">E-mail *</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="rg">RG</Label>
+              <Input
+                id="rg"
+                value={rg}
+                onChange={(e) => setRg(e.target.value)}
+                placeholder="00.000.000-0"
               />
             </div>
 
