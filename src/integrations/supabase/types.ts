@@ -4186,6 +4186,7 @@ export type Database = {
           target_deal_stages: Json | null
           title: string
           updated_at: string
+          visible_sectors: Json | null
         }
         Insert: {
           account_id: string
@@ -4223,6 +4224,7 @@ export type Database = {
           target_deal_stages?: Json | null
           title: string
           updated_at?: string
+          visible_sectors?: Json | null
         }
         Update: {
           account_id?: string
@@ -4260,6 +4262,7 @@ export type Database = {
           target_deal_stages?: Json | null
           title?: string
           updated_at?: string
+          visible_sectors?: Json | null
         }
         Relationships: [
           {

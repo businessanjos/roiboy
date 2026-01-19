@@ -88,15 +88,15 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
       // Build query based on sector
       let query = supabase
         .from("events")
-        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code, allow_external_guests, max_capacity")
+        .select("id, title, event_type, scheduled_at, start_time, address, meeting_url, goal_invited, goal_confirmed, goal_present, public_registration_code, allow_external_guests, max_capacity, visible_sectors")
         .eq("account_id", userData.account_id);
       
       if (isVendasSector) {
-        // For sales sector: only show events that allow external guests
-        query = query.eq("allow_external_guests", true);
+        // For sales sector: show events that allow external guests OR have vendas in visible_sectors
+        query = query.or(`allow_external_guests.eq.true,visible_sectors.cs.["vendas"]`);
       } else if (isOperationSector) {
-        // For operations: show operation events
-        query = query.eq("category", "operation");
+        // For operations: show operation events OR have operacoes in visible_sectors
+        query = query.or(`category.eq.operation,visible_sectors.cs.["operacoes"]`);
       } else {
         // For marketing and others: show marketing events
         query = query.eq("category", "marketing");

@@ -111,6 +111,7 @@ export function MarketingEventDialog({
       goals: formData.goals || null,
       notes: formData.notes || null,
       category: 'marketing',
+      visible_sectors: null,
     });
   };
 
