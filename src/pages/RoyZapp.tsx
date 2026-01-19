@@ -3438,10 +3438,41 @@ export default function RoyZapp() {
               console.error('Error loading playbook image:', error);
               toast.error("Erro ao carregar imagem do playbook");
             }
+          } else if (item.content_type === 'audio' && item.media_url) {
+            // For audio items, download and send directly
+            try {
+              toast.info("Enviando áudio...");
+              const response = await fetch(item.media_url);
+              if (!response.ok) throw new Error('Failed to fetch audio');
+              const blob = await response.blob();
+              await sendAudioMessage(blob);
+            } catch (error) {
+              console.error('Error sending playbook audio:', error);
+              toast.error("Erro ao enviar áudio do playbook");
+            }
+          } else if ((item.content_type === 'video' || item.content_type === 'document') && item.media_url) {
+            // For video and document items, download and send directly
+            try {
+              const mediaTypeLabel = item.content_type === 'video' ? 'vídeo' : 'documento';
+              toast.info(`Enviando ${mediaTypeLabel}...`);
+              
+              const response = await fetch(item.media_url);
+              if (!response.ok) throw new Error(`Failed to fetch ${item.content_type}`);
+              
+              const blob = await response.blob();
+              const fileName = item.media_filename || item.name || `playbook-file`;
+              const mimeType = blob.type || (item.content_type === 'video' ? 'video/mp4' : 'application/octet-stream');
+              const file = new File([blob], fileName, { type: mimeType });
+              
+              await sendMediaMessage(file, 'document', item.media_caption || undefined);
+            } catch (error) {
+              console.error(`Error sending playbook ${item.content_type}:`, error);
+              toast.error(`Erro ao enviar ${item.content_type === 'video' ? 'vídeo' : 'documento'} do playbook`);
+            }
           } else if (item.media_url) {
-            // For other media items (audio, video, document), copy the URL to clipboard
+            // For other media types (sticker, link, template), copy the URL to clipboard
             navigator.clipboard.writeText(item.media_url);
-            toast.success("Link da mídia copiado!");
+            toast.success("Link copiado para a área de transferência!");
           }
         }}
         variables={extractPlaybookVariables({
