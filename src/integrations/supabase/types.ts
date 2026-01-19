@@ -9990,26 +9990,16 @@ export type Database = {
         Returns: undefined
       }
       refresh_client_latest_metrics: { Args: never; Returns: undefined }
-      register_for_event:
-        | {
-            Args: {
-              p_code: string
-              p_email?: string
-              p_name: string
-              p_phone: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_code: string
-              p_email?: string
-              p_name: string
-              p_phone: string
-              p_rg?: string
-            }
-            Returns: Json
-          }
+      register_for_event: {
+        Args: {
+          p_code: string
+          p_email?: string
+          p_name: string
+          p_phone: string
+          p_rg?: string
+        }
+        Returns: Json
+      }
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json
