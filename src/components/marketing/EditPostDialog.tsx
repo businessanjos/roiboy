@@ -256,6 +256,7 @@ export function EditPostDialog({
                       <SelectItem value="vlog">🎥 Vlog</SelectItem>
                       <SelectItem value="corte_podcast_convidado">🎙️ Corte Podcast Convidado</SelectItem>
                       <SelectItem value="corte_vida_ryka_podcast">🎧 Corte Vida Ryka Podcast</SelectItem>
+                      <SelectItem value="eventos">📅 Eventos</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
