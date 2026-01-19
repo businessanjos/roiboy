@@ -1,17 +1,23 @@
-import { Music2, Users, UserPlus, Video, Heart, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { Music2, Users, UserPlus, Video, Heart, ExternalLink, Camera } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TikTokProfile } from '@/hooks/useTikTokData';
+import { TikTokProfileAvatarUpload } from './TikTokProfileAvatarUpload';
 
 interface TikTokProfileHeaderProps {
   profile: TikTokProfile | undefined;
   isLoading: boolean;
+  onProfilePictureChange?: (url: string | null) => void;
 }
 
 export function TikTokProfileHeader({ 
   profile, 
   isLoading,
+  onProfilePictureChange,
 }: TikTokProfileHeaderProps) {
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
@@ -57,15 +63,42 @@ export function TikTokProfileHeader({
   return (
     <div className="bg-card rounded-xl border p-6">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-        {/* Profile Picture */}
+        {/* Profile Picture with TikTok Gradient Border */}
         <div className="relative group">
-          <Avatar className="h-24 w-24 ring-4 ring-background shadow-lg">
-            <AvatarImage src={profile.profile_picture_url || undefined} alt={profile.username} />
-            <AvatarFallback className="text-2xl bg-gradient-to-br from-cyan-400 to-pink-500 text-white">
-              {profile.username.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-cyan-400 to-pink-500 p-[3px]">
+            <Avatar className="h-full w-full border-2 border-card">
+              <AvatarImage 
+                src={profile.profile_picture_url || undefined} 
+                alt={profile.username}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-2xl font-semibold bg-muted">
+                {profile.username.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          {/* Edit photo button overlay */}
+          {onProfilePictureChange && (
+            <button
+              onClick={() => setAvatarDialogOpen(true)}
+              className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+            >
+              <Camera className="h-6 w-6 text-white" />
+            </button>
+          )}
         </div>
+
+        {/* Avatar Upload Dialog */}
+        {profile && onProfilePictureChange && (
+          <TikTokProfileAvatarUpload
+            profileId={profile.id}
+            username={profile.username}
+            currentAvatarUrl={profile.profile_picture_url}
+            onAvatarChange={onProfilePictureChange}
+            open={avatarDialogOpen}
+            onOpenChange={setAvatarDialogOpen}
+          />
+        )}
 
         {/* Profile Info */}
         <div className="flex-1 text-center sm:text-left space-y-4">

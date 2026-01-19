@@ -200,6 +200,11 @@ export function TikTokTab() {
       <TikTokProfileHeader
         profile={currentProfile}
         isLoading={isLoading}
+        onProfilePictureChange={(url) => {
+          if (currentProfile) {
+            updateProfilePicture.mutate({ profileId: currentProfile.id, avatarUrl: url });
+          }
+        }}
       />
 
       {/* Header with Profile Selector */}
