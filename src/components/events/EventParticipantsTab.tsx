@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Plus, 
   Users, 
@@ -45,7 +47,11 @@ import {
   MoreHorizontal,
   Download,
   Link,
-  Copy
+  Copy,
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -80,6 +86,16 @@ interface Participant {
   notes: string | null;
   rsvp_token: string | null;
   clients?: Client;
+}
+
+interface ImportRow {
+  nome: string;
+  email?: string;
+  telefone?: string;
+  rg?: string;
+  notas?: string;
+  valid: boolean;
+  error?: string;
 }
 
 interface EventParticipantsTabProps {
@@ -119,6 +135,12 @@ export default function EventParticipantsTab({
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Import state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportRow[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (eventId && accountId) {
@@ -279,6 +301,135 @@ export default function EventParticipantsTab({
     link.click();
   };
 
+  // CSV Import functions
+  const parseCSV = (text: string): ImportRow[] => {
+    // Clean content
+    const cleanContent = text
+      .replace(/^\uFEFF/, '')
+      .replace(/\0/g, '')
+      .trim();
+
+    // Detect separator
+    const separator = cleanContent.includes(';') ? ';' : ',';
+
+    const lines = cleanContent.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+
+    const headerLine = lines[0].toLowerCase();
+    const headers = headerLine.split(separator).map(h => h.replace(/"/g, '').trim());
+
+    return lines.slice(1).map(line => {
+      // Parse CSV line properly handling quoted values
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === separator && !inQuotes) {
+          values.push(current.trim().replace(/^"|"$/g, ''));
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim().replace(/^"|"$/g, ''));
+
+      const row: ImportRow = { nome: '', valid: false };
+
+      headers.forEach((h, i) => {
+        const value = values[i] || '';
+        if (h === 'nome' || h === 'name') row.nome = value;
+        if (h === 'email' || h === 'e-mail') row.email = value;
+        if (h === 'telefone' || h === 'phone' || h === 'tel') row.telefone = value;
+        if (h === 'rg') row.rg = value;
+        if (h === 'notas' || h === 'notes' || h === 'observacoes' || h === 'observações') row.notas = value;
+      });
+
+      row.valid = !!row.nome;
+      row.error = !row.nome ? 'Nome obrigatório' : undefined;
+
+      return row;
+    }).filter(row => row.nome || row.email || row.telefone); // Filter empty rows
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      
+      if (rows.length === 0) {
+        toast({ 
+          title: "Arquivo vazio", 
+          description: "Nenhum dado encontrado no arquivo CSV", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      setImportPreview(rows);
+      setImportDialogOpen(true);
+    } catch (error) {
+      console.error("Error parsing CSV:", error);
+      toast({ 
+        title: "Erro ao ler arquivo", 
+        description: "Verifique se o arquivo é um CSV válido", 
+        variant: "destructive" 
+      });
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!accountId) return;
+    setImporting(true);
+
+    const validRows = importPreview.filter(r => r.valid);
+    const toInsert = validRows.map(row => ({
+      account_id: accountId,
+      event_id: eventId,
+      guest_name: row.nome,
+      guest_email: row.email || null,
+      guest_phone: row.telefone || null,
+      guest_rg: row.rg || null,
+      notes: row.notas || null,
+      rsvp_status: 'pending' as const,
+    }));
+
+    const { error } = await supabase
+      .from('event_participants')
+      .insert(toInsert);
+
+    if (error) {
+      console.error("Error importing participants:", error);
+      toast({ 
+        title: "Erro na importação", 
+        description: "Não foi possível importar os participantes", 
+        variant: "destructive" 
+      });
+    } else {
+      toast({ 
+        title: "Importação concluída", 
+        description: `${validRows.length} convidado(s) importado(s) com sucesso` 
+      });
+      setImportDialogOpen(false);
+      setImportPreview([]);
+      fetchParticipants();
+      onUpdate?.();
+    }
+
+    setImporting(false);
+  };
+
   const getParticipantName = (p: Participant) => p.clients?.full_name || p.guest_name || "—";
   const getParticipantEmail = (p: Participant) => {
     const emails = p.clients?.emails;
@@ -345,6 +496,17 @@ export default function EventParticipantsTab({
             <UserPlus className="h-4 w-4 mr-2" />
             Convidar
           </Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />
+            Importar
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
           {participants.length > 0 && (
             <Button variant="outline" onClick={exportCSV}>
               <Download className="h-4 w-4 mr-2" />
@@ -595,6 +757,112 @@ export default function EventParticipantsTab({
             <Button onClick={handleAddParticipant}>
               <UserPlus className="h-4 w-4 mr-2" />
               Convidar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import CSV Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Importar Lista de Convidados
+            </DialogTitle>
+            <DialogDescription>
+              Revise os dados antes de confirmar a importação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Summary */}
+            <div className="flex gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-green-500/10 text-green-600">
+                  <Check className="h-3 w-3 mr-1" />
+                  {importPreview.filter(r => r.valid).length} válidos
+                </Badge>
+              </div>
+              {importPreview.filter(r => !r.valid).length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-red-500/10 text-red-600">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    {importPreview.filter(r => !r.valid).length} inválidos
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            {/* Preview Table */}
+            <ScrollArea className="h-[300px] border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8"></TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>RG</TableHead>
+                    <TableHead>Notas</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {importPreview.map((row, idx) => (
+                    <TableRow key={idx} className={!row.valid ? 'bg-red-500/5' : ''}>
+                      <TableCell>
+                        {row.valid ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {row.nome || <span className="text-red-600 text-sm">{row.error}</span>}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{row.email || '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.telefone || '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.rg || '—'}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[150px] truncate">
+                        {row.notas || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+
+            <p className="text-xs text-muted-foreground">
+              Formato esperado: CSV com colunas nome, email, telefone, rg, notas (separador: vírgula ou ponto-e-vírgula)
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setImportDialogOpen(false);
+                setImportPreview([]);
+              }}
+              disabled={importing}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleImportConfirm}
+              disabled={importing || importPreview.filter(r => r.valid).length === 0}
+            >
+              {importing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar {importPreview.filter(r => r.valid).length} convidado(s)
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
