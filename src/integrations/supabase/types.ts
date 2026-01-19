@@ -4168,6 +4168,7 @@ export type Database = {
           goal_present: number | null
           goals: string | null
           id: string
+          invitation_file_url: string | null
           is_recurring: boolean
           material_url: string | null
           max_capacity: number | null
@@ -4203,6 +4204,7 @@ export type Database = {
           goal_present?: number | null
           goals?: string | null
           id?: string
+          invitation_file_url?: string | null
           is_recurring?: boolean
           material_url?: string | null
           max_capacity?: number | null
@@ -4238,6 +4240,7 @@ export type Database = {
           goal_present?: number | null
           goals?: string | null
           id?: string
+          invitation_file_url?: string | null
           is_recurring?: boolean
           material_url?: string | null
           max_capacity?: number | null
