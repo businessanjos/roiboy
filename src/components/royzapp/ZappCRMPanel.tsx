@@ -29,6 +29,7 @@ import {
   ListTodo,
   Eye,
   FileText,
+  Pencil,
 } from "lucide-react";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { useNavigate } from "react-router-dom";
@@ -73,6 +74,7 @@ interface PendingTask {
   title: string;
   due_date: string | null;
   due_time: string | null;
+  activity_type_id: string | null;
   activity_type?: { name: string; color: string; icon: string | null } | null;
 }
 
@@ -93,11 +95,12 @@ export function ZappCRMPanel({
   const { activityTypes } = useActivityTypes();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [showCreateDeal, setShowCreateDeal] = useState(false);
+const [showCreateDeal, setShowCreateDeal] = useState(false);
   const [newDealTitle, setNewDealTitle] = useState("");
   const [newDealValue, setNewDealValue] = useState("");
   const [dealDetailOpen, setDealDetailOpen] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<PendingTask | null>(null);
   const [selectedActivityType, setSelectedActivityType] = useState<ActivityType | null>(null);
 
   // Fetch deal stages
@@ -251,7 +254,7 @@ export function ZappCRMPanel({
       let query = supabase
         .from("internal_tasks")
         .select(`
-          id, title, due_date, due_time,
+          id, title, due_date, due_time, activity_type_id,
           activity_type:activity_types(name, color, icon)
         `)
         .is("completed_at", null)
@@ -641,12 +644,23 @@ export function ZappCRMPanel({
                   </div>
                   <div className="space-y-1.5">
                     {pendingTasks.slice(0, 3).map(task => (
-                      <div key={task.id} className="flex items-center gap-2 text-xs">
+                      <div key={task.id} className="flex items-center gap-2 text-xs group">
                         <Checkbox 
                           onCheckedChange={() => completeTask.mutate(task.id)}
                           className="h-3.5 w-3.5"
                         />
                         <span className="flex-1 truncate text-zapp-text">{task.title}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setEditingTask(task);
+                            setTaskDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-3 w-3 text-zapp-text-muted hover:text-zapp-text" />
+                        </Button>
                         {task.due_date && (
                           <span className="text-zapp-text-muted whitespace-nowrap">
                             {formatTaskDate(task.due_date, task.due_time)}
@@ -779,13 +793,31 @@ export function ZappCRMPanel({
       {/* Task Dialog */}
       <TaskDialog
         open={taskDialogOpen}
-        onOpenChange={setTaskDialogOpen}
+        onOpenChange={(open) => {
+          setTaskDialogOpen(open);
+          if (!open) setEditingTask(null);
+        }}
+        task={editingTask ? {
+          id: editingTask.id,
+          title: editingTask.title,
+          description: null,
+          status: "pending",
+          priority: "medium",
+          due_date: editingTask.due_date,
+          due_time: editingTask.due_time,
+          client_id: null,
+          deal_id: activeDeal?.id || null,
+          lead_id: conversationLeadId || null,
+          assigned_to: null,
+          activity_type_id: editingTask.activity_type_id || null,
+        } : null}
         dealId={activeDeal?.id}
         leadId={conversationLeadId || undefined}
         initialActivityTypeId={selectedActivityType?.id}
         onSuccess={() => {
           refetchPendingTasks();
           setTaskDialogOpen(false);
+          setEditingTask(null);
         }}
       />
     </div>
