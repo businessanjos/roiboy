@@ -717,7 +717,7 @@ serve(async (req) => {
           // For groups, search by group_jid + integration_id for multi-instance isolation
           let groupQuery = supabase
             .from("zapp_conversations")
-            .select("id, unread_count, integration_id")
+            .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
             .eq("account_id", accountId)
             .eq("group_jid", groupJid);
           
@@ -736,7 +736,7 @@ serve(async (req) => {
           // CRITICAL: This ensures same phone number creates separate conversations per instance
           let directQuery = supabase
             .from("zapp_conversations")
-            .select("id, unread_count, integration_id")
+            .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
             .eq("account_id", accountId)
             .eq("phone_e164", phone)
             .eq("is_group", false);
@@ -767,12 +767,37 @@ serve(async (req) => {
                   : content.substring(0, 100)),
           };
           
-          // Only update contact_name and avatar for inbound messages
+          // Only update unread_count and avatar for inbound messages
           if (direction === "inbound") {
-            updateData.contact_name = isGroupMessage ? groupName : contactName;
             updateData.unread_count = (existingZappConvo.unread_count || 0) + 1;
             
+            // IMPORTANT: Do NOT update contact_name for existing conversations
+            // This prevents name changes from the WhatsApp "push name" overwriting
+            // manually set or linked client/lead names.
+            // 
+            // For groups: NEVER update the group name from incoming messages
+            // as it could pick up sender names instead of group names.
+            // 
+            // For direct messages: Only update if current name is empty/unknown
+            // AND the conversation is not linked to a client/lead.
+            if (!isGroupMessage) {
+              const currentName = existingZappConvo.contact_name;
+              const hasClientOrLead = existingZappConvo.client_id || existingZappConvo.lead_id;
+              
+              // Only update name if: not linked AND (empty OR "Desconhecido")
+              const shouldUpdateName = !hasClientOrLead && 
+                (!currentName || currentName.trim() === "" || currentName === "Desconhecido");
+              
+              if (shouldUpdateName && contactName && contactName !== "Desconhecido") {
+                updateData.contact_name = contactName;
+                console.log(`[WEBHOOK] Updating empty contact_name to: ${contactName}`);
+              }
+            }
+            // Note: For groups, we intentionally do NOT update contact_name
+            // to prevent the sender's name from overwriting the group name
+            
             // Update avatar from WhatsApp profile picture if available
+            // (avatar updates are still allowed as they don't cause confusion)
             const profilePicUrl = chat.image || chat.imagePreview;
             if (profilePicUrl) {
               updateData.avatar_url = profilePicUrl;
