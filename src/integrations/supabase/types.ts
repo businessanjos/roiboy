@@ -4179,6 +4179,7 @@ export type Database = {
           modality: Database["public"]["Enums"]["event_modality"]
           notes: string | null
           public_registration_code: string | null
+          public_registration_enabled: boolean | null
           scheduled_at: string | null
           start_time: string | null
           status: string | null
@@ -4215,6 +4216,7 @@ export type Database = {
           modality?: Database["public"]["Enums"]["event_modality"]
           notes?: string | null
           public_registration_code?: string | null
+          public_registration_enabled?: boolean | null
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
@@ -4251,6 +4253,7 @@ export type Database = {
           modality?: Database["public"]["Enums"]["event_modality"]
           notes?: string | null
           public_registration_code?: string | null
+          public_registration_enabled?: boolean | null
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
