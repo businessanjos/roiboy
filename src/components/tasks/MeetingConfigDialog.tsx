@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Video, Mail, Clock, Loader2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
@@ -66,6 +67,7 @@ export function MeetingConfigDialog({
   const [platform, setPlatform] = useState("google");
   const [emailAdvance, setEmailAdvance] = useState("immediate");
   const [emailMessage, setEmailMessage] = useState("");
+  const [sendEmail, setSendEmail] = useState(true);
 
   // Load user preferences and auto-populate message when dialog opens
   useEffect(() => {
@@ -178,18 +180,30 @@ Até lá!`;
           email_message: formattedMessage,
           email_subject: `Reunião: ${taskTitle}`,
           lead_id: leadId,
+          send_email: sendEmail,
         },
       });
 
       if (error) throw error;
 
       if (data?.meeting_url) {
+        // Atualiza a mensagem com o link real para exibição
+        const updatedMessage = emailMessage
+          .replace(/{link}/g, data.meeting_url)
+          .replace(/{senha}/g, data.meeting_password || "Não requer senha");
+        setEmailMessage(updatedMessage);
+        
         onMeetingCreated(data.meeting_url, platform);
         toast.success("Reunião criada com sucesso!");
-        if (emailAdvance === "immediate") {
-          toast.info("Convite enviado para " + participantEmail);
+        
+        if (sendEmail) {
+          if (emailAdvance === "immediate") {
+            toast.info("Convite enviado para " + participantEmail);
+          } else {
+            toast.info(`Convite será enviado ${EMAIL_ADVANCE_OPTIONS.find(o => o.value === emailAdvance)?.label.toLowerCase()}`);
+          }
         } else {
-          toast.info(`Convite será enviado ${EMAIL_ADVANCE_OPTIONS.find(o => o.value === emailAdvance)?.label.toLowerCase()}`);
+          toast.info("Reunião criada sem envio de convite por email");
         }
         onOpenChange(false);
       } else {
@@ -263,39 +277,55 @@ Até lá!`;
             )}
           </div>
 
-          {/* When to send */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Quando enviar o convite
+          {/* Send Email Checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="send-email"
+              checked={sendEmail}
+              onCheckedChange={(checked) => setSendEmail(checked === true)}
+            />
+            <Label htmlFor="send-email" className="text-sm font-normal cursor-pointer">
+              Enviar convite por email
             </Label>
-            <Select value={emailAdvance} onValueChange={setEmailAdvance}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {EMAIL_ADVANCE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
-          {/* Email Message */}
-          <div className="space-y-2">
-            <Label>Mensagem do Convite</Label>
-            <Textarea
-              value={emailMessage}
-              onChange={(e) => setEmailMessage(e.target.value)}
-              rows={6}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Use {"{nome}"}, {"{data}"}, {"{horario}"}, {"{link}"}, {"{senha}"} para personalizar
-            </p>
-          </div>
+          {sendEmail && (
+            <>
+              {/* When to send */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Quando enviar o convite
+                </Label>
+                <Select value={emailAdvance} onValueChange={setEmailAdvance}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EMAIL_ADVANCE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Email Message */}
+              <div className="space-y-2">
+                <Label>Mensagem do Convite</Label>
+                <Textarea
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                  rows={6}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use {"{nome}"}, {"{data}"}, {"{horario}"}, {"{link}"}, {"{senha}"} para personalizar
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <DialogFooter>
