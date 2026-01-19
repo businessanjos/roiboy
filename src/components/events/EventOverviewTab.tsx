@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Pencil, Copy, Link, RefreshCw } from "lucide-react";
+import { Save, Pencil, Copy, Link, RefreshCw, Upload, FileText, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface Event {
@@ -32,6 +32,7 @@ interface Event {
   expected_attendees: number | null;
   status: string | null;
   public_registration_code: string | null;
+  invitation_file_url: string | null;
 }
 
 interface Props {
@@ -45,6 +46,8 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generatingCode, setGeneratingCode] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     title: event.title,
@@ -86,6 +89,95 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
     const link = `${window.location.origin}/inscricao/${event.public_registration_code}`;
     navigator.clipboard.writeText(link);
     toast.success("Link de inscrição copiado!");
+  };
+
+  const handleFileUpload = async (file: File) => {
+    // Validate file size (50MB max)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 50MB.");
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Formato não suportado. Use JPG, PNG, WEBP, GIF ou PDF.");
+      return;
+    }
+
+    setUploadingFile(true);
+
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'file';
+      const filePath = `${event.id}/invitation-${Date.now()}.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('event-media')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('event-media')
+        .getPublicUrl(filePath);
+
+      // Update event with file URL
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ invitation_file_url: publicUrl })
+        .eq('id', event.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Arquivo do convite salvo com sucesso!");
+      onUpdate();
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Erro ao fazer upload do arquivo");
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleRemoveFile = async () => {
+    try {
+      // Extract file path from URL
+      if (event.invitation_file_url) {
+        const urlParts = event.invitation_file_url.split('/event-media/');
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1];
+          await supabase.storage.from('event-media').remove([filePath]);
+        }
+      }
+
+      // Clear URL in database
+      const { error } = await supabase
+        .from('events')
+        .update({ invitation_file_url: null })
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast.success("Arquivo removido com sucesso!");
+      onUpdate();
+    } catch (error) {
+      console.error("Error removing file:", error);
+      toast.error("Erro ao remover arquivo");
+    }
+  };
+
+  const isImageFile = (url: string | null) => {
+    if (!url) return false;
+    const extension = url.split('.').pop()?.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension || '');
+  };
+
+  const getFileName = (url: string | null) => {
+    if (!url) return '';
+    const parts = url.split('/');
+    return parts[parts.length - 1];
   };
 
   const handleSave = async () => {
@@ -315,6 +407,112 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
               </Button>
             </div>
           )}
+
+          {/* Invitation File Upload Section */}
+          <div className="mt-6 pt-6 border-t">
+            <Label className="text-sm font-medium">Arquivo do Convite (opcional)</Label>
+            <p className="text-xs text-muted-foreground mb-3">
+              Adicione uma imagem ou PDF para enviar junto com o link de inscrição
+            </p>
+
+            {event.invitation_file_url ? (
+              <div className="space-y-3">
+                {isImageFile(event.invitation_file_url) ? (
+                  <div className="relative rounded-lg border overflow-hidden max-w-xs">
+                    <img 
+                      src={event.invitation_file_url} 
+                      alt="Convite do evento" 
+                      className="w-full h-auto max-h-48 object-cover"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={handleRemoveFile}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                    <div className="p-2 rounded bg-red-100 dark:bg-red-900/30">
+                      <FileText className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{getFileName(event.invitation_file_url)}</p>
+                      <a 
+                        href={event.invitation_file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Abrir arquivo
+                      </a>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={handleRemoveFile}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFile}
+                >
+                  {uploadingFile ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Substituir arquivo
+                </Button>
+              </div>
+            ) : (
+              <div 
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadingFile ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+                    <p className="text-sm text-muted-foreground">Enviando...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      <FileText className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Clique para adicionar uma imagem ou PDF
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      JPG, PNG, WEBP, GIF ou PDF (máx. 50MB)
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+                e.target.value = '';
+              }}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

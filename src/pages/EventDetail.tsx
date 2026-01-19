@@ -63,6 +63,7 @@ interface Event {
   created_at: string;
   account_id: string;
   public_registration_code: string | null;
+  invitation_file_url: string | null;
 }
 
 export default function EventDetail() {
