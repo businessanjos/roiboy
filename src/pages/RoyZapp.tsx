@@ -2468,8 +2468,9 @@ export default function RoyZapp() {
     
     setCreatingConversation(true);
     try {
-      const isLeadMode = selectedSectorId === "vendas";
-      const idField = isLeadMode ? "lead_id" : "client_id";
+      // Usar o TIPO do contato selecionado, não o setor
+      const isLeadContact = contact.type === 'lead';
+      const isClientContact = contact.type === 'client';
       
       // Normalizar telefone para busca consistente
       const normalizedPhone = contact.phone_e164?.startsWith('+') 
@@ -2490,13 +2491,13 @@ export default function RoyZapp() {
       if (convByPhone) {
         zappConvId = convByPhone.id;
         
-        // Atualizar lead_id/client_id se não estiver vinculado
-        if (isLeadMode && !convByPhone.lead_id && contact.id) {
+        // Atualizar lead_id/client_id se não estiver vinculado (baseado no tipo do contato)
+        if (isLeadContact && !convByPhone.lead_id && contact.id) {
           await supabase
             .from("zapp_conversations")
             .update({ lead_id: contact.id, contact_name: contact.full_name })
             .eq("id", convByPhone.id);
-        } else if (!isLeadMode && !convByPhone.client_id && contact.id) {
+        } else if (isClientContact && !convByPhone.client_id && contact.id) {
           await supabase
             .from("zapp_conversations")
             .update({ client_id: contact.id, contact_name: contact.full_name })
@@ -2504,15 +2505,18 @@ export default function RoyZapp() {
         }
       } else {
         // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)
-        const { data: convById } = await supabase
-          .from("zapp_conversations")
-          .select("id")
-          .eq("account_id", currentUser.account_id)
-          .eq(idField, contact.id)
-          .maybeSingle();
-        
-        if (convById) {
-          zappConvId = convById.id;
+        if (isLeadContact || isClientContact) {
+          const idField = isLeadContact ? 'lead_id' : 'client_id';
+          const { data: convById } = await supabase
+            .from("zapp_conversations")
+            .select("id")
+            .eq("account_id", currentUser.account_id)
+            .eq(idField, contact.id)
+            .maybeSingle();
+          
+          if (convById) {
+            zappConvId = convById.id;
+          }
         }
       }
       
@@ -2558,9 +2562,14 @@ export default function RoyZapp() {
           integration_id: selectedIntegrationId,
         };
         
-        const insertData = isLeadMode 
-          ? { ...baseData, lead_id: contact.id }
-          : { ...baseData, client_id: contact.id };
+        // Determinar qual ID usar baseado no TIPO do contato
+        let insertData: typeof baseData & { lead_id?: string; client_id?: string } = { ...baseData };
+        if (isLeadContact) {
+          insertData = { ...baseData, lead_id: contact.id };
+        } else if (isClientContact) {
+          insertData = { ...baseData, client_id: contact.id };
+        }
+        // Se for 'conversation', não adiciona nem lead_id nem client_id
         
         const { data: newConv, error: convError } = await supabase
           .from("zapp_conversations")
