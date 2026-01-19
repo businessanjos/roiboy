@@ -26,6 +26,7 @@ export type EventType =
   | "webinar" 
   | "imersao" 
   | "plantao"
+  | "alinhamento"
   // Marketing types
   | "launch"
   | "campaign"
@@ -92,6 +93,12 @@ export const eventTypeConfig: Record<EventType, EventTypeConfig> = {
     label: 'Plantão de Dúvidas', 
     icon: 'clock', 
     defaultColor: '#22c55e', // green-500
+    category: 'operation'
+  },
+  alinhamento: { 
+    label: 'Alinhamento', 
+    icon: 'users', 
+    defaultColor: '#f59e0b', // amber-500
     category: 'operation'
   },
   // Marketing types - tons de vermelho/laranja/rosa/roxo
