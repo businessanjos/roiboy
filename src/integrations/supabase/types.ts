@@ -8375,6 +8375,310 @@ export type Database = {
           },
         ]
       }
+      tiktok_credentials: {
+        Row: {
+          access_token: string | null
+          account_id: string
+          created_at: string
+          id: string
+          profile_id: string
+          refresh_token: string | null
+          scope: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_id: string
+          created_at?: string
+          id?: string
+          profile_id: string
+          refresh_token?: string | null
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_id?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_credentials_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiktok_credentials_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiktok_insights: {
+        Row: {
+          account_id: string
+          created_at: string
+          followers_count: number | null
+          following_count: number | null
+          id: string
+          likes_count: number | null
+          profile_id: string
+          profile_views: number | null
+          recorded_at: string
+          videos_count: number | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          likes_count?: number | null
+          profile_id: string
+          profile_views?: number | null
+          recorded_at?: string
+          videos_count?: number | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          likes_count?: number | null
+          profile_id?: string
+          profile_views?: number | null
+          recorded_at?: string
+          videos_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_insights_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiktok_insights_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiktok_post_options: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          option_type: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          option_type: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          option_type?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_post_options_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiktok_posts: {
+        Row: {
+          account_id: string
+          ai_objective: string | null
+          avg_watch_time: number | null
+          caption: string | null
+          category: string | null
+          comments: number | null
+          completion_rate: number | null
+          created_at: string
+          duration_seconds: number | null
+          engagement_rate: number | null
+          followers_gained: number | null
+          hashtags: string[] | null
+          id: string
+          is_viral: boolean | null
+          likes: number | null
+          posted_at: string | null
+          profile_id: string
+          saves: number | null
+          shares: number | null
+          sound_name: string | null
+          thumbnail_url: string | null
+          tiktok_id: string | null
+          updated_at: string
+          video_url: string | null
+          views: number | null
+        }
+        Insert: {
+          account_id: string
+          ai_objective?: string | null
+          avg_watch_time?: number | null
+          caption?: string | null
+          category?: string | null
+          comments?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          engagement_rate?: number | null
+          followers_gained?: number | null
+          hashtags?: string[] | null
+          id?: string
+          is_viral?: boolean | null
+          likes?: number | null
+          posted_at?: string | null
+          profile_id: string
+          saves?: number | null
+          shares?: number | null
+          sound_name?: string | null
+          thumbnail_url?: string | null
+          tiktok_id?: string | null
+          updated_at?: string
+          video_url?: string | null
+          views?: number | null
+        }
+        Update: {
+          account_id?: string
+          ai_objective?: string | null
+          avg_watch_time?: number | null
+          caption?: string | null
+          category?: string | null
+          comments?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          engagement_rate?: number | null
+          followers_gained?: number | null
+          hashtags?: string[] | null
+          id?: string
+          is_viral?: boolean | null
+          likes?: number | null
+          posted_at?: string | null
+          profile_id?: string
+          saves?: number | null
+          shares?: number | null
+          sound_name?: string | null
+          thumbnail_url?: string | null
+          tiktok_id?: string | null
+          updated_at?: string
+          video_url?: string | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiktok_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiktok_profiles: {
+        Row: {
+          account_id: string
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          followers_count: number | null
+          followers_previous_count: number | null
+          following_count: number | null
+          id: string
+          is_active: boolean | null
+          last_synced_at: string | null
+          likes_count: number | null
+          profile_picture_url: string | null
+          updated_at: string
+          username: string
+          videos_count: number | null
+        }
+        Insert: {
+          account_id: string
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          followers_count?: number | null
+          followers_previous_count?: number | null
+          following_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          likes_count?: number | null
+          profile_picture_url?: string | null
+          updated_at?: string
+          username: string
+          videos_count?: number | null
+        }
+        Update: {
+          account_id?: string
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          followers_count?: number | null
+          followers_previous_count?: number | null
+          following_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          likes_count?: number | null
+          profile_picture_url?: string | null
+          updated_at?: string
+          username?: string
+          videos_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_profiles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_instance_preferences: {
         Row: {
           account_id: string
