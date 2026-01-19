@@ -11,10 +11,7 @@ interface TikTokProfileHeaderProps {
 export function TikTokProfileHeader({ 
   profile, 
   isLoading,
-  onProfilePictureChange
 }: TikTokProfileHeaderProps) {
-  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
-
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
@@ -57,11 +54,6 @@ export function TikTokProfileHeader({
     );
   }
 
-  const handleAvatarSave = (url: string | null) => {
-    onProfilePictureChange?.(url);
-    setAvatarDialogOpen(false);
-  };
-
   return (
     <div className="bg-card rounded-xl border p-6">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
@@ -73,16 +65,6 @@ export function TikTokProfileHeader({
               {profile.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          {onProfilePictureChange && (
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute bottom-0 right-0 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-              onClick={() => setAvatarDialogOpen(true)}
-            >
-              <Camera className="h-4 w-4" />
-            </Button>
-          )}
         </div>
 
         {/* Profile Info */}
@@ -143,17 +125,6 @@ export function TikTokProfileHeader({
           </div>
         </div>
       </div>
-
-      {onProfilePictureChange && (
-        <ImageCropDialog
-          open={avatarDialogOpen}
-          onOpenChange={setAvatarDialogOpen}
-          onSave={handleAvatarSave}
-          currentImage={profile.profile_picture_url}
-          title="Editar Foto de Perfil"
-          aspectRatio={1}
-        />
-      )}
     </div>
   );
 }
