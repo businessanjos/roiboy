@@ -59,6 +59,7 @@ import {
   ListTodo,
   Settings,
   Copy,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
@@ -442,6 +443,23 @@ export function DealDetailSheet({
       toast.error("Erro ao registrar atividade");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteActivity = async (activityId: string) => {
+    try {
+      const { error } = await supabase
+        .from("deal_activities")
+        .delete()
+        .eq("id", activityId);
+
+      if (error) throw error;
+
+      fetchActivities();
+      toast.success("Anotação excluída!");
+    } catch (error: any) {
+      console.error("Error deleting activity:", error);
+      toast.error("Erro ao excluir anotação");
     }
   };
 
@@ -868,7 +886,7 @@ export function DealDetailSheet({
                               const userName = activity.user?.name || "Sistema";
 
                               return (
-                                <div key={`activity-${activity.id}`} className="flex gap-2.5 p-3">
+                                <div key={`activity-${activity.id}`} className="group flex gap-2.5 p-3 hover:bg-muted/30 transition-colors">
                                   <div className={cn(
                                     "w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0",
                                     config.bgColor
@@ -882,9 +900,20 @@ export function DealDetailSheet({
                                       <span className={cn("font-medium", config.textColor)}>
                                         {activity.title || config.label}
                                       </span>
-                                      <span className="text-[10px] text-muted-foreground ml-auto">
-                                        {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
-                                      </span>
+                                      <div className="flex items-center gap-1 ml-auto">
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {formatDistanceToNow(new Date(activity.created_at), { locale: ptBR, addSuffix: true })}
+                                        </span>
+                                        {!['stage_change', 'status_change'].includes(activity.type) && (
+                                          <button
+                                            onClick={() => handleDeleteActivity(activity.id)}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
+                                            title="Excluir anotação"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                     {activity.content && (
                                       <>
