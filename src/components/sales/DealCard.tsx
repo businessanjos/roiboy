@@ -209,7 +209,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        "relative cursor-pointer hover:shadow-lg transition-all bg-card border-border/50",
+        "relative cursor-pointer hover:shadow-lg transition-all bg-card border-border/50 overflow-hidden",
         isRenewal && "ring-2 ring-amber-500/50 bg-amber-500/5",
         (isDragging || isSortableDragging) && "opacity-50 shadow-xl rotate-1 scale-105"
       )}
