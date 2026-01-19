@@ -131,19 +131,17 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="w-full h-[calc(100vh-220px)] flex flex-col">
-        <div className="flex-1 overflow-auto">
-          <div className="flex gap-3 h-full min-w-max pb-2 pr-4">
-            {stages.map((stage, index) => (
-              <DealKanbanColumn
-                key={stage.id}
-                stage={stage}
-                deals={dealsByStage[stage.id] || []}
-                onDealClick={onDealClick}
-                conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
-              />
-            ))}
-          </div>
+      <div className="w-full h-[calc(100vh-220px)] overflow-x-auto">
+        <div className="flex gap-3 h-full min-w-max pr-4">
+          {stages.map((stage, index) => (
+            <DealKanbanColumn
+              key={stage.id}
+              stage={stage}
+              deals={dealsByStage[stage.id] || []}
+              onDealClick={onDealClick}
+              conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
+            />
+          ))}
         </div>
       </div>
 

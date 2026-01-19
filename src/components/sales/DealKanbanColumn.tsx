@@ -54,7 +54,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate }: 
     <div
       ref={setNodeRef}
       className={cn(
-        "w-[200px] min-w-[160px] flex-shrink-0 flex flex-col transition-all",
+        "flex-1 min-w-[200px] max-w-[320px] flex flex-col transition-all",
         isOver && "scale-[1.01]"
       )}
     >
