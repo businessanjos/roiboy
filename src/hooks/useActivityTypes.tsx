@@ -11,13 +11,14 @@ export interface ActivityType {
   description: string | null;
   is_active: boolean;
   display_order: number;
+  sector_id: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export function useActivityTypes() {
+export function useActivityTypes(sectorId?: string | null) {
   const { data: activityTypes = [], isLoading } = useQuery({
-    queryKey: ["activity-types"],
+    queryKey: ["activity-types", sectorId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activity_types")
@@ -26,7 +27,17 @@ export function useActivityTypes() {
         .order("display_order");
       
       if (error) throw error;
-      return data as ActivityType[];
+      
+      const allTypes = data as ActivityType[];
+      
+      // Filter by sector: include types for the specified sector OR types with no sector (null)
+      if (sectorId) {
+        return allTypes.filter(
+          type => type.sector_id === null || type.sector_id === sectorId
+        );
+      }
+      
+      return allTypes;
     },
   });
 
