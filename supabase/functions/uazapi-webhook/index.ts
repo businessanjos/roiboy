@@ -1140,13 +1140,20 @@ serve(async (req) => {
               newStatus = wasOfficiallyAssigned ? "active" : "pending";
             }
             
-            await supabase
+          // BLINDAGEM DE SETOR: Log security alert if trying to change department
+          if (sectorDepartmentId && existingAssignment.department_id && 
+              sectorDepartmentId !== existingAssignment.department_id) {
+            console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
+          }
+          
+          await supabase
               .from("zapp_conversation_assignments")
               .update({
                 updated_at: timestamp,
                 status: newStatus,
-                // Set department_id if we have it and assignment doesn't have one
-                ...(sectorDepartmentId ? { department_id: sectorDepartmentId } : {}),
+                // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
+                // NUNCA sobrescrever um department_id existente para evitar migração entre setores
+                ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
               })
               .eq("id", existingAssignment.id);
             markLatency("assignment_updated");
@@ -1498,20 +1505,27 @@ serve(async (req) => {
             // Create or update zapp assignment
             const { data: existingAssignment } = await supabase
               .from("zapp_conversation_assignments")
-              .select("id, status")
+              .select("id, status, department_id")
               .eq("account_id", accountId)
               .eq("zapp_conversation_id", zappConversationId)
               .maybeSingle();
 
             if (existingAssignment) {
+              // BLINDAGEM DE SETOR: Log security alert if trying to change department
+              if (sectorDepartmentId && existingAssignment.department_id && 
+                  sectorDepartmentId !== existingAssignment.department_id) {
+                console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
+              }
+              
               await supabase
                 .from("zapp_conversation_assignments")
                 .update({
                   updated_at: timestamp,
                   // If conversation was closed and client sends new message, reopen to triage
                   status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
-                  // Set department_id if we have it
-                  ...(sectorDepartmentId ? { department_id: sectorDepartmentId } : {}),
+                  // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
+                  // NUNCA sobrescrever um department_id existente para evitar migração entre setores
+                  ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
                 })
                 .eq("id", existingAssignment.id);
             } else {
