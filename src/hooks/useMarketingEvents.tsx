@@ -27,6 +27,7 @@ export interface MarketingEvent {
   goals: string | null;
   notes: string | null;
   category: 'marketing' | 'operation';
+  visible_sectors: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -59,6 +60,7 @@ function mapEventRowToMarketingEvent(row: EventRow): MarketingEvent {
     goals: row.goals,
     notes: row.notes,
     category: row.category as 'marketing' | 'operation',
+    visible_sectors: row.visible_sectors as string[] | null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -191,14 +193,34 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
     },
   });
 
+  const updateVisibilityMutation = useMutation({
+    mutationFn: async ({ eventId, sectors }: { eventId: string; sectors: string[] }) => {
+      const { error } = await supabase
+        .from('events')
+        .update({ visible_sectors: sectors })
+        .eq('id', eventId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast.success('Visibilidade atualizada!');
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar visibilidade');
+    },
+  });
+
   return {
     events: query.data || [],
     isLoading: query.isLoading,
     createEvent: createMutation.mutate,
     updateEvent: updateMutation.mutate,
     deleteEvent: deleteMutation.mutate,
+    updateEventVisibility: updateVisibilityMutation.mutate,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    isUpdatingVisibility: updateVisibilityMutation.isPending,
   };
 }

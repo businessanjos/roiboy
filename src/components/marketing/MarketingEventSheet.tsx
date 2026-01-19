@@ -1,11 +1,19 @@
+import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { MarketingEvent, eventTypeConfig, statusConfig } from '@/hooks/useMarketingEvents';
-import { Rocket, Megaphone, Video, FileText, Radio, Handshake, Building, Presentation, Circle, Pencil, Trash2, Calendar, DollarSign, Target, StickyNote, Copy, Clock } from 'lucide-react';
+import { Rocket, Megaphone, Video, FileText, Radio, Handshake, Building, Presentation, Circle, Pencil, Trash2, Calendar, DollarSign, Target, StickyNote, Copy, Clock, Eye, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { sectors, type SectorId } from '@/config/sectors';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const iconMap: Record<string, React.ElementType> = {
   rocket: Rocket,
@@ -19,6 +27,11 @@ const iconMap: Record<string, React.ElementType> = {
   circle: Circle,
 };
 
+// Setores disponíveis para seleção (excluindo marketing, configuracoes, royzapp, roychat)
+const availableSectors = sectors.filter(
+  s => !['marketing', 'configuracoes', 'royzapp', 'roychat'].includes(s.id)
+);
+
 interface MarketingEventSheetProps {
   event: MarketingEvent | null;
   open: boolean;
@@ -29,6 +42,10 @@ interface MarketingEventSheetProps {
 }
 
 export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelete, onDuplicate }: MarketingEventSheetProps) {
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const queryClient = useQueryClient();
+
   if (!event) return null;
 
   const typeConfig = eventTypeConfig[event.event_type];
@@ -42,6 +59,36 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
   const formatTime = (time: string) => {
     return time.slice(0, 5); // HH:MM format
   };
+
+  const handleSectorToggle = async (sectorId: string, checked: boolean) => {
+    if (!event) return;
+    
+    setIsUpdating(true);
+    try {
+      const current = event.visible_sectors || [];
+      const updated = checked 
+        ? [...current, sectorId]
+        : current.filter(id => id !== sectorId);
+      
+      const { error } = await supabase
+        .from('events')
+        .update({ visible_sectors: updated })
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      // Update local state via query invalidation
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast.success('Visibilidade atualizada!');
+    } catch (error) {
+      console.error('Error updating visibility:', error);
+      toast.error('Erro ao atualizar visibilidade');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const selectedCount = event.visible_sectors?.length || 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -106,6 +153,57 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
               </div>
             </div>
           )}
+
+          {/* Visibility by Sector */}
+          <Collapsible open={visibilityOpen} onOpenChange={setVisibilityOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  <span>Visibilidade em outros setores</span>
+                  {selectedCount > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {selectedCount}
+                    </Badge>
+                  )}
+                </div>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", 
+                  visibilityOpen && "rotate-180")} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 space-y-2">
+              <p className="text-xs text-muted-foreground mb-2">
+                Selecione os setores que poderão visualizar este evento além do Marketing:
+              </p>
+              {availableSectors.map(sector => {
+                const SectorIcon = sector.icon;
+                const isChecked = event.visible_sectors?.includes(sector.id) || false;
+                
+                return (
+                  <div 
+                    key={sector.id} 
+                    className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <Checkbox 
+                      id={`sector-${sector.id}`}
+                      checked={isChecked}
+                      disabled={isUpdating}
+                      onCheckedChange={(checked) => handleSectorToggle(sector.id, !!checked)}
+                    />
+                    <div className={cn("p-1.5 rounded", sector.bgColor)}>
+                      <SectorIcon className={cn("h-3.5 w-3.5", sector.color)} />
+                    </div>
+                    <label 
+                      htmlFor={`sector-${sector.id}`}
+                      className="text-sm font-medium cursor-pointer flex-1"
+                    >
+                      {sector.name}
+                    </label>
+                  </div>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Description */}
           {event.description && (
