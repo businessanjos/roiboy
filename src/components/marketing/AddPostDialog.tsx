@@ -60,6 +60,7 @@ export interface PostFormData {
   views: number;
   followers_gained: number;
   reposts: number;
+  profile_visits: number;
   collaborator: string;
   specialist_version?: string;
   composition?: string[];
@@ -99,6 +100,7 @@ export function AddPostDialog({
   const [views, setViews] = useState('');
   const [followersGained, setFollowersGained] = useState('');
   const [reposts, setReposts] = useState('');
+  const [profileVisits, setProfileVisits] = useState('');
   const [collaborator, setCollaborator] = useState('');
   const [specialistVersion, setSpecialistVersion] = useState('');
   const [composition, setComposition] = useState<string[]>([]);
@@ -133,6 +135,7 @@ export function AddPostDialog({
     setViews('');
     setFollowersGained('');
     setReposts('');
+    setProfileVisits('');
     setCollaborator('');
     setSpecialistVersion('');
     setComposition([]);
@@ -161,6 +164,7 @@ export function AddPostDialog({
     const viewsNum = parseInt(views) || 0;
     const followersGainedNum = parseInt(followersGained) || 0;
     const repostsNum = parseInt(reposts) || 0;
+    const profileVisitsNum = parseInt(profileVisits) || 0;
 
     onSubmit({
       permalink,
@@ -178,6 +182,7 @@ export function AddPostDialog({
       views: viewsNum,
       followers_gained: followersGainedNum,
       reposts: repostsNum,
+      profile_visits: profileVisitsNum,
       collaborator: collaborator.trim(),
       specialist_version: specialistVersion || undefined,
       composition: composition.length > 0 ? composition : undefined,
@@ -509,6 +514,20 @@ export function AddPostDialog({
                       placeholder="0"
                       value={followersGained}
                       onChange={(e) => setFollowersGained(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="profileVisits" className="text-xs text-muted-foreground">
+                      Visitas ao Perfil
+                    </Label>
+                    <Input
+                      id="profileVisits"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={profileVisits}
+                      onChange={(e) => setProfileVisits(e.target.value)}
                       className="h-8"
                     />
                   </div>

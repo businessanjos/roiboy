@@ -1,0 +1,1 @@
+ALTER TABLE instagram_posts ADD COLUMN profile_visits integer DEFAULT 0;
