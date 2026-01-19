@@ -61,6 +61,7 @@ import {
   Send,
   Copy,
   ExternalLink,
+  Instagram,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -1536,6 +1537,19 @@ export default function ClientDetail() {
                   </span>
                   {client.emails.length > 1 && ` +${client.emails.length - 1}`}
                 </span>
+              )}
+              {client.instagram && (
+                <a
+                  href={`https://instagram.com/${client.instagram.replace(/^@/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-pink-600 hover:text-pink-700 hover:underline transition-colors"
+                >
+                  <Instagram className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-[120px]">
+                    @{client.instagram.replace(/^@/, '')}
+                  </span>
+                </a>
               )}
               {client.company_name && (
                 <span className="flex items-center gap-1">
