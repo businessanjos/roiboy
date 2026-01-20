@@ -108,13 +108,17 @@ export function MarketingTaskDialog({
 
     setIsSubmitting(true);
     try {
+      // Converter "none" para undefined para evitar erro de UUID
+      const finalSectionId = sectionId === "none" ? undefined : sectionId;
+      const finalAssigneeId = assigneeId === "none" ? undefined : assigneeId;
+
       if (isEditing && taskId) {
         await updateTask.mutateAsync({
           id: taskId,
           title: title.trim(),
           description: description.trim() || undefined,
-          section_id: sectionId,
-          assignee_id: assigneeId,
+          section_id: finalSectionId,
+          assignee_id: finalAssigneeId,
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
           status,
@@ -123,8 +127,8 @@ export function MarketingTaskDialog({
         await createTask.mutateAsync({
           title: title.trim(),
           description: description.trim() || undefined,
-          section_id: sectionId,
-          assignee_id: assigneeId,
+          section_id: finalSectionId,
+          assignee_id: finalAssigneeId,
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
           status,
