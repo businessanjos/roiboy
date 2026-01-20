@@ -127,6 +127,7 @@ export default function EventParticipantsTab({
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchClients, setSearchClients] = useState("");
+  const [searchingClients, setSearchingClients] = useState(false);
 
   // Form state
   const [inviteType, setInviteType] = useState<"client" | "guest">("client");
@@ -145,9 +146,19 @@ export default function EventParticipantsTab({
   useEffect(() => {
     if (eventId && accountId) {
       fetchParticipants();
-      fetchClients();
     }
   }, [eventId, accountId]);
+
+  // Debounced search for clients
+  useEffect(() => {
+    if (!accountId) return;
+    
+    const timer = setTimeout(() => {
+      searchClientsFromServer(searchClients);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchClients, accountId]);
 
   const fetchParticipants = async () => {
     setLoading(true);
@@ -168,15 +179,29 @@ export default function EventParticipantsTab({
     setLoading(false);
   };
 
-  const fetchClients = async () => {
-    const { data, error } = await supabase
+  const searchClientsFromServer = async (searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      // Load first 50 clients if no search term
+      const { data } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164, avatar_url, emails")
+        .order("full_name")
+        .limit(50);
+      
+      setClients((data || []) as Client[]);
+      return;
+    }
+    
+    setSearchingClients(true);
+    const { data } = await supabase
       .from("clients")
       .select("id, full_name, phone_e164, avatar_url, emails")
-      .order("full_name");
-
-    if (!error && data) {
-      setClients(data as Client[]);
-    }
+      .or(`full_name.ilike.%${searchTerm}%,phone_e164.ilike.%${searchTerm}%`)
+      .order("full_name")
+      .limit(50);
+    
+    setClients((data || []) as Client[]);
+    setSearchingClients(false);
   };
 
   const resetForm = () => {
@@ -684,29 +709,42 @@ export default function EventParticipantsTab({
               <div className="space-y-2">
                 <Label>Cliente</Label>
                 <Input
-                  placeholder="Buscar cliente..."
+                  placeholder="Buscar cliente pelo nome ou telefone..."
                   value={searchClients}
                   onChange={(e) => setSearchClients(e.target.value)}
                 />
                 <div className="max-h-40 overflow-y-auto border rounded-md">
-                  {filteredClients.slice(0, 10).map(client => (
-                    <div
-                      key={client.id}
-                      className={`p-2 cursor-pointer hover:bg-muted flex items-center gap-2 ${
-                        selectedClientId === client.id ? 'bg-muted' : ''
-                      }`}
-                      onClick={() => setSelectedClientId(client.id)}
-                    >
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={client.avatar_url || undefined} />
-                        <AvatarFallback>{client.full_name.substring(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{client.full_name}</span>
-                      {selectedClientId === client.id && (
-                        <Check className="h-4 w-4 ml-auto text-primary" />
-                      )}
+                  {searchingClients ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">Buscando...</span>
                     </div>
-                  ))}
+                  ) : filteredClients.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                      {searchClients.length < 2 
+                        ? "Digite ao menos 2 caracteres para buscar" 
+                        : "Nenhum cliente encontrado"}
+                    </div>
+                  ) : (
+                    filteredClients.slice(0, 10).map(client => (
+                      <div
+                        key={client.id}
+                        className={`p-2 cursor-pointer hover:bg-muted flex items-center gap-2 ${
+                          selectedClientId === client.id ? 'bg-muted' : ''
+                        }`}
+                        onClick={() => setSelectedClientId(client.id)}
+                      >
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={client.avatar_url || undefined} />
+                          <AvatarFallback>{client.full_name.substring(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{client.full_name}</span>
+                        {selectedClientId === client.id && (
+                          <Check className="h-4 w-4 ml-auto text-primary" />
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             ) : (
