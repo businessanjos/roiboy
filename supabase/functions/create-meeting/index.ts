@@ -9,7 +9,7 @@ const corsHeaders = {
 interface CreateMeetingRequest {
   task_id: string;
   platform: "zoom" | "google";
-  participant_email: string;
+  participant_email?: string; // Optional for Zoom
   participant_name: string;
   start_time: string;
   end_time: string;
@@ -25,7 +25,7 @@ async function createZoomMeeting(
   startTime: string,
   endTime: string,
   title: string,
-  participantEmail: string
+  participantEmail?: string // Now optional
 ): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
   const clientId = Deno.env.get("ZOOM_CLIENT_ID");
   const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
@@ -77,7 +77,8 @@ async function createZoomMeeting(
         participant_video: true,
         join_before_host: true,
         waiting_room: false,
-        meeting_invitees: [{ email: participantEmail }],
+        // Only add invitees if email is provided
+        ...(participantEmail && { meeting_invitees: [{ email: participantEmail }] }),
       },
     }),
   });
@@ -134,7 +135,7 @@ async function createGoogleMeetMeeting(
   startTime: string,
   endTime: string,
   title: string,
-  participantEmail: string,
+  participantEmail: string | undefined,
   supabaseClient: any,
   accountId: string,
   userId?: string
@@ -229,7 +230,8 @@ async function createGoogleMeetMeeting(
         summary: title,
         start: { dateTime: startTime, timeZone: "America/Sao_Paulo" },
         end: { dateTime: endTime, timeZone: "America/Sao_Paulo" },
-        attendees: [{ email: participantEmail }],
+        // Only add attendees if email is provided
+        ...(participantEmail && { attendees: [{ email: participantEmail }] }),
         conferenceData: {
           createRequest: {
             requestId: crypto.randomUUID(),
@@ -336,8 +338,8 @@ serve(async (req) => {
       console.error("Error updating task:", updateError);
     }
 
-    // Only schedule email if send_email is not false
-    if (send_email !== false) {
+    // Only schedule email if send_email is not false AND participant has email
+    if (send_email !== false && participant_email) {
       // Prepare HTML email content - replace placeholders with actual values
       const passwordDisplay = meetingResult.meeting_password || "Não requer senha";
       const emailHtml = email_message
@@ -365,7 +367,7 @@ serve(async (req) => {
         console.error("Error scheduling email:", emailError);
       }
     } else {
-      console.log("Email sending skipped as requested");
+      console.log("Email sending skipped: no email or user opted out");
     }
 
     return new Response(
