@@ -654,6 +654,9 @@ export default function EventParticipantsTab({
                                 <Link className="h-4 w-4 mr-2 text-primary" /> Copiar Link RSVP
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'pending')}>
+                              <Clock className="h-4 w-4 mr-2 text-yellow-600" /> Marcar Pendente
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'confirmed')}>
                               <Check className="h-4 w-4 mr-2 text-green-600" /> Confirmar
                             </DropdownMenuItem>
