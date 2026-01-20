@@ -1,20 +1,29 @@
 import { useState } from 'react';
-import { Music2, Users, UserPlus, Video, Heart, ExternalLink, Camera } from 'lucide-react';
+import { Music2, Users, UserPlus, Video, Heart, ExternalLink, Camera, RefreshCw, Clock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { TikTokProfile } from '@/hooks/useTikTokData';
 import { TikTokProfileAvatarUpload } from './TikTokProfileAvatarUpload';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface TikTokProfileHeaderProps {
   profile: TikTokProfile | undefined;
   isLoading: boolean;
   onProfilePictureChange?: (url: string | null) => void;
+  onSync?: () => void;
+  isSyncing?: boolean;
 }
 
 export function TikTokProfileHeader({ 
   profile, 
   isLoading,
   onProfilePictureChange,
+  onSync,
+  isSyncing,
 }: TikTokProfileHeaderProps) {
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
 
@@ -26,6 +35,15 @@ export function TikTokProfileHeader({
       return (num / 1000).toFixed(1).replace('.0', '') + 'K';
     }
     return num.toLocaleString('pt-BR');
+  };
+
+  const formatLastSynced = (date: string | null): string => {
+    if (!date) return 'Nunca sincronizado';
+    try {
+      return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
+    } catch {
+      return 'Data inválida';
+    }
   };
 
   if (isLoading) {
@@ -110,16 +128,48 @@ export function TikTokProfileHeader({
             {profile.display_name && (
               <span className="text-muted-foreground">({profile.display_name})</span>
             )}
-            <a
-              href={`https://tiktok.com/@${profile.username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Ver perfil
-            </a>
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <a
+                href={`https://tiktok.com/@${profile.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Ver perfil
+              </a>
+              
+              {/* Sync Button */}
+              {onSync && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={onSync}
+                        disabled={isSyncing}
+                      >
+                        <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Atualizar dados do perfil</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
+
+          {/* Last Synced Indicator */}
+          {profile.last_synced_at && (
+            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>Atualizado {formatLastSynced(profile.last_synced_at)}</span>
+            </div>
+          )}
 
           {profile.bio && (
             <p className="text-sm text-muted-foreground max-w-md">{profile.bio}</p>
