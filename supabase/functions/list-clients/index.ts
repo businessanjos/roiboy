@@ -82,9 +82,20 @@ Deno.serve(async (req) => {
       .order("full_name", { ascending: true })
       .range(offset, offset + limit - 1);
 
-    // Add search filter if provided
+    // Add search filter if provided - improved for partial name matching
     if (search) {
-      query = query.or(`full_name.ilike.%${search}%,phone_e164.ilike.%${search}%,company_name.ilike.%${search}%`);
+      // Split search into multiple terms for better matching (e.g., "Letícia Dourado" -> ["Letícia", "Dourado"])
+      const searchTerms = search.trim().split(/\s+/).filter((s: string) => s.length > 0);
+      
+      if (searchTerms.length === 1) {
+        // Single term - search in all fields
+        query = query.or(`full_name.ilike.%${searchTerms[0]}%,phone_e164.ilike.%${searchTerms[0]}%,company_name.ilike.%${searchTerms[0]}%`);
+      } else {
+        // Multiple terms - all terms must match in full_name (for partial name searches)
+        // This allows searching "Letícia Dourado" to find "Silvia Letícia Dourado Costa"
+        const conditions = searchTerms.map((term: string) => `full_name.ilike.%${term}%`);
+        query = query.or(conditions.join(','));
+      }
     }
 
     // Add status filter if provided
