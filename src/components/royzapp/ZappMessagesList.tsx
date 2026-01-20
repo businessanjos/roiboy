@@ -9,6 +9,7 @@ interface ZappMessagesListProps {
   isGroup: boolean;
   onReplyMessage?: (message: Message) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   onRetryMessage?: (message: Message) => void;
 }
 
@@ -17,6 +18,7 @@ export function ZappMessagesList({
   isGroup,
   onReplyMessage,
   onDeleteMessage,
+  onEditMessage,
   onRetryMessage,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -125,6 +127,7 @@ export function ZappMessagesList({
                 isGroup={isGroup}
                 onReply={onReplyMessage}
                 onDelete={onDeleteMessage}
+                onEdit={onEditMessage}
                 onRetry={onRetryMessage}
               />
             );

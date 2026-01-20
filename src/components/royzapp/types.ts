@@ -88,6 +88,9 @@ export interface Message {
   // Status de envio local (para mensagens otimistas)
   send_status?: "sending" | "sent" | "failed";
   send_error?: string | null;
+  // Campos para edição
+  updated_at?: string | null;
+  is_edited?: boolean;
 }
 
 export interface ConversationAssignment {

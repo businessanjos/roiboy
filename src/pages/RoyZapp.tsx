@@ -1926,6 +1926,68 @@ export default function RoyZapp() {
     }
   };
 
+  // Handle editing a message
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    if (!selectedConversation || !newContent.trim()) return;
+    
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+    
+    try {
+      // 1. Try to edit on WhatsApp via UAZAPI
+      let whatsappEdited = false;
+      
+      if (message.external_message_id) {
+        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+          body: {
+            action: "edit_message",
+            message_id: message.external_message_id,
+            new_content: newContent.trim(),
+            phone: getContactInfo(selectedConversation).phone,
+            sector_id: selectedSectorId || "",
+          },
+        });
+        
+        if (!error && data?.data?.edited) {
+          whatsappEdited = true;
+          console.log("WhatsApp edit successful");
+        } else {
+          const errorMsg = data?.data?.error || data?.error || "Unknown error";
+          console.warn("WhatsApp edit failed:", errorMsg);
+        }
+      }
+      
+      // 2. Update in database
+      const { error: updateError } = await supabase
+        .from("zapp_messages")
+        .update({ 
+          content: newContent.trim(),
+          updated_at: new Date().toISOString(),
+          is_edited: true,
+        })
+        .eq("id", messageId);
+      
+      if (updateError) throw updateError;
+      
+      // 3. Update local state immediately for responsiveness
+      setMessages(prev => prev.map(m =>
+        m.id === messageId
+          ? { ...m, content: newContent.trim(), is_edited: true }
+          : m
+      ));
+      
+      toast.success(
+        whatsappEdited 
+          ? "Mensagem editada" 
+          : "Mensagem editada localmente"
+      );
+      
+    } catch (error: any) {
+      console.error("Error editing message:", error);
+      toast.error(error.message || "Erro ao editar mensagem");
+    }
+  };
+
   // Handle key press in input
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

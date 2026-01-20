@@ -18,7 +18,7 @@ interface UazapiRequest {
     | "update_group_name" | "update_group_description" | "update_group_image"
     | "create_support_instance" | "refresh_support_qr" | "disconnect_support" | "check_support_status"
     | "import-conversations"
-    | "delete_message"
+    | "delete_message" | "edit_message"
     | "list_instances" | "link_instance"
     | "add_instance_to_sector" | "update_instance_pin" | "verify_instance_pin" | "list_sector_instances";
   limit?: number;
@@ -26,6 +26,7 @@ interface UazapiRequest {
   phone?: string;
   message?: string;
   message_id?: string;
+  new_content?: string;
   quoted_message_id?: string;
   quoted_from_me?: boolean; // NEW: Whether the quoted message was sent by us
   group_id?: string;
@@ -3557,6 +3558,83 @@ serve(async (req) => {
           };
         } else {
           result = { deleted: true, message_id, success: true };
+        }
+        break;
+      }
+
+      case "edit_message": {
+        // Edit a message on WhatsApp
+        // UAZAPI GO v2 - POST /message/edit
+        const { message_id, new_content, phone: targetPhone } = payload;
+        
+        console.log("=== EDIT MESSAGE REQUEST ===");
+        console.log("External Message ID (raw):", message_id);
+        console.log("New Content:", new_content);
+        
+        if (!message_id || !new_content) {
+          return new Response(
+            JSON.stringify({ error: "message_id and new_content are required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get instance token from integration config
+        let editIntQuery = supabase
+          .from("integrations")
+          .select("config")
+          .eq("account_id", accountId)
+          .eq("type", "whatsapp");
+        
+        if (sector_id) {
+          editIntQuery = editIntQuery.eq("sector_id", sector_id);
+        }
+        
+        const { data: editIntegration } = await editIntQuery.maybeSingle();
+
+        const editInstanceToken = (editIntegration?.config as { instance_token?: string })?.instance_token;
+        
+        if (!editInstanceToken) {
+          return new Response(
+            JSON.stringify({ error: "WhatsApp não está conectado" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Extract actual message ID from format "phone:msgId" if needed
+        let actualEditMessageId = message_id;
+        if (message_id.includes(':')) {
+          actualEditMessageId = message_id.split(':').pop() || message_id;
+        }
+        
+        console.log("Original Message ID:", message_id);
+        console.log("Actual Message ID (extracted):", actualEditMessageId);
+        
+        // UAZAPI GO v2 - POST /message/edit
+        // Body: { "id": "message_id", "text": "new content" }
+        console.log(`[edit_message] Attempting edit via POST /message/edit with id: ${actualEditMessageId}`);
+        
+        let edited = false;
+        try {
+          result = await uazapiInstanceRequest(`/message/edit`, "POST", editInstanceToken, { 
+            id: actualEditMessageId, 
+            text: new_content 
+          });
+          console.log(`[edit_message] Edit successful:`, JSON.stringify(result));
+          edited = true;
+        } catch (err) {
+          const errorMsg = (err as Error).message;
+          console.error(`[edit_message] Edit failed:`, errorMsg);
+        }
+        
+        if (!edited) {
+          result = { 
+            edited: false, 
+            message_id, 
+            soft_edit_only: true,
+            error: "Não foi possível editar no WhatsApp - editada apenas localmente"
+          };
+        } else {
+          result = { edited: true, message_id, success: true };
         }
         break;
       }

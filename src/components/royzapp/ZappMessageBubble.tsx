@@ -15,12 +15,15 @@ import {
   Sparkles,
   RefreshCw,
   AlertCircle,
+  Pencil,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Message, getSenderColor } from "./types";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +43,7 @@ interface ZappMessageBubbleProps {
   isGroup: boolean;
   onReply?: (message: Message) => void;
   onDelete?: (messageId: string) => void;
+  onEdit?: (messageId: string, newContent: string) => Promise<void>;
   onRetry?: (message: Message) => void;
 }
 
@@ -147,6 +151,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   isGroup,
   onReply,
   onDelete,
+  onEdit,
   onRetry,
 }: ZappMessageBubbleProps) {
   const { toast } = useToast();
@@ -157,6 +162,11 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   const [transcription, setTranscription] = useState<string | null>(
     message.transcription || null
   );
+  
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   
   // All useMemo hooks MUST be called before any early return
   const renderedContent = useMemo(() => {
@@ -178,6 +188,38 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     const hoursDiff = (now.getTime() - sentAt.getTime()) / (1000 * 60 * 60);
     return hoursDiff < 1; // WhatsApp allows delete for ~1 hour
   }, [message.id, message.is_from_client, message.created_at]);
+  
+  // Check if message can be edited (only outbound text messages sent less than 15 minutes ago)
+  const canEdit = useMemo(() => {
+    const isTemporaryId = message.id.startsWith("temp-");
+    if (isTemporaryId) return false;
+    if (message.is_from_client) return false; // Only outbound messages
+    if (message.media_type) return false; // Cannot edit media messages
+    if (!message.content) return false; // Must have text content
+    
+    const sentAt = new Date(message.created_at);
+    const now = new Date();
+    const minutesDiff = (now.getTime() - sentAt.getTime()) / (1000 * 60);
+    return minutesDiff < 15; // WhatsApp allows edit for ~15 minutes
+  }, [message.id, message.is_from_client, message.media_type, message.content, message.created_at]);
+
+  // Handle edit save
+  const handleSaveEdit = async () => {
+    if (!onEdit || !editContent.trim() || editContent.trim() === message.content) {
+      setIsEditing(false);
+      return;
+    }
+    
+    setIsSavingEdit(true);
+    try {
+      await onEdit(message.id, editContent.trim());
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error saving edit:", error);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
   
   // Handle deleted messages - show placeholder (AFTER all hooks)
   if (message.is_deleted) {
@@ -430,7 +472,56 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           )}
           
           {/* Text content (hide for audio-only messages) */}
-          {renderedContent && (
+          {isEditing ? (
+            <div className="space-y-2 mt-1">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[60px] text-sm bg-black/20 border-zapp-accent/50 text-zapp-text resize-none"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setIsEditing(false);
+                    setEditContent("");
+                  }
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSaveEdit();
+                  }
+                }}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditContent("");
+                  }}
+                  disabled={isSavingEdit}
+                  className="h-7 px-2 text-xs text-zapp-text-muted hover:text-zapp-text"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancelar
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSaveEdit} 
+                  disabled={isSavingEdit || !editContent.trim() || editContent.trim() === message.content}
+                  className="h-7 px-2 text-xs"
+                >
+                  {isSavingEdit ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="h-3 w-3 mr-1" />
+                      Salvar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : renderedContent && (
             <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">
               {renderedContent}
             </p>
@@ -450,6 +541,9 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             <span className="text-[10px]">
               {format(new Date(message.created_at), "HH:mm")}
             </span>
+            {message.is_edited && (
+              <span className="text-[9px] text-zapp-text-muted/70 ml-0.5">(editado)</span>
+            )}
             {!message.is_from_client && (
               <>
                 {/* Local send status (for optimistic messages) */}
@@ -496,7 +590,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           
         {/* Action buttons - now positioned relative to message */}
         <AnimatePresence>
-          {showActions && (onReply || (onDelete && canDelete)) && (
+          {showActions && !isEditing && (onReply || (onEdit && canEdit) || (onDelete && canDelete)) && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -517,6 +611,24 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">Responder</TooltipContent>
+                </Tooltip>
+              )}
+              {onEdit && canEdit && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                      onClick={() => {
+                        setEditContent(message.content || "");
+                        setIsEditing(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 text-zapp-text-muted" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Editar</TooltipContent>
                 </Tooltip>
               )}
               {onDelete && canDelete && (
