@@ -206,7 +206,7 @@ export function TikTokTab() {
             updateProfilePicture.mutate({ profileId: currentProfile.id, avatarUrl: url });
           }
         }}
-        onSync={() => syncProfile.mutate()}
+        onSync={() => syncProfile.mutate(currentProfile?.id)}
         isSyncing={syncProfile.isPending}
       />
 
