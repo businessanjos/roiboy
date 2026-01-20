@@ -10482,6 +10482,7 @@ export type Database = {
         | "google_meet"
         | "system"
         | "financial"
+        | "event_no_show"
       roi_category:
         | "revenue"
         | "cost"
@@ -10498,6 +10499,8 @@ export type Database = {
         | "google_meet"
         | "manual"
         | "financial"
+        | "event_rsvp"
+        | "event_attendance"
       roi_type: "tangible" | "intangible"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "pending" | "in_progress" | "done" | "overdue" | "cancelled"
@@ -10793,6 +10796,7 @@ export const Constants = {
         "google_meet",
         "system",
         "financial",
+        "event_no_show",
       ],
       roi_category: [
         "revenue",
@@ -10811,6 +10815,8 @@ export const Constants = {
         "google_meet",
         "manual",
         "financial",
+        "event_rsvp",
+        "event_attendance",
       ],
       roi_type: ["tangible", "intangible"],
       task_priority: ["low", "medium", "high", "urgent"],
