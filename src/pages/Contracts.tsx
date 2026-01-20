@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { Button } from "@/components/ui/button";
@@ -183,6 +183,9 @@ interface Client {
   id: string;
   full_name: string;
   avatar_url: string | null;
+  phone_e164?: string | null;
+  cpf?: string | null;
+  cnpj?: string | null;
 }
 
 export default function Contracts() {
@@ -236,6 +239,10 @@ export default function Contracts() {
   const [clientFormData, setClientFormData] = useState<ClientFormData>(getEmptyClientFormData());
   const [loadingClientData, setLoadingClientData] = useState(false);
   const [isCreatingNewClient, setIsCreatingNewClient] = useState(false);
+  
+  // Client search state for server-side search
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [searchingClients, setSearchingClients] = useState(false);
   
   // Financial data
   const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; bank_name: string }[]>([]);
@@ -399,19 +406,49 @@ export default function Contracts() {
     }
   };
 
-  const fetchClients = async () => {
+  const fetchClients = async (searchTerm?: string) => {
     try {
-      const { data, error } = await supabase
+      setSearchingClients(true);
+      let query = supabase
         .from("clients")
         .select("id, full_name, avatar_url, cpf, cnpj, phone_e164")
         .order("full_name");
+      
+      // If search term provided, search by name, phone or company
+      if (searchTerm && searchTerm.length >= 2) {
+        // Split search into terms for better matching
+        const terms = searchTerm.trim().split(/\s+/).filter(t => t.length > 0);
+        if (terms.length > 0) {
+          // Build OR conditions for each term matching name, phone or company
+          const orConditions = terms.map(term => 
+            `full_name.ilike.%${term}%,phone_e164.ilike.%${term}%,company_name.ilike.%${term}%`
+          ).join(',');
+          query = query.or(orConditions);
+        }
+        query = query.limit(50);
+      } else {
+        // No search - just get first 50 sorted
+        query = query.limit(50);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setClients(data || []);
     } catch (error) {
       console.error("Error fetching clients:", error);
+    } finally {
+      setSearchingClients(false);
     }
   };
+  
+  // Debounced client search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchClients(clientSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientSearchTerm]);
 
   const fetchProducts = async () => {
     try {
@@ -2062,7 +2099,13 @@ export default function Contracts() {
                       </p>
                     </div>
                   ) : (
-                    <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                    <Popover open={clientPopoverOpen} onOpenChange={(open) => {
+                      setClientPopoverOpen(open);
+                      if (open) {
+                        // Reset search when opening
+                        setClientSearchTerm("");
+                      }
+                    }}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -2088,40 +2131,61 @@ export default function Contracts() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar cliente..." />
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Buscar cliente por nome ou telefone..." 
+                            value={clientSearchTerm}
+                            onValueChange={setClientSearchTerm}
+                          />
                           <CommandList>
-                            <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                            <CommandGroup className="max-h-64 overflow-auto">
-                              {clients.map((client) => (
-                                <CommandItem
-                                  key={client.id}
-                                  value={client.full_name}
-                                  onSelect={() => {
-                                    setSelectedClient(client);
-                                    setClientPopoverOpen(false);
-                                    fetchClientData(client.id);
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                                      {client.avatar_url ? (
-                                        <img src={client.avatar_url} alt="" className="w-full h-full object-cover" />
-                                      ) : (
-                                        <Users className="h-3 w-3 text-muted-foreground" />
-                                      )}
+                            {searchingClients ? (
+                              <div className="flex items-center justify-center py-6">
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : clients.length === 0 ? (
+                              <CommandEmpty>
+                                {clientSearchTerm.length < 2 
+                                  ? "Digite ao menos 2 caracteres para buscar" 
+                                  : "Nenhum cliente encontrado."
+                                }
+                              </CommandEmpty>
+                            ) : (
+                              <CommandGroup className="max-h-64 overflow-auto">
+                                {clients.map((client) => (
+                                  <CommandItem
+                                    key={client.id}
+                                    value={client.id}
+                                    onSelect={() => {
+                                      setSelectedClient(client);
+                                      setClientPopoverOpen(false);
+                                      fetchClientData(client.id);
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                                        {client.avatar_url ? (
+                                          <img src={client.avatar_url} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                          <Users className="h-3 w-3 text-muted-foreground" />
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="truncate">{client.full_name}</span>
+                                        {client.phone_e164 && (
+                                          <span className="text-xs text-muted-foreground truncate">{client.phone_e164}</span>
+                                        )}
+                                      </div>
                                     </div>
-                                    <span>{client.full_name}</span>
-                                  </div>
-                                  <Check
-                                    className={cn(
-                                      "ml-auto h-4 w-4",
-                                      selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
+                                    <Check
+                                      className={cn(
+                                        "ml-auto h-4 w-4 shrink-0",
+                                        selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
                           </CommandList>
                         </Command>
                       </PopoverContent>

@@ -346,8 +346,10 @@ export default function Clients() {
     try {
       // Use optimized edge function for faster loading
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      // Pass search query to edge function for server-side search
+      const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : "";
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/list-clients?limit=200&offset=0`,
+        `${SUPABASE_URL}/functions/v1/list-clients?limit=200&offset=0${searchParam}`,
         {
           method: "GET",
           headers: {
@@ -568,6 +570,14 @@ export default function Clients() {
     fetchCustomFields();
     // Note: teamUsers now comes from edge function response
   }, [currentSector?.id]);
+  
+  // Debounced search - refetch clients when search query changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchClients();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Fetch client stages when account is available
   useEffect(() => {
