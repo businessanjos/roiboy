@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, CalendarDays, Bell, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, CalendarDays, Bell, Users, Grid3X3 } from 'lucide-react';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MonthlyCalendarView } from '@/components/marketing/MonthlyCalendarView';
+import { YearlyCalendarView } from '@/components/marketing/YearlyCalendarView';
 import { MarketingEventDialog, MarketingEventSheet } from '@/components/marketing';
 import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
 import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab';
@@ -13,6 +15,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 export default function Marketing() {
   const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'month' | 'year'>('month');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<MarketingEvent | null>(null);
@@ -23,11 +26,11 @@ export default function Marketing() {
 
   const { currentUser } = useCurrentUser();
   
-  // Fetch events for the current month, including shared events from other departments
+  // Fetch events - when in year mode, pass undefined for month to get all year events
   const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(
     currentMonth.getFullYear(),
     'marketing',
-    currentMonth.getMonth(),
+    viewMode === 'month' ? currentMonth.getMonth() : undefined,
     true // includeSharedEvents
   );
 
@@ -104,6 +107,25 @@ export default function Marketing() {
           <h1 className="text-2xl font-bold">Marketing</h1>
           <p className="text-muted-foreground">Gerencie eventos, campanhas e lembretes de marketing</p>
         </div>
+        {activeTab === 'calendar' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode(viewMode === 'month' ? 'year' : 'month')}
+          >
+            {viewMode === 'month' ? (
+              <>
+                <Grid3X3 className="h-4 w-4 mr-2" />
+                Visão Anual
+              </>
+            ) : (
+              <>
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Visão Mensal
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -131,13 +153,23 @@ export default function Marketing() {
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
-          ) : (
+          ) : viewMode === 'month' ? (
             <MonthlyCalendarView
               currentMonth={currentMonth}
               events={events}
               onMonthChange={setCurrentMonth}
               onEventClick={handleEventClick}
               onAddEvent={handleAddEvent}
+              currentCategory="marketing"
+            />
+          ) : (
+            <YearlyCalendarView
+              currentYear={currentMonth.getFullYear()}
+              events={events}
+              onYearChange={(year) => setCurrentMonth(new Date(year, currentMonth.getMonth()))}
+              onEventClick={handleEventClick}
+              onDayClick={(date) => handleAddEvent(date)}
+              onAddEvent={() => handleAddEvent()}
               currentCategory="marketing"
             />
           )}
