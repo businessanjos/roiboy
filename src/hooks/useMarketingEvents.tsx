@@ -66,15 +66,34 @@ function mapEventRowToMarketingEvent(row: EventRow): MarketingEvent {
   };
 }
 
-export function useMarketingEvents(year?: number, category?: 'marketing' | 'operation') {
+export function useMarketingEvents(year?: number, category?: 'marketing' | 'operation', month?: number, includeSharedEvents?: boolean) {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['events', currentUser?.account_id, year, category],
+    queryKey: ['events', currentUser?.account_id, year, month, category, includeSharedEvents],
     queryFn: async () => {
       if (!currentUser?.account_id) return [];
 
+      // If includeSharedEvents is true, we need to fetch events that are either:
+      // 1. Events of the specified category
+      // 2. Events from other categories that have this category in visible_sectors
+      if (includeSharedEvents && category) {
+        // Build OR query to include shared events
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('account_id', currentUser.account_id)
+          .or(`category.eq.${category},visible_sectors.cs.["${category}"]`)
+          .gte('scheduled_at', `${year}-${String((month ?? 0) + 1).padStart(2, '0')}-01`)
+          .lte('scheduled_at', `${year}-${String((month ?? 0) + 1).padStart(2, '0')}-31`)
+          .order('scheduled_at', { ascending: true });
+
+        if (error) throw error;
+        return (data || []).map(mapEventRowToMarketingEvent);
+      }
+
+      // Standard query without shared events
       let queryBuilder = supabase
         .from('events')
         .select('*')
@@ -85,7 +104,13 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
         queryBuilder = queryBuilder.eq('category', category);
       }
 
-      if (year) {
+      if (year && month !== undefined) {
+        // Filter by specific month
+        const monthStr = String(month + 1).padStart(2, '0');
+        queryBuilder = queryBuilder
+          .gte('scheduled_at', `${year}-${monthStr}-01`)
+          .lte('scheduled_at', `${year}-${monthStr}-31`);
+      } else if (year) {
         queryBuilder = queryBuilder
           .gte('scheduled_at', `${year}-01-01`)
           .lte('scheduled_at', `${year}-12-31`);

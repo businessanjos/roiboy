@@ -1,4 +1,5 @@
 export * from './MarketingCalendar';
+export * from './MonthlyCalendarView';
 export * from './MarketingEventCard';
 export * from './MarketingEventDialog';
 export * from './MarketingEventSheet';

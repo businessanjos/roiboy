@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, CalendarDays, Bell, Users } from 'lucide-react';
+import { Calendar, CalendarDays, Bell, Users } from 'lucide-react';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
-import { MarketingCalendar, MarketingEventDialog, MarketingEventSheet } from '@/components/marketing';
+import { MonthlyCalendarView } from '@/components/marketing/MonthlyCalendarView';
+import { MarketingEventDialog, MarketingEventSheet } from '@/components/marketing';
 import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
 import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab';
 import AttendanceReport from '@/components/events/AttendanceReport';
@@ -12,7 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function Marketing() {
   const navigate = useNavigate();
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<MarketingEvent | null>(null);
@@ -22,7 +22,14 @@ export default function Marketing() {
   const [activeTab, setActiveTab] = useState('calendar');
 
   const { currentUser } = useCurrentUser();
-  const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(year, 'marketing');
+  
+  // Fetch events for the current month, including shared events from other departments
+  const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(
+    currentMonth.getFullYear(),
+    'marketing',
+    currentMonth.getMonth(),
+    true // includeSharedEvents
+  );
 
   const handleAddEvent = (dateOrMonth?: Date | number) => {
     setSelectedEvent(null);
@@ -35,7 +42,7 @@ export default function Marketing() {
       setDefaultMonth(dateOrMonth);
       setDefaultDate(undefined);
     } else {
-      setDefaultMonth(undefined);
+      setDefaultMonth(currentMonth.getMonth());
       setDefaultDate(undefined);
     }
     
@@ -97,14 +104,6 @@ export default function Marketing() {
           <h1 className="text-2xl font-bold">Marketing</h1>
           <p className="text-muted-foreground">Gerencie eventos, campanhas e lembretes de marketing</p>
         </div>
-        <div className="flex items-center gap-2">
-          {activeTab === 'calendar' && (
-            <Button onClick={() => handleAddEvent()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Evento
-            </Button>
-          )}
-        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -133,12 +132,13 @@ export default function Marketing() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           ) : (
-            <MarketingCalendar
-              year={year}
+            <MonthlyCalendarView
+              currentMonth={currentMonth}
               events={events}
-              onYearChange={setYear}
+              onMonthChange={setCurrentMonth}
               onEventClick={handleEventClick}
               onAddEvent={handleAddEvent}
+              currentCategory="marketing"
             />
           )}
         </TabsContent>
@@ -161,7 +161,7 @@ export default function Marketing() {
         onOpenChange={setDialogOpen}
         event={isDuplicating ? eventForDialog : selectedEvent}
         defaultMonth={defaultMonth}
-        defaultYear={year}
+        defaultYear={currentMonth.getFullYear()}
         defaultDate={defaultDate}
         onSave={handleSave}
         isSaving={isCreating || isUpdating}
