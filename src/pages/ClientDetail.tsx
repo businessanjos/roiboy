@@ -813,6 +813,7 @@ export default function ClientDetail() {
             file_name: followup.file_name,
             file_size: followup.file_size,
             followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
+            updated_at: followup.updated_at,
           },
         });
       });
@@ -1104,6 +1105,7 @@ export default function ClientDetail() {
                 file_name: followup.file_name,
                 file_size: followup.file_size,
                 followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
+                updated_at: followup.updated_at,
               },
             };
             const updated = [newEvent, ...prev.filter(e => e.id !== followup.id)];
