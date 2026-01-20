@@ -814,6 +814,7 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
         dealId={activeDeal?.id}
         leadId={conversationLeadId || undefined}
         initialActivityTypeId={selectedActivityType?.id}
+        forceSectorId="vendas"
         onSuccess={() => {
           refetchPendingTasks();
           setTaskDialogOpen(false);

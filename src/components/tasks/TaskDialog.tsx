@@ -78,6 +78,7 @@ interface TaskDialogProps {
   initialStatus?: string;
   initialActivityTypeId?: string;
   suggestedTitle?: string;
+  forceSectorId?: string;
   onSuccess: () => void;
 }
 
@@ -88,12 +89,14 @@ const PRIORITY_LABELS = {
   urgent: "Urgente",
 };
 
-export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialActivityTypeId, suggestedTitle, onSuccess }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialActivityTypeId, suggestedTitle, forceSectorId, onSuccess }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
   const { currentSector } = useSector();
-  const { activityTypes } = useActivityTypes(currentSector?.id);
+  // Use forceSectorId if provided, otherwise use currentSector
+  const effectiveSectorId = forceSectorId || currentSector?.id;
+  const { activityTypes } = useActivityTypes(effectiveSectorId);
   const [isCompleted, setIsCompleted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
