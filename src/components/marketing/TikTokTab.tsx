@@ -82,6 +82,7 @@ export function TikTokTab() {
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
+    syncProfile,
     createPost,
     updatePost,
     deletePost,
@@ -205,6 +206,8 @@ export function TikTokTab() {
             updateProfilePicture.mutate({ profileId: currentProfile.id, avatarUrl: url });
           }
         }}
+        onSync={() => syncProfile.mutate()}
+        isSyncing={syncProfile.isPending}
       />
 
       {/* Header with Profile Selector */}

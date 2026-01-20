@@ -238,33 +238,81 @@ export function useTikTokData() {
     };
   }, [currentProfile, posts]);
 
-  // Create profile mutation
+  // Create profile mutation - NOW USES EDGE FUNCTION FOR AUTO-FETCH
   const createProfile = useMutation({
-    mutationFn: async (data: { username: string; followers_count?: number; following_count?: number; videos_count?: number; bio?: string }) => {
-      if (!user?.account_id) throw new Error('User not authenticated');
+    mutationFn: async (data: { username: string; followers_count?: number; following_count?: number; videos_count?: number; likes_count?: number; bio?: string }) => {
+      if (!user?.account_id) throw new Error('Usuário não autenticado');
 
-      const { data: profile, error } = await supabase
-        .from('tiktok_profiles')
-        .insert({
-          account_id: user.account_id,
-          username: data.username.replace('@', ''),
-          followers_count: data.followers_count || 0,
-          following_count: data.following_count || 0,
-          videos_count: data.videos_count || 0,
-          bio: data.bio || null,
-        })
-        .select()
-        .single();
+      // Call Edge Function to fetch and create profile with real data
+      const { data: result, error } = await supabase.functions.invoke('fetch-tiktok-profile', {
+        body: {
+          profileInput: data.username,
+          accountId: user.account_id,
+          manualMetrics: {
+            followers_count: data.followers_count,
+            following_count: data.following_count,
+            videos_count: data.videos_count,
+            likes_count: data.likes_count,
+            bio: data.bio,
+          }
+        }
+      });
 
-      if (error) throw error;
-      return profile;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Erro ao buscar perfil do TikTok');
+      }
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro ao conectar perfil');
+      }
+
+      return result.profile;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tiktok-profiles'] });
-      toast.success('Perfil do TikTok conectado com sucesso!');
+      toast.success(`Perfil @${variables.username.replace('@', '')} conectado com dados atualizados!`);
     },
     onError: (error) => {
       toast.error('Erro ao conectar perfil: ' + error.message);
+    },
+  });
+
+  // Sync profile mutation - UPDATES PROFILE WITH FRESH DATA
+  const syncProfile = useMutation({
+    mutationFn: async (profileId?: string) => {
+      if (!user?.account_id) throw new Error('Usuário não autenticado');
+
+      const { data: result, error } = await supabase.functions.invoke('sync-tiktok-profiles', {
+        body: {
+          accountId: user.account_id,
+          profileId: profileId || currentProfile?.id
+        }
+      });
+
+      if (error) {
+        console.error('Sync error:', error);
+        throw new Error(error.message || 'Erro ao sincronizar perfil');
+      }
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro na sincronização');
+      }
+
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['tiktok-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['tiktok-posts'] });
+      
+      if (result.synced > 0) {
+        toast.success(result.message || 'Perfil sincronizado com sucesso!');
+      } else {
+        toast.info('Nenhum dado novo disponível');
+      }
+    },
+    onError: (error) => {
+      toast.error('Erro ao sincronizar: ' + error.message);
     },
   });
 
@@ -397,6 +445,7 @@ export function useTikTokData() {
     selectedProfileId,
     setSelectedProfileId,
     createProfile,
+    syncProfile, // NEW: Sync profile with fresh data
     createPost,
     updatePost,
     deletePost,
