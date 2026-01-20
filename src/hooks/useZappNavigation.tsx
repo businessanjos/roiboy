@@ -11,6 +11,7 @@ interface ZappNavigationOptions {
   leadId?: string;
   clientId?: string;
   name?: string;
+  openInNewTab?: boolean;
 }
 
 interface IntegrationInfo {
@@ -34,8 +35,13 @@ export function useZappNavigation() {
   const [availableInstances, setAvailableInstances] = useState<IntegrationInfo[]>([]);
   const [pendingOptions, setPendingOptions] = useState<ZappNavigationOptions | null>(null);
 
-  const completeNavigation = useCallback((url: string) => {
-    navigate(url);
+  const completeNavigation = useCallback((url: string, openInNewTab?: boolean) => {
+    if (openInNewTab) {
+      const fullUrl = `${window.location.origin}${url}`;
+      window.open(fullUrl, '_blank');
+    } else {
+      navigate(url);
+    }
     toast.info("Abrindo RoyZapp...");
   }, [navigate]);
 
@@ -69,12 +75,13 @@ export function useZappNavigation() {
         hasPinHash: true,
       });
       setPendingNavigationUrl(navigationUrl);
+      setPendingOptions(options); // Store options for openInNewTab
       setShowPinDialog(true);
       return;
     }
 
     // No PIN required, navigate directly
-    completeNavigation(navigationUrl);
+    completeNavigation(navigationUrl, options.openInNewTab);
   }, [buildNavigationUrl, completeNavigation]);
 
   const openZappConversation = useCallback(async (options: ZappNavigationOptions) => {
@@ -112,7 +119,7 @@ export function useZappNavigation() {
         const normalizedPhone = phone.replace(/\D/g, "");
         const encodedName = encodeURIComponent(name || "");
         const navigationUrl = `/roy-zapp?sector=vendas&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
-        completeNavigation(navigationUrl);
+        completeNavigation(navigationUrl, options.openInNewTab);
         setLoading(false);
         return;
       }
@@ -157,12 +164,13 @@ export function useZappNavigation() {
 
   const handlePinSuccess = useCallback(() => {
     if (pendingNavigationUrl) {
-      completeNavigation(pendingNavigationUrl);
+      completeNavigation(pendingNavigationUrl, pendingOptions?.openInNewTab);
     }
     setShowPinDialog(false);
     setPendingIntegration(null);
     setPendingNavigationUrl(null);
-  }, [pendingNavigationUrl, completeNavigation]);
+    setPendingOptions(null);
+  }, [pendingNavigationUrl, pendingOptions, completeNavigation]);
 
   const handlePinDialogClose = useCallback((open: boolean) => {
     if (!open) {
