@@ -63,8 +63,12 @@ import {
   Users,
   Download,
   BarChart3,
-  Lock
+  Lock,
+  Eye,
+  ChevronDown
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { sectors, type SectorId } from "@/config/sectors";
 import { format, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -157,10 +161,16 @@ export default function Events() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [allowExternalGuests, setAllowExternalGuests] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [visibleSectors, setVisibleSectors] = useState<string[]>([]);
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
   
   // Multi-day schedule state: { 'YYYY-MM-DD': { startTime: 'HH:mm', endTime: 'HH:mm' } }
   const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
 
+  // Available sectors for visibility (excluding operacoes, configuracoes, and integrations)
+  const availableSectors = sectors.filter(
+    s => !['operacoes', 'configuracoes', 'royzapp', 'roychat'].includes(s.id)
+  );
   // Fetch account ID with React Query
   const { data: accountId } = useQuery({
     queryKey: ["user-account-id", user?.id],
@@ -311,6 +321,8 @@ export default function Events() {
     setAllowExternalGuests(false);
     setSelectedProducts([]);
     setDaySchedules({});
+    setVisibleSectors([]);
+    setVisibilityOpen(false);
     setEditingEvent(null);
   };
 
@@ -363,6 +375,7 @@ export default function Events() {
     setIsRecurring(event.is_recurring);
     setAllowExternalGuests((event as any).allow_external_guests || false);
     setSelectedProducts(event.event_products.map(ep => ep.product_id));
+    setVisibleSectors((event as any).visible_sectors || []);
     setDaySchedules({});
     setDialogOpen(true);
   };
@@ -409,6 +422,7 @@ export default function Events() {
       material_url: materialUrl.trim() || null,
       is_recurring: isRecurring,
       allow_external_guests: allowExternalGuests,
+      visible_sectors: visibleSectors.length > 0 ? visibleSectors : null,
       account_id: accountId,
     };
 
@@ -937,6 +951,63 @@ export default function Events() {
                         Permitir convidados externos (visível no Comercial)
                       </Label>
                     </div>
+
+                    {/* Sector Visibility Section */}
+                    <Collapsible open={visibilityOpen} onOpenChange={setVisibilityOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-between"
+                          type="button"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            <span>Visibilidade em outros setores</span>
+                            {visibleSectors.length > 0 && (
+                              <Badge variant="secondary" className="ml-1">
+                                {visibleSectors.length}
+                              </Badge>
+                            )}
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${visibilityOpen ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3 space-y-2">
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Selecione os setores que poderão visualizar este evento além de Operações:
+                        </p>
+                        <div className="border rounded-lg p-3 space-y-2">
+                          {availableSectors.map((sector) => {
+                            const SectorIcon = sector.icon;
+                            return (
+                              <div 
+                                key={sector.id} 
+                                className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors"
+                              >
+                                <Checkbox
+                                  id={`sector-${sector.id}`}
+                                  checked={visibleSectors.includes(sector.id)}
+                                  onCheckedChange={(checked) => {
+                                    setVisibleSectors(prev => 
+                                      checked 
+                                        ? [...prev, sector.id]
+                                        : prev.filter(id => id !== sector.id)
+                                    );
+                                  }}
+                                />
+                                <SectorIcon className={`h-4 w-4 ${sector.color}`} />
+                                <Label 
+                                  htmlFor={`sector-${sector.id}`} 
+                                  className="text-sm font-normal cursor-pointer flex-1"
+                                >
+                                  {sector.name}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </>
               )}
 
