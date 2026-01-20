@@ -304,6 +304,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                     clientId: deal.client_id || undefined,
                     leadId: deal.lead_id || undefined,
                     name: contactName,
+                    openInNewTab: true,
                   });
                 }}
                 disabled={zappLoading}
