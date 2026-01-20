@@ -123,8 +123,9 @@ Até lá!`;
   };
 
   const handleCreateMeeting = async () => {
-    if (!participantEmail) {
-      toast.error("O lead não possui email cadastrado");
+    // Email obrigatório APENAS para Google Meet
+    if (platform === "google" && !participantEmail) {
+      toast.error("O Google Meet requer email do participante");
       return;
     }
 
@@ -196,12 +197,14 @@ Até lá!`;
         onMeetingCreated(data.meeting_url, platform);
         toast.success("Reunião criada com sucesso!");
         
-        if (sendEmail) {
+        if (sendEmail && participantEmail) {
           if (emailAdvance === "immediate") {
             toast.info("Convite enviado para " + participantEmail);
           } else {
             toast.info(`Convite será enviado ${EMAIL_ADVANCE_OPTIONS.find(o => o.value === emailAdvance)?.label.toLowerCase()}`);
           }
+        } else if (!participantEmail) {
+          toast.info("Compartilhe o link da reunião com o participante");
         } else {
           toast.info("Reunião criada sem envio de convite por email");
         }
@@ -266,28 +269,38 @@ Até lá!`;
             <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
               Email do Participante
+              {platform === "zoom" && (
+                <span className="text-xs text-muted-foreground font-normal">(Opcional)</span>
+              )}
             </Label>
             <div className="p-2 bg-muted rounded-md text-sm">
               {participantEmail || "Email não disponível"}
             </div>
-            {!participantEmail && (
+            {!participantEmail && platform === "google" && (
               <p className="text-xs text-destructive">
-                O lead vinculado não possui email cadastrado
+                O Google Meet requer email do participante
+              </p>
+            )}
+            {!participantEmail && platform === "zoom" && (
+              <p className="text-xs text-muted-foreground">
+                Você poderá compartilhar o link da reunião manualmente
               </p>
             )}
           </div>
 
-          {/* Send Email Checkbox */}
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="send-email"
-              checked={sendEmail}
-              onCheckedChange={(checked) => setSendEmail(checked === true)}
-            />
-            <Label htmlFor="send-email" className="text-sm font-normal cursor-pointer">
-              Enviar convite por email
-            </Label>
-          </div>
+          {/* Send Email Checkbox - só aparece se tiver email */}
+          {participantEmail && (
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="send-email"
+                checked={sendEmail}
+                onCheckedChange={(checked) => setSendEmail(checked === true)}
+              />
+              <Label htmlFor="send-email" className="text-sm font-normal cursor-pointer">
+                Enviar convite por email
+              </Label>
+            </div>
+          )}
 
           {sendEmail && (
             <>
@@ -332,7 +345,7 @@ Até lá!`;
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleCreateMeeting} disabled={loading || !participantEmail}>
+          <Button onClick={handleCreateMeeting} disabled={loading || (platform === "google" && !participantEmail)}>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
