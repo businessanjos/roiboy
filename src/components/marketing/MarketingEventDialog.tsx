@@ -19,6 +19,7 @@ interface MarketingEventDialogProps {
   event?: MarketingEvent | null;
   defaultMonth?: number;
   defaultYear?: number;
+  defaultDate?: Date;
   onSave: (data: Omit<MarketingEvent, 'id' | 'account_id' | 'created_at' | 'updated_at'>) => void;
   isSaving?: boolean;
 }
@@ -29,6 +30,7 @@ export function MarketingEventDialog({
   event,
   defaultMonth,
   defaultYear,
+  defaultDate,
   onSave,
   isSaving,
 }: MarketingEventDialogProps) {
@@ -64,15 +66,21 @@ export function MarketingEventDialog({
         notes: event.notes || '',
       });
     } else {
-      const year = defaultYear || new Date().getFullYear();
-      const month = defaultMonth !== undefined ? defaultMonth : new Date().getMonth();
-      const defaultDate = new Date(year, month, 15);
+      // Use defaultDate if provided, otherwise calculate from year/month
+      let dateToUse: Date;
+      if (defaultDate) {
+        dateToUse = defaultDate;
+      } else {
+        const year = defaultYear || new Date().getFullYear();
+        const month = defaultMonth !== undefined ? defaultMonth : new Date().getMonth();
+        dateToUse = new Date(year, month, 15);
+      }
       
       setFormData({
         title: '',
         description: '',
         event_type: 'campaign',
-        scheduled_at: format(defaultDate, 'yyyy-MM-dd'),
+        scheduled_at: format(dateToUse, 'yyyy-MM-dd'),
         ends_at: '',
         start_time: '',
         end_time: '',
@@ -83,7 +91,7 @@ export function MarketingEventDialog({
         notes: '',
       });
     }
-  }, [event, defaultMonth, defaultYear, open]);
+  }, [event, defaultMonth, defaultYear, defaultDate, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
