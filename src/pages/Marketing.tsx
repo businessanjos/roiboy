@@ -17,16 +17,28 @@ export default function Marketing() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<MarketingEvent | null>(null);
   const [defaultMonth, setDefaultMonth] = useState<number | undefined>();
+  const [defaultDate, setDefaultDate] = useState<Date | undefined>();
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
 
   const { currentUser } = useCurrentUser();
   const { events, isLoading, createEvent, updateEvent, deleteEvent, isCreating, isUpdating } = useMarketingEvents(year, 'marketing');
 
-  const handleAddEvent = (month?: number) => {
+  const handleAddEvent = (dateOrMonth?: Date | number) => {
     setSelectedEvent(null);
-    setDefaultMonth(month);
     setIsDuplicating(false);
+    
+    if (dateOrMonth instanceof Date) {
+      setDefaultDate(dateOrMonth);
+      setDefaultMonth(dateOrMonth.getMonth());
+    } else if (typeof dateOrMonth === 'number') {
+      setDefaultMonth(dateOrMonth);
+      setDefaultDate(undefined);
+    } else {
+      setDefaultMonth(undefined);
+      setDefaultDate(undefined);
+    }
+    
     setDialogOpen(true);
   };
 
@@ -150,6 +162,7 @@ export default function Marketing() {
         event={isDuplicating ? eventForDialog : selectedEvent}
         defaultMonth={defaultMonth}
         defaultYear={year}
+        defaultDate={defaultDate}
         onSave={handleSave}
         isSaving={isCreating || isUpdating}
       />
