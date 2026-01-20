@@ -26,6 +26,9 @@ import {
   Users,
   MapPin,
   Trash2,
+  Pencil,
+  X,
+  Check,
 } from "lucide-react";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +52,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { ConversationView } from "./ConversationView";
 import { linkifyText } from "@/lib/linkify";
 
@@ -79,6 +83,7 @@ export interface TimelineEvent {
     file_name?: string;
     file_size?: number;
     followup_type?: "note" | "file" | "image" | "financial_note" | "sales_note";
+    updated_at?: string;
     // Field change specific
     field_name?: string;
     old_value?: string;
@@ -262,15 +267,32 @@ const getFileTypeLabel = (fileName?: string) => {
 function CommentItem({ 
   event, 
   highlightState,
-  onDeleteClick 
+  onDeleteClick,
+  onEditClick,
+  isEditing,
+  editContent,
+  onEditChange,
+  onSaveEdit,
+  onCancelEdit,
+  saving,
 }: { 
   event: TimelineEvent; 
   highlightState?: "glow" | "fading" | null;
   onDeleteClick?: (event: TimelineEvent) => void;
+  onEditClick?: (event: TimelineEvent) => void;
+  isEditing?: boolean;
+  editContent?: string;
+  onEditChange?: (value: string) => void;
+  onSaveEdit?: () => void;
+  onCancelEdit?: () => void;
+  saving?: boolean;
 }) {
   const userName = event.metadata?.user_name || "Usuário";
   const userAvatar = event.metadata?.user_avatar;
   const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  
+  // Check if the comment was edited (updated_at > created_at)
+  const wasEdited = event.timestamp !== event.metadata?.updated_at && event.metadata?.updated_at;
   
   return (
     <div 
@@ -294,18 +316,59 @@ function CommentItem({
           <span className="text-sm text-muted-foreground">
             {formatDistanceToNow(new Date(event.timestamp), { locale: ptBR, addSuffix: false })}
           </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
-            onClick={() => onDeleteClick?.(event)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {wasEdited && (
+            <span className="text-xs text-muted-foreground">(editado)</span>
+          )}
+          {!isEditing && (
+            <div className="flex items-center gap-0.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                onClick={() => onEditClick?.(event)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                onClick={() => onDeleteClick?.(event)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
         
-        {event.description && (
-          <p className="text-foreground mt-1 whitespace-pre-wrap">{linkifyText(event.description)}</p>
+        {isEditing ? (
+          <div className="mt-2 space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => onEditChange?.(e.target.value)}
+              className="min-h-[60px] text-sm"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  onCancelEdit?.();
+                }
+              }}
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={onSaveEdit} disabled={saving || !editContent?.trim()}>
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
+                Salvar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onCancelEdit} disabled={saving}>
+                <X className="h-3.5 w-3.5 mr-1" />
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          event.description && (
+            <p className="text-foreground mt-1 whitespace-pre-wrap">{linkifyText(event.description)}</p>
+          )
         )}
         
         {/* File Attachment */}
@@ -474,6 +537,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<TimelineEvent | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const location = useLocation();
   
   // Refs for hidden file inputs
@@ -659,6 +725,43 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const openDeleteDialog = (event: TimelineEvent) => {
     setEventToDelete(event);
     setDeleteDialogOpen(true);
+  };
+
+  const handleEditClick = (event: TimelineEvent) => {
+    setEditingId(event.id);
+    setEditContent(event.description || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditContent("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editContent.trim()) return;
+    
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from("client_followups")
+        .update({ 
+          content: editContent.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", editingId);
+      
+      if (error) throw error;
+      
+      setEditingId(null);
+      setEditContent("");
+      onCommentAdded?.();
+      toast.success("Comentário atualizado!");
+    } catch (error: any) {
+      console.error("Error updating followup:", error);
+      toast.error(error.message || "Erro ao atualizar comentário");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   // Upload file to Supabase Storage
@@ -851,7 +954,18 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
           {visibleEvents.map((event, index) => (
             <div key={event.id} className="relative">
           {event.type === "comment" ? (
-                <CommentItem event={event} highlightState={highlightedId === event.id ? highlightState : null} onDeleteClick={openDeleteDialog} />
+                <CommentItem 
+                  event={event} 
+                  highlightState={highlightedId === event.id ? highlightState : null} 
+                  onDeleteClick={openDeleteDialog}
+                  onEditClick={handleEditClick}
+                  isEditing={editingId === event.id}
+                  editContent={editContent}
+                  onEditChange={setEditContent}
+                  onSaveEdit={handleSaveEdit}
+                  onCancelEdit={handleCancelEdit}
+                  saving={savingEdit}
+                />
               ) : event.type === "field_change" ? (
                 <SystemEventItem event={event} onDeleteClick={openDeleteDialog} />
               ) : (
