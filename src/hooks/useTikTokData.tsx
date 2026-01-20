@@ -375,17 +375,38 @@ export function useTikTokData() {
   // Update post mutation
   const updatePost = useMutation({
     mutationFn: async ({ postId, data }: { postId: string; data: Partial<TikTokPostFormData> }) => {
-      const engagementRate = data.views && data.views > 0
-        ? (((data.likes || 0) + (data.comments || 0) + (data.shares || 0) + (data.saves || 0)) / data.views) * 100
-        : undefined;
+      // Build update object manually to avoid Date serialization issues
+      const updateData: Record<string, unknown> = {};
+
+      if (data.video_url !== undefined) updateData.video_url = data.video_url;
+      if (data.caption !== undefined) updateData.caption = data.caption;
+      if (data.thumbnail_url !== undefined) updateData.thumbnail_url = data.thumbnail_url;
+      if (data.posted_at !== undefined) updateData.posted_at = data.posted_at.toISOString();
+      if (data.duration_seconds !== undefined) updateData.duration_seconds = data.duration_seconds;
+      if (data.views !== undefined) updateData.views = data.views;
+      if (data.likes !== undefined) updateData.likes = data.likes;
+      if (data.comments !== undefined) updateData.comments = data.comments;
+      if (data.shares !== undefined) updateData.shares = data.shares;
+      if (data.saves !== undefined) updateData.saves = data.saves;
+      if (data.avg_watch_time !== undefined) updateData.avg_watch_time = data.avg_watch_time;
+      if (data.completion_rate !== undefined) updateData.completion_rate = data.completion_rate;
+      if (data.followers_gained !== undefined) updateData.followers_gained = data.followers_gained;
+      if (data.is_viral !== undefined) updateData.is_viral = data.is_viral;
+      if (data.sound_name !== undefined) updateData.sound_name = data.sound_name;
+      if (data.hashtags !== undefined) updateData.hashtags = data.hashtags;
+      if (data.ai_objective !== undefined) updateData.ai_objective = data.ai_objective;
+      if (data.category !== undefined) updateData.category = data.category;
+      if (data.notes !== undefined) updateData.notes = data.notes;
+
+      // Calculate and add engagement_rate if views are provided
+      if (data.views && data.views > 0) {
+        const engagementRate = (((data.likes || 0) + (data.comments || 0) + (data.shares || 0) + (data.saves || 0)) / data.views) * 100;
+        updateData.engagement_rate = engagementRate;
+      }
 
       const { error } = await supabase
         .from('tiktok_posts')
-        .update({
-          ...data,
-          posted_at: data.posted_at?.toISOString(),
-          engagement_rate: engagementRate,
-        })
+        .update(updateData)
         .eq('id', postId);
 
       if (error) throw error;
