@@ -111,7 +111,8 @@ export default function Marketing() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setViewMode(viewMode === 'month' ? 'year' : 'month')}
+            onClick={() => setViewMode(prev => prev === 'month' ? 'year' : 'month')}
+            className="shrink-0"
           >
             {viewMode === 'month' ? (
               <>
