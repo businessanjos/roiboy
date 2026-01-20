@@ -64,6 +64,7 @@ export function EditTikTokPostDialog({
   const [hashtagsInput, setHashtagsInput] = useState('');
   const [objective, setObjective] = useState<'growth' | 'connection' | 'authority' | 'sales'>('growth');
   const [category, setCategory] = useState('');
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (post) {
@@ -84,6 +85,7 @@ export function EditTikTokPostDialog({
       setHashtagsInput(post.hashtags?.join(', ') || '');
       setObjective(post.ai_objective || 'growth');
       setCategory(post.category || '');
+      setNotes((post as any).notes || '');
     }
   }, [post]);
 
@@ -114,6 +116,7 @@ export function EditTikTokPostDialog({
       hashtags: hashtags.length > 0 ? hashtags : undefined,
       ai_objective: objective,
       category: category || undefined,
+      notes: notes || undefined,
     });
   };
 
@@ -397,6 +400,17 @@ export function EditTikTokPostDialog({
                   id="is-viral"
                   checked={isViral}
                   onCheckedChange={setIsViral}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Observações</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Anotações sobre o vídeo, estratégia, resultados..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
                 />
               </div>
             </div>

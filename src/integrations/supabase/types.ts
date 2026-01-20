@@ -8535,6 +8535,7 @@ export type Database = {
           id: string
           is_viral: boolean | null
           likes: number | null
+          notes: string | null
           posted_at: string | null
           profile_id: string
           saves: number | null
@@ -8562,6 +8563,7 @@ export type Database = {
           id?: string
           is_viral?: boolean | null
           likes?: number | null
+          notes?: string | null
           posted_at?: string | null
           profile_id: string
           saves?: number | null
@@ -8589,6 +8591,7 @@ export type Database = {
           id?: string
           is_viral?: boolean | null
           likes?: number | null
+          notes?: string | null
           posted_at?: string | null
           profile_id?: string
           saves?: number | null

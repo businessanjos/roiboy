@@ -46,6 +46,7 @@ export interface TikTokPost {
   hashtags: string[] | null;
   ai_objective: 'growth' | 'connection' | 'authority' | 'sales' | null;
   category: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +78,7 @@ export interface TikTokPostFormData {
   hashtags?: string[];
   ai_objective?: 'growth' | 'connection' | 'authority' | 'sales';
   category?: string;
+  notes?: string;
 }
 
 // Mock data for initial state
@@ -125,6 +127,7 @@ const MOCK_POSTS: TikTokPost[] = [
     hashtags: ['viral', 'trending', 'fyp'],
     ai_objective: 'growth',
     category: null,
+    notes: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -352,6 +355,7 @@ export function useTikTokData() {
           hashtags: data.hashtags,
           ai_objective: data.ai_objective,
           category: data.category,
+          notes: data.notes,
         })
         .select()
         .single();
