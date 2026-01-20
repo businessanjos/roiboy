@@ -80,14 +80,27 @@ export function useMarketingEvents(year?: number, category?: 'marketing' | 'oper
       // 2. Events from other categories that have this category in visible_sectors
       if (includeSharedEvents && category) {
         // Build OR query to include shared events
-        const { data, error } = await supabase
+        let queryBuilder = supabase
           .from('events')
           .select('*')
           .eq('account_id', currentUser.account_id)
-          .or(`category.eq.${category},visible_sectors.cs.["${category}"]`)
-          .gte('scheduled_at', `${year}-${String((month ?? 0) + 1).padStart(2, '0')}-01`)
-          .lte('scheduled_at', `${year}-${String((month ?? 0) + 1).padStart(2, '0')}-31`)
-          .order('scheduled_at', { ascending: true });
+          .or(`category.eq.${category},visible_sectors.cs.["${category}"]`);
+
+        // Apply date filter based on mode (monthly or annual)
+        if (year && month !== undefined) {
+          // Filter by specific month (monthly view)
+          const monthStr = String(month + 1).padStart(2, '0');
+          queryBuilder = queryBuilder
+            .gte('scheduled_at', `${year}-${monthStr}-01`)
+            .lte('scheduled_at', `${year}-${monthStr}-31`);
+        } else if (year) {
+          // Filter by entire year (annual view)
+          queryBuilder = queryBuilder
+            .gte('scheduled_at', `${year}-01-01`)
+            .lte('scheduled_at', `${year}-12-31`);
+        }
+
+        const { data, error } = await queryBuilder.order('scheduled_at', { ascending: true });
 
         if (error) throw error;
         return (data || []).map(mapEventRowToMarketingEvent);
