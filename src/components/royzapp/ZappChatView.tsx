@@ -77,6 +77,7 @@ interface ZappChatViewProps {
   onReplyMessage: (message: Message) => void;
   onCancelReply: () => void;
   onDeleteMessage?: (messageId: string) => void;
+  onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   onRetryMessage?: (message: Message) => void;
   onMentionInsert?: (mention: MentionData) => void;
   // Signature
@@ -144,6 +145,7 @@ export function ZappChatView({
   onReplyMessage,
   onCancelReply,
   onDeleteMessage,
+  onEditMessage,
   onRetryMessage,
   onMentionInsert,
   signatureEnabled,
@@ -257,6 +259,7 @@ export function ZappChatView({
         isGroup={contactInfo.isGroup}
         onReplyMessage={onReplyMessage}
         onDeleteMessage={onDeleteMessage}
+        onEditMessage={onEditMessage}
         onRetryMessage={onRetryMessage}
       />
 

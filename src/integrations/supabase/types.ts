@@ -9772,6 +9772,7 @@ export type Database = {
           external_message_id: string | null
           id: string
           is_deleted: boolean | null
+          is_edited: boolean | null
           media_download_status: string | null
           media_encrypted_url: string | null
           media_filename: string | null
@@ -9787,6 +9788,7 @@ export type Database = {
           sender_phone: string | null
           sent_at: string
           transcription: string | null
+          updated_at: string | null
           zapp_conversation_id: string
         }
         Insert: {
@@ -9800,6 +9802,7 @@ export type Database = {
           external_message_id?: string | null
           id?: string
           is_deleted?: boolean | null
+          is_edited?: boolean | null
           media_download_status?: string | null
           media_encrypted_url?: string | null
           media_filename?: string | null
@@ -9815,6 +9818,7 @@ export type Database = {
           sender_phone?: string | null
           sent_at?: string
           transcription?: string | null
+          updated_at?: string | null
           zapp_conversation_id: string
         }
         Update: {
@@ -9828,6 +9832,7 @@ export type Database = {
           external_message_id?: string | null
           id?: string
           is_deleted?: boolean | null
+          is_edited?: boolean | null
           media_download_status?: string | null
           media_encrypted_url?: string | null
           media_filename?: string | null
@@ -9843,6 +9848,7 @@ export type Database = {
           sender_phone?: string | null
           sent_at?: string
           transcription?: string | null
+          updated_at?: string | null
           zapp_conversation_id?: string
         }
         Relationships: [
