@@ -5,6 +5,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Robust browser-like headers for better scraping success
+const browserHeaders = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"macOS"',
+  'sec-fetch-dest': 'document',
+  'sec-fetch-mode': 'navigate',
+  'sec-fetch-site': 'none',
+  'sec-fetch-user': '?1',
+  'upgrade-insecure-requests': '1',
+};
+
 // Extract username from various TikTok URL formats
 function extractUsername(input: string): string | null {
   const trimmed = input.trim();
@@ -40,7 +58,7 @@ function extractUsername(input: string): string | null {
   return null;
 }
 
-// Fetch public profile data from TikTok
+// Fetch public profile data from TikTok with robust headers
 async function fetchTikTokProfile(username: string): Promise<{
   username: string;
   display_name: string | null;
@@ -50,23 +68,22 @@ async function fetchTikTokProfile(username: string): Promise<{
   videos_count: number;
   likes_count: number;
   bio: string | null;
+  dataFetched: boolean;
 } | null> {
   try {
-    console.log('Attempting to fetch TikTok profile for:', username);
+    console.log('Fetching TikTok profile for:', username);
     
-    // Method 1: Try TikTok web page parsing
     const response = await fetch(`https://www.tiktok.com/@${username}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
+      headers: browserHeaders,
     });
+
+    console.log('TikTok response status:', response.status);
 
     if (response.ok) {
       const html = await response.text();
+      console.log('HTML length received:', html.length);
       
-      // Try to extract JSON data from SIGI_STATE or similar
+      // Try to extract JSON data from SIGI_STATE
       const sigiMatch = html.match(/<script id="SIGI_STATE" type="application\/json">([^<]+)<\/script>/);
       if (sigiMatch) {
         try {
@@ -74,8 +91,9 @@ async function fetchTikTokProfile(username: string): Promise<{
           const userModule = sigiData?.UserModule?.users?.[username];
           const statsModule = sigiData?.UserModule?.stats?.[username];
           
-          if (userModule) {
+          if (userModule && statsModule) {
             console.log('Successfully extracted TikTok profile from SIGI_STATE');
+            console.log('Stats:', JSON.stringify(statsModule));
             return {
               username: userModule.uniqueId || username,
               display_name: userModule.nickname || null,
@@ -85,6 +103,7 @@ async function fetchTikTokProfile(username: string): Promise<{
               videos_count: statsModule?.videoCount || 0,
               likes_count: statsModule?.heartCount || statsModule?.heart || 0,
               bio: userModule.signature || null,
+              dataFetched: true,
             };
           }
         } catch (e) {
@@ -105,6 +124,7 @@ async function fetchTikTokProfile(username: string): Promise<{
             const stats = userDetail.stats;
             
             console.log('Successfully extracted TikTok profile from UNIVERSAL_DATA');
+            console.log('Stats:', JSON.stringify(stats));
             return {
               username: user?.uniqueId || username,
               display_name: user?.nickname || null,
@@ -114,6 +134,7 @@ async function fetchTikTokProfile(username: string): Promise<{
               videos_count: stats?.videoCount || 0,
               likes_count: stats?.heartCount || stats?.heart || 0,
               bio: user?.signature || null,
+              dataFetched: true,
             };
           }
         } catch (e) {
@@ -126,9 +147,10 @@ async function fetchTikTokProfile(username: string): Promise<{
       const followersMatch = html.match(/(\d+(?:\.\d+)?[KMB]?)\s*Followers/i);
       const likesMatch = html.match(/(\d+(?:\.\d+)?[KMB]?)\s*Likes/i);
       
-      if (titleMatch) {
+      if (titleMatch && (followersMatch || likesMatch)) {
         const displayName = titleMatch[1].replace(/ \| TikTok$/, '').replace(/@\w+/, '').trim();
         
+        console.log('Extracted from meta tags');
         return {
           username: username,
           display_name: displayName || username,
@@ -138,34 +160,17 @@ async function fetchTikTokProfile(username: string): Promise<{
           videos_count: 0,
           likes_count: parseMetricValue(likesMatch?.[1]),
           bio: null,
+          dataFetched: true,
         };
       }
     }
 
-    // Fallback - just return basic info
-    console.log('Could not fetch TikTok profile data, using fallback');
-    return {
-      username: username,
-      display_name: username,
-      profile_picture_url: null,
-      followers_count: 0,
-      following_count: 0,
-      videos_count: 0,
-      likes_count: 0,
-      bio: null,
-    };
+    // Fallback - return null to indicate fetch failed
+    console.log('Could not fetch TikTok profile data, fetch failed');
+    return null;
   } catch (error) {
     console.error('Error fetching TikTok profile:', error);
-    return {
-      username: username,
-      display_name: username,
-      profile_picture_url: null,
-      followers_count: 0,
-      following_count: 0,
-      videos_count: 0,
-      likes_count: 0,
-      bio: null,
-    };
+    return null;
   }
 }
 
@@ -191,7 +196,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { profileInput, accountId, manualMetrics } = await req.json();
+    const { profileInput, accountId } = await req.json();
 
     if (!profileInput) {
       return new Response(
@@ -217,24 +222,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Fetching TikTok profile for:', username);
-
-    // Fetch public profile data
-    const fetchedData = await fetchTikTokProfile(username);
-
-    // Use manual metrics as fallback if fetched data is empty
-    const profileData = {
-      username: fetchedData?.username || username,
-      display_name: fetchedData?.display_name || username,
-      profile_picture_url: fetchedData?.profile_picture_url || null,
-      followers_count: fetchedData?.followers_count || manualMetrics?.followers_count || 0,
-      following_count: fetchedData?.following_count || manualMetrics?.following_count || 0,
-      videos_count: fetchedData?.videos_count || manualMetrics?.videos_count || 0,
-      likes_count: fetchedData?.likes_count || manualMetrics?.likes_count || 0,
-      bio: fetchedData?.bio || manualMetrics?.bio || null,
-    };
-
-    console.log('Profile data to save:', profileData);
+    console.log('Processing TikTok profile for:', username);
 
     // Initialize Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -256,6 +244,25 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch public profile data
+    const fetchedData = await fetchTikTokProfile(username);
+    const dataFetched = fetchedData?.dataFetched || false;
+
+    // Build profile data - NO MANUAL FALLBACK, only fetched data
+    const profileData = {
+      username: fetchedData?.username || username,
+      display_name: fetchedData?.display_name || username,
+      profile_picture_url: fetchedData?.profile_picture_url || null,
+      followers_count: fetchedData?.followers_count || 0,
+      following_count: fetchedData?.following_count || 0,
+      videos_count: fetchedData?.videos_count || 0,
+      likes_count: fetchedData?.likes_count || 0,
+      bio: fetchedData?.bio || null,
+    };
+
+    console.log('Profile data to save:', JSON.stringify(profileData));
+    console.log('Data was fetched automatically:', dataFetched);
+
     // Insert the profile
     const { data: newProfile, error: insertError } = await supabase
       .from('tiktok_profiles')
@@ -265,13 +272,13 @@ Deno.serve(async (req) => {
         display_name: profileData.display_name,
         profile_picture_url: profileData.profile_picture_url,
         followers_count: profileData.followers_count,
-        followers_previous_count: profileData.followers_count, // Same as current initially
+        followers_previous_count: profileData.followers_count,
         following_count: profileData.following_count,
         videos_count: profileData.videos_count,
         likes_count: profileData.likes_count,
         bio: profileData.bio,
         is_active: true,
-        last_synced_at: new Date().toISOString(),
+        last_synced_at: dataFetched ? new Date().toISOString() : null, // Only set if data was actually fetched
       })
       .select()
       .single();
@@ -290,8 +297,11 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         profile: newProfile,
-        message: 'Perfil do TikTok conectado com sucesso!',
-        dataSource: fetchedData?.followers_count ? 'fetched' : 'manual'
+        message: dataFetched 
+          ? 'Perfil do TikTok conectado com dados atualizados!'
+          : 'Perfil conectado. Sincronizando dados...',
+        dataFetched,
+        needsSync: !dataFetched, // Tell frontend to trigger sync
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

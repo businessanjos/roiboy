@@ -240,21 +240,14 @@ export function useTikTokData() {
 
   // Create profile mutation - NOW USES EDGE FUNCTION FOR AUTO-FETCH
   const createProfile = useMutation({
-    mutationFn: async (data: { username: string; followers_count?: number; following_count?: number; videos_count?: number; likes_count?: number; bio?: string }) => {
+    mutationFn: async (data: { username: string }) => {
       if (!user?.account_id) throw new Error('Usuário não autenticado');
 
-      // Call Edge Function to fetch and create profile with real data
+      // Call Edge Function to fetch and create profile with real data - NO MANUAL METRICS
       const { data: result, error } = await supabase.functions.invoke('fetch-tiktok-profile', {
         body: {
           profileInput: data.username,
           accountId: user.account_id,
-          manualMetrics: {
-            followers_count: data.followers_count,
-            following_count: data.following_count,
-            videos_count: data.videos_count,
-            likes_count: data.likes_count,
-            bio: data.bio,
-          }
         }
       });
 
@@ -267,11 +260,21 @@ export function useTikTokData() {
         throw new Error(result?.error || 'Erro ao conectar perfil');
       }
 
-      return result.profile;
+      return { profile: result.profile, needsSync: result.needsSync };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tiktok-profiles'] });
-      toast.success(`Perfil @${variables.username.replace('@', '')} conectado com dados atualizados!`);
+      
+      // If data wasn't fetched automatically, trigger sync immediately
+      if (result.needsSync && result.profile?.id) {
+        toast.info('Sincronizando dados do TikTok...');
+        // Wait a bit and trigger sync
+        setTimeout(() => {
+          syncProfile.mutate(result.profile.id);
+        }, 500);
+      } else {
+        toast.success(`Perfil @${variables.username.replace('@', '')} conectado com dados atualizados!`);
+      }
     },
     onError: (error) => {
       toast.error('Erro ao conectar perfil: ' + error.message);
