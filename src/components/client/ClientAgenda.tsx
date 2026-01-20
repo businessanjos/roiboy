@@ -686,24 +686,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     return typeMap[eventType] || typeMap.live;
   };
 
-  if (events.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Novo Evento
-          </Button>
-        </div>
-        <div className="text-center py-8 text-muted-foreground">
-          <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Nenhum evento programado para os produtos deste cliente.</p>
-          <p className="text-sm mt-1">Crie eventos usando o botão acima.</p>
-        </div>
-        {eventDialogContent}
-      </div>
-    );
-  }
+  // Removed early return - we always want to render participations even if no product events
 
   // Separate events by status
   const upcomingEvents = events.filter(
@@ -870,72 +853,107 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     );
   };
 
+  const statusColors: Record<string, string> = {
+    confirmed: "bg-green-500/10 text-green-600 border-green-500/30",
+    declined: "bg-red-500/10 text-red-600 border-red-500/30",
+    pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
+    attended: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+    no_show: "bg-gray-500/10 text-gray-500 border-gray-500/30",
+    waitlist: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  };
+  const statusLabels: Record<string, string> = {
+    confirmed: "Confirmado",
+    declined: "Recusado",
+    pending: "Pendente",
+    attended: "Presente",
+    no_show: "Não Compareceu",
+    waitlist: "Lista de Espera",
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Create Button */}
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Novo Evento
-        </Button>
-      </div>
+      {clientProductIds.length > 0 && (
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Novo Evento
+          </Button>
+        </div>
+      )}
       
       {eventDialogContent}
       {deleteDialogContent}
-      
-      {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />, true)}
-      {renderEventTable(materialsEvents, "Materiais de Apoio", <FileText className="h-4 w-4" />, true)}
-      {renderEventTable(pastEvents, "Eventos Passados", <Clock className="h-4 w-4" />, true)}
 
-      {/* Client Event Participations (RSVPs) */}
-      {participations.length > 0 && (
-        <div className="border-t pt-6 mt-6">
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Participações em Eventos (RSVPs)
-          </h3>
+      {/* SECTION 1: Client Event Invitations (RSVPs) - ALWAYS VISIBLE */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Convites para Eventos
+        </h3>
+        
+        {participations.length > 0 ? (
           <div className="grid gap-3">
-            {participations.map((p) => {
-              const statusColors: Record<string, string> = {
-                confirmed: "bg-green-500/10 text-green-600 border-green-500/30",
-                declined: "bg-red-500/10 text-red-600 border-red-500/30",
-                pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
-                attended: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
-                no_show: "bg-gray-500/10 text-gray-500 border-gray-500/30",
-                waitlist: "bg-blue-500/10 text-blue-600 border-blue-500/30",
-              };
-              const statusLabels: Record<string, string> = {
-                confirmed: "Confirmado",
-                declined: "Recusado",
-                pending: "Pendente",
-                attended: "Presente",
-                no_show: "Não Compareceu",
-                waitlist: "Lista de Espera",
-              };
-              return (
-                <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                  <div>
-                    <p className="font-medium">{p.events?.title || "Evento"}</p>
-                    <p className="text-sm text-muted-foreground">
+            {participations.map((p) => (
+              <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{p.events?.title || "Evento"}</p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
                       {p.events?.scheduled_at 
                         ? format(new Date(p.events.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
                         : "Data não definida"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={statusColors[p.rsvp_status] || "bg-muted"}>
-                      {statusLabels[p.rsvp_status] || p.rsvp_status}
-                    </Badge>
-                    {p.rsvp_responded_at && (
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(p.rsvp_responded_at), "dd/MM", { locale: ptBR })}
+                    </span>
+                    {p.invited_at && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Convidado em {format(new Date(p.invited_at), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                     )}
                   </div>
                 </div>
-              );
-            })}
+                <div className="flex items-center gap-2 ml-3">
+                  <Badge className={statusColors[p.rsvp_status] || "bg-muted"}>
+                    {statusLabels[p.rsvp_status] || p.rsvp_status}
+                  </Badge>
+                  {p.rsvp_responded_at && (
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      Resp. {format(new Date(p.rsvp_responded_at), "dd/MM", { locale: ptBR })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
+            <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Nenhum convite de evento registrado</p>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 2: Delivery Schedule (product events) */}
+      {clientProductIds.length > 0 && (
+        <div className="border-t pt-6">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Agenda de Entregas
+          </h3>
+          {events.length > 0 ? (
+            <div className="space-y-6">
+              {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />, true)}
+              {renderEventTable(materialsEvents, "Materiais de Apoio", <FileText className="h-4 w-4" />, true)}
+              {renderEventTable(pastEvents, "Eventos Passados", <Clock className="h-4 w-4" />, true)}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Nenhum evento programado para os produtos deste cliente.</p>
+              <p className="text-xs mt-1">Crie eventos usando o botão acima.</p>
+            </div>
+          )}
         </div>
       )}
 
