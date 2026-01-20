@@ -457,7 +457,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
         }
       }} modal={true}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left">
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left w-full max-w-full overflow-hidden">
             <FieldValueBadge 
               field={field} 
               value={currentValue} 

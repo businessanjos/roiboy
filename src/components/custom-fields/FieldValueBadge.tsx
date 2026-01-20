@@ -188,7 +188,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} max-w-full overflow-hidden`}
+        className={`inline-flex items-center gap-1 ${padding} rounded bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:bg-pink-500/25 transition-colors font-medium ${textSize} max-w-full min-w-0 overflow-hidden`}
       >
         <Instagram className="h-3 w-3 flex-shrink-0" />
         <span className="truncate">@{handle}</span>
@@ -203,12 +203,12 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
       return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     return (
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1 max-w-full overflow-hidden">
         {instagrams.slice(0, 3).map((ig, index) => {
           const handle = String(ig).replace(/^@/, '').trim();
           const instagramUrl = `https://instagram.com/${handle}`;
           return (
-            <div key={index} className="group inline-flex items-center max-w-full">
+            <div key={index} className="group inline-flex items-center max-w-[calc(100%-8px)] min-w-0">
               <a
                 href={instagramUrl}
                 target="_blank"
