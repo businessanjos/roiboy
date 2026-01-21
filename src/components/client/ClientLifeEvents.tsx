@@ -86,6 +86,8 @@ interface LifeEvent {
   source: "manual" | "conversation" | "ai_detected";
   created_at: string;
   image_url: string | null;
+  // Images from related table
+  images?: LifeEventImage[];
 }
 
 interface LifeEventImage {
@@ -206,7 +208,10 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     try {
       const { data, error } = await supabase
         .from("client_life_events")
-        .select("*")
+        .select(`
+          *,
+          images:client_life_event_images(id, image_url, file_name)
+        `)
         .eq("client_id", clientId)
         .order("event_date", { ascending: true, nullsFirst: false });
 
@@ -561,12 +566,19 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                   key={event.id}
                   className="flex items-center gap-3 py-3 px-2 hover:bg-muted/30 rounded-lg transition-colors group"
                 >
-                  {event.image_url ? (
-                    <img
-                      src={event.image_url}
-                      alt=""
-                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                    />
+                  {(event.images && event.images.length > 0) || event.image_url ? (
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={event.images?.[0]?.image_url || event.image_url || ''}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                      {event.images && event.images.length > 1 && (
+                        <span className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-medium">
+                          +{event.images.length - 1}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <div className={`p-2 rounded-lg bg-muted/50 ${typeInfo.color}`}>
                       <Icon className="h-4 w-4" />
