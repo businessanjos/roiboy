@@ -51,11 +51,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     try {
       // Check if user is admin (has all permissions)
-      // Admin can be: role === 'admin', role === 'super_admin', or is_also_admin === true
+      // Admin can be: role === 'admin', role === 'super_admin', is_also_admin === true, or team_role_name === "Admin"
       const isAdminRole = currentUser.role === "admin" || currentUser.role === "super_admin";
-      const hasAdminFlag = (currentUser as any).is_also_admin === true;
+      const hasAdminFlag = currentUser.is_also_admin === true;
+      const hasAdminTeamRole = currentUser.team_role_name === "Admin";
       
-      if (isAdminRole || hasAdminFlag) {
+      if (isAdminRole || hasAdminFlag || hasAdminTeamRole) {
         // Admin has all permissions
         setPermissions(Object.values(PERMISSIONS));
         setIsAdmin(true);
