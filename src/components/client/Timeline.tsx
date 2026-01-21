@@ -791,9 +791,9 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     const file = e.target.files?.[0];
     if (!file || !currentUser || !clientId) return;
 
-    // Validate max file size (50MB)
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo 50MB.");
+    // Validate max file size (100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 100MB.");
       return;
     }
 
