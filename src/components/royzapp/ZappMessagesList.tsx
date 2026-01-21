@@ -26,17 +26,19 @@ export function ZappMessagesList({
   // Deduplicate messages to prevent visual duplicates from race conditions
   // Priority: real messages over temp, dedupe by external_message_id when available
   // Special handling for audio messages which can have duplicate records with different content
+  // CRITICAL FIX: Use 30-second buckets (increased from 5s) as safety fallback
   const deduplicatedMessages = useMemo(() => {
     const seen = new Map<string, boolean>();
     const result: Message[] = [];
     
-    // Group outbound audio messages by approximate time (5-second buckets) for deduplication
+    // Group outbound audio messages by approximate time (30-second buckets) for deduplication
     // This handles the case where frontend and webhook create separate records
     const audioTimeMap = new Map<string, Message[]>();
     
     for (const msg of messages) {
       if (msg.message_type === 'audio' && !msg.is_from_client) {
-        const timeKey = String(Math.floor(new Date(msg.created_at).getTime() / 5000));
+        // Use 30-second buckets (30000ms) for more aggressive deduplication
+        const timeKey = String(Math.floor(new Date(msg.created_at).getTime() / 30000));
         if (!audioTimeMap.has(timeKey)) {
           audioTimeMap.set(timeKey, []);
         }
@@ -46,8 +48,10 @@ export function ZappMessagesList({
     
     // For each time bucket with multiple audios, prefer the one with external_message_id and duration
     const duplicateAudioIds = new Set<string>();
-    for (const [, audioMsgs] of audioTimeMap) {
+    for (const [timeKey, audioMsgs] of audioTimeMap) {
       if (audioMsgs.length > 1) {
+        console.log(`[DEDUPE] Found ${audioMsgs.length} audio messages in 30s bucket ${timeKey}`);
+        
         // Sort: prefer messages with external_message_id and non-zero duration
         audioMsgs.sort((a, b) => {
           // Prefer real messages over temp
@@ -61,8 +65,10 @@ export function ZappMessagesList({
           if ((a.audio_duration_sec || 0) < (b.audio_duration_sec || 0)) return 1;
           return 0;
         });
+        
         // Mark all but the first (best) as duplicates
         for (let i = 1; i < audioMsgs.length; i++) {
+          console.log(`[DEDUPE] Filtering duplicate audio: ${audioMsgs[i].id}`);
           duplicateAudioIds.add(audioMsgs[i].id);
         }
       }
@@ -75,13 +81,13 @@ export function ZappMessagesList({
         continue;
       }
       
-      // Skip temporary messages if a real version exists
+      // Skip temporary messages if a real version exists (30s window)
       if (msg.id.startsWith('temp-')) {
         const hasRecentRealAudio = messages.some(m => 
           !m.id.startsWith('temp-') && 
           m.message_type === 'audio' &&
           m.is_from_client === false &&
-          Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 5000
+          Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 30000
         );
         if (hasRecentRealAudio) {
           continue;

@@ -1754,34 +1754,13 @@ export default function RoyZapp() {
     }
 
     setUploadingMedia(true);
-    const tempMessageId = `temp-audio-${Date.now()}`;
     const now = new Date().toISOString();
-    
-    // Create optimistic message
-    // Use empty content to match what webhook receives (prevents deduplication failures)
-    const optimisticMessage: Message = {
-      id: tempMessageId,
-      content: "",
-      is_from_client: false,
-      created_at: now,
-      message_type: "audio",
-      media_url: URL.createObjectURL(audioBlob),
-      media_type: "audio",
-      media_mimetype: audioBlob.type,
-      media_filename: `audio_${Date.now()}.webm`,
-      audio_duration_sec: duration || null,
-      sender_name: null,
-    };
-    
-    setMessages(prev => [...prev, optimisticMessage]);
+    let insertedMessageId: string | null = null;
     
     try {
-      // Determine file extension based on audio format
-      // WhatsApp prefers ogg/mp3, but webm might work too
+      // 1. UPLOAD: First upload audio to storage
       const isOgg = audioBlob.type.includes('ogg');
       const extension = isOgg ? 'ogg' : 'webm';
-      
-      // Upload audio to public bucket (UAZAPI needs to access the URL)
       const fileName = `${currentUser!.account_id}/audio_${Date.now()}.${extension}`;
       const bucket = "zapp-media";
       
@@ -1795,44 +1774,13 @@ export default function RoyZapp() {
       
       if (uploadError) throw uploadError;
       
-      // Get public URL
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       const mediaUrl = urlData.publicUrl;
       
-      // Call UAZAPI to send audio
-      const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
-      const payload: Record<string, string> = {
-        action,
-        media_url: mediaUrl,
-        media_type: "audio",
-        caption: "",
-        file_name: `audio_${Date.now()}.webm`,
-        sector_id: selectedSectorId || "",
-        integration_id: selectedIntegrationId || "",
-      };
-      
-      if (isGroup && groupJid) {
-        payload.group_id = groupJid;
-      } else {
-        payload.phone = phone;
-      }
-      
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: payload,
-      });
-      
-      if (error) throw error;
-      
-      // Check both wrapper and inner success
-      const innerData = data?.data || data;
-      if (!innerData?.success && innerData?.message) {
-        throw new Error(innerData.message || "Falha ao enviar áudio");
-      }
-      
-      // Save message to zapp_messages
-      // Use empty content to match what webhook receives (prevents deduplication failures)
+      // 2. INSERT FIRST: Save to database BEFORE calling UAZAPI
+      // This ensures webhook finds the record to update (prevents duplicates)
       if (selectedConversation.zapp_conversation_id) {
-        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+        const { data: insertedMessage, error: insertError } = await supabase.from("zapp_messages").insert({
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
@@ -1842,27 +1790,91 @@ export default function RoyZapp() {
           media_type: "audio",
           media_mimetype: audioBlob.type,
           media_filename: `audio_${Date.now()}.webm`,
-          audio_duration_sec: recordingDuration || null,
+          audio_duration_sec: duration || null,
           sent_at: now,
+          // external_message_id will be filled by webhook
         }).select("id").single();
         
-        // Replace temp message with real one - filter out temp completely then add real
-        if (insertedMessage) {
+        if (insertError) throw insertError;
+        insertedMessageId = insertedMessage?.id || null;
+        
+        // 3. UPDATE UI: Add to messages list with real ID
+        if (insertedMessageId) {
+          const optimisticMessage: Message = {
+            id: insertedMessageId,
+            content: "",
+            is_from_client: false,
+            created_at: now,
+            message_type: "audio",
+            media_url: mediaUrl,
+            media_type: "audio",
+            media_mimetype: audioBlob.type,
+            media_filename: `audio_${Date.now()}.webm`,
+            audio_duration_sec: duration || null,
+            sender_name: null,
+            delivery_status: "pending",
+          };
+          
           setMessages(prev => {
-            // Remove ALL temp audio messages for this conversation to prevent duplicates
-            const filtered = prev.filter(m => m.id !== tempMessageId && !m.id.startsWith('temp-audio-'));
-            // Check if this message already exists (from realtime)
-            const exists = filtered.some(m => m.id === insertedMessage.id);
-            if (exists) {
-              return filtered;
-            }
-            // Add the real message
-            return [...filtered, { ...optimisticMessage, id: insertedMessage.id, media_url: mediaUrl }];
+            // Check if this message already exists
+            const exists = prev.some(m => m.id === insertedMessageId);
+            if (exists) return prev;
+            // Remove any temp audio messages
+            const filtered = prev.filter(m => !m.id.startsWith('temp-audio-'));
+            return [...filtered, optimisticMessage];
           });
-        } else {
-          // Even if insert didn't return data, remove the temp message
-          setMessages(prev => prev.filter(m => m.id !== tempMessageId));
         }
+        
+        // 4. SEND: Now call UAZAPI (webhook will update existing record)
+        const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
+        const payload: Record<string, string> = {
+          action,
+          media_url: mediaUrl,
+          media_type: "audio",
+          caption: "",
+          file_name: `audio_${Date.now()}.webm`,
+          sector_id: selectedSectorId || "",
+          integration_id: selectedIntegrationId || "",
+        };
+        
+        if (isGroup && groupJid) {
+          payload.group_id = groupJid;
+        } else {
+          payload.phone = phone;
+        }
+        
+        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+          body: payload,
+        });
+        
+        if (error) {
+          // ROLLBACK: Delete the inserted record if UAZAPI fails
+          if (insertedMessageId) {
+            console.log(`[ROLLBACK] UAZAPI failed, deleting message ${insertedMessageId}`);
+            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
+            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
+          }
+          throw error;
+        }
+        
+        // Check both wrapper and inner success
+        const innerData = data?.data || data;
+        if (!innerData?.success && innerData?.message) {
+          // ROLLBACK: Delete the inserted record if UAZAPI reports failure
+          if (insertedMessageId) {
+            console.log(`[ROLLBACK] UAZAPI reported failure, deleting message ${insertedMessageId}`);
+            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
+            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
+          }
+          throw new Error(innerData.message || "Falha ao enviar áudio");
+        }
+        
+        // 5. UPDATE UI: Mark as sent
+        setMessages(prev => prev.map(m => 
+          m.id === insertedMessageId 
+            ? { ...m, delivery_status: "sent" as const }
+            : m
+        ));
         
         // Update conversation last message
         await supabase.from("zapp_conversations").update({
@@ -1875,8 +1887,6 @@ export default function RoyZapp() {
       toast.success("Áudio enviado!");
     } catch (error: any) {
       console.error("Error sending audio:", error);
-      // Keep message in UI but mark as failed (don't remove)
-      // The message stays visible so user can see what they tried to send
       toast.error(error.message || "Erro ao enviar áudio. O áudio foi gravado mas não enviado ao WhatsApp.");
     } finally {
       setUploadingMedia(false);
