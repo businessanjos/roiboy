@@ -121,12 +121,14 @@ export default function RoyZapp() {
     return sectors.find(s => s.id === selectedSectorId);
   }, [selectedSectorId]);
 
-  // Get the first department for the current sector (for creating new assignments)
+  // Get the department for the current sector (for creating new assignments)
+  // CRITICAL FIX: Must match by sector_id to prevent cross-sector leakage
   const currentSectorDepartmentId = useMemo(() => {
-    if (!departments || departments.length === 0) return null;
-    // departments is already filtered by sector in useZappData, so take the first one
-    return departments[0]?.id || null;
-  }, [departments]);
+    if (!departments || departments.length === 0 || !selectedSectorId) return null;
+    // Find the specific department that belongs to this sector
+    const sectorDept = departments.find(d => d.sector_id === selectedSectorId);
+    return sectorDept?.id || null;
+  }, [departments, selectedSectorId]);
 
   // UI state
   const [activeView, setActiveView] = useState<"inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector">("inbox");
