@@ -756,6 +756,12 @@ export default function Events() {
                           Material / Download
                         </div>
                       </SelectItem>
+                      <SelectItem value="reuniao">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Reunião
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
