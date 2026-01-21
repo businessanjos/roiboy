@@ -1,33 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, List, LayoutGrid, ChevronDown } from "lucide-react";
+import { Plus, Search, List, LayoutGrid } from "lucide-react";
 import { MarketingTaskList } from "./MarketingTaskList";
 import { MarketingTaskDialog } from "./MarketingTaskDialog";
 import { MarketingTaskSection } from "./MarketingTaskSection";
-import { useMarketingTasks } from "@/hooks/useMarketingTasks";
+import { MarketingTaskKanban } from "./MarketingTaskKanban";
+import { useMarketingTasks, MarketingTaskStatus } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 type ViewMode = "list" | "board";
-type GroupBy = "section" | "status" | "assignee" | "none";
 
 export function MarketingTasksTab() {
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [groupBy, setGroupBy] = useState<GroupBy>("section");
+  const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [addingToSection, setAddingToSection] = useState<string | null>(null);
+  const [defaultStatus, setDefaultStatus] = useState<MarketingTaskStatus | undefined>(undefined);
 
-  const { tasks, isLoading: tasksLoading, createTask, toggleComplete } = useMarketingTasks();
+  const { tasks, isLoading: tasksLoading, createTask, updateTask, toggleComplete } = useMarketingTasks();
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
+
+  // Fetch subtask counts for all tasks
+  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+  
+  const { data: subtaskCounts = {} } = useQuery({
+    queryKey: ["marketing-subtask-counts", taskIds],
+    queryFn: async () => {
+      if (taskIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from("marketing_task_subtasks")
+        .select("task_id, is_completed")
+        .in("task_id", taskIds);
+
+      if (error) throw error;
+
+      const counts: Record<string, { total: number; completed: number }> = {};
+      (data || []).forEach((subtask) => {
+        if (!counts[subtask.task_id]) {
+          counts[subtask.task_id] = { total: 0, completed: 0 };
+        }
+        counts[subtask.task_id].total += 1;
+        if (subtask.is_completed) {
+          counts[subtask.task_id].completed += 1;
+        }
+      });
+
+      return counts;
+    },
+    enabled: taskIds.length > 0,
+  });
 
   const isLoading = tasksLoading || sectionsLoading;
 
@@ -36,7 +63,7 @@ export function MarketingTasksTab() {
     task.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Group tasks by section
+  // Group tasks by section (for list view)
   const tasksBySection = sections.reduce((acc, section) => {
     acc[section.id] = filteredTasks.filter((t) => t.section_id === section.id);
     return acc;
@@ -45,8 +72,9 @@ export function MarketingTasksTab() {
   // Tasks without section (uncategorized)
   const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
 
-  const handleAddTask = (sectionId?: string) => {
+  const handleAddTask = (sectionId?: string, status?: MarketingTaskStatus) => {
     setAddingToSection(sectionId || null);
+    setDefaultStatus(status);
     setEditingTask(null);
     setIsDialogOpen(true);
   };
@@ -54,11 +82,20 @@ export function MarketingTasksTab() {
   const handleEditTask = (taskId: string) => {
     setEditingTask(taskId);
     setAddingToSection(null);
+    setDefaultStatus(undefined);
     setIsDialogOpen(true);
   };
 
   const handleAddSection = async () => {
     await createSection.mutateAsync({ name: "Nova Seção" });
+  };
+
+  const handleStatusChange = async (taskId: string, newStatus: MarketingTaskStatus) => {
+    await updateTask.mutateAsync({
+      id: taskId,
+      status: newStatus,
+      is_completed: newStatus === "done",
+    });
   };
 
   if (isLoading) {
@@ -82,30 +119,6 @@ export function MarketingTasksTab() {
             <Plus className="h-4 w-4" />
             Add task
           </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Group by
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setGroupBy("section")}>
-                Seção
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setGroupBy("status")}>
-                Status
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setGroupBy("assignee")}>
-                Responsável
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setGroupBy("none")}>
-                Nenhum
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-2">
@@ -140,52 +153,66 @@ export function MarketingTasksTab() {
         </div>
       </div>
 
-      {/* Task List */}
-      <div className="border rounded-lg bg-card">
-        {/* Column Headers */}
-        <div className="grid grid-cols-[auto,1fr,140px,120px,100px,100px] gap-2 px-4 py-3 border-b bg-muted/30 text-sm font-medium text-muted-foreground">
-          <div className="w-6" />
-          <div>Task name</div>
-          <div>Assignee</div>
-          <div>Due date</div>
-          <div>Status</div>
-          <div>Priority</div>
+      {/* Board View (Kanban) */}
+      {viewMode === "board" && (
+        <MarketingTaskKanban
+          tasks={filteredTasks}
+          onEditTask={handleEditTask}
+          onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+          onStatusChange={handleStatusChange}
+          onAddTask={(status) => handleAddTask(undefined, status)}
+          subtaskCounts={subtaskCounts}
+        />
+      )}
+
+      {/* List View */}
+      {viewMode === "list" && (
+        <div className="border rounded-lg bg-card">
+          {/* Column Headers */}
+          <div className="grid grid-cols-[auto,1fr,140px,120px,100px,100px] gap-2 px-4 py-3 border-b bg-muted/30 text-sm font-medium text-muted-foreground">
+            <div className="w-6" />
+            <div>Task name</div>
+            <div>Assignee</div>
+            <div>Due date</div>
+            <div>Status</div>
+            <div>Priority</div>
+          </div>
+
+          {/* Sections */}
+          {sections.map((section) => (
+            <MarketingTaskSection
+              key={section.id}
+              section={section}
+              tasks={tasksBySection[section.id] || []}
+              onAddTask={() => handleAddTask(section.id)}
+              onEditTask={handleEditTask}
+              onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+            />
+          ))}
+
+          {/* Uncategorized Tasks */}
+          {uncategorizedTasks.length > 0 && (
+            <MarketingTaskList
+              tasks={uncategorizedTasks}
+              onEditTask={handleEditTask}
+              onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+            />
+          )}
+
+          {/* Add Section Button */}
+          <div className="p-4 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleAddSection}
+              className="text-muted-foreground hover:text-foreground gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add section
+            </Button>
+          </div>
         </div>
-
-        {/* Sections */}
-        {sections.map((section) => (
-          <MarketingTaskSection
-            key={section.id}
-            section={section}
-            tasks={tasksBySection[section.id] || []}
-            onAddTask={() => handleAddTask(section.id)}
-            onEditTask={handleEditTask}
-            onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
-          />
-        ))}
-
-        {/* Uncategorized Tasks */}
-        {uncategorizedTasks.length > 0 && (
-          <MarketingTaskList
-            tasks={uncategorizedTasks}
-            onEditTask={handleEditTask}
-            onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
-          />
-        )}
-
-        {/* Add Section Button */}
-        <div className="p-4 border-t">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleAddSection}
-            className="text-muted-foreground hover:text-foreground gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add section
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Task Dialog */}
       <MarketingTaskDialog
@@ -193,6 +220,7 @@ export function MarketingTasksTab() {
         onOpenChange={setIsDialogOpen}
         taskId={editingTask}
         defaultSectionId={addingToSection}
+        defaultStatus={defaultStatus}
       />
     </div>
   );
