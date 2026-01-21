@@ -74,6 +74,7 @@ import {
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ImageGalleryLightbox } from "@/components/ui/image-gallery-lightbox";
 
 interface LifeEvent {
   id: string;
@@ -150,6 +151,33 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Gallery lightbox state
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
+  const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
+
+  const openGallery = (event: LifeEvent, imageIndex: number = 0) => {
+    const images: { url: string; alt?: string }[] = [];
+    
+    // Collect images from related table
+    if (event.images && event.images.length > 0) {
+      event.images.forEach(img => {
+        images.push({ url: img.image_url, alt: img.file_name || event.title });
+      });
+    }
+    
+    // Include legacy image_url if exists and not already in images
+    if (event.image_url && !images.some(i => i.url === event.image_url)) {
+      images.push({ url: event.image_url, alt: event.title });
+    }
+    
+    if (images.length > 0) {
+      setGalleryImages(images);
+      setGalleryInitialIndex(imageIndex);
+      setGalleryOpen(true);
+    }
+  };
 
   useEffect(() => {
     fetchEvents();
@@ -567,7 +595,13 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                   className="flex items-center gap-3 py-3 px-2 hover:bg-muted/30 rounded-lg transition-colors group"
                 >
                   {(event.images && event.images.length > 0) || event.image_url ? (
-                    <div className="relative flex-shrink-0">
+                    <div 
+                      className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openGallery(event, 0);
+                      }}
+                    >
                       <img
                         src={event.images?.[0]?.image_url || event.image_url || ''}
                         alt=""
@@ -947,6 +981,13 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Image Gallery Lightbox */}
+      <ImageGalleryLightbox
+        images={galleryImages}
+        initialIndex={galleryInitialIndex}
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+      />
     </div>
   );
 }
