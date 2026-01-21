@@ -410,15 +410,39 @@ export default function RoyZapp() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
-  // User signature state (persisted to localStorage)
-  const [userSignature, setUserSignature] = useState(() => {
-    const saved = localStorage.getItem("zapp_signature");
-    return saved || "";
-  });
-  const [signatureEnabled, setSignatureEnabled] = useState(() => {
-    const saved = localStorage.getItem("zapp_signatureEnabled");
-    return saved === "true";
-  });
+  // User signature state (persisted to database)
+  const [userSignature, setUserSignature] = useState("");
+  const [signatureEnabled, setSignatureEnabled] = useState(false);
+  
+  // Sync signature state from currentUser when it loads
+  useEffect(() => {
+    if (currentUser) {
+      setUserSignature(currentUser.zapp_signature || "");
+      setSignatureEnabled(currentUser.zapp_signature_enabled || false);
+      
+      // Migrate from localStorage if exists and database is empty
+      const localSignature = localStorage.getItem("zapp_signature");
+      const localEnabled = localStorage.getItem("zapp_signatureEnabled");
+      
+      if (localSignature && !currentUser.zapp_signature) {
+        // Migrate to database
+        supabase
+          .from("users")
+          .update({ 
+            zapp_signature: localSignature, 
+            zapp_signature_enabled: localEnabled === "true" 
+          })
+          .eq("id", currentUser.id)
+          .then(() => {
+            setUserSignature(localSignature);
+            setSignatureEnabled(localEnabled === "true");
+            // Clear localStorage after migration
+            localStorage.removeItem("zapp_signature");
+            localStorage.removeItem("zapp_signatureEnabled");
+          });
+      }
+    }
+  }, [currentUser]);
   // Distribution settings state (persisted to localStorage)
   const [roundRobinEnabled, setRoundRobinEnabled] = useState(() => {
     const saved = localStorage.getItem("zapp_roundRobin");
@@ -3209,7 +3233,13 @@ export default function RoyZapp() {
           userSignature={userSignature}
           onSignatureChange={(value) => {
             setUserSignature(value);
-            localStorage.setItem("zapp_signature", value);
+            if (currentUser) {
+              supabase
+                .from("users")
+                .update({ zapp_signature: value })
+                .eq("id", currentUser.id)
+                .then();
+            }
           }}
           spellingEnabled={spellingEnabled}
           suggestionsEnabled={suggestionsEnabled}
@@ -3338,7 +3368,13 @@ export default function RoyZapp() {
           onToggleSignature={() => {
             const newValue = !signatureEnabled;
             setSignatureEnabled(newValue);
-            localStorage.setItem("zapp_signatureEnabled", String(newValue));
+            if (currentUser) {
+              supabase
+                .from("users")
+                .update({ zapp_signature_enabled: newValue })
+                .eq("id", currentUser.id)
+                .then();
+            }
           }}
           onOpenPlaybook={() => setPlaybookDialogOpen(true)}
         />

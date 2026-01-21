@@ -8964,6 +8964,8 @@ export type Database = {
           name: string
           role: Database["public"]["Enums"]["user_role"]
           team_role_id: string | null
+          zapp_signature: string | null
+          zapp_signature_enabled: boolean | null
         }
         Insert: {
           account_id: string
@@ -8979,6 +8981,8 @@ export type Database = {
           name: string
           role?: Database["public"]["Enums"]["user_role"]
           team_role_id?: string | null
+          zapp_signature?: string | null
+          zapp_signature_enabled?: boolean | null
         }
         Update: {
           account_id?: string
@@ -8994,6 +8998,8 @@ export type Database = {
           name?: string
           role?: Database["public"]["Enums"]["user_role"]
           team_role_id?: string | null
+          zapp_signature?: string | null
+          zapp_signature_enabled?: boolean | null
         }
         Relationships: [
           {
