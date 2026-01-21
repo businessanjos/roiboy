@@ -1016,29 +1016,34 @@ serve(async (req) => {
               );
             }
           } else {
-            // For outbound messages, also check for recent duplicates without external_message_id
+            // For outbound messages, check for recent duplicates without external_message_id
             // This handles messages sent from the UI that are then echoed back by the webhook
+            // CRITICAL FIX: Use 5-minute window (increased from 2) to handle race conditions
             let isDuplicate = false;
             if (direction === "outbound") {
-              const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+              const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
               
-              // For audio messages, frontend saves with "[Áudio]" but webhook receives empty content
-              // So we need to search by message_type instead of content for audio
+              // For audio messages, search by message_type (content differs between frontend/webhook)
               let recentDupe = null;
               
               if (mediaType === "audio") {
-                // Search for audio messages by type, not content (content differs between frontend/webhook)
+                // Search for audio messages without external_message_id (frontend-inserted, awaiting webhook)
                 const { data } = await supabase
                   .from("zapp_messages")
-                  .select("id")
+                  .select("id, media_url")
                   .eq("zapp_conversation_id", zappConversationId)
                   .eq("direction", "outbound")
                   .eq("message_type", "audio")
                   .is("external_message_id", null)
-                  .gte("created_at", twoMinutesAgo)
+                  .gte("created_at", fiveMinutesAgo)
+                  .order("created_at", { ascending: false })
                   .limit(1)
                   .maybeSingle();
                 recentDupe = data;
+                
+                if (recentDupe) {
+                  console.log(`[DEDUPE] Found pending audio message ${recentDupe.id} to update with external_message_id ${messageId}`);
+                }
               } else {
                 // For non-audio messages, use content-based matching
                 const { data } = await supabase
@@ -1048,7 +1053,7 @@ serve(async (req) => {
                   .eq("direction", "outbound")
                   .eq("content", content)
                   .is("external_message_id", null)
-                  .gte("created_at", twoMinutesAgo)
+                  .gte("created_at", fiveMinutesAgo)
                   .limit(1)
                   .maybeSingle();
                 recentDupe = data;
@@ -1057,15 +1062,23 @@ serve(async (req) => {
               if (recentDupe) {
                 // Update the existing message with the external_message_id and audio duration
                 const updateData: Record<string, unknown> = { external_message_id: messageId };
-                if (mediaType === "audio" && audioDurationSec) {
-                  updateData.audio_duration_sec = audioDurationSec;
+                if (mediaType === "audio") {
+                  if (audioDurationSec) {
+                    updateData.audio_duration_sec = audioDurationSec;
+                  }
+                  // Also update media_url if webhook has a permanent URL
+                  if (permanentMediaUrl) {
+                    updateData.media_url = permanentMediaUrl;
+                  }
                 }
                 await supabase
                   .from("zapp_messages")
                   .update(updateData)
                   .eq("id", recentDupe.id);
-                console.log(`Updated existing ${mediaType || 'text'} message ${recentDupe.id} with external_message_id ${messageId}`);
+                console.log(`[DEDUPE] Updated existing ${mediaType || 'text'} message ${recentDupe.id} with external_message_id ${messageId}`);
                 isDuplicate = true;
+              } else if (mediaType === "audio") {
+                console.log(`[DEDUPE] No pending audio message found for conversation ${zappConversationId} in last 5 minutes`);
               }
             }
 
