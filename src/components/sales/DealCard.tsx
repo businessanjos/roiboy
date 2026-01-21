@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Deal } from "@/hooks/useDeals";
-import { useZappNavigation } from "@/hooks/useZappNavigation";
+import { useZappNavigationContext } from "@/contexts/ZappNavigationContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   const [activityStatus, setActivityStatus] = useState<ActivityStatus>({ pendingCount: 0, hasOverdue: false, totalActivities: 0 });
   
-  const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
+  const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
   
   // Fetch all activities status for this deal
   useEffect(() => {
@@ -389,10 +389,6 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
       dealId={deal.id}
       leadId={deal.lead_id || undefined}
     />
-    
-    {/* Dialogs for WhatsApp instance selection and PIN */}
-    {InstanceSelectorDialog}
-    {PinDialog}
   </>
   );
 }
