@@ -172,8 +172,8 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
     const file = e.target.files?.[0];
     if (!file || !currentUser) return;
 
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo 50MB.");
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 100MB.");
       return;
     }
 
