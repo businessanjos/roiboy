@@ -28,8 +28,10 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Building2,
-  Link2
+  Link2,
+  MessageSquareText
 } from "lucide-react";
+import { FinancialNotes } from "./FinancialNotes";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -546,7 +548,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
       )}
 
       <Tabs defaultValue="entries" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="entries" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             Lançamentos
@@ -560,6 +562,10 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
             {(subscriptions.length + stripeSubscriptions.length) > 0 && (
               <Badge variant="secondary" className="ml-1">{subscriptions.length + stripeSubscriptions.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="notes" className="flex items-center gap-2">
+            <MessageSquareText className="h-4 w-4" />
+            Anotações
           </TabsTrigger>
         </TabsList>
 
@@ -867,71 +873,13 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
             </div>
           )}
         </TabsContent>
+
+        {/* Notes Tab */}
+        <TabsContent value="notes" className="mt-4">
+          <FinancialNotes clientId={clientId} currentUser={currentUser} />
+        </TabsContent>
       </Tabs>
 
-      {/* Quick Comment Input - Bottom position */}
-      {currentUser && (
-        <div className="flex gap-3 pt-4 border-t">
-          <Avatar className="h-9 w-9 flex-shrink-0">
-            <AvatarImage src={currentUser.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {currentUser.name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 relative">
-            <MentionInput
-              placeholder="Escreva uma nota financeira... Use @ para mencionar"
-              value={quickComment}
-              onChange={setQuickComment}
-              onKeyDown={handleQuickKeyDown}
-              className="pr-24"
-            />
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleQuickFileSelect(e, "image")}
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => handleQuickFileSelect(e, "file")}
-              />
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploading}
-                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                title="Enviar imagem"
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                title="Enviar arquivo"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              {(quickComment.trim() || saving) && (
-                <button
-                  type="button"
-                  onClick={handleQuickComment}
-                  disabled={saving || !quickComment.trim()}
-                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
