@@ -1439,15 +1439,26 @@ export default function RoyZapp() {
                                         errorMsg.includes("desconectado") ||
                                         errorMsg.includes("disconnected");
         
+        // Check for "no LID found" error (number not registered on WhatsApp)
+        const isLidNotFound = errorMsg.includes("no LID found") || 
+                              errorMsg.includes("LID not found") ||
+                              errorMsg.includes("not found for") && errorMsg.includes("@s.whatsapp.net");
+        
+        // Determine user-friendly error message
+        let userErrorMessage = errorMsg;
+        if (isWhatsAppDisconnected) {
+          userErrorMessage = "WhatsApp desconectado";
+        } else if (isLidNotFound) {
+          userErrorMessage = "Número não encontrado no WhatsApp";
+        }
+        
         // Mark message as failed instead of removing it
         setMessages(prev => prev.map(m => 
           m.id === tempMessageId 
             ? { 
                 ...m, 
                 send_status: "failed" as const, 
-                send_error: isWhatsAppDisconnected 
-                  ? "WhatsApp desconectado" 
-                  : errorMsg 
+                send_error: userErrorMessage
               } 
             : m
         ));
@@ -1460,6 +1471,10 @@ export default function RoyZapp() {
               label: "Ir para Configurações",
               onClick: () => navigate("/settings"),
             },
+          });
+        } else if (isLidNotFound) {
+          toast.error("Este número não está cadastrado no WhatsApp ou é inválido. Verifique se o número está correto.", {
+            duration: 8000,
           });
         } else {
           toast.error(errorMsg);
