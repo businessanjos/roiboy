@@ -10,6 +10,8 @@ interface CurrentUser {
   account_id: string;
   auth_user_id: string | null;
   is_also_admin?: boolean;
+  zapp_signature: string | null;
+  zapp_signature_enabled: boolean;
 }
 
 interface CurrentUserContextType {
@@ -39,7 +41,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       // Then fetch the user profile using auth_user_id
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin")
+        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled")
         .eq("auth_user_id", authUser.id)
         .maybeSingle();
       
