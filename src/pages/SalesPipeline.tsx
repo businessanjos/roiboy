@@ -707,6 +707,7 @@ export default function SalesPipeline() {
         onOpenChange={setIsDetailOpen}
         deal={selectedDeal}
         stages={stages}
+        allDeals={deals}
         onEdit={handleEditFromDetail}
         onMarkAsWon={handleMarkAsWon}
         onMarkAsLost={handleMarkAsLost}

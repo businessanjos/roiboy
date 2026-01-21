@@ -60,6 +60,7 @@ import {
   Settings,
   Copy,
   Trash2,
+  GitMerge,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
@@ -70,6 +71,8 @@ import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
+import { MergeDealDialog } from "./MergeDealDialog";
+import { useDealMerge } from "@/hooks/useDealMerge";
 
 interface DealActivity {
   id: string;
@@ -122,6 +125,7 @@ interface DealDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   deal: Deal | null;
   stages: DealStage[];
+  allDeals?: Deal[];
   onEdit: () => void;
   onMarkAsWon: (dealId: string) => Promise<void>;
   onMarkAsLost: (dealId: string, reason?: string) => Promise<void>;
@@ -170,6 +174,7 @@ export function DealDetailSheet({
   onOpenChange,
   deal,
   stages,
+  allDeals = [],
   onEdit,
   onMarkAsWon,
   onMarkAsLost,
@@ -188,10 +193,13 @@ export function DealDetailSheet({
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
   const [lostReason, setLostReason] = useState("");
+  
+  const { mergeDeals } = useDealMerge();
 
   const toggleItemExpanded = (itemId: string) => {
     setExpandedItems(prev => {
@@ -724,15 +732,26 @@ export function DealDetailSheet({
                       )}
                     </div>
                     {!isClosed && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => setTransferDialogOpen(true)}
-                      >
-                        <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
-                        Transferir
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setMergeDialogOpen(true)}
+                        >
+                          <GitMerge className="h-3.5 w-3.5 mr-1" />
+                          Mesclar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setTransferDialogOpen(true)}
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
+                          Transferir
+                        </Button>
+                      </div>
                     )}
                   </div>
 
@@ -1096,6 +1115,24 @@ export function DealDetailSheet({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Merge Deal Dialog */}
+        {deal && (
+          <MergeDealDialog
+            open={mergeDialogOpen}
+            onOpenChange={setMergeDialogOpen}
+            sourceDeal={deal}
+            deals={allDeals}
+            onMerge={async (sourceDealId, targetDealId, mergedData, sourceDealTitle) => {
+              const success = await mergeDeals(sourceDealId, targetDealId, mergedData, sourceDealTitle);
+              if (success) {
+                onOpenChange(false);
+                onDealUpdated?.();
+              }
+              return success;
+            }}
+          />
+        )}
         
       </SheetContent>
     </Sheet>
