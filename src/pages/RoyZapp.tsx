@@ -3633,6 +3633,7 @@ export default function RoyZapp() {
           conversationPhone={selectedConversation.zapp_conversation?.phone_e164 || ""}
           contactName={selectedConversation.zapp_conversation?.contact_name || ""}
           accountId={currentUser?.account_id || ""}
+          isGroup={selectedConversation.zapp_conversation?.is_group || false}
           onLinked={() => {
             setLinkClientDialogOpen(false);
             fetchData();
