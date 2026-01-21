@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban, PauseCircle, Ban } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge } from "lucide-react";
 import { ClientKanban } from "@/components/client/ClientKanban";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -40,6 +40,8 @@ import { ContractDialog } from "@/components/client/ContractDialog";
 import { ProductDialog } from "@/components/client/ProductDialog";
 import { DuplicateAlert } from "@/components/client/DuplicateAlert";
 import { useDuplicateDetection } from "@/hooks/useDuplicateDetection";
+import { MergeClientDialog } from "@/components/client/MergeClientDialog";
+import { useClientMerge } from "@/hooks/useClientMerge";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -324,6 +326,11 @@ export default function Clients() {
   // Duplicate detection
   const { duplicates, checkDuplicates, clearDuplicates, loading: checkingDuplicates } = useDuplicateDetection();
   const [dismissedDuplicates, setDismissedDuplicates] = useState(false);
+
+  // Merge client state
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [clientToMerge, setClientToMerge] = useState<any | null>(null);
+  const { mergeClients } = useClientMerge();
 
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
@@ -2515,7 +2522,27 @@ export default function Clients() {
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => {
+                                      setClientToMerge(client);
+                                      setMergeDialogOpen(true);
+                                    }}
+                                  >
+                                    <GitMerge className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Mesclar cliente</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                                     onClick={() => {
                                       setClientToDelete({ id: client.id, name: client.full_name });
                                       setDeleteDialogOpen(true);
@@ -2529,7 +2556,7 @@ export default function Clients() {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            <Button variant="ghost" size="sm" asChild>
+                            <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
                               <Link to={`/clients/${client.id}`}>
                                 <ArrowRight className="h-4 w-4" />
                               </Link>
@@ -2705,6 +2732,25 @@ export default function Clients() {
                             <Button 
                               variant="ghost" 
                               size="sm"
+                              onClick={() => {
+                                setClientToMerge(client);
+                                setMergeDialogOpen(true);
+                              }}
+                            >
+                              <GitMerge className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Mesclar cliente</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => {
                                 setClientToDelete({ id: client.id, name: client.full_name });
@@ -2832,6 +2878,26 @@ export default function Clients() {
           setProductClientData(null);
         }}
       />
+
+      {/* Merge Client Dialog */}
+      {clientToMerge && (
+        <MergeClientDialog
+          open={mergeDialogOpen}
+          onOpenChange={(open) => {
+            setMergeDialogOpen(open);
+            if (!open) setClientToMerge(null);
+          }}
+          sourceClient={clientToMerge}
+          clients={clients}
+          onMerge={async (sourceId, targetId, mergedData, sourceName) => {
+            const success = await mergeClients(sourceId, targetId, mergedData, sourceName);
+            if (success) {
+              fetchClients();
+            }
+            return success;
+          }}
+        />
+      )}
     </div>
   );
 }
