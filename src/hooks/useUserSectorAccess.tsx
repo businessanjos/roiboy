@@ -53,7 +53,7 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
   }, [fetchSectorAccess]);
 
   // Check if user can manage (create/edit/delete) resources in a sector
-  // Admin and manager roles can manage; null sector means global (only admin can manage)
+  // Admin, manager and member roles can manage; viewer cannot; null sector means global (only admin can manage)
   const canManageSector = useCallback((sectorId: SectorId | string | null): boolean => {
     // Super admin or account admin can manage everything
     if (currentUser?.role === "admin") return true;
@@ -68,8 +68,8 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
 
     if (!access) return false;
 
-    // Only admin and manager roles can manage resources
-    return access.role_in_sector === "admin" || access.role_in_sector === "manager";
+    // Admin, manager and member roles can manage resources (only viewer cannot)
+    return access.role_in_sector !== "viewer";
   }, [currentUser?.role, sectorAccess]);
 
   // Check if user has any access to a sector (including view-only)
