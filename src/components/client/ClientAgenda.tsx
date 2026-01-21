@@ -151,6 +151,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     title: "",
     description: "",
     event_type: "live" as EventType,
+    modality: "online" as "online" | "presencial",
+    address: "",
     scheduled_at: "",
     duration_minutes: "60",
     meeting_url: "",
@@ -360,6 +362,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       title: "",
       description: "",
       event_type: "live",
+      modality: "online",
+      address: "",
       scheduled_at: "",
       duration_minutes: "60",
       meeting_url: "",
@@ -374,6 +378,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       title: event.title,
       description: event.description || "",
       event_type: event.event_type,
+      modality: event.modality || "online",
+      address: event.address || "",
       scheduled_at: event.scheduled_at ? event.scheduled_at.slice(0, 16) : "",
       duration_minutes: event.duration_minutes?.toString() || "60",
       meeting_url: event.meeting_url || "",
@@ -404,6 +410,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           event_type: formData.event_type,
+          modality: formData.modality,
+          address: formData.modality === "presencial" ? formData.address.trim() || null : null,
           scheduled_at: formData.scheduled_at || null,
           duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
           meeting_url: formData.meeting_url.trim() || null,
@@ -454,6 +462,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           event_type: formData.event_type,
+          modality: formData.modality,
+          address: formData.modality === "presencial" ? formData.address.trim() || null : null,
           scheduled_at: formData.scheduled_at || null,
           duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
           meeting_url: formData.meeting_url.trim() || null,
@@ -555,23 +565,65 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="event_type">Tipo</Label>
-            <Select
-              value={formData.event_type}
-              onValueChange={(value: "live" | "material") => 
-                setFormData({ ...formData, event_type: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="live">Live / Reunião</SelectItem>
-                <SelectItem value="material">Material de Apoio</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="event_type">Tipo</Label>
+              <Select
+                value={formData.event_type}
+                onValueChange={(value: "live" | "material") => 
+                  setFormData({ ...formData, event_type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="live">Live / Reunião</SelectItem>
+                  <SelectItem value="material">Material de Apoio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Modalidade</Label>
+              <Select
+                value={formData.modality}
+                onValueChange={(v: "online" | "presencial") => 
+                  setFormData({ ...formData, modality: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="online">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4" />
+                      Online
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="presencial">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Presencial
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {formData.modality === "presencial" && (
+            <div className="space-y-2">
+              <Label htmlFor="address">Endereço</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Rua, número, bairro, cidade..."
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="event-description">Descrição</Label>
