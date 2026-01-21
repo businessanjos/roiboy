@@ -12,7 +12,7 @@ import {
 import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealKanbanColumn } from "./DealKanbanColumn";
 import { DealCard } from "./DealCard";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ZappNavigationProvider } from "@/contexts/ZappNavigationContext";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -125,31 +125,33 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="w-full h-[calc(100vh-220px)] overflow-x-auto">
-        <div className="flex gap-3 h-full min-w-max pr-4">
-          {stages.map((stage, index) => (
-            <DealKanbanColumn
-              key={stage.id}
-              stage={stage}
-              deals={dealsByStage[stage.id] || []}
-              onDealClick={onDealClick}
-              conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
-            />
-          ))}
+    <ZappNavigationProvider>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="w-full h-[calc(100vh-220px)] overflow-x-auto">
+          <div className="flex gap-3 h-full min-w-max pr-4">
+            {stages.map((stage, index) => (
+              <DealKanbanColumn
+                key={stage.id}
+                stage={stage}
+                deals={dealsByStage[stage.id] || []}
+                onDealClick={onDealClick}
+                conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
+              />
+            ))}
+          </div>
         </div>
-      </div>
 
-      <DragOverlay>
-        {activeDeal && (
-          <DealCard deal={activeDeal} onClick={() => {}} isDragging />
-        )}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activeDeal && (
+            <DealCard deal={activeDeal} onClick={() => {}} isDragging />
+          )}
+        </DragOverlay>
+      </DndContext>
+    </ZappNavigationProvider>
   );
 }
