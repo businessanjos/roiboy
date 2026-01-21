@@ -2860,8 +2860,9 @@ export default function RoyZapp() {
       const matchesProduct = filterProductId === "all" || 
         (clientProds && clientProds.some(p => p.id === filterProductId));
       
-      // Tag filter - for now just pass if 'all', tags feature to be implemented on conversations
-      const matchesTag = filterTagId === "all";
+      // Tag filter
+      const matchesTag = filterTagId === "all" || 
+        (a.conversation_tags && a.conversation_tags.some(ct => ct.tag_id === filterTagId));
       
       // Agent filter
       const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;

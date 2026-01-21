@@ -112,7 +112,8 @@ export const ZappConversationList = memo(function ZappConversationList({
       const matchesProduct = filterProductId === "all" || 
         (clientProds && clientProds.some(p => p.id === filterProductId));
       
-      const matchesTag = filterTagId === "all";
+      const matchesTag = filterTagId === "all" || 
+        (a.conversation_tags && a.conversation_tags.some(ct => ct.tag_id === filterTagId));
       const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesGroups && matchesProduct && matchesTag && matchesAgent;

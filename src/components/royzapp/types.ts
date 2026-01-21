@@ -106,6 +106,14 @@ export interface ConversationAssignment {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
+  conversation_tags?: {
+    tag_id: string;
+    tag: {
+      id: string;
+      name: string;
+      color: string;
+    } | null;
+  }[];
   agent?: Agent | null;
   department?: Department | null;
   conversation?: {
