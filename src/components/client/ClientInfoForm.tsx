@@ -707,38 +707,25 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   <Instagram className="h-3.5 w-3.5 text-pink-500" />
                   Instagram principal
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={data.instagram}
-                    onChange={(e) => updateField("instagram", e.target.value.replace(/^@/, ''))}
-                    placeholder="usuario"
-                    className="h-9"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 shrink-0"
-                    onClick={() => {
-                      if (data.instagram.trim()) {
-                        updateField("instagrams", [...data.instagrams, data.instagram.trim()]);
-                        updateField("instagram", "");
-                      }
-                    }}
-                    disabled={!data.instagram.trim()}
-                    title="Adicionar outro Instagram"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Input
+                  value={data.instagram}
+                  onChange={(e) => updateField("instagram", e.target.value.replace(/^@/, ''))}
+                  placeholder="usuario"
+                  className="h-9"
+                />
                 <p className="text-[11px] text-muted-foreground">Sem o @ (ex: usuario)</p>
               </div>
 
-              {/* Instagrams adicionais */}
-              {data.instagrams.length > 0 && (
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Instagrams adicionais</Label>
-                  <div className="flex flex-wrap gap-2">
+              {/* Instagrams adicionais - sempre visível */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Instagram className="h-3.5 w-3.5 text-pink-500" />
+                  Instagrams adicionais
+                </Label>
+                
+                {/* Lista de instagrams adicionais */}
+                {data.instagrams.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
                     {data.instagrams.map((ig, index) => (
                       <Badge 
                         key={index} 
@@ -759,8 +746,44 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                       </Badge>
                     ))}
                   </div>
+                )}
+                
+                {/* Campo para adicionar novo Instagram */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Adicionar outro Instagram..."
+                    className="h-9"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = (e.target as HTMLInputElement).value.replace(/^@/, '').trim();
+                        if (value && !data.instagrams.includes(value)) {
+                          updateField("instagrams", [...data.instagrams, value]);
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={(e) => {
+                      const input = (e.target as HTMLElement).parentElement?.querySelector('input') as HTMLInputElement;
+                      const value = input?.value.replace(/^@/, '').trim();
+                      if (value && !data.instagrams.includes(value)) {
+                        updateField("instagrams", [...data.instagrams, value]);
+                        input.value = '';
+                      }
+                    }}
+                    title="Adicionar Instagram"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+                <p className="text-[11px] text-muted-foreground">Digite e pressione Enter ou clique no +</p>
+              </div>
 
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-sm font-medium">Bio</Label>
