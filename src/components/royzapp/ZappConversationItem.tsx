@@ -289,9 +289,9 @@ export const ZappConversationItem = memo(function ZappConversationItem({
           </div>
         </div>
         
-        {/* Third row: Wait time (queue) / Agent + Products */}
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-        {/* Show status badge based on assignment status */}
+        {/* Third row: Wait time (queue) / Agent + Products + Tags */}
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          {/* Show status badge based on assignment status */}
           {assignment.status === "pending" && assignment.zapp_conversation?.last_message_at && (
             <Badge 
               variant="secondary" 
@@ -321,6 +321,31 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                 : getAgentName(assignment.agent_id) || "Atendente"}
             </Badge>
           )}
+          {/* Conversation Tags */}
+          {assignment.conversation_tags && assignment.conversation_tags.length > 0 && (
+            <>
+              {assignment.conversation_tags.slice(0, 3).map((ct) => 
+                ct.tag && (
+                  <span
+                    key={ct.tag_id}
+                    className="inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium h-4"
+                    style={{ 
+                      backgroundColor: `${ct.tag.color}20`, 
+                      color: ct.tag.color 
+                    }}
+                  >
+                    {ct.tag.name}
+                  </span>
+                )
+              )}
+              {assignment.conversation_tags.length > 3 && (
+                <span className="text-[10px] text-zapp-text-muted">
+                  +{assignment.conversation_tags.length - 3}
+                </span>
+              )}
+            </>
+          )}
+          {/* Products */}
           {products && products.length > 0 && (
             <>
               {products.slice(0, 2).map((p) => (
@@ -349,6 +374,9 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison for memo - only re-render if these change
+  const prevTags = prevProps.assignment.conversation_tags?.map(t => t.tag_id).join(',') || '';
+  const nextTags = nextProps.assignment.conversation_tags?.map(t => t.tag_id).join(',') || '';
+  
   return (
     prevProps.assignment.id === nextProps.assignment.id &&
     prevProps.assignment.status === nextProps.assignment.status &&
@@ -361,6 +389,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
     prevProps.assignment.zapp_conversation?.is_favorite === nextProps.assignment.zapp_conversation?.is_favorite &&
     prevProps.assignment.zapp_conversation?.is_archived === nextProps.assignment.zapp_conversation?.is_archived &&
     prevProps.isSelected === nextProps.isSelected &&
-    prevProps.currentAgentId === nextProps.currentAgentId
+    prevProps.currentAgentId === nextProps.currentAgentId &&
+    prevTags === nextTags
   );
 });
