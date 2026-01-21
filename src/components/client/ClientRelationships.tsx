@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Users, 
   Plus, 
@@ -56,6 +63,7 @@ import {
   Check,
   ChevronsUpDown,
   Gift,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -71,6 +79,7 @@ interface ClientRelationship {
   relationship_label: string | null;
   notes: string | null;
   is_active: boolean;
+  sync_data: boolean;
   primary_client?: {
     id: string;
     full_name: string;
@@ -117,6 +126,7 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
   const [relationshipType, setRelationshipType] = useState<RelationshipType>("spouse");
   const [relationshipLabel, setRelationshipLabel] = useState("");
   const [notes, setNotes] = useState("");
+  const [syncData, setSyncData] = useState(true); // Default to true for couples
 
   // Fetch relationships where this client is primary or related
   const { data: relationships, isLoading } = useQuery({
@@ -177,12 +187,14 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
           relationship_type: relationshipType,
           relationship_label: relationshipLabel || null,
           notes: notes || null,
+          sync_data: syncData,
         });
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-relationships", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["linked-clients"] });
       toast.success("Vínculo criado com sucesso!");
       resetForm();
       setIsOpen(false);
@@ -193,6 +205,25 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
       } else {
         toast.error("Erro ao criar vínculo");
       }
+    },
+  });
+
+  const toggleSyncMutation = useMutation({
+    mutationFn: async ({ id, newValue }: { id: string; newValue: boolean }) => {
+      const { error } = await supabase
+        .from("client_relationships")
+        .update({ sync_data: newValue })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-relationships", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["linked-clients"] });
+      toast.success("Sincronização atualizada!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar sincronização");
     },
   });
 
@@ -220,6 +251,7 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
     setRelationshipType("spouse");
     setRelationshipLabel("");
     setNotes("");
+    setSyncData(true);
     setSearchTerm("");
     setComboboxOpen(false);
   };
@@ -354,6 +386,23 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
                 />
               </div>
 
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 text-primary" />
+                    <Label htmlFor="sync-data" className="font-medium">Sincronizar dados</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Timeline, negócios, contratos, eventos e momentos CX
+                  </p>
+                </div>
+                <Switch
+                  id="sync-data"
+                  checked={syncData}
+                  onCheckedChange={setSyncData}
+                />
+              </div>
+
               <Button 
                 className="w-full" 
                 onClick={() => createMutation.mutate()}
@@ -391,7 +440,7 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
                       )}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{linkedClient.full_name}</span>
                         <Badge variant="outline" className={`text-xs ${typeInfo.color}`}>
                           {typeInfo.icon}
@@ -404,6 +453,21 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
                             Principal
                           </Badge>
                         )}
+                        {relationship.sync_data && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-xs border-primary/50 text-primary bg-primary/10">
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  Sincronizado
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Timeline, negócios, contratos e eventos são compartilhados</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">{linkedClient.phone_e164}</p>
                       {relationship.notes && (
@@ -412,6 +476,24 @@ export function ClientRelationships({ clientId, accountId }: ClientRelationships
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center">
+                            <Switch
+                              checked={relationship.sync_data}
+                              onCheckedChange={(checked) => 
+                                toggleSyncMutation.mutate({ id: relationship.id, newValue: checked })
+                              }
+                              disabled={toggleSyncMutation.isPending}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{relationship.sync_data ? "Desativar" : "Ativar"} sincronização de dados</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Button
                       size="icon"
                       variant="ghost"

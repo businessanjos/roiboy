@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -77,6 +78,7 @@ interface ClientDealsProps {
 
 export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
   const navigate = useNavigate();
+  const { linkedClientIds, linkedClients, hasLinkedClients } = useLinkedClients(clientId);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [stages, setStages] = useState<DealStage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,9 +100,11 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
   });
 
   useEffect(() => {
-    fetchDeals();
+    if (linkedClientIds.length > 0) {
+      fetchDeals();
+    }
     fetchStages();
-  }, [clientId]);
+  }, [clientId, linkedClientIds]);
 
   const fetchStages = async () => {
     const { data } = await supabase
@@ -120,7 +124,7 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
         stage:deal_stages(id, name, color),
         responsible_user:users(id, name)
       `)
-      .eq("client_id", clientId)
+      .in("client_id", linkedClientIds)
       .order("created_at", { ascending: false });
 
     if (error) {
