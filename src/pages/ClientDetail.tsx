@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingScreen } from "@/components/ui/loading-screen";
@@ -180,6 +181,7 @@ const getCategoryLabel = (category: string) => {
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
+  const { currentUser, loading: userLoading } = useCurrentUser();
   const navigate = useNavigate();
   const [client, setClient] = useState<Client | null>(null);
   const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
@@ -355,19 +357,20 @@ export default function ClientDetail() {
 
   const handleSaveProducts = async () => {
     if (!id) return;
+    
+    if (userLoading) {
+      toast.info("Aguarde, carregando perfil...");
+      return;
+    }
+    
+    if (!currentUser?.account_id) {
+      toast.error("Perfil não encontrado. Recarregue a página.");
+      return;
+    }
+    
     setSavingProducts(true);
 
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-
-      if (!userData) {
-        toast.error("Perfil não encontrado");
-        return;
-      }
-
       // Delete existing client_products
       await supabase
         .from("client_products")
@@ -377,7 +380,7 @@ export default function ClientDetail() {
       // Insert new client_products
       if (selectedProductIds.length > 0) {
         const newClientProducts = selectedProductIds.map(productId => ({
-          account_id: userData.account_id,
+          account_id: currentUser.account_id,
           client_id: id,
           product_id: productId,
         }));
