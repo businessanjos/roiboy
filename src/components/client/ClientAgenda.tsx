@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { localDateTimeToUTC, utcToLocalDateTime } from "@/lib/dateUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -380,7 +381,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       event_type: event.event_type,
       modality: event.modality || "online",
       address: event.address || "",
-      scheduled_at: event.scheduled_at ? event.scheduled_at.slice(0, 16) : "",
+      scheduled_at: utcToLocalDateTime(event.scheduled_at),
       duration_minutes: event.duration_minutes?.toString() || "60",
       meeting_url: event.meeting_url || "",
       material_url: event.material_url || "",
@@ -412,7 +413,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           event_type: formData.event_type,
           modality: formData.modality,
           address: formData.modality === "presencial" ? formData.address.trim() || null : null,
-          scheduled_at: formData.scheduled_at || null,
+          scheduled_at: formData.scheduled_at ? localDateTimeToUTC(formData.scheduled_at) : null,
           duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
           meeting_url: formData.meeting_url.trim() || null,
           material_url: formData.material_url.trim() || null,
@@ -464,7 +465,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           event_type: formData.event_type,
           modality: formData.modality,
           address: formData.modality === "presencial" ? formData.address.trim() || null : null,
-          scheduled_at: formData.scheduled_at || null,
+          scheduled_at: formData.scheduled_at ? localDateTimeToUTC(formData.scheduled_at) : null,
           duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
           meeting_url: formData.meeting_url.trim() || null,
           material_url: formData.material_url.trim() || null,

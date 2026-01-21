@@ -21,3 +21,30 @@ export function formatLocalDate(dateString: string | null | undefined): string {
   
   return date.toLocaleDateString("pt-BR");
 }
+
+/**
+ * Converte uma string de datetime-local para ISO UTC.
+ * datetime-local retorna "2026-01-21T13:30", que deve ser tratado como horário LOCAL.
+ */
+export function localDateTimeToUTC(dateTimeLocal: string): string {
+  if (!dateTimeLocal) return "";
+  // new Date() interpreta "YYYY-MM-DDTHH:mm" como horário local
+  // toISOString() converte corretamente para UTC
+  return new Date(dateTimeLocal).toISOString();
+}
+
+/**
+ * Converte uma string ISO UTC para formato datetime-local (para inputs).
+ * Usado ao preencher forms de edição.
+ */
+export function utcToLocalDateTime(isoString: string | null | undefined): string {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  // Formatar como YYYY-MM-DDTHH:mm no horário LOCAL do usuário
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
