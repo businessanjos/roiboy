@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,6 +124,7 @@ const EVENT_TYPES = [
 
 export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const { currentUser } = useCurrentUser();
+  const { linkedClientIds, linkedClients, hasLinkedClients } = useLinkedClients(clientId);
   const [events, setEvents] = useState<LifeEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -180,56 +182,10 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   };
 
   useEffect(() => {
-    fetchEvents();
-
-    // Realtime subscription for automatic updates when AI detects new events
-    const channel = supabase
-      .channel(`life-events-${clientId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'client_life_events',
-          filter: `client_id=eq.${clientId}`,
-        },
-        (payload) => {
-          console.log('Life event realtime update:', payload);
-          
-          if (payload.eventType === 'INSERT') {
-            const newEvent = payload.new as LifeEvent;
-            setEvents((prev) => {
-              // Check if already exists to avoid duplicates
-              if (prev.some((e) => e.id === newEvent.id)) return prev;
-              // Show toast for AI-detected events
-              if (newEvent.source === 'ai_detected') {
-                toast.success(`Momento CX detectado pela IA: ${newEvent.title}`, {
-                  icon: '✨',
-                });
-              }
-              return [...prev, newEvent].sort((a, b) => {
-                if (!a.event_date) return 1;
-                if (!b.event_date) return -1;
-                return new Date(a.event_date).getTime() - new Date(b.event_date).getTime();
-              });
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedEvent = payload.new as LifeEvent;
-            setEvents((prev) =>
-              prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            const deletedEvent = payload.old as { id: string };
-            setEvents((prev) => prev.filter((e) => e.id !== deletedEvent.id));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [clientId]);
+    if (linkedClientIds.length > 0) {
+      fetchEvents();
+    }
+  }, [clientId, linkedClientIds]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -240,7 +196,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
           *,
           images:client_life_event_images(id, image_url, file_name)
         `)
-        .eq("client_id", clientId)
+        .in("client_id", linkedClientIds)
         .order("event_date", { ascending: true, nullsFirst: false });
 
       if (error) throw error;

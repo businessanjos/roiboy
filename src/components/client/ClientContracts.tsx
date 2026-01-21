@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,6 +138,7 @@ const CONTRACT_TYPES = [
 ];
 
 export function ClientContracts({ clientId }: ClientContractsProps) {
+  const { linkedClientIds, linkedClients, hasLinkedClients } = useLinkedClients(clientId);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -180,9 +182,11 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   });
 
   useEffect(() => {
-    fetchContracts();
+    if (linkedClientIds.length > 0) {
+      fetchContracts();
+    }
     fetchProducts();
-  }, [clientId]);
+  }, [clientId, linkedClientIds]);
 
   const fetchProducts = async () => {
     const { data } = await supabase
@@ -198,7 +202,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       const { data, error } = await supabase
         .from("client_contracts")
         .select("*")
-        .eq("client_id", clientId)
+        .in("client_id", linkedClientIds)
         .order("start_date", { ascending: false });
 
       if (error) throw error;

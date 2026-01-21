@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -116,6 +117,7 @@ interface ClientFollowupProps {
 
 export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const { currentUser } = useCurrentUser();
+  const { linkedClientIds, linkedClients, hasLinkedClients } = useLinkedClients(clientId);
   const [followups, setFollowups] = useState<Followup[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -165,8 +167,10 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const PAGE_SIZE = 10;
 
   useEffect(() => {
-    fetchFollowups();
-  }, [clientId, sortOrder]);
+    if (linkedClientIds.length > 0) {
+      fetchFollowups();
+    }
+  }, [clientId, sortOrder, linkedClientIds]);
 
   const fetchFollowups = async (loadMore = false) => {
     if (loadMore) {
@@ -179,14 +183,14 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     try {
       const offset = loadMore ? followups.length : 0;
       
-      // Fetch only top-level comments (parent_id is null)
+      // Fetch only top-level comments (parent_id is null) for all linked clients
       const { data, error, count } = await supabase
         .from("client_followups")
         .select(`
           *,
           users (name, avatar_url)
         `, { count: "exact" })
-        .eq("client_id", clientId)
+        .in("client_id", linkedClientIds)
         .is("parent_id", null)
         .order("created_at", { ascending: sortOrder === "asc" })
         .range(offset, offset + PAGE_SIZE - 1);
