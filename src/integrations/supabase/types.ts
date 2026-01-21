@@ -1835,6 +1835,7 @@ export type Database = {
           related_client_id: string
           relationship_label: string | null
           relationship_type: Database["public"]["Enums"]["client_relationship_type"]
+          sync_data: boolean
           updated_at: string
         }
         Insert: {
@@ -1847,6 +1848,7 @@ export type Database = {
           related_client_id: string
           relationship_label?: string | null
           relationship_type?: Database["public"]["Enums"]["client_relationship_type"]
+          sync_data?: boolean
           updated_at?: string
         }
         Update: {
@@ -1859,6 +1861,7 @@ export type Database = {
           related_client_id?: string
           relationship_label?: string | null
           relationship_type?: Database["public"]["Enums"]["client_relationship_type"]
+          sync_data?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -10346,6 +10349,10 @@ export type Database = {
           relationship_label: string
           relationship_type: Database["public"]["Enums"]["client_relationship_type"]
         }[]
+      }
+      get_synced_client_ids: {
+        Args: { p_client_id: string }
+        Returns: string[]
       }
       get_user_account_id: { Args: never; Returns: string }
       increment_template_usage: {
