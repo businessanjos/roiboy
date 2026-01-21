@@ -817,14 +817,15 @@ serve(async (req) => {
           
           markLatency("conversation_updated");
         } else {
-          // Find client if exists (to link) - only for direct messages
+        // Find client if exists (to link) - only for direct messages
+          // Search by primary phone OR additional_phones
           let clientId = null;
-          if (!isGroupMessage) {
+          if (!isGroupMessage && phone) {
             const { data: existingClient } = await supabase
               .from("clients")
               .select("id")
               .eq("account_id", accountId)
-              .eq("phone_e164", phone)
+              .or(`phone_e164.eq.${phone},additional_phones.cs.["${phone}"]`)
               .maybeSingle();
             clientId = existingClient?.id || null;
           }

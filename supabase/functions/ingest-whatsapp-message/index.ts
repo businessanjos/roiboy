@@ -265,44 +265,9 @@ serve(async (req) => {
       clientError = result.error;
     }
     
-    // If not found by phone, try by contact name
-    if (!client && payload.contact_name && payload.contact_name.trim()) {
-      console.log("Trying to find client by name:", payload.contact_name);
-      
-      // Try exact match first
-      const { data: clientByName, error: nameError } = await supabase
-        .from("clients")
-        .select("id, account_id, full_name, phone_e164")
-        .eq("account_id", authResult.accountId)
-        .ilike("full_name", payload.contact_name.trim())
-        .maybeSingle();
-      
-      if (clientByName) {
-        client = clientByName;
-        console.log("Found client by exact name match:", client.id, client.full_name);
-      } else {
-        // Try partial match (contact name might include company name)
-        const nameParts = payload.contact_name.trim().split(/\s+/);
-        const firstName = nameParts[0];
-        
-        if (firstName && firstName.length > 2) {
-          const { data: clientByPartialName } = await supabase
-            .from("clients")
-            .select("id, account_id, full_name, phone_e164")
-            .eq("account_id", authResult.accountId)
-            .ilike("full_name", `${firstName}%`)
-            .limit(1)
-            .maybeSingle();
-          
-          if (clientByPartialName) {
-            client = clientByPartialName;
-            console.log("Found client by partial name match:", client.id, client.full_name);
-          }
-        }
-      }
-      
-      clientError = nameError;
-    }
+    // REMOVED: Name-based matching was causing incorrect client linking due to name collisions
+    // Client must be found by phone number only for data integrity
+    // If client is not found by phone, they will need to be manually linked
 
     if (clientError) {
       console.error("Database error:", clientError.code);

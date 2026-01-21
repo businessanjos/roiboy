@@ -285,18 +285,8 @@ serve(async (req) => {
       client = clientByPhone;
     }
 
-    // If not found by phone, try by contact name
-    if (!client && payload.contact_name) {
-      const { data: clientByName } = await supabase
-        .from("clients")
-        .select("id, account_id, full_name")
-        .eq("account_id", authenticatedAccountId)
-        .ilike("full_name", `%${payload.contact_name}%`)
-        .limit(1)
-        .maybeSingle();
-      
-      client = clientByName;
-    }
+    // REMOVED: Name-based matching causes incorrect client linking due to name collisions
+    // Client must be found by phone number only for data integrity
 
     if (!client) {
       console.log("Client not found for phone:", payload.phone_e164, "or name:", payload.contact_name);
