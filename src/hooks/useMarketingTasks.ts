@@ -3,6 +3,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 
+// Sanitiza valores que deveriam ser UUID mas podem vir como strings inválidas
+function sanitizeUuid(value: string | undefined | null): string | null {
+  if (!value || value === "none" || value === "null" || value === "undefined" || value.trim() === "") {
+    return null;
+  }
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(value)) {
+    return null;
+  }
+  return value;
+}
+
+// Traduz erros técnicos para mensagens amigáveis
+function translateError(error: Error): string {
+  const msg = error.message;
+  if (msg.includes("invalid input syntax for type uuid")) {
+    return "Erro: Um dos campos de seleção contém um valor inválido. Tente selecionar novamente.";
+  }
+  if (msg.includes("violates not-null constraint")) {
+    const field = msg.match(/column \"(.+?)\"/)?.[1];
+    return field ? `O campo "${field}" é obrigatório.` : "Um campo obrigatório não foi preenchido.";
+  }
+  return "Erro ao processar: " + msg;
+}
+
 export type MarketingTaskPriority = "low" | "medium" | "high";
 export type MarketingTaskStatus = "pending" | "in_progress" | "done";
 
@@ -90,8 +115,8 @@ export function useMarketingTasks() {
           account_id: currentUser.account_id,
           title: input.title,
           description: input.description,
-          section_id: input.section_id === "none" ? null : input.section_id || null,
-          assignee_id: input.assignee_id === "none" ? null : input.assignee_id || null,
+          section_id: sanitizeUuid(input.section_id),
+          assignee_id: sanitizeUuid(input.assignee_id),
           due_date: input.due_date,
           priority: input.priority || "medium",
           status: input.status || "pending",
@@ -113,19 +138,28 @@ export function useMarketingTasks() {
       toast.success("Tarefa criada com sucesso");
     },
     onError: (error: Error) => {
-      toast.error("Erro ao criar tarefa: " + error.message);
+      toast.error(translateError(error));
     },
   });
 
   const updateTask = useMutation({
     mutationFn: async (input: UpdateMarketingTaskInput) => {
-      const { id, ...updateData } = input;
+      const { id, ...rawData } = input;
+
+      // Sanitizar campos UUID antes de enviar
+      const updateData: Record<string, unknown> = { ...rawData };
+      if ('section_id' in rawData) {
+        updateData.section_id = sanitizeUuid(rawData.section_id);
+      }
+      if ('assignee_id' in rawData) {
+        updateData.assignee_id = sanitizeUuid(rawData.assignee_id);
+      }
 
       // If completing task, set completed_at
       if (input.is_completed === true) {
-        (updateData as Record<string, unknown>).completed_at = new Date().toISOString();
+        updateData.completed_at = new Date().toISOString();
       } else if (input.is_completed === false) {
-        (updateData as Record<string, unknown>).completed_at = null;
+        updateData.completed_at = null;
       }
 
       const { data, error } = await supabase
@@ -145,7 +179,7 @@ export function useMarketingTasks() {
       queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
     },
     onError: (error: Error) => {
-      toast.error("Erro ao atualizar tarefa: " + error.message);
+      toast.error(translateError(error));
     },
   });
 
