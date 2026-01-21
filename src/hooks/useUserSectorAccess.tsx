@@ -52,6 +52,9 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
     fetchSectorAccess();
   }, [fetchSectorAccess]);
 
+  // Team roles that automatically have permission in the Operations sector
+  const OPERATION_TEAM_ROLES = ["CX", "CS", "Consultor"];
+
   // Check if user can manage (create/edit/delete) resources in a sector
   // Admin, manager and member roles can manage; viewer cannot; null sector means global (only admin can manage)
   const canManageSector = useCallback((sectorId: SectorId | string | null): boolean => {
@@ -61,7 +64,14 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
     // If sector is null (global resource), only admins can manage
     if (!sectorId) return false;
 
-    // Find user's access to this sector
+    // Check if user has an operation team role and is accessing operacoes sector
+    if (sectorId === "operacoes" && currentUser?.team_role_name) {
+      if (OPERATION_TEAM_ROLES.includes(currentUser.team_role_name)) {
+        return true;
+      }
+    }
+
+    // Find user's access to this sector via explicit registration
     const access = sectorAccess.find(
       (a) => a.sector_id === sectorId && a.is_active
     );
@@ -70,7 +80,7 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
 
     // Admin, manager and member roles can manage resources (only viewer cannot)
     return access.role_in_sector !== "viewer";
-  }, [currentUser?.role, sectorAccess]);
+  }, [currentUser?.role, currentUser?.team_role_name, sectorAccess]);
 
   // Check if user has any access to a sector (including view-only)
   const hasAccessToSector = useCallback((sectorId: SectorId | string | null): boolean => {

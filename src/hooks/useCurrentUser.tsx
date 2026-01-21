@@ -12,6 +12,7 @@ interface CurrentUser {
   is_also_admin?: boolean;
   zapp_signature: string | null;
   zapp_signature_enabled: boolean;
+  team_role_name?: string;
 }
 
 interface CurrentUserContextType {
@@ -38,10 +39,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // Then fetch the user profile using auth_user_id
+      // Then fetch the user profile using auth_user_id, including team role
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled")
+        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled, team_role:team_roles(name)")
         .eq("auth_user_id", authUser.id)
         .maybeSingle();
       
@@ -50,7 +51,12 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       }
       
       if (data) {
-        setCurrentUser(data as CurrentUser);
+        // Extract team role name from the joined data
+        const teamRoleName = (data as any).team_role?.name;
+        setCurrentUser({
+          ...data,
+          team_role_name: teamRoleName,
+        } as CurrentUser);
       } else {
         setCurrentUser(null);
       }
