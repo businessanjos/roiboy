@@ -58,8 +58,12 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
   // Check if user can manage (create/edit/delete) resources in a sector
   // Admin, manager and member roles can manage; viewer cannot; null sector means global (only admin can manage)
   const canManageSector = useCallback((sectorId: SectorId | string | null): boolean => {
-    // Super admin, account admin, or Team Role "Admin" can manage everything
-    if (currentUser?.role === "admin" || currentUser?.team_role_name === "Admin") return true;
+    // Super admin, account admin, Team Role "Admin", or "Também é Admin" can manage everything
+    if (
+      currentUser?.role === "admin" || 
+      currentUser?.team_role_name === "Admin" || 
+      currentUser?.is_also_admin === true
+    ) return true;
 
     // If sector is null (global resource), only admins can manage
     if (!sectorId) return false;
@@ -80,21 +84,29 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
 
     // Admin, manager and member roles can manage resources (only viewer cannot)
     return access.role_in_sector !== "viewer";
-  }, [currentUser?.role, currentUser?.team_role_name, sectorAccess]);
+  }, [currentUser?.role, currentUser?.team_role_name, currentUser?.is_also_admin, sectorAccess]);
 
   // Check if user has any access to a sector (including view-only)
   const hasAccessToSector = useCallback((sectorId: SectorId | string | null): boolean => {
-    if (currentUser?.role === "admin" || currentUser?.team_role_name === "Admin") return true;
+    if (
+      currentUser?.role === "admin" || 
+      currentUser?.team_role_name === "Admin" || 
+      currentUser?.is_also_admin === true
+    ) return true;
     if (!sectorId) return true; // Global resources are viewable by all
 
     return sectorAccess.some(
       (a) => a.sector_id === sectorId && a.is_active
     );
-  }, [currentUser?.role, currentUser?.team_role_name, sectorAccess]);
+  }, [currentUser?.role, currentUser?.team_role_name, currentUser?.is_also_admin, sectorAccess]);
 
   // Get user's role in a specific sector
   const getRoleInSector = useCallback((sectorId: SectorId | string | null): string | null => {
-    if (currentUser?.role === "admin" || currentUser?.team_role_name === "Admin") return "admin";
+    if (
+      currentUser?.role === "admin" || 
+      currentUser?.team_role_name === "Admin" || 
+      currentUser?.is_also_admin === true
+    ) return "admin";
     if (!sectorId) return null;
 
     const access = sectorAccess.find(
@@ -102,7 +114,7 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
     );
 
     return access?.role_in_sector || null;
-  }, [currentUser?.role, currentUser?.team_role_name, sectorAccess]);
+  }, [currentUser?.role, currentUser?.team_role_name, currentUser?.is_also_admin, sectorAccess]);
 
   return {
     sectorAccess,
