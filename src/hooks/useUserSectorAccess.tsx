@@ -58,8 +58,8 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
   // Check if user can manage (create/edit/delete) resources in a sector
   // Admin, manager and member roles can manage; viewer cannot; null sector means global (only admin can manage)
   const canManageSector = useCallback((sectorId: SectorId | string | null): boolean => {
-    // Super admin or account admin can manage everything
-    if (currentUser?.role === "admin") return true;
+    // Super admin, account admin, or Team Role "Admin" can manage everything
+    if (currentUser?.role === "admin" || currentUser?.team_role_name === "Admin") return true;
 
     // If sector is null (global resource), only admins can manage
     if (!sectorId) return false;
@@ -84,17 +84,17 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
 
   // Check if user has any access to a sector (including view-only)
   const hasAccessToSector = useCallback((sectorId: SectorId | string | null): boolean => {
-    if (currentUser?.role === "admin") return true;
+    if (currentUser?.role === "admin" || currentUser?.team_role_name === "Admin") return true;
     if (!sectorId) return true; // Global resources are viewable by all
 
     return sectorAccess.some(
       (a) => a.sector_id === sectorId && a.is_active
     );
-  }, [currentUser?.role, sectorAccess]);
+  }, [currentUser?.role, currentUser?.team_role_name, sectorAccess]);
 
   // Get user's role in a specific sector
   const getRoleInSector = useCallback((sectorId: SectorId | string | null): string | null => {
-    if (currentUser?.role === "admin") return "admin";
+    if (currentUser?.role === "admin" || currentUser?.team_role_name === "Admin") return "admin";
     if (!sectorId) return null;
 
     const access = sectorAccess.find(
@@ -102,7 +102,7 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
     );
 
     return access?.role_in_sector || null;
-  }, [currentUser?.role, sectorAccess]);
+  }, [currentUser?.role, currentUser?.team_role_name, sectorAccess]);
 
   return {
     sectorAccess,
