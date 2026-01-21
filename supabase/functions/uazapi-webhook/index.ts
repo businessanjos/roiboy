@@ -147,11 +147,41 @@ function isGroupJid(jid: string): boolean {
   return jid?.includes("@g.us") || false;
 }
 
+/**
+ * Normalizes phone numbers to E.164 format.
+ * CRITICAL FOR BRAZIL: Adds the 9th digit prefix for mobile numbers if missing.
+ * 
+ * Brazilian mobile numbers transitioned to 9-digit format (after DDD):
+ * - Old format: 55 + DDD(2) + number(8) = 12 digits (e.g., +557197398455)
+ * - New format: 55 + DDD(2) + 9 + number(8) = 13 digits (e.g., +5571997398455)
+ * 
+ * This normalization prevents duplicate contacts when WhatsApp/UAZAPI sends
+ * the same number in different formats.
+ */
 function normalizePhone(phone: string | undefined): string {
   if (!phone) return "";
+  
   // Remove all non-digit characters
-  const digits = phone.replace(/\D/g, "");
-  return digits ? `+${digits}` : "";
+  let digits = phone.replace(/\D/g, "");
+  if (!digits) return "";
+  
+  // BRAZILIAN PHONE NORMALIZATION
+  // If we receive a 12-digit BR number (missing 9th digit), add it
+  if (digits.length === 12 && digits.startsWith("55")) {
+    const ddd = digits.substring(2, 4);
+    const dddNumber = parseInt(ddd, 10);
+    
+    // Valid Brazilian DDDs range from 11 to 99
+    // Mobile numbers in Brazil all start with 9 after the DDD
+    if (dddNumber >= 11 && dddNumber <= 99) {
+      // Insert '9' after the DDD (position 4) to make it 13 digits
+      const normalizedDigits = digits.substring(0, 4) + "9" + digits.substring(4);
+      console.log(`[PHONE] Normalized BR phone: +${digits} → +${normalizedDigits} (added 9th digit)`);
+      digits = normalizedDigits;
+    }
+  }
+  
+  return `+${digits}`;
 }
 
 serve(async (req) => {
@@ -736,7 +766,7 @@ serve(async (req) => {
           // CRITICAL: This ensures same phone number creates separate conversations per instance
           let directQuery = supabase
             .from("zapp_conversations")
-            .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
+            .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164")
             .eq("account_id", accountId)
             .eq("phone_e164", phone)
             .eq("is_group", false);
@@ -751,6 +781,45 @@ serve(async (req) => {
           
           const { data } = await directQuery.maybeSingle();
           existingZappConvo = data;
+          
+          // ============================================
+          // BRAZILIAN PHONE FALLBACK SEARCH
+          // ============================================
+          // If no conversation found with normalized phone, try the alternate format
+          // This handles cases where old conversations exist with 12-digit phones
+          // while new messages come with 13-digit format (or vice versa after normalization)
+          if (!existingZappConvo && phone && phone.startsWith("+55") && phone.length === 14) {
+            // phone is 13 digits (+55 + 11 digits), try finding 12-digit version
+            // Remove the 9th digit (position 5, which is index 5 in the string "+5571997398455")
+            const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
+            console.log(`[PHONE] Fallback search: trying ${phoneWithout9} (removed 9th digit from ${phone})`);
+            
+            let fallbackQuery = supabase
+              .from("zapp_conversations")
+              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164")
+              .eq("account_id", accountId)
+              .eq("phone_e164", phoneWithout9)
+              .eq("is_group", false);
+            
+            if (integrationId) {
+              fallbackQuery = fallbackQuery.eq("integration_id", integrationId);
+            } else if (sectorId) {
+              fallbackQuery = fallbackQuery.eq("sector_id", sectorId);
+            }
+            
+            const { data: fallbackData } = await fallbackQuery.maybeSingle();
+            
+            if (fallbackData) {
+              existingZappConvo = fallbackData;
+              console.log(`[PHONE] Found conversation with old phone format: ${phoneWithout9}, updating to ${phone}`);
+              
+              // Update the conversation to use the correct normalized phone
+              await supabase
+                .from("zapp_conversations")
+                .update({ phone_e164: phone })
+                .eq("id", fallbackData.id);
+            }
+          }
         }
 
         if (existingZappConvo) {
@@ -819,15 +888,38 @@ serve(async (req) => {
         } else {
         // Find client if exists (to link) - only for direct messages
           // Search by primary phone OR additional_phones
+          // Also search with phone variant (with/without 9th digit) for Brazilian numbers
           let clientId = null;
           if (!isGroupMessage && phone) {
+            // Build the OR condition with phone variants for Brazilian numbers
+            let orCondition = `phone_e164.eq.${phone},additional_phones.cs.["${phone}"]`;
+            
+            // Add Brazilian phone variant (12 vs 13 digits)
+            if (phone.startsWith("+55") && phone.length === 14) {
+              // phone is 13 digits, also search for 12-digit version
+              const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
+              orCondition += `,phone_e164.eq.${phoneWithout9},additional_phones.cs.["${phoneWithout9}"]`;
+            }
+            
             const { data: existingClient } = await supabase
               .from("clients")
-              .select("id")
+              .select("id, phone_e164")
               .eq("account_id", accountId)
-              .or(`phone_e164.eq.${phone},additional_phones.cs.["${phone}"]`)
+              .or(orCondition)
               .maybeSingle();
-            clientId = existingClient?.id || null;
+            
+            if (existingClient) {
+              clientId = existingClient.id;
+              
+              // Update client's phone to normalized format if it was in old format
+              if (existingClient.phone_e164 && existingClient.phone_e164.length === 13 && phone.length === 14) {
+                console.log(`[PHONE] Updating client ${clientId} phone from ${existingClient.phone_e164} to ${phone}`);
+                await supabase
+                  .from("clients")
+                  .update({ phone_e164: phone })
+                  .eq("id", clientId);
+              }
+            }
           }
           
           const profilePicUrl = chat.image || chat.imagePreview;
