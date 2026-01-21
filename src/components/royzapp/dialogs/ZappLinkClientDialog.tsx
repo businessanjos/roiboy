@@ -37,6 +37,7 @@ interface ZappLinkClientDialogProps {
   conversationPhone: string;
   contactName: string;
   accountId: string;
+  isGroup?: boolean; // Prevenir vinculação de clientes a grupos
   onLinked: () => void;
 }
 
@@ -47,6 +48,7 @@ export function ZappLinkClientDialog({
   conversationPhone,
   contactName,
   accountId,
+  isGroup = false,
   onLinked,
 }: ZappLinkClientDialogProps) {
   const [search, setSearch] = useState("");
@@ -233,13 +235,22 @@ export function ZappLinkClientDialog({
     return () => clearTimeout(timer);
   }, [search, searchClients]);
 
-  // Auto-search with contact name on open
+  // Auto-search with contact name on open (block if group)
   useEffect(() => {
-    if (open && contactName && contactName !== "Desconhecido") {
-      // Try to find first name or first two words
-      const nameParts = contactName.split(/[\s\-\/]+/).filter(p => p.length > 2);
-      if (nameParts.length > 0) {
-        setSearch(nameParts[0]);
+    if (open) {
+      // Bloquear vinculação a grupos
+      if (isGroup) {
+        toast.error("Não é possível vincular clientes a grupos do WhatsApp");
+        onOpenChange(false);
+        return;
+      }
+      
+      if (contactName && contactName !== "Desconhecido") {
+        // Try to find first name or first two words
+        const nameParts = contactName.split(/[\s\-\/]+/).filter(p => p.length > 2);
+        if (nameParts.length > 0) {
+          setSearch(nameParts[0]);
+        }
       }
     }
     if (!open) {
@@ -248,7 +259,7 @@ export function ZappLinkClientDialog({
       setSelectedClient(null);
       setAddPhoneToClient(true);
     }
-  }, [open, contactName]);
+  }, [open, contactName, isGroup, onOpenChange]);
 
   // Link conversation to client or lead
   const handleLink = async () => {

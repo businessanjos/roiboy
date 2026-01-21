@@ -216,7 +216,14 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
   if (zappConv) {
     const clientData = zappConv.client;
     const leadData = zappConv.lead;
-    const name = clientData?.full_name || leadData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido";
+    
+    // IMPORTANTE: Para GRUPOS, sempre usar contact_name (nome do grupo no WhatsApp)
+    // Para conversas individuais, priorizar cliente/lead vinculado
+    // Isso evita o bug onde o nome de um cliente aparece em conversas de outros
+    const name = zappConv.is_group 
+      ? (zappConv.contact_name || "Grupo sem nome")
+      : (clientData?.full_name || leadData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido");
+    
     const phone = zappConv.phone_e164 || "";
     
     // Build searchable text with all relevant fields
