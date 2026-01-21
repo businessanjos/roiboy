@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { useUserSectorAccess } from "@/hooks/useUserSectorAccess";
+import { sectors, SectorId } from "@/config/sectors";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { LoadingScreen } from "@/components/ui/loading-screen";
@@ -51,6 +60,8 @@ import {
   ThumbsUp,
   MessageSquare,
   Lock,
+  Building2,
+  Filter,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -95,6 +106,7 @@ interface Form {
   is_active: boolean;
   require_client_info: boolean;
   created_at: string;
+  sector_id: string | null;
   _count?: number;
 }
 
@@ -614,6 +626,7 @@ const FORM_TEMPLATES: FormTemplate[] = [
 export default function Forms() {
   const { currentUser } = useCurrentUser();
   const { canCreate } = usePlanLimits();
+  const { canManageSector, loading: loadingSectorAccess } = useUserSectorAccess();
   const [forms, setForms] = useState<Form[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
@@ -629,11 +642,15 @@ export default function Forms() {
   const [formDescription, setFormDescription] = useState("");
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [requireClientInfo, setRequireClientInfo] = useState(false);
+  const [formSectorId, setFormSectorId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editingForm, setEditingForm] = useState<Form | null>(null);
   const [customFieldsDialogOpen, setCustomFieldsDialogOpen] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
+  
+  // Filter state
+  const [filterSectorId, setFilterSectorId] = useState<string | "all">("all");
 
   // Preview state (interactive testing)
   const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
@@ -735,6 +752,7 @@ export default function Forms() {
     setFormDescription("");
     setSelectedFields([]);
     setRequireClientInfo(false);
+    setFormSectorId("operacoes"); // Default to operations sector
     setShowTemplates(true);
     setDialogOpen(true);
   };
@@ -745,8 +763,14 @@ export default function Forms() {
     setFormDescription(form.description || "");
     setSelectedFields(form.fields || []);
     setRequireClientInfo(form.require_client_info);
+    setFormSectorId(form.sector_id);
     setShowTemplates(false);
     setDialogOpen(true);
+  };
+
+  // Check if user can edit/delete a form based on sector permissions
+  const canEditForm = (form: Form): boolean => {
+    return canManageSector(form.sector_id);
   };
 
   const applyTemplate = async (template: FormTemplate) => {
@@ -826,6 +850,7 @@ export default function Forms() {
             description: formDescription.trim() || null,
             fields: selectedFields,
             require_client_info: requireClientInfo,
+            sector_id: formSectorId,
           })
           .eq("id", editingForm.id);
 
@@ -838,6 +863,7 @@ export default function Forms() {
           description: formDescription.trim() || null,
           fields: selectedFields,
           require_client_info: requireClientInfo,
+          sector_id: formSectorId,
         });
 
         if (error) throw error;
@@ -1223,6 +1249,27 @@ export default function Forms() {
         </Button>
       </div>
 
+      {/* Sector Filter */}
+      <div className="flex items-center gap-2">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Select value={filterSectorId} onValueChange={setFilterSectorId}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por setor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os setores</SelectItem>
+            {sectors.map((sector) => (
+              <SelectItem key={sector.id} value={sector.id}>
+                <div className="flex items-center gap-2">
+                  <sector.icon className="h-4 w-4" />
+                  {sector.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Forms List */}
       {forms.length === 0 ? (
         <Card>
@@ -1243,8 +1290,9 @@ export default function Forms() {
       ) : (
         <div className="border rounded-lg bg-card">
           {/* Table Header */}
-          <div className="hidden md:grid md:grid-cols-[1fr,100px,100px,120px,50px] gap-4 px-4 py-3 border-b text-sm text-muted-foreground">
+          <div className="hidden md:grid md:grid-cols-[1fr,120px,100px,100px,120px,50px] gap-4 px-4 py-3 border-b text-sm text-muted-foreground">
             <div></div>
+            <div>Setor</div>
             <div className="text-right">Respostas</div>
             <div className="text-right">Campos</div>
             <div className="text-right">Atualizado</div>
@@ -1253,7 +1301,13 @@ export default function Forms() {
 
           {/* Form Rows */}
           <div className="divide-y">
-            {forms.map((form, index) => {
+            {forms
+              .filter((form) => filterSectorId === "all" || form.sector_id === filterSectorId)
+              .map((form, index) => {
+              // Get sector info for badge color
+              const formSector = sectors.find(s => s.id === form.sector_id);
+              const userCanEdit = canEditForm(form);
+
               // Generate a consistent color based on form index
               const colors = [
                 "bg-slate-700",
@@ -1284,13 +1338,32 @@ export default function Forms() {
 
                   {/* Title */}
                   <div className="flex-1 min-w-0">
-                    <p className={`font-medium text-foreground truncate ${!form.is_active ? "opacity-60" : ""}`}>
-                      {form.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className={`font-medium text-foreground truncate ${!form.is_active ? "opacity-60" : ""}`}>
+                        {form.title}
+                      </p>
+                      {!userCanEdit && (
+                        <span title="Você não tem permissão para editar">
+                          <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        </span>
+                      )}
+                    </div>
                     {form.description && (
                       <p className="text-sm text-muted-foreground truncate hidden sm:block">
                         {form.description}
                       </p>
+                    )}
+                  </div>
+
+                  {/* Sector Badge - Desktop */}
+                  <div className="hidden md:block w-[120px]">
+                    {formSector ? (
+                      <Badge variant="outline" className={`${formSector.bgColor} ${formSector.color} border-0`}>
+                        <formSector.icon className="h-3 w-3 mr-1" />
+                        {formSector.name}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">Global</Badge>
                     )}
                   </div>
 
@@ -1309,6 +1382,11 @@ export default function Forms() {
 
                   {/* Stats - Mobile */}
                   <div className="flex md:hidden items-center gap-2">
+                    {formSector && (
+                      <Badge variant="outline" className={`${formSector.bgColor} ${formSector.color} border-0 text-xs`}>
+                        {formSector.name}
+                      </Badge>
+                    )}
                     <Badge variant="secondary" className="text-xs">
                       {form._count || 0}
                     </Badge>
@@ -1342,24 +1420,33 @@ export default function Forms() {
                         <Link2 className="h-4 w-4 mr-2" />
                         Link com Cliente
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openEditDialog(form); }}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); duplicateForm(form); }}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Duplicar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggleFormActive(form); }}>
-                        {form.is_active ? "Desativar" : "Ativar"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={(e) => { e.preventDefault(); deleteForm(form); }}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
+                      {userCanEdit ? (
+                        <>
+                          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openEditDialog(form); }}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); duplicateForm(form); }}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Duplicar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggleFormActive(form); }}>
+                            {form.is_active ? "Desativar" : "Ativar"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={(e) => { e.preventDefault(); deleteForm(form); }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <DropdownMenuItem disabled className="text-muted-foreground">
+                          <Lock className="h-4 w-4 mr-2" />
+                          Sem permissão para editar
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -1450,6 +1537,31 @@ export default function Forms() {
                 placeholder="Instruções ou informações adicionais..."
                 rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Setor</Label>
+              <Select 
+                value={formSectorId || "operacoes"} 
+                onValueChange={(value) => setFormSectorId(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectors.map((sector) => (
+                    <SelectItem key={sector.id} value={sector.id}>
+                      <div className="flex items-center gap-2">
+                        <sector.icon className="h-4 w-4" />
+                        {sector.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Administradores e gestores do setor poderão editar este formulário
+              </p>
             </div>
 
             <div className="flex items-center justify-between py-2">
