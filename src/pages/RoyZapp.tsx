@@ -2621,15 +2621,18 @@ export default function RoyZapp() {
       }
       
       if (zappConvId) {
-        // Conversa existe - verificar se tem QUALQUER assignment ativo (não apenas do agente atual)
-        const { data: existingAssignment } = await supabase
+        // Buscar TODOS os assignments (ativos E fechados) para este departamento
+        const { data: existingAssignments } = await supabase
           .from("zapp_conversation_assignments")
-          .select("id, agent_id")
+          .select("id, agent_id, status, department_id")
           .eq("zapp_conversation_id", zappConvId)
-          .neq("status", "closed")
-          .maybeSingle();
+          .eq("department_id", currentSectorDepartmentId)
+          .order("created_at", { ascending: false });
         
-        if (existingAssignment) {
+        const activeAssignment = existingAssignments?.find(a => a.status !== 'closed');
+        const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
+        
+        if (activeAssignment) {
           // Apenas abrir a conversa existente (sem mudar o responsável)
           const { data: assignmentData } = await supabase
             .from("zapp_conversation_assignments")
@@ -2638,7 +2641,7 @@ export default function RoyZapp() {
               zapp_conversation:zapp_conversations(*),
               agent:zapp_agents(*)
             `)
-            .eq("id", existingAssignment.id)
+            .eq("id", activeAssignment.id)
             .single();
           
           if (assignmentData) {
@@ -2649,8 +2652,42 @@ export default function RoyZapp() {
           setNewConversationDialogOpen(false);
           setCreatingConversation(false);
           return;
+        } else if (closedAssignment) {
+          // REABRIR: Atualizar status do assignment fechado ao invés de criar novo
+          const { error: reopenError } = await supabase
+            .from("zapp_conversation_assignments")
+            .update({ 
+              status: "triage", 
+              agent_id: null,
+              updated_at: new Date().toISOString() 
+            })
+            .eq("id", closedAssignment.id);
+          
+          if (reopenError) throw reopenError;
+          
+          toast.success("Conversa reaberta na Fila!");
+          setInboxTab("queue");
+          setNewConversationDialogOpen(false);
+          
+          // Buscar assignment reaberto para exibir
+          const { data: reopenedData } = await supabase
+            .from("zapp_conversation_assignments")
+            .select(`
+              *,
+              zapp_conversation:zapp_conversations(*),
+              agent:zapp_agents(*)
+            `)
+            .eq("id", closedAssignment.id)
+            .single();
+          
+          if (reopenedData) {
+            setSelectedConversation(reopenedData);
+          }
+          fetchData();
+          setCreatingConversation(false);
+          return;
         }
-        // Se não tem assignment ativo, continua para criar um abaixo
+        // Se não tem nenhum assignment para este departamento, continua para criar
       } else {
         // Criar nova zapp_conversation
         const baseData = {
