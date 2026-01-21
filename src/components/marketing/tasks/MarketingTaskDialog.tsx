@@ -36,12 +36,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SubtaskList } from "./SubtaskList";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface MarketingTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   taskId?: string | null;
   defaultSectionId?: string | null;
+  defaultStatus?: MarketingTaskStatus;
 }
 
 export function MarketingTaskDialog({
@@ -49,6 +53,7 @@ export function MarketingTaskDialog({
   onOpenChange,
   taskId,
   defaultSectionId,
+  defaultStatus,
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
   const { sections } = useMarketingTaskSections();
@@ -97,10 +102,10 @@ export function MarketingTaskDialog({
         setAssigneeId(undefined);
         setDueDate(undefined);
         setPriority("medium");
-        setStatus("pending");
+        setStatus(defaultStatus || "pending");
       }
     }
-  }, [open, existingTask, defaultSectionId]);
+  }, [open, existingTask, defaultSectionId, defaultStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,158 +155,166 @@ export function MarketingTaskDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>{isEditing ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title">Título *</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Nome da tarefa"
-                autoFocus
-              />
-            </div>
+          <ScrollArea className="max-h-[calc(90vh-100px)]">
+            <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4">
+              {/* Title */}
+              <div className="space-y-2">
+                <Label htmlFor="title">Título *</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Nome da tarefa"
+                  autoFocus
+                />
+              </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detalhes da tarefa..."
-                rows={3}
-              />
-            </div>
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Detalhes da tarefa..."
+                  rows={3}
+                />
+              </div>
 
-            {/* Section */}
-            <div className="space-y-2">
-              <Label>Seção</Label>
-              <Select value={sectionId} onValueChange={setSectionId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma seção" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem seção</SelectItem>
-                  {sections.map((section) => (
-                    <SelectItem key={section.id} value={section.id}>
-                      {section.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Section */}
+                <div className="space-y-2">
+                  <Label>Seção</Label>
+                  <Select value={sectionId} onValueChange={setSectionId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma seção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem seção</SelectItem>
+                      {sections.map((section) => (
+                        <SelectItem key={section.id} value={section.id}>
+                          {section.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Assignee */}
-            <div className="space-y-2">
-              <Label>Responsável</Label>
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem responsável</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Assignee */}
+                <div className="space-y-2">
+                  <Label>Responsável</Label>
+                  <Select value={assigneeId} onValueChange={setAssigneeId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o responsável" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                      {teamMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-            {/* Due Date */}
-            <div className="space-y-2">
-              <Label>Data de vencimento</Label>
-              <Popover>
-                <PopoverTrigger asChild>
+              {/* Due Date */}
+              <div className="space-y-2">
+                <Label>Data de vencimento</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDate ? format(dueDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Priority & Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Prioridade</Label>
+                  <Select value={priority} onValueChange={(v) => setPriority(v as MarketingTaskPriority)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baixa</SelectItem>
+                      <SelectItem value="medium">Média</SelectItem>
+                      <SelectItem value="high">Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v as MarketingTaskStatus)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">A Fazer</SelectItem>
+                      <SelectItem value="in_progress">Fazendo</SelectItem>
+                      <SelectItem value="done">Concluído</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Subtasks Section */}
+              <Separator className="my-4" />
+              <SubtaskList taskId={isEditing ? taskId : null} />
+
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-4">
+                {isEditing ? (
                   <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dueDate && "text-muted-foreground"
-                    )}
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+                ) : (
+                  <div />
+                )}
 
-            {/* Priority & Status */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Prioridade</Label>
-                <Select value={priority} onValueChange={(v) => setPriority(v as MarketingTaskPriority)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting || !title.trim()}>
+                    {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {isEditing ? "Salvar" : "Criar"}
+                  </Button>
+                </div>
               </div>
-
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={status} onValueChange={(v) => setStatus(v as MarketingTaskStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="in_progress">Em andamento</SelectItem>
-                    <SelectItem value="done">Concluído</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-4">
-              {isEditing ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </Button>
-              ) : (
-                <div />
-              )}
-
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isSubmitting || !title.trim()}>
-                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {isEditing ? "Salvar" : "Criar"}
-                </Button>
-              </div>
-            </div>
-          </form>
+            </form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
@@ -311,7 +324,7 @@ export function MarketingTaskDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A tarefa será permanentemente excluída.
+              Esta ação não pode ser desfeita. A tarefa e suas subtarefas serão permanentemente excluídas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

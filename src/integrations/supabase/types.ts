@@ -6191,6 +6191,70 @@ export type Database = {
           },
         ]
       }
+      marketing_task_subtasks: {
+        Row: {
+          account_id: string
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          display_order: number
+          due_date: string | null
+          id: string
+          is_completed: boolean
+          task_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          display_order?: number
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          task_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          display_order?: number
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          task_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_task_subtasks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_task_subtasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_task_subtasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_tasks: {
         Row: {
           account_id: string
