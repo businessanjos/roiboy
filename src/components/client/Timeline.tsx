@@ -572,19 +572,161 @@ function SystemEventItem({
             "{event.description}"
           </p>
         )}
+        {/* Image URL with download */}
         {event.metadata?.image_url && (
-          <a
-            href={event.metadata.image_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block mt-2 max-w-sm"
-          >
-            <img
-              src={event.metadata.image_url}
-              alt="Print anexado"
-              className="rounded-lg border max-h-32 object-cover hover:opacity-90 transition-opacity"
-            />
-          </a>
+          <div className="relative group/image max-w-sm mt-2">
+            <a
+              href={event.metadata.image_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <img
+                src={event.metadata.image_url}
+                alt="Print anexado"
+                className="rounded-lg border max-h-32 object-cover hover:opacity-90 transition-opacity"
+              />
+            </a>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover/image:opacity-100 transition-opacity shadow-md"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try {
+                        const response = await fetch(event.metadata!.image_url!);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = "imagem";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        toast.success("Download iniciado!");
+                      } catch (error) {
+                        console.error("Erro ao baixar imagem:", error);
+                        toast.error("Erro ao baixar imagem");
+                      }
+                    }}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Baixar imagem</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+
+        {/* File URL with download */}
+        {event.metadata?.file_url && (
+          <div className="mt-2">
+            {event.metadata.followup_type === "image" || event.metadata.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+              <div className="relative group/file-image max-w-sm">
+                <a
+                  href={event.metadata.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <img
+                    src={event.metadata.file_url}
+                    alt={event.metadata.file_name || "Imagem"}
+                    className="rounded-lg border max-h-32 object-cover hover:opacity-90 transition-opacity"
+                  />
+                </a>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover/file-image:opacity-100 transition-opacity shadow-md"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          try {
+                            const response = await fetch(event.metadata!.file_url!);
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.download = event.metadata?.file_name || "imagem";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                            toast.success("Download iniciado!");
+                          } catch (error) {
+                            console.error("Erro ao baixar imagem:", error);
+                            toast.error("Erro ao baixar imagem");
+                          }
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Baixar imagem</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-2.5 border rounded-lg bg-muted/30 max-w-md">
+                <a
+                  href={event.metadata.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  <FileText className="h-4 w-4 text-primary" />
+                </a>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{event.metadata.file_name || "Arquivo"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getFileTypeLabel(event.metadata.file_name)} · {formatFileSize(event.metadata.file_size)}
+                  </p>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(event.metadata!.file_url!);
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.download = event.metadata?.file_name || "arquivo";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                            toast.success("Download iniciado!");
+                          } catch (error) {
+                            console.error("Erro ao baixar arquivo:", error);
+                            toast.error("Erro ao baixar arquivo");
+                          }
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Baixar arquivo</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
