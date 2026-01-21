@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { localDateTimeToUTC, utcToLocalDateTime } from "@/lib/dateUtils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -366,8 +367,8 @@ export default function Events() {
     setEventType(event.event_type);
     setModality(event.modality || "online");
     setAddress(event.address || "");
-    setScheduledAt(event.scheduled_at ? event.scheduled_at.slice(0, 16) : "");
-    setEndsAt(event.ends_at ? event.ends_at.slice(0, 16) : "");
+    setScheduledAt(utcToLocalDateTime(event.scheduled_at));
+    setEndsAt(utcToLocalDateTime(event.ends_at));
     setIsMultiDay(!!event.ends_at);
     setDurationMinutes(event.duration_minutes?.toString() || "");
     setMeetingUrl(event.meeting_url || "");
@@ -415,8 +416,8 @@ export default function Events() {
       event_type: eventType,
       modality: modality,
       address: modality === "presencial" ? address.trim() || null : null,
-      scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-      ends_at: isMultiDay && endsAt ? new Date(endsAt).toISOString() : null,
+      scheduled_at: scheduledAt ? localDateTimeToUTC(scheduledAt) : null,
+      ends_at: isMultiDay && endsAt ? localDateTimeToUTC(endsAt) : null,
       duration_minutes: !isMultiDay && durationMinutes ? parseInt(durationMinutes) : null,
       meeting_url: meetingUrl.trim() || null,
       material_url: materialUrl.trim() || null,
