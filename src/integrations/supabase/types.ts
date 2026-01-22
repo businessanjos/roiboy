@@ -5103,6 +5103,8 @@ export type Database = {
           is_default: boolean
           layout: Json
           name: string
+          shared_with: string[] | null
+          type: string
           updated_at: string
           user_id: string
           widgets: Json
@@ -5114,6 +5116,8 @@ export type Database = {
           is_default?: boolean
           layout?: Json
           name?: string
+          shared_with?: string[] | null
+          type?: string
           updated_at?: string
           user_id: string
           widgets?: Json
@@ -5125,6 +5129,8 @@ export type Database = {
           is_default?: boolean
           layout?: Json
           name?: string
+          shared_with?: string[] | null
+          type?: string
           updated_at?: string
           user_id?: string
           widgets?: Json
