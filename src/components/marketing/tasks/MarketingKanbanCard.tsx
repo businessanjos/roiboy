@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo } from "lucide-react";
+import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
@@ -105,6 +105,14 @@ export function MarketingKanbanCard({
 
           {/* Meta info */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {/* Media attachments indicator */}
+            {task.media_attachments && task.media_attachments.length > 0 && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Paperclip className="h-3 w-3" />
+                <span>{task.media_attachments.length}</span>
+              </div>
+            )}
+
             {/* Subtasks indicator */}
             {subtaskInfo && subtaskInfo.total > 0 && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">

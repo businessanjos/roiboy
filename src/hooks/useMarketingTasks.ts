@@ -31,6 +31,14 @@ function translateError(error: Error): string {
 export type MarketingTaskPriority = "low" | "medium" | "high";
 export type MarketingTaskStatus = "pending" | "in_progress" | "done";
 
+export interface MediaAttachment {
+  url: string;
+  type: "image" | "video";
+  name: string;
+  size: number;
+  uploaded_at: string;
+}
+
 export interface MarketingTask {
   id: string;
   account_id: string;
@@ -49,6 +57,7 @@ export interface MarketingTask {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  media_attachments: MediaAttachment[] | null;
   assignee?: {
     id: string;
     name: string;
@@ -65,12 +74,14 @@ export interface CreateMarketingTaskInput {
   priority?: MarketingTaskPriority;
   status?: MarketingTaskStatus;
   tags?: string[];
+  media_attachments?: MediaAttachment[];
 }
 
 export interface UpdateMarketingTaskInput extends Partial<CreateMarketingTaskInput> {
   id: string;
   is_completed?: boolean;
   display_order?: number;
+  media_attachments?: MediaAttachment[];
 }
 
 export function useMarketingTasks() {
