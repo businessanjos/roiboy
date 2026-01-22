@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useCallback, useMemo, ReactNode, u
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Json } from "@/integrations/supabase/types";
 
@@ -59,21 +58,20 @@ interface InsightsPanelsContextType {
 const InsightsPanelsContext = createContext<InsightsPanelsContextType | null>(null);
 
 export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
 
   // Fetch my panels
   const myPanelsQuery = useQuery({
-    queryKey: ["insights-panels", "mine", user?.id],
+    queryKey: ["insights-panels", "mine", currentUser?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!currentUser?.id) return [];
       
       const { data, error } = await supabase
         .from("insights_layouts")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", currentUser.id)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -86,20 +84,20 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
         widgets: (Array.isArray(item.widgets) ? item.widgets : []) as unknown as WidgetConfig[],
       })) as InsightsPanel[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.id,
   });
 
   // Fetch shared panels
   const sharedPanelsQuery = useQuery({
-    queryKey: ["insights-panels", "shared", user?.id],
+    queryKey: ["insights-panels", "shared", currentUser?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!currentUser?.id) return [];
       
       const { data, error } = await supabase
         .from("insights_layouts")
         .select("*")
-        .contains("shared_with", [user.id])
-        .neq("user_id", user.id)
+        .contains("shared_with", [currentUser.id])
+        .neq("user_id", currentUser.id)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -112,7 +110,7 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
         widgets: (Array.isArray(item.widgets) ? item.widgets : []) as unknown as WidgetConfig[],
       })) as InsightsPanel[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.id,
   });
 
   // Debounce ref for layout updates
@@ -121,7 +119,7 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
   // Create panel mutation
   const createPanelMutation = useMutation({
     mutationFn: async ({ name, type }: { name: string; type: "dashboard" | "report" }) => {
-      if (!user?.id || !currentUser?.account_id) {
+      if (!currentUser?.id || !currentUser?.account_id) {
         throw new Error("Usuário não autenticado");
       }
 
@@ -130,7 +128,7 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
         .insert({
           name,
           type,
-          user_id: user.id,
+          user_id: currentUser.id,
           account_id: currentUser.account_id,
           layout: [],
           widgets: [],
