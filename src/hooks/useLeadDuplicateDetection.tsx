@@ -61,64 +61,75 @@ export function useLeadDuplicateDetection() {
     const matches: LeadDuplicateMatch[] = [];
 
     try {
-      // Check phone (primary phone or additional_phones array)
+      // Check phone (primary phone) - filter directly in database
       if (cleanPhone.length >= 8) {
         const { data: phoneMatches } = await supabase
           .from("leads")
           .select("id, full_name, phone, email, emails, cpf, cnpj, status, source, created_at, additional_phones")
           .eq("account_id", currentUser.account_id)
           .is("converted_to_client_id", null)
+          .ilike("phone", `%${cleanPhone}%`)
           .limit(10);
 
         phoneMatches?.forEach(lead => {
           if (excludeId && lead.id === excludeId) return;
           if (matches.find(m => m.id === lead.id)) return;
           
-          // Check primary phone
-          const leadPhone = lead.phone?.replace(/\D/g, "") || "";
-          if (leadPhone && (leadPhone.includes(cleanPhone) || cleanPhone.includes(leadPhone))) {
-            matches.push({
-              id: lead.id,
-              full_name: lead.full_name,
-              phone: lead.phone,
-              email: lead.email,
-              emails: Array.isArray(lead.emails) ? lead.emails as string[] : [],
-              cpf: lead.cpf,
-              cnpj: lead.cnpj,
-              status: lead.status,
-              source: lead.source,
-              created_at: lead.created_at,
-              matchType: "phone",
-              matchValue: phone || "",
-            });
-            return;
-          }
-          
-          // Check additional phones
-          const additionalPhones = Array.isArray(lead.additional_phones) ? lead.additional_phones : [];
-          for (const ap of additionalPhones) {
-            const apPhone = typeof ap === 'object' && ap !== null 
-              ? (ap as { number?: string }).number?.replace(/\D/g, "") 
-              : String(ap).replace(/\D/g, "");
-            if (apPhone && (apPhone.includes(cleanPhone) || cleanPhone.includes(apPhone))) {
-              matches.push({
-                id: lead.id,
-                full_name: lead.full_name,
-                phone: lead.phone,
-                email: lead.email,
-                emails: Array.isArray(lead.emails) ? lead.emails as string[] : [],
-                cpf: lead.cpf,
-                cnpj: lead.cnpj,
-                status: lead.status,
-                source: lead.source,
-                created_at: lead.created_at,
-                matchType: "phone",
-                matchValue: phone || "",
-              });
-              return;
-            }
-          }
+          matches.push({
+            id: lead.id,
+            full_name: lead.full_name,
+            phone: lead.phone,
+            email: lead.email,
+            emails: Array.isArray(lead.emails) ? lead.emails as string[] : [],
+            cpf: lead.cpf,
+            cnpj: lead.cnpj,
+            status: lead.status,
+            source: lead.source,
+            created_at: lead.created_at,
+            matchType: "phone",
+            matchValue: phone || "",
+          });
         });
+
+        // Also check additional_phones if no matches found yet
+        if (matches.length === 0) {
+          const { data: additionalPhoneLeads } = await supabase
+            .from("leads")
+            .select("id, full_name, phone, email, emails, cpf, cnpj, status, source, created_at, additional_phones")
+            .eq("account_id", currentUser.account_id)
+            .is("converted_to_client_id", null)
+            .not("additional_phones", "is", null)
+            .limit(100);
+
+          additionalPhoneLeads?.forEach(lead => {
+            if (excludeId && lead.id === excludeId) return;
+            if (matches.find(m => m.id === lead.id)) return;
+            
+            const additionalPhones = Array.isArray(lead.additional_phones) ? lead.additional_phones : [];
+            for (const ap of additionalPhones) {
+              const apPhone = typeof ap === 'object' && ap !== null 
+                ? (ap as { number?: string }).number?.replace(/\D/g, "") 
+                : String(ap).replace(/\D/g, "");
+              if (apPhone && (apPhone.includes(cleanPhone) || cleanPhone.includes(apPhone))) {
+                matches.push({
+                  id: lead.id,
+                  full_name: lead.full_name,
+                  phone: lead.phone,
+                  email: lead.email,
+                  emails: Array.isArray(lead.emails) ? lead.emails as string[] : [],
+                  cpf: lead.cpf,
+                  cnpj: lead.cnpj,
+                  status: lead.status,
+                  source: lead.source,
+                  created_at: lead.created_at,
+                  matchType: "phone",
+                  matchValue: phone || "",
+                });
+                break;
+              }
+            }
+          });
+        }
       }
 
       // Check CPF

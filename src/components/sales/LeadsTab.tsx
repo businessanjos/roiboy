@@ -285,6 +285,19 @@ export default function LeadsTab() {
       return;
     }
 
+    // FINAL VALIDATION: Check for duplicates before creating
+    if (formData.phone) {
+      const duplicates = await checkLeadDuplicates({ 
+        phone: formData.phone,
+        email: formData.email,
+      });
+      if (duplicates.length > 0) {
+        toast.error("Já existe um lead com este telefone. Por favor, use o lead existente.");
+        setDialogStep('duplicate-found');
+        return;
+      }
+    }
+
     await createLead(dataToSave);
     setIsDialogOpen(false);
     resetForm();
