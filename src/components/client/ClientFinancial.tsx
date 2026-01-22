@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -125,6 +126,7 @@ const entryStatusConfig: Record<string, { label: string; className: string }> = 
 };
 
 export function ClientFinancial({ clientId }: ClientFinancialProps) {
+  const { currentUser } = useCurrentUser();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [stripeSubscriptions, setStripeSubscriptions] = useState<StripeSubscription[]>([]);
   const [loadingStripe, setLoadingStripe] = useState(false);
@@ -137,11 +139,10 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [savingNote, setSavingNote] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
-  // Quick comment state
+  // Quick comment state (kept for legacy inline usage, though FinancialQuickNoteInput manages its own)
   const [quickComment, setQuickComment] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id: string } | null>(null);
   
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -287,17 +288,8 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     setLoading(false);
   };
 
-  const fetchCurrentUser = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, name, avatar_url, account_id")
-      .single();
-    if (data) setCurrentUser(data);
-  };
-
   useEffect(() => {
     fetchAllData();
-    fetchCurrentUser();
 
     const channel = supabase
       .channel(`subscriptions-${clientId}`)
