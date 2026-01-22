@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -6,12 +6,31 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Json } from "@/integrations/supabase/types";
 
+export interface WidgetConfig {
+  id: string;
+  type: "bar" | "line" | "pie" | "scorecard";
+  metric: "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons";
+  groupBy: "month" | "stage" | "user" | "product" | "reason";
+  title: string;
+  createdAt: string;
+}
+
+export interface LayoutItem {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+}
+
 export interface InsightsPanel {
   id: string;
   name: string;
   type: "dashboard" | "report";
-  layout: Json;
-  widgets: Json;
+  layout: LayoutItem[];
+  widgets: WidgetConfig[];
   is_default: boolean;
   user_id: string;
   account_id: string;
@@ -29,6 +48,9 @@ interface InsightsPanelsContextType {
   createPanel: (name: string, type: "dashboard" | "report") => Promise<InsightsPanel | null>;
   renamePanel: (id: string, name: string) => Promise<void>;
   deletePanel: (id: string) => Promise<void>;
+  addWidget: (widget: WidgetConfig) => Promise<void>;
+  removeWidget: (widgetId: string) => Promise<void>;
+  updateLayout: (newLayout: LayoutItem[]) => void;
   isLoading: boolean;
   isCreating: boolean;
   isDeleting: boolean;
@@ -60,6 +82,8 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
         ...item,
         type: (item.type as "dashboard" | "report") || "dashboard",
         shared_with: (item.shared_with as string[]) || [],
+        layout: (Array.isArray(item.layout) ? item.layout : []) as unknown as LayoutItem[],
+        widgets: (Array.isArray(item.widgets) ? item.widgets : []) as unknown as WidgetConfig[],
       })) as InsightsPanel[];
     },
     enabled: !!user?.id,
@@ -84,10 +108,15 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
         ...item,
         type: (item.type as "dashboard" | "report") || "dashboard",
         shared_with: (item.shared_with as string[]) || [],
+        layout: (Array.isArray(item.layout) ? item.layout : []) as unknown as LayoutItem[],
+        widgets: (Array.isArray(item.widgets) ? item.widgets : []) as unknown as WidgetConfig[],
       })) as InsightsPanel[];
     },
     enabled: !!user?.id,
   });
+
+  // Debounce ref for layout updates
+  const layoutUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Create panel mutation
   const createPanelMutation = useMutation({
@@ -116,6 +145,8 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
         ...data,
         type: (data.type as "dashboard" | "report") || "dashboard",
         shared_with: (data.shared_with as string[]) || [],
+        layout: (Array.isArray(data.layout) ? data.layout : []) as unknown as LayoutItem[],
+        widgets: (Array.isArray(data.widgets) ? data.widgets : []) as unknown as WidgetConfig[],
       } as InsightsPanel;
     },
     onSuccess: (newPanel) => {
@@ -191,6 +222,111 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
     [deletePanelMutation]
   );
 
+  // Add widget to active panel
+  const addWidget = useCallback(
+    async (widget: WidgetConfig) => {
+      if (!activePanelId) {
+        toast.error("Selecione um painel primeiro");
+        return;
+      }
+
+      // Get current panel data
+      const currentPanel = myPanelsQuery.data?.find(p => p.id === activePanelId) ||
+                          sharedPanelsQuery.data?.find(p => p.id === activePanelId);
+      
+      if (!currentPanel) return;
+
+      const currentWidgets = (currentPanel.widgets || []) as WidgetConfig[];
+      const currentLayout = (currentPanel.layout || []) as LayoutItem[];
+
+      const newWidgets = [...currentWidgets, widget];
+      
+      // Calculate position for new widget
+      const maxY = currentLayout.reduce((max, item) => Math.max(max, item.y + item.h), 0);
+      const newLayoutItem: LayoutItem = {
+        i: widget.id,
+        x: 0,
+        y: maxY,
+        w: widget.type === "scorecard" ? 3 : 6,
+        h: widget.type === "scorecard" ? 2 : 4,
+        minW: 2,
+        minH: 2,
+      };
+      const newLayout = [...currentLayout, newLayoutItem];
+
+      const { error } = await supabase
+        .from("insights_layouts")
+        .update({ widgets: newWidgets as unknown as Json, layout: newLayout as unknown as Json })
+        .eq("id", activePanelId);
+
+      if (error) {
+        toast.error("Erro ao adicionar visual: " + error.message);
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["insights-panels"] });
+      toast.success("Visual adicionado com sucesso");
+    },
+    [activePanelId, myPanelsQuery.data, sharedPanelsQuery.data, queryClient]
+  );
+
+  // Remove widget from active panel
+  const removeWidget = useCallback(
+    async (widgetId: string) => {
+      if (!activePanelId) return;
+
+      const currentPanel = myPanelsQuery.data?.find(p => p.id === activePanelId) ||
+                          sharedPanelsQuery.data?.find(p => p.id === activePanelId);
+      
+      if (!currentPanel) return;
+
+      const currentWidgets = (currentPanel.widgets || []) as WidgetConfig[];
+      const currentLayout = (currentPanel.layout || []) as LayoutItem[];
+
+      const newWidgets = currentWidgets.filter(w => w.id !== widgetId);
+      const newLayout = currentLayout.filter(l => l.i !== widgetId);
+
+      const { error } = await supabase
+        .from("insights_layouts")
+        .update({ widgets: newWidgets as unknown as Json, layout: newLayout as unknown as Json })
+        .eq("id", activePanelId);
+
+      if (error) {
+        toast.error("Erro ao remover visual: " + error.message);
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["insights-panels"] });
+      toast.success("Visual removido");
+    },
+    [activePanelId, myPanelsQuery.data, sharedPanelsQuery.data, queryClient]
+  );
+
+  // Update layout (debounced)
+  const updateLayout = useCallback(
+    (newLayout: LayoutItem[]) => {
+      if (!activePanelId) return;
+
+      // Clear previous timeout
+      if (layoutUpdateTimeoutRef.current) {
+        clearTimeout(layoutUpdateTimeoutRef.current);
+      }
+
+      // Debounce the save operation
+      layoutUpdateTimeoutRef.current = setTimeout(async () => {
+        const { error } = await supabase
+          .from("insights_layouts")
+          .update({ layout: newLayout as unknown as Json })
+          .eq("id", activePanelId);
+
+        if (error) {
+          console.error("Error updating layout:", error);
+        }
+      }, 500);
+    },
+    [activePanelId]
+  );
+
   const myPanels = myPanelsQuery.data || [];
   const sharedPanels = sharedPanelsQuery.data || [];
 
@@ -210,6 +346,15 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
     }
   }, [activePanelId, myPanels]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (layoutUpdateTimeoutRef.current) {
+        clearTimeout(layoutUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const value = useMemo(
     () => ({
       myPanels,
@@ -220,6 +365,9 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
       createPanel,
       renamePanel,
       deletePanel,
+      addWidget,
+      removeWidget,
+      updateLayout,
       isLoading: myPanelsQuery.isLoading || sharedPanelsQuery.isLoading,
       isCreating: createPanelMutation.isPending,
       isDeleting: deletePanelMutation.isPending,
@@ -233,6 +381,9 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
       createPanel,
       renamePanel,
       deletePanel,
+      addWidget,
+      removeWidget,
+      updateLayout,
       myPanelsQuery.isLoading,
       sharedPanelsQuery.isLoading,
       createPanelMutation.isPending,
