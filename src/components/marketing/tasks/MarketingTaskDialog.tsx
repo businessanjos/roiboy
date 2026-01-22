@@ -22,7 +22,7 @@ import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MarketingTaskStatus } from "@/hooks/useMarketingTasks";
+import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MarketingTaskStatus, MediaAttachment } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,8 @@ import {
 import { SubtaskList } from "./SubtaskList";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MarketingTaskMediaUpload } from "./MarketingTaskMediaUpload";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface MarketingTaskDialogProps {
   open: boolean;
@@ -57,6 +59,7 @@ export function MarketingTaskDialog({
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
   const { sections } = useMarketingTaskSections();
+  const { currentUser } = useCurrentUser();
 
   const existingTask = taskId ? tasks.find((t) => t.id === taskId) : null;
   const isEditing = !!existingTask;
@@ -68,6 +71,7 @@ export function MarketingTaskDialog({
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [priority, setPriority] = useState<MarketingTaskPriority>("medium");
   const [status, setStatus] = useState<MarketingTaskStatus>("pending");
+  const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -95,6 +99,7 @@ export function MarketingTaskDialog({
         setDueDate(existingTask.due_date ? new Date(existingTask.due_date) : undefined);
         setPriority(existingTask.priority);
         setStatus(existingTask.status);
+        setMediaAttachments(existingTask.media_attachments || []);
       } else {
         setTitle("");
         setDescription("");
@@ -103,6 +108,7 @@ export function MarketingTaskDialog({
         setDueDate(undefined);
         setPriority("medium");
         setStatus(defaultStatus || "pending");
+        setMediaAttachments([]);
       }
     }
   }, [open, existingTask, defaultSectionId, defaultStatus]);
@@ -127,6 +133,7 @@ export function MarketingTaskDialog({
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
           status,
+          media_attachments: mediaAttachments,
         });
       } else {
         await createTask.mutateAsync({
@@ -137,6 +144,7 @@ export function MarketingTaskDialog({
           due_date: dueDate?.toISOString().split("T")[0],
           priority,
           status,
+          media_attachments: mediaAttachments,
         });
       }
       onOpenChange(false);
@@ -286,6 +294,14 @@ export function MarketingTaskDialog({
               {/* Subtasks Section */}
               <Separator className="my-4" />
               <SubtaskList taskId={isEditing ? taskId : null} />
+
+              {/* Media Attachments Section */}
+              <Separator className="my-4" />
+              <MarketingTaskMediaUpload
+                attachments={mediaAttachments}
+                onAttachmentsChange={setMediaAttachments}
+                accountId={currentUser?.account_id || ""}
+              />
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-4">

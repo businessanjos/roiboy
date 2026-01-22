@@ -724,11 +724,15 @@ export default function Forms() {
             .from("form_responses")
             .select("*", { count: "exact", head: true })
             .eq("form_id", form.id);
-          return { ...form, _count: count || 0 };
+          return { 
+            ...form, 
+            appearance: (form.appearance as FormAppearance) || {},
+            _count: count || 0 
+          };
         })
       );
 
-      setForms(formsWithCounts);
+      setForms(formsWithCounts as Form[]);
     } catch (error: any) {
       console.error("Error fetching forms:", error);
       toast.error("Erro ao carregar formulários");
@@ -861,22 +865,23 @@ export default function Forms() {
             fields: selectedFields,
             require_client_info: requireClientInfo,
             sector_id: formSectorId,
-            appearance: formAppearance,
+            appearance: JSON.parse(JSON.stringify(formAppearance)),
           })
           .eq("id", editingForm.id);
 
         if (error) throw error;
         toast.success("Formulário atualizado!");
       } else {
-        const { error } = await supabase.from("forms").insert({
+        const insertData = {
           account_id: currentUser!.account_id,
           title: formTitle.trim(),
           description: formDescription.trim() || null,
           fields: selectedFields,
           require_client_info: requireClientInfo,
           sector_id: formSectorId,
-          appearance: formAppearance,
-        });
+          appearance: JSON.parse(JSON.stringify(formAppearance)),
+        };
+        const { error } = await supabase.from("forms").insert(insertData);
 
         if (error) throw error;
         toast.success("Formulário criado!");

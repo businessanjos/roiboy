@@ -6277,6 +6277,7 @@ export type Database = {
           due_date: string | null
           id: string
           is_completed: boolean
+          media_attachments: Json | null
           priority: Database["public"]["Enums"]["marketing_task_priority"]
           section_id: string | null
           status: Database["public"]["Enums"]["marketing_task_status"]
@@ -6296,6 +6297,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_completed?: boolean
+          media_attachments?: Json | null
           priority?: Database["public"]["Enums"]["marketing_task_priority"]
           section_id?: string | null
           status?: Database["public"]["Enums"]["marketing_task_status"]
@@ -6315,6 +6317,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_completed?: boolean
+          media_attachments?: Json | null
           priority?: Database["public"]["Enums"]["marketing_task_priority"]
           section_id?: string | null
           status?: Database["public"]["Enums"]["marketing_task_status"]
