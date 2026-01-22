@@ -64,15 +64,21 @@ export function InsightsGridLayout() {
           minW: l.minW || 2,
           minH: l.minH || 2,
         }))}
-        cols={12}
-        rowHeight={80}
         width={width}
         onLayoutChange={handleLayoutChange}
-        draggableHandle=".widget-drag-handle"
-        isResizable={true}
-        isDraggable={true}
-        margin={[16, 16] as [number, number]}
-        containerPadding={[0, 0] as [number, number]}
+        gridConfig={{
+          cols: 12,
+          rowHeight: 80,
+          margin: [16, 16] as [number, number],
+          containerPadding: [0, 0] as [number, number],
+        }}
+        dragConfig={{
+          enabled: true,
+          handle: ".widget-drag-handle",
+        }}
+        resizeConfig={{
+          enabled: true,
+        }}
       >
         {widgets.map((widget) => (
           <div key={widget.id} className="h-full">
