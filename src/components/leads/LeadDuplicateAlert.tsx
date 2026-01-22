@@ -69,45 +69,42 @@ export function LeadDuplicateAlert({
             return (
               <div
                 key={lead.id}
-                className="flex items-center justify-between gap-3 p-3 bg-white rounded-lg border border-amber-200 shadow-sm"
+                className="flex flex-col gap-2 p-3 bg-white rounded-lg border border-amber-200 shadow-sm overflow-hidden"
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarFallback className="bg-amber-100 text-amber-700 text-sm font-medium">
+                {/* Header: Avatar + Nome + Status */}
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarFallback className="bg-amber-100 text-amber-700 text-xs font-medium">
                       {getInitials(lead.full_name)}
                     </AvatarFallback>
                   </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-foreground truncate">
-                        {lead.full_name}
-                      </span>
-                      <Badge className={`${status.color} text-white text-xs shrink-0`}>
-                        {status.label}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <Badge variant="outline" className={`${config.color} text-xs`}>
-                        <Icon className="h-3 w-3 mr-1" />
-                        {config.label}: {lead.matchValue}
-                      </Badge>
-                      
-                      <span className="text-xs text-muted-foreground">
-                        Criado em {format(new Date(lead.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
-                    </div>
-                  </div>
+                  <span className="font-medium text-foreground truncate flex-1 text-sm">
+                    {lead.full_name}
+                  </span>
+                  <Badge className={`${status.color} text-white text-xs shrink-0`}>
+                    {status.label}
+                  </Badge>
                 </div>
                 
-                <div className="flex items-center gap-2 shrink-0">
+                {/* Detalhes: Match Type + Data */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className={`${config.color} text-xs max-w-full`}>
+                    <Icon className="h-3 w-3 mr-1 shrink-0" />
+                    <span className="truncate">{config.label}: {lead.matchValue}</span>
+                  </Badge>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {format(new Date(lead.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                  </span>
+                </div>
+                
+                {/* Ações */}
+                <div className="flex items-center gap-2 pt-1">
                   {onViewLead && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onViewLead(lead.id)}
-                      className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                      className="text-amber-700 border-amber-300 hover:bg-amber-100 flex-1"
                     >
                       <ExternalLink className="h-3.5 w-3.5 mr-1" />
                       Ver
@@ -119,7 +116,7 @@ export function LeadDuplicateAlert({
                       variant="default"
                       size="sm"
                       onClick={() => onSelectLead(lead)}
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      className="bg-amber-600 hover:bg-amber-700 text-white flex-1"
                     >
                       <UserCheck className="h-3.5 w-3.5 mr-1" />
                       Usar este
