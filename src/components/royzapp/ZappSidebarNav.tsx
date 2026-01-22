@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { MessageSquare, Users, Building2, Tags, Users2, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign } from "lucide-react";
+import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 interface ZappSidebarNavProps {
   activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector";
   setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector") => void;
-  filterGroups: boolean;
-  setFilterGroups: (groups: boolean) => void;
+  filterConversationType: "all" | "individual" | "group";
+  setFilterConversationType: (type: "all" | "individual" | "group") => void;
   onlineAgents: number;
   totalQueueConversations: number;
   sectorId?: string | null;
@@ -23,8 +23,8 @@ interface ZappSidebarNavProps {
 export const ZappSidebarNav = memo(function ZappSidebarNav({
   activeView,
   setActiveView,
-  filterGroups,
-  setFilterGroups,
+  filterConversationType,
+  setFilterConversationType,
   onlineAgents,
   totalQueueConversations,
   sectorId,
@@ -191,22 +191,65 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
         </Tooltip>
       )}
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              filterGroups ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setFilterGroups(!filterGroups)}
-          >
-            <Users2 className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">{filterGroups ? "Mostrar todas" : "Filtrar grupos"}</TooltipContent>
-      </Tooltip>
+      {/* Conversation Type Filter: All | Individual | Group */}
+      <div className="flex items-center bg-zapp-input rounded-full p-0.5">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-full h-8 w-8",
+                filterConversationType === "all" 
+                  ? "bg-zapp-panel text-zapp-accent" 
+                  : "text-zapp-text-muted hover:bg-zapp-panel/50"
+              )}
+              onClick={() => setFilterConversationType("all")}
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Todas as conversas</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-full h-8 w-8",
+                filterConversationType === "individual" 
+                  ? "bg-zapp-panel text-zapp-accent" 
+                  : "text-zapp-text-muted hover:bg-zapp-panel/50"
+              )}
+              onClick={() => setFilterConversationType("individual")}
+            >
+              <User className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Chats individuais</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-full h-8 w-8",
+                filterConversationType === "group" 
+                  ? "bg-zapp-panel text-zapp-accent" 
+                  : "text-zapp-text-muted hover:bg-zapp-panel/50"
+              )}
+              onClick={() => setFilterConversationType("group")}
+            >
+              <Users2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Grupos</TooltipContent>
+        </Tooltip>
+      </div>
 
 
       <div className="flex-1" />
