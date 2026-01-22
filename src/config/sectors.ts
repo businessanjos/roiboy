@@ -122,6 +122,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/pipeline",
     navItems: [
       { to: "/pipeline", icon: TrendingUp, label: "Pipeline", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/insights", icon: BarChart3, label: "Insights", permission: PERMISSIONS.REPORTS_VIEW },
       { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/sales-team", icon: UserCheck, label: "Vendedores", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
