@@ -1043,6 +1043,7 @@ export default function LeadsTab() {
                                 phone: lead.phone,
                                 leadId: lead.id,
                                 name: lead.full_name,
+                                openInNewTab: true,
                               });
                             }}
                             disabled={zappLoading}
@@ -1075,6 +1076,7 @@ export default function LeadsTab() {
                                     phone: lead.phone,
                                     leadId: lead.id,
                                     name: lead.full_name,
+                                    openInNewTab: true,
                                   });
                                 }}
                               >
