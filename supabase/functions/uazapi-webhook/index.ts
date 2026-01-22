@@ -783,16 +783,15 @@ serve(async (req) => {
           existingZappConvo = data;
           
           // ============================================
-          // BRAZILIAN PHONE FALLBACK SEARCH
+          // MULTI-LAYER FALLBACK SEARCH
           // ============================================
-          // If no conversation found with normalized phone, try the alternate format
-          // This handles cases where old conversations exist with 12-digit phones
-          // while new messages come with 13-digit format (or vice versa after normalization)
+          // Layer 1: Try alternate phone format (12 vs 13 digits for BR numbers)
+          // Layer 2: If still not found, search WITHOUT integration_id filter (unify conversations)
+          
+          // === LAYER 1: Brazilian phone format fallback (with integration_id) ===
           if (!existingZappConvo && phone && phone.startsWith("+55") && phone.length === 14) {
-            // phone is 13 digits (+55 + 11 digits), try finding 12-digit version
-            // Remove the 9th digit (position 5, which is index 5 in the string "+5571997398455")
             const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
-            console.log(`[PHONE] Fallback search: trying ${phoneWithout9} (removed 9th digit from ${phone})`);
+            console.log(`[PHONE] Fallback L1: trying ${phoneWithout9} (removed 9th digit)`);
             
             let fallbackQuery = supabase
               .from("zapp_conversations")
@@ -811,13 +810,65 @@ serve(async (req) => {
             
             if (fallbackData) {
               existingZappConvo = fallbackData;
-              console.log(`[PHONE] Found conversation with old phone format: ${phoneWithout9}, updating to ${phone}`);
+              console.log(`[PHONE] Found via L1: old format ${phoneWithout9}, updating to ${phone}`);
               
-              // Update the conversation to use the correct normalized phone
               await supabase
                 .from("zapp_conversations")
                 .update({ phone_e164: phone })
                 .eq("id", fallbackData.id);
+            }
+          }
+          
+          // === LAYER 2: Search ANY conversation with same phone (no integration filter) ===
+          // This unifies conversations that were created with different/null integration_id
+          if (!existingZappConvo && phone) {
+            console.log(`[PHONE] Fallback L2: searching for ANY conversation with ${phone} (ignoring integration_id)`);
+            
+            // Build OR condition for both phone formats
+            let phoneConditions = `phone_e164.eq.${phone}`;
+            if (phone.startsWith("+55") && phone.length === 14) {
+              const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
+              phoneConditions += `,phone_e164.eq.${phoneWithout9}`;
+            }
+            
+            const { data: anyConvo } = await supabase
+              .from("zapp_conversations")
+              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
+              .eq("account_id", accountId)
+              .eq("is_group", false)
+              .or(phoneConditions)
+              .order("last_message_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (anyConvo) {
+              existingZappConvo = anyConvo;
+              console.log(`[PHONE] Found via L2: conversation ${anyConvo.id} (integration: ${anyConvo.integration_id}, phone: ${anyConvo.phone_e164})`);
+              
+              // Build update object: normalize phone + set integration_id + sector_id
+              const updateFields: Record<string, unknown> = {};
+              
+              if (anyConvo.phone_e164 !== phone) {
+                updateFields.phone_e164 = phone;
+                console.log(`[PHONE] L2: Updating phone from ${anyConvo.phone_e164} to ${phone}`);
+              }
+              
+              if (integrationId && anyConvo.integration_id !== integrationId) {
+                updateFields.integration_id = integrationId;
+                console.log(`[PHONE] L2: Updating integration_id from ${anyConvo.integration_id} to ${integrationId}`);
+              }
+              
+              if (sectorId && anyConvo.sector_id !== sectorId) {
+                updateFields.sector_id = sectorId;
+                console.log(`[PHONE] L2: Updating sector_id from ${anyConvo.sector_id} to ${sectorId}`);
+              }
+              
+              if (Object.keys(updateFields).length > 0) {
+                await supabase
+                  .from("zapp_conversations")
+                  .update(updateFields)
+                  .eq("id", anyConvo.id);
+              }
             }
           }
         }
