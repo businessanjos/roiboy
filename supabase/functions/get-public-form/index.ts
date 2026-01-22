@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     // Fetch form
     const { data: form, error: formError } = await supabase
       .from("forms")
-      .select("id, account_id, title, description, fields, is_active, require_client_info")
+      .select("id, account_id, title, description, fields, is_active, require_client_info, appearance")
       .eq("id", formId)
       .eq("is_active", true)
       .maybeSingle();
@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
           description: form.description,
           fields: form.fields,
           require_client_info: form.require_client_info,
+          appearance: form.appearance || {},
         },
         client,
         customFields: customFields || [],
