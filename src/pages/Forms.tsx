@@ -72,6 +72,9 @@ import { ptBR } from "date-fns/locale";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { FormResponseViewer } from "@/components/forms/FormResponseViewer";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
+import { FormAppearanceEditor } from "@/components/forms/FormAppearanceEditor";
+import { FormPreview } from "@/components/forms/FormPreview";
+import { FormAppearance, DEFAULT_APPEARANCE } from "@/components/forms/FormAppearance.types";
 import {
   DndContext,
   closestCenter,
@@ -107,6 +110,7 @@ interface Form {
   require_client_info: boolean;
   created_at: string;
   sector_id: string | null;
+  appearance?: FormAppearance;
   _count?: number;
 }
 
@@ -648,6 +652,8 @@ export default function Forms() {
   const [customFieldsDialogOpen, setCustomFieldsDialogOpen] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [formAppearance, setFormAppearance] = useState<FormAppearance>({});
+  const [editDialogTab, setEditDialogTab] = useState<"fields" | "appearance" | "preview">("fields");
   
   // Filter state
   const [filterSectorId, setFilterSectorId] = useState<string | "all">("all");
@@ -753,6 +759,8 @@ export default function Forms() {
     setSelectedFields([]);
     setRequireClientInfo(false);
     setFormSectorId("operacoes"); // Default to operations sector
+    setFormAppearance({});
+    setEditDialogTab("fields");
     setShowTemplates(true);
     setDialogOpen(true);
   };
@@ -764,6 +772,8 @@ export default function Forms() {
     setSelectedFields(form.fields || []);
     setRequireClientInfo(form.require_client_info);
     setFormSectorId(form.sector_id);
+    setFormAppearance(form.appearance || {});
+    setEditDialogTab("fields");
     setShowTemplates(false);
     setDialogOpen(true);
   };
@@ -851,6 +861,7 @@ export default function Forms() {
             fields: selectedFields,
             require_client_info: requireClientInfo,
             sector_id: formSectorId,
+            appearance: formAppearance,
           })
           .eq("id", editingForm.id);
 
@@ -864,6 +875,7 @@ export default function Forms() {
           fields: selectedFields,
           require_client_info: requireClientInfo,
           sector_id: formSectorId,
+          appearance: formAppearance,
         });
 
         if (error) throw error;
@@ -1517,176 +1529,206 @@ export default function Forms() {
             </div>
           ) : (
             <>
-              <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Título *</Label>
-              <Input
-                id="title"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="Ex: Formulário de Diagnóstico"
-              />
-            </div>
+              <Tabs value={editDialogTab} onValueChange={(v) => setEditDialogTab(v as typeof editDialogTab)} className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="fields">Campos</TabsTrigger>
+                  <TabsTrigger value="appearance">Aparência</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                </TabsList>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Instruções ou informações adicionais..."
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Setor</Label>
-              <Select 
-                value={formSectorId || "operacoes"} 
-                onValueChange={(value) => setFormSectorId(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o setor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sectors.map((sector) => (
-                    <SelectItem key={sector.id} value={sector.id}>
-                      <div className="flex items-center gap-2">
-                        <sector.icon className="h-4 w-4" />
-                        {sector.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Administradores e gestores do setor poderão editar este formulário
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <Label>Solicitar dados do cliente</Label>
-                <p className="text-sm text-muted-foreground">
-                  Pede nome e telefone quando não há cliente vinculado
-                </p>
-              </div>
-              <Switch
-                checked={requireClientInfo}
-                onCheckedChange={setRequireClientInfo}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Campos do Formulário *</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Selecione os campos personalizados que aparecerão no formulário
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCustomFieldsDialogOpen(true)}
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Gerenciar Campos
-                </Button>
-              </div>
-
-              {customFields.length === 0 ? (
-                <Card>
-                  <CardContent className="py-6 text-center">
-                    <p className="text-muted-foreground mb-3">
-                      Nenhum campo personalizado criado.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCustomFieldsDialogOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Campos
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {/* Available fields to select */}
-                  <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                    {customFields.map((field) => (
-                      <div
-                        key={field.id}
-                        className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
-                        onClick={() => toggleField(field.id)}
-                      >
-                        <Checkbox
-                          checked={selectedFields.includes(field.id)}
-                          onCheckedChange={() => toggleField(field.id)}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground">{field.name}</p>
-                          {field.is_required && (
-                            <span className="text-xs text-muted-foreground">
-                              Obrigatório
-                            </span>
-                          )}
-                        </div>
-                        {getFieldTypeBadge(field.field_type)}
-                      </div>
-                    ))}
+                <TabsContent value="fields" className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Título *</Label>
+                    <Input
+                      id="title"
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      placeholder="Ex: Formulário de Diagnóstico"
+                    />
                   </div>
 
-                  {/* Sortable selected fields */}
-                  {selectedFields.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-sm text-muted-foreground">
-                        Ordem dos campos (arraste para reordenar)
-                      </Label>
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <SortableContext
-                          items={selectedFields}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="space-y-2">
-                            {getSelectedFieldsData().map((field) => (
-                              <SortableFieldItem
-                                key={field.id}
-                                field={field}
-                                onRemove={toggleField}
-                                getFieldTypeBadge={getFieldTypeBadge}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      value={formDescription}
+                      onChange={(e) => setFormDescription(e.target.value)}
+                      placeholder="Instruções ou informações adicionais..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Setor</Label>
+                    <Select 
+                      value={formSectorId || "operacoes"} 
+                      onValueChange={(value) => setFormSectorId(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o setor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sectors.map((sector) => (
+                          <SelectItem key={sector.id} value={sector.id}>
+                            <div className="flex items-center gap-2">
+                              <sector.icon className="h-4 w-4" />
+                              {sector.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Administradores e gestores do setor poderão editar este formulário
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <Label>Solicitar dados do cliente</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Pede nome e telefone quando não há cliente vinculado
+                      </p>
                     </div>
-                  )}
-                </div>
-              )}
+                    <Switch
+                      checked={requireClientInfo}
+                      onCheckedChange={setRequireClientInfo}
+                    />
+                  </div>
 
-              {selectedFields.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {selectedFields.length} campo(s) selecionado(s)
-                </p>
-              )}
-            </div>
-          </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Campos do Formulário *</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Selecione os campos personalizados que aparecerão no formulário
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCustomFieldsDialogOpen(true)}
+                      >
+                        <Settings2 className="h-4 w-4 mr-2" />
+                        Gerenciar Campos
+                      </Button>
+                    </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingForm ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
+                    {customFields.length === 0 ? (
+                      <Card>
+                        <CardContent className="py-6 text-center">
+                          <p className="text-muted-foreground mb-3">
+                            Nenhum campo personalizado criado.
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCustomFieldsDialogOpen(true)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Criar Campos
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Available fields to select */}
+                        <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+                          {customFields.map((field) => (
+                            <div
+                              key={field.id}
+                              className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
+                              onClick={() => toggleField(field.id)}
+                            >
+                              <Checkbox
+                                checked={selectedFields.includes(field.id)}
+                                onCheckedChange={() => toggleField(field.id)}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-foreground">{field.name}</p>
+                                {field.is_required && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Obrigatório
+                                  </span>
+                                )}
+                              </div>
+                              {getFieldTypeBadge(field.field_type)}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Sortable selected fields */}
+                        {selectedFields.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-sm text-muted-foreground">
+                              Ordem dos campos (arraste para reordenar)
+                            </Label>
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={handleDragEnd}
+                            >
+                              <SortableContext
+                                items={selectedFields}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className="space-y-2">
+                                  {getSelectedFieldsData().map((field) => (
+                                    <SortableFieldItem
+                                      key={field.id}
+                                      field={field}
+                                      onRemove={toggleField}
+                                      getFieldTypeBadge={getFieldTypeBadge}
+                                    />
+                                  ))}
+                                </div>
+                              </SortableContext>
+                            </DndContext>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedFields.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedFields.length} campo(s) selecionado(s)
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="appearance" className="py-4 max-h-[60vh] overflow-y-auto">
+                  <FormAppearanceEditor
+                    appearance={formAppearance}
+                    onChange={setFormAppearance}
+                    accountId={currentUser?.account_id || ""}
+                    formId={editingForm?.id}
+                  />
+                </TabsContent>
+
+                <TabsContent value="preview" className="py-4 max-h-[60vh] overflow-y-auto">
+                  <FormPreview
+                    formData={{
+                      title: formTitle,
+                      description: formDescription,
+                      require_client_info: requireClientInfo,
+                      fields: selectedFields,
+                      appearance: formAppearance,
+                    }}
+                    customFields={customFields}
+                  />
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingForm ? "Salvar" : "Criar"}
+                </Button>
+              </DialogFooter>
             </>
           )}
         </DialogContent>

@@ -5048,6 +5048,7 @@ export type Database = {
       forms: {
         Row: {
           account_id: string
+          appearance: Json | null
           created_at: string
           description: string | null
           fields: Json
@@ -5060,6 +5061,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          appearance?: Json | null
           created_at?: string
           description?: string | null
           fields?: Json
@@ -5072,6 +5074,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          appearance?: Json | null
           created_at?: string
           description?: string | null
           fields?: Json

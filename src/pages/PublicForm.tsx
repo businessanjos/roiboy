@@ -17,6 +17,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Loader2, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import {
+  FormAppearance,
+  DEFAULT_APPEARANCE,
+  CARD_WIDTH_OPTIONS,
+  BORDER_RADIUS_OPTIONS,
+} from "@/components/forms/FormAppearance.types";
 
 interface FormData {
   id: string;
@@ -24,6 +30,7 @@ interface FormData {
   description: string | null;
   fields: string[];
   require_client_info: boolean;
+  appearance?: FormAppearance;
 }
 
 interface CustomField {
@@ -373,43 +380,102 @@ export default function PublicForm() {
     );
   }
 
+  // Calculate appearance styles
+  const appearance = { ...DEFAULT_APPEARANCE, ...formData?.appearance };
+  
+  const getBackgroundStyle = (): React.CSSProperties => {
+    if (appearance.background_type === "gradient") {
+      return {
+        background: `linear-gradient(135deg, ${appearance.gradient_start} 0%, ${appearance.gradient_end} 100%)`,
+        minHeight: "100vh",
+      };
+    }
+    return { 
+      backgroundColor: appearance.background_color,
+      minHeight: "100vh",
+    };
+  };
+
+  const cardWidthClass = CARD_WIDTH_OPTIONS[appearance.card_width || "md"].class;
+  const borderRadiusClass = BORDER_RADIUS_OPTIONS[appearance.border_radius || "lg"].class;
+
+  const titleAlignmentClass = {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+  }[appearance.title_alignment || "center"];
+
+  const logoAlignmentClass = {
+    left: "justify-start",
+    center: "justify-center",
+    right: "justify-end",
+  }[appearance.logo_position || "center"];
+
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/80">
-              <TrendingUp className="h-5 w-5 text-primary-foreground" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">{formData?.title}</h1>
-          {formData?.description && (
-            <p className="text-muted-foreground mt-2">{formData.description}</p>
-          )}
-        </div>
+    <div style={getBackgroundStyle()} className="py-8 px-4">
+      <div className={`mx-auto space-y-6 ${cardWidthClass}`}>
+        {/* Form Card */}
+        <Card 
+          className={`shadow-xl ${borderRadiusClass}`}
+          style={{ backgroundColor: appearance.card_background }}
+        >
+          <CardHeader className={titleAlignmentClass}>
+            {/* Logo */}
+            {appearance.logo_url && (
+              <div className={`flex ${logoAlignmentClass} mb-4`}>
+                <img
+                  src={appearance.logo_url}
+                  alt="Logo"
+                  className="h-16 object-contain"
+                />
+              </div>
+            )}
 
-        {/* Client Info */}
-        {clientData && (
-          <Card>
-            <CardContent className="py-4">
-              <p className="text-sm text-muted-foreground">
-                Respondendo como:{" "}
-                <span className="font-medium text-foreground">{clientData.name}</span>
-              </p>
-            </CardContent>
-          </Card>
-        )}
+            {/* Title */}
+            {appearance.show_title !== false && (
+              <CardTitle 
+                className="text-2xl font-bold"
+                style={{ color: appearance.text_color }}
+              >
+                {formData?.title}
+              </CardTitle>
+            )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardContent className="pt-6 space-y-6">
+            {/* Description */}
+            {formData?.description && (
+              <CardDescription style={{ color: appearance.text_color, opacity: 0.7 }}>
+                {formData.description}
+              </CardDescription>
+            )}
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Client Info Card */}
+            {clientData && (
+              <div 
+                className="p-3 rounded-lg border"
+                style={{ borderColor: `${appearance.primary_color}40` }}
+              >
+                <p className="text-sm" style={{ color: appearance.text_color, opacity: 0.7 }}>
+                  Respondendo como:{" "}
+                  <span className="font-medium" style={{ color: appearance.text_color }}>
+                    {clientData.name}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Client info fields if required and no clientId */}
               {formData?.require_client_info && !clientId && (
                 <div className="space-y-4 pb-4 border-b">
                   <div className="space-y-2">
-                    <Label htmlFor="clientName" className={cn(fieldErrors.clientName && "text-destructive")}>
+                    <Label 
+                      htmlFor="clientName" 
+                      className={cn(fieldErrors.clientName && "text-destructive")}
+                      style={{ color: fieldErrors.clientName ? undefined : appearance.text_color }}
+                    >
                       Nome <span className="text-destructive">*</span>
                     </Label>
                     <Input
@@ -429,7 +495,11 @@ export default function PublicForm() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="clientPhone" className={cn(fieldErrors.clientPhone && "text-destructive")}>
+                    <Label 
+                      htmlFor="clientPhone" 
+                      className={cn(fieldErrors.clientPhone && "text-destructive")}
+                      style={{ color: fieldErrors.clientPhone ? undefined : appearance.text_color }}
+                    >
                       Telefone <span className="text-destructive">*</span>
                     </Label>
                     <Input
@@ -465,7 +535,10 @@ export default function PublicForm() {
               {/* Custom fields */}
               {customFields.map((field) => (
                 <div key={field.id} className="space-y-2">
-                  <Label className={cn(fieldErrors[field.id] && "text-destructive")}>
+                  <Label 
+                    className={cn(fieldErrors[field.id] && "text-destructive")}
+                    style={{ color: fieldErrors[field.id] ? undefined : appearance.text_color }}
+                  >
                     {field.name}
                     {field.is_required && (
                       <span className="text-destructive ml-1">*</span>
@@ -479,18 +552,31 @@ export default function PublicForm() {
               ))}
 
               {/* Submit */}
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={submitting}
+                style={{
+                  backgroundColor: appearance.primary_color,
+                  color: appearance.card_background,
+                }}
+              >
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Enviar Respostas
               </Button>
-            </CardContent>
-          </Card>
-        </form>
+            </form>
+          </CardContent>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground">
-          Powered by ROY
-        </p>
+          {/* Footer inside card */}
+          {appearance.show_footer !== false && appearance.footer_text && (
+            <div
+              className="text-center py-4 text-xs"
+              style={{ color: appearance.text_color, opacity: 0.5 }}
+            >
+              {appearance.footer_text}
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
