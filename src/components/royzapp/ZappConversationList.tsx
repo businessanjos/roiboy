@@ -17,7 +17,7 @@ interface ZappConversationListProps {
   inboxTab: "mine" | "queue";
   filterStatus: string;
   filterUnread: boolean;
-  filterGroups: boolean;
+  filterConversationType: "all" | "individual" | "group";
   filterProductId: string;
   filterTagId: string;
   filterAgentId: string;
@@ -49,7 +49,7 @@ export const ZappConversationList = memo(function ZappConversationList({
   inboxTab,
   filterStatus,
   filterUnread,
-  filterGroups,
+  filterConversationType,
   filterProductId,
   filterTagId,
   filterAgentId,
@@ -104,8 +104,12 @@ export const ZappConversationList = memo(function ZappConversationList({
       
       const matchesUnread = !filterUnread || (contact.unreadCount > 0);
       
+      // Conversation type filter
       const isGroup = contact.isGroup;
-      const matchesGroups = !filterGroups || isGroup;
+      const matchesConversationType = 
+        filterConversationType === "all" ||
+        (filterConversationType === "individual" && !isGroup) ||
+        (filterConversationType === "group" && isGroup);
       
       const clientId = a.zapp_conversation?.client_id || a.conversation?.client?.id;
       const clientProds = clientId ? clientProducts[clientId] : undefined;
@@ -116,7 +120,7 @@ export const ZappConversationList = memo(function ZappConversationList({
         (a.conversation_tags && a.conversation_tags.some(ct => ct.tag_id === filterTagId));
       const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
       
-      return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesGroups && matchesProduct && matchesTag && matchesAgent;
+      return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
     
     // Sort: pinned first, then by unread count (desc), then by last message date (desc)
@@ -138,7 +142,7 @@ export const ZappConversationList = memo(function ZappConversationList({
       const dateB = new Date(contactB.lastMessageAt).getTime();
       return dateB - dateA;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
 
   return (
     <div className="flex flex-col h-full">

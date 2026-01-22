@@ -56,8 +56,8 @@ interface ZappConversationPanelProps {
   setFilterStatus: (status: string) => void;
   filterUnread: boolean;
   setFilterUnread: (unread: boolean) => void;
-  filterGroups: boolean;
-  setFilterGroups: (groups: boolean) => void;
+  filterConversationType: "all" | "individual" | "group";
+  setFilterConversationType: (type: "all" | "individual" | "group") => void;
   filterArchived: boolean;
   setFilterArchived: (archived: boolean) => void;
   filterProductId: string;
@@ -156,8 +156,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   setFilterStatus,
   filterUnread,
   setFilterUnread,
-  filterGroups,
-  setFilterGroups,
+  filterConversationType,
+  setFilterConversationType,
   filterArchived = false,
   setFilterArchived,
   filterProductId,
@@ -590,8 +590,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       <ZappSidebarNav
         activeView={activeView}
         setActiveView={setActiveView}
-        filterGroups={filterGroups}
-        setFilterGroups={setFilterGroups}
+        filterConversationType={filterConversationType}
+        setFilterConversationType={setFilterConversationType}
         onlineAgents={onlineAgents}
         totalQueueConversations={totalQueueConversations}
         sectorId={sectorId}

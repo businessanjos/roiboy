@@ -135,7 +135,7 @@ export default function RoyZapp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
-  const [filterGroups, setFilterGroups] = useState(false);
+  const [filterConversationType, setFilterConversationType] = useState<"all" | "individual" | "group">("all");
   const [filterArchived, setFilterArchived] = useState(false);
   const [filterProductId, setFilterProductId] = useState<string>("all");
   const [filterTagId, setFilterTagId] = useState<string>("all");
@@ -2875,9 +2875,12 @@ export default function RoyZapp() {
       // Unread filter
       const matchesUnread = !filterUnread || (contact.unreadCount > 0);
       
-      // Groups filter: use is_group from zapp_conversation
+      // Conversation type filter: all, individual, or group
       const isGroup = contact.isGroup;
-      const matchesGroups = !filterGroups || isGroup;
+      const matchesConversationType = 
+        filterConversationType === "all" ||
+        (filterConversationType === "individual" && !isGroup) ||
+        (filterConversationType === "group" && isGroup);
       
       // Product filter
       const clientId = a.zapp_conversation?.client_id || a.conversation?.client?.id;
@@ -2892,9 +2895,9 @@ export default function RoyZapp() {
       // Agent filter
       const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
       
-      return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesGroups && matchesProduct && matchesTag && matchesAgent;
+      return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterGroups, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
 
   // Helper to get agent name by id
   const getAgentName = (agentId: string | null) => {
@@ -3185,8 +3188,8 @@ export default function RoyZapp() {
           setFilterStatus={setFilterStatus}
           filterUnread={filterUnread}
           setFilterUnread={setFilterUnread}
-          filterGroups={filterGroups}
-          setFilterGroups={setFilterGroups}
+          filterConversationType={filterConversationType}
+          setFilterConversationType={setFilterConversationType}
           filterArchived={filterArchived}
           setFilterArchived={setFilterArchived}
           filterProductId={filterProductId}
