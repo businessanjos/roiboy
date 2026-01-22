@@ -152,7 +152,7 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
-  const [ignoreDuplicates, setIgnoreDuplicates] = useState(false);
+  
   
   // Merge lead state
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
@@ -171,7 +171,7 @@ export default function Leads() {
   const [fieldValues, setFieldValues] = useState<Record<string, Record<string, any>>>({});
   
   // Flow state for new lead creation and deal conversion
-  const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form'>('phone');
+  const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form' | 'duplicate-found'>('phone');
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
   const [creatingDeal, setCreatingDeal] = useState(false);
@@ -307,7 +307,6 @@ export default function Leads() {
     setLeadForDeal(null);
     setDialogStep('phone');
     clearLeadDuplicates();
-    setIgnoreDuplicates(false);
   };
 
   const openNewDialog = () => {
@@ -366,9 +365,15 @@ export default function Leads() {
         setDialogStep('deal-form');
       } else {
         // No client - check for duplicate leads
-        await checkLeadDuplicates({ phone: formData.phone });
+        const duplicates = await checkLeadDuplicates({ phone: formData.phone });
         setExistingClient(null);
-        setDialogStep('lead-form');
+        
+        if (duplicates.length > 0) {
+          // Block creation - show duplicate found step
+          setDialogStep('duplicate-found');
+        } else {
+          setDialogStep('lead-form');
+        }
       }
     } catch (error) {
       console.error("Error checking phone:", error);
@@ -1368,6 +1373,7 @@ export default function Leads() {
             <DialogTitle>
               {selectedLead ? "Editar Lead" : 
                 dialogStep === 'phone' ? "Verificar Telefone" :
+                dialogStep === 'duplicate-found' ? "Lead já cadastrado" :
                 dialogStep === 'deal-form' ? "Criar Negócio" : "Novo Lead"}
             </DialogTitle>
             {dialogStep === 'phone' && !selectedLead && (
@@ -1405,19 +1411,31 @@ export default function Leads() {
             </div>
           )}
 
+          {/* Step: Duplicate Found - Block Creation */}
+          {dialogStep === 'duplicate-found' && (
+            <div className="space-y-4">
+              <LeadDuplicateAlert 
+                duplicates={leadDuplicates}
+                onSelectLead={handleSelectDuplicateLead}
+                onViewLead={handleViewDuplicateLead}
+                allowIgnore={false}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDialogStep('phone')}
+                >
+                  Voltar e usar outro telefone
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
           {/* Step 2a: Lead Form (if no existing client) */}
           {(dialogStep === 'lead-form' || selectedLead) && (
             <ScrollArea className="max-h-[60vh] pr-2">
             <div className="space-y-4 pr-2">
-              {/* Duplicate Lead Alert */}
-              {!selectedLead && leadDuplicates.length > 0 && !ignoreDuplicates && (
-                <LeadDuplicateAlert 
-                  duplicates={leadDuplicates}
-                  onDismiss={() => setIgnoreDuplicates(true)}
-                  onSelectLead={handleSelectDuplicateLead}
-                  onViewLead={handleViewDuplicateLead}
-                />
-              )}
 
               <div className="space-y-2">
                 <Label htmlFor="full_name">Nome *</Label>
