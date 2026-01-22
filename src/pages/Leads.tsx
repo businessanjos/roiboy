@@ -81,6 +81,8 @@ import { LeadImportPreview, ImportLeadRow, ExistingLeadInfo, DuplicateMatchType 
 import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { MergeLeadDialog, MergedLeadData } from "@/components/leads/MergeLeadDialog";
 import { useLeadMerge } from "@/hooks/useLeadMerge";
+import { useLeadDuplicateDetection, LeadDuplicateMatch } from "@/hooks/useLeadDuplicateDetection";
+import { LeadDuplicateAlert } from "@/components/leads/LeadDuplicateAlert";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -141,6 +143,7 @@ export default function Leads() {
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const { mergeLeads } = useLeadMerge();
+  const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates, loading: checkingDuplicates } = useLeadDuplicateDetection();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
@@ -149,6 +152,7 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
+  const [ignoreDuplicates, setIgnoreDuplicates] = useState(false);
   
   // Merge lead state
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
@@ -302,6 +306,8 @@ export default function Leads() {
     setExistingClient(null);
     setLeadForDeal(null);
     setDialogStep('phone');
+    clearLeadDuplicates();
+    setIgnoreDuplicates(false);
   };
 
   const openNewDialog = () => {
@@ -340,6 +346,7 @@ export default function Leads() {
     try {
       const normalizedPhone = formData.phone.replace(/\D/g, '');
       
+      // Check for existing client first
       const { data } = await supabase
         .from("clients")
         .select("id, full_name, phone_e164")
@@ -358,7 +365,8 @@ export default function Leads() {
         });
         setDialogStep('deal-form');
       } else {
-        // No client - go to lead form
+        // No client - check for duplicate leads
+        await checkLeadDuplicates({ phone: formData.phone });
         setExistingClient(null);
         setDialogStep('lead-form');
       }
@@ -367,6 +375,26 @@ export default function Leads() {
       toast.error("Erro ao verificar telefone");
     } finally {
       setCheckingPhone(false);
+    }
+  };
+
+  // Handle selecting an existing duplicate lead (edit instead of create)
+  const handleSelectDuplicateLead = (duplicateLead: LeadDuplicateMatch) => {
+    const foundLead = leads.find(l => l.id === duplicateLead.id);
+    if (foundLead) {
+      setIsDialogOpen(false);
+      resetForm();
+      setDetailLead(foundLead);
+    }
+  };
+
+  // Handle viewing a duplicate lead
+  const handleViewDuplicateLead = (leadId: string) => {
+    const foundLead = leads.find(l => l.id === leadId);
+    if (foundLead) {
+      setIsDialogOpen(false);
+      resetForm();
+      setDetailLead(foundLead);
     }
   };
 
@@ -1381,6 +1409,16 @@ export default function Leads() {
           {(dialogStep === 'lead-form' || selectedLead) && (
             <ScrollArea className="max-h-[60vh] pr-2">
             <div className="space-y-4 pr-2">
+              {/* Duplicate Lead Alert */}
+              {!selectedLead && leadDuplicates.length > 0 && !ignoreDuplicates && (
+                <LeadDuplicateAlert 
+                  duplicates={leadDuplicates}
+                  onDismiss={() => setIgnoreDuplicates(true)}
+                  onSelectLead={handleSelectDuplicateLead}
+                  onViewLead={handleViewDuplicateLead}
+                />
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="full_name">Nome *</Label>
                 <Input
