@@ -156,11 +156,14 @@ export function useZappNavigation() {
     setLoading(true);
     setShowInstanceSelector(false);
     
-    await navigateToInstance(integrationId, pendingOptions);
+    // PIN já foi validado no ZappInstanceSelectorDialog (se necessário)
+    // Navegar diretamente sem verificar PIN novamente
+    const navigationUrl = buildNavigationUrl(integrationId, pendingOptions);
+    completeNavigation(navigationUrl, pendingOptions.openInNewTab);
     
     setPendingOptions(null);
     setLoading(false);
-  }, [pendingOptions, navigateToInstance]);
+  }, [pendingOptions, buildNavigationUrl, completeNavigation]);
 
   const handlePinSuccess = useCallback(() => {
     if (pendingNavigationUrl) {
