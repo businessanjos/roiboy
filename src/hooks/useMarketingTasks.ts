@@ -100,7 +100,10 @@ export function useMarketingTasks() {
         .order("display_order", { ascending: true });
 
       if (error) throw error;
-      return (data || []) as MarketingTask[];
+      return (data || []).map(task => ({
+        ...task,
+        media_attachments: task.media_attachments as unknown as MediaAttachment[] | null,
+      })) as MarketingTask[];
     },
     enabled: !!currentUser,
   });
@@ -142,7 +145,10 @@ export function useMarketingTasks() {
         .single();
 
       if (error) throw error;
-      return data as MarketingTask;
+      return {
+        ...data,
+        media_attachments: data.media_attachments as unknown as MediaAttachment[] | null,
+      } as MarketingTask;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
@@ -184,7 +190,10 @@ export function useMarketingTasks() {
         .single();
 
       if (error) throw error;
-      return data as MarketingTask;
+      return {
+        ...data,
+        media_attachments: data.media_attachments as unknown as MediaAttachment[] | null,
+      } as MarketingTask;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });

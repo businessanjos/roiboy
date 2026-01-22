@@ -30,6 +30,7 @@ import {
   Activity,
   Grid3X3,
   UserPlus,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +81,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { RoyLogo } from "@/components/ui/roy-logo";
+import { useSidebarZappNavigation } from "@/hooks/useSidebarZappNavigation";
 
 interface NavItem {
   to: string;
@@ -124,6 +126,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { currentSector, clearSector } = useSector();
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  
+  // Hook for ROY zAPP instance selection
+  const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
 
   // Check if current user is super admin
   useEffect(() => {
@@ -346,18 +351,26 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <NavLink
-                  to={`/roy-zapp?sector=${currentSector.id}`}
-                  onClick={onNavigate}
+                <button
+                  onClick={() => {
+                    openZappForSector(currentSector.id);
+                    onNavigate?.();
+                  }}
+                  disabled={zappLoading}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all w-full",
                     "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20",
-                    collapsed && "justify-center px-2"
+                    collapsed && "justify-center px-2",
+                    zappLoading && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  <MessageSquare className="h-5 w-5 flex-shrink-0" />
+                  {zappLoading ? (
+                    <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+                  ) : (
+                    <MessageSquare className="h-5 w-5 flex-shrink-0" />
+                  )}
                   {!collapsed && <span>ROY zAPP</span>}
-                </NavLink>
+                </button>
               </TooltipTrigger>
               {collapsed && (
                 <TooltipContent side="right">ROY zAPP</TooltipContent>
@@ -366,6 +379,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           </TooltipProvider>
         </div>
       )}
+      
+      {/* Render Zapp dialogs */}
+      {PinDialog}
+      {InstanceSelectorDialog}
 
       {/* User Menu */}
       <div className="p-3 border-t border-border">
