@@ -32,6 +32,7 @@ import {
   MessageSquareText
 } from "lucide-react";
 import { FinancialNotes } from "./FinancialNotes";
+import { FinancialQuickNoteInput } from "./FinancialQuickNoteInput";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -570,7 +571,15 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
         </TabsList>
 
         {/* Financial Entries Tab */}
-        <TabsContent value="entries" className="mt-4">
+        <TabsContent value="entries" className="mt-4 space-y-4">
+          {/* Quick note input for Admin and CX users */}
+          {currentUser && (
+            <FinancialQuickNoteInput
+              clientId={clientId}
+              currentUser={currentUser}
+            />
+          )}
+
           {financialEntries.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-30" />
