@@ -12,6 +12,7 @@ interface LeadDuplicateAlertProps {
   onDismiss?: () => void;
   onSelectLead?: (lead: LeadDuplicateMatch) => void;
   onViewLead?: (leadId: string) => void;
+  allowIgnore?: boolean;
 }
 
 const matchTypeConfig = {
@@ -33,7 +34,8 @@ export function LeadDuplicateAlert({
   duplicates, 
   onDismiss, 
   onSelectLead,
-  onViewLead 
+  onViewLead,
+  allowIgnore = true
 }: LeadDuplicateAlertProps) {
   if (duplicates.length === 0) return null;
 
@@ -129,7 +131,7 @@ export function LeadDuplicateAlert({
           })}
         </div>
         
-        {onDismiss && (
+        {onDismiss && allowIgnore && (
           <div className="flex justify-end">
             <Button
               variant="ghost"

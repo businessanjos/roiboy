@@ -122,7 +122,7 @@ export default function LeadsTab() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
-  const [ignoreDuplicates, setIgnoreDuplicates] = useState(false);
+  
   
   // Import state
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
@@ -134,7 +134,7 @@ export default function LeadsTab() {
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
   
   // Flow state for new lead creation and deal conversion
-  const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form'>('phone');
+  const [dialogStep, setDialogStep] = useState<'phone' | 'lead-form' | 'deal-form' | 'duplicate-found'>('phone');
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
   const [creatingDeal, setCreatingDeal] = useState(false);
@@ -183,7 +183,6 @@ export default function LeadsTab() {
     setLeadForDeal(null);
     setDialogStep('phone');
     clearLeadDuplicates();
-    setIgnoreDuplicates(false);
   };
 
   const openNewDialog = () => {
@@ -233,9 +232,15 @@ export default function LeadsTab() {
         setDialogStep('deal-form');
       } else {
         // No client - check for duplicate leads
-        await checkLeadDuplicates({ phone: formData.phone });
+        const duplicates = await checkLeadDuplicates({ phone: formData.phone });
         setExistingClient(null);
-        setDialogStep('lead-form');
+        
+        if (duplicates.length > 0) {
+          // Block creation - show duplicate found step
+          setDialogStep('duplicate-found');
+        } else {
+          setDialogStep('lead-form');
+        }
       }
     } catch (error) {
       console.error("Error checking phone:", error);
@@ -1154,12 +1159,15 @@ export default function LeadsTab() {
                 ? "Editar Lead"
                 : dialogStep === 'phone'
                 ? "Novo Lead"
+                : dialogStep === 'duplicate-found'
+                ? "Lead já cadastrado"
                 : dialogStep === 'deal-form'
                 ? "Criar Negócio"
                 : "Novo Lead"}
             </DialogTitle>
             <DialogDescription>
               {dialogStep === 'phone' && "Digite o telefone para verificar se já é cliente"}
+              {dialogStep === 'duplicate-found' && "Já existe um lead com este telefone"}
               {dialogStep === 'lead-form' && "Preencha os dados do lead"}
               {dialogStep === 'deal-form' && existingClient && `Cliente encontrado: ${existingClient.full_name}`}
               {dialogStep === 'deal-form' && leadForDeal && `Converter lead: ${leadForDeal.full_name}`}
@@ -1190,17 +1198,29 @@ export default function LeadsTab() {
             </div>
           )}
 
+          {/* Step: Duplicate Found - Block Creation */}
+          {dialogStep === 'duplicate-found' && (
+            <div className="space-y-4">
+              <LeadDuplicateAlert 
+                duplicates={leadDuplicates}
+                onSelectLead={handleSelectDuplicateLead}
+                onViewLead={handleViewDuplicateLead}
+                allowIgnore={false}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDialogStep('phone')}
+                >
+                  Voltar e usar outro telefone
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
           {dialogStep === 'lead-form' && (
             <div className="space-y-4">
-              {/* Duplicate Lead Alert */}
-              {!selectedLead && leadDuplicates.length > 0 && !ignoreDuplicates && (
-                <LeadDuplicateAlert 
-                  duplicates={leadDuplicates}
-                  onDismiss={() => setIgnoreDuplicates(true)}
-                  onSelectLead={handleSelectDuplicateLead}
-                  onViewLead={handleViewDuplicateLead}
-                />
-              )}
 
               <div className="space-y-2">
                 <Label>Nome *</Label>
