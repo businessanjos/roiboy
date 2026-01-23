@@ -351,12 +351,23 @@ export default function Clients() {
     setLoading(true);
     
     try {
-      // Use optimized edge function for faster loading
+      // Use optimized edge function for faster loading with server-side filters
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      // Pass search query to edge function for server-side search
-      const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : "";
+      const params = new URLSearchParams({
+        limit: "200",
+        offset: "0",
+      });
+      
+      // Add server-side filter parameters
+      if (searchQuery) params.set("search", searchQuery);
+      if (filterResponsible !== "all") params.set("responsible_user_id", filterResponsible);
+      if (filterProduct !== "all") params.set("product_id", filterProduct);
+      if (filterVNPS !== "all") params.set("vnps_class", filterVNPS);
+      if (filterContract !== "all") params.set("contract_filter", filterContract);
+      if (filterClientStatus !== "all") params.set("client_status", filterClientStatus);
+      
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/list-clients?limit=200&offset=0${searchParam}`,
+        `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
         {
           method: "GET",
           headers: {
@@ -578,13 +589,13 @@ export default function Clients() {
     // Note: teamUsers now comes from edge function response
   }, [currentSector?.id]);
   
-  // Debounced search - refetch clients when search query changes
+  // Refetch clients when filters change (server-side filtering)
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchClients();
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, filterResponsible, filterProduct, filterVNPS, filterContract, filterClientStatus]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1113,63 +1124,8 @@ export default function Clients() {
     setFilterResponsible("all");
   };
 
-  const filtered = clients.filter(c => {
-    // Search filter
-    const matchesSearch = c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone_e164.includes(searchQuery);
-    if (!matchesSearch) return false;
-
-    // Client Status filter (based on clients.status field)
-    if (filterClientStatus !== "all") {
-      if (filterClientStatus === "no_contract") {
-        // Check if client has no contracts using contractMap
-        if (contractMap[c.id]) return false;
-      } else {
-        if (c.status !== filterClientStatus) return false;
-      }
-    }
-
-    // Product filter
-    if (filterProduct !== "all") {
-      const clientProductIds = (c.client_products || []).map((cp: any) => cp.product_id);
-      if (!clientProductIds.includes(filterProduct)) return false;
-    }
-
-    // V-NPS filter
-    if (filterVNPS !== "all") {
-      const vnps = vnpsMap[c.id];
-      if (!vnps) {
-        if (filterVNPS !== "none") return false;
-      } else {
-        if (filterVNPS !== vnps.vnps_class) return false;
-      }
-    }
-
-    // Contract filter (based on contract expiry status)
-    if (filterContract !== "all") {
-      const contract = contractMap[c.id];
-      if (filterContract === "none") {
-        // Show only clients without any contract
-        if (contract) return false;
-      } else {
-        // For other contract filters, client must have a contract
-        if (!contract) return false;
-        const expiryStatus = getContractExpiryStatus(contract.end_date);
-        if (filterContract === "expired" && expiryStatus?.type !== "expired") return false;
-        if (filterContract === "urgent" && expiryStatus?.type !== "urgent") return false;
-        if (filterContract === "warning" && expiryStatus?.type !== "warning") return false;
-        if (filterContract === "ok" && expiryStatus !== null) return false;
-      }
-    }
-
-    // Responsible filter
-    if (filterResponsible !== "all") {
-      if (filterResponsible === "none" && c.responsible_user_id) return false;
-      if (filterResponsible !== "none" && c.responsible_user_id !== filterResponsible) return false;
-    }
-
-    return true;
-  }).sort((a, b) => {
+  // Since filtering is now done server-side, we only apply local sorting
+  const filtered = clients.sort((a, b) => {
     if (sortOrder === "alphabetical") {
       return a.full_name.localeCompare(b.full_name, 'pt-BR');
     }
