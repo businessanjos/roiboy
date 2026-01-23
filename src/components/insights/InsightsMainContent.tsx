@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { BarChart3, Plus } from "lucide-react";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { InsightsFilterBar } from "./InsightsFilterBar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VisualBuilderSheet } from "./visual-builder";
-import { ConfigurableVisualCard } from "./visuals";
+import { InsightsGrid } from "./grid/InsightsGrid";
 
 export function InsightsMainContent() {
   const { 
@@ -17,7 +17,17 @@ export function InsightsMainContent() {
     isLoadingVisuals,
     createDashboard, 
     isCreating,
+    updateVisual,
   } = useInsightsDashboards();
+
+  const handleLayoutChange = useCallback(
+    async (layouts: Array<{ id: string; layout: any }>) => {
+      for (const { id, layout } of layouts) {
+        await updateVisual(id, { layout });
+      }
+    },
+    [updateVisual]
+  );
   
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
@@ -102,11 +112,10 @@ export function InsightsMainContent() {
             <Skeleton className="h-48" />
           </div>
         ) : hasVisuals ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visuals.map((visual) => (
-              <ConfigurableVisualCard key={visual.id} visual={visual} />
-            ))}
-          </div>
+          <InsightsGrid 
+            visuals={visuals} 
+            onLayoutChange={handleLayoutChange} 
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
