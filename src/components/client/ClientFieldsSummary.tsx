@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldValueEditor } from "@/components/custom-fields/FieldValueEditor";
-import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
+import { CustomFieldsManager, CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { 
@@ -42,6 +42,7 @@ import {
   GripVertical,
   Instagram,
   MapPin,
+  Settings2,
 } from "lucide-react";
 
 interface ClientFieldValue {
@@ -175,6 +176,7 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldOptions, setNewFieldOptions] = useState<FieldOption[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -393,14 +395,24 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
         {/* Fixed Header with Add Button */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Campos Personalizados</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAddDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Campo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsManagerOpen(true)}
+            >
+              <Settings2 className="h-4 w-4 mr-2" />
+              Gerenciar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Campo
+            </Button>
+          </div>
         </div>
 
         {/* Fixed Progress Header */}
@@ -512,6 +524,13 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
           isSaving={isSaving}
           needsOptions={needsOptions}
         />
+
+        {/* Custom Fields Manager Dialog */}
+        <CustomFieldsManager
+          open={isManagerOpen}
+          onOpenChange={setIsManagerOpen}
+          onFieldsChange={fetchData}
+        />
       </div>
     );
   }
@@ -528,14 +547,26 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
               {filledCount}/{fields.length}
             </Badge>
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            onClick={() => setIsAddDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setIsManagerOpen(true)}
+              title="Gerenciar campos"
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setIsAddDialogOpen(true)}
+              title="Novo campo"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -605,6 +636,13 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
         handleSaveNewField={handleSaveNewField}
         isSaving={isSaving}
         needsOptions={needsOptions}
+      />
+
+      {/* Custom Fields Manager Dialog */}
+      <CustomFieldsManager
+        open={isManagerOpen}
+        onOpenChange={setIsManagerOpen}
+        onFieldsChange={fetchData}
       />
     </Card>
   );
