@@ -1,19 +1,18 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useInsightsPanels } from "@/hooks/useInsightsPanels";
+import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { InsightsSidebarHeader } from "./InsightsSidebarHeader";
-import { InsightsPanelList } from "./InsightsPanelList";
+import { InsightsDashboardList } from "./InsightsDashboardList";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function InsightsSidebar() {
   const {
-    myPanels,
-    sharedPanels,
-    activePanelId,
-    setActivePanelId,
-    deletePanel,
-    renamePanel,
+    dashboards,
+    activeDashboardId,
+    navigateToDashboard,
+    deleteDashboard,
+    renameDashboard,
     isLoading,
-  } = useInsightsPanels();
+  } = useInsightsDashboards();
 
   return (
     <div className="w-64 min-w-64 border-r bg-muted/30 flex flex-col h-full">
@@ -31,35 +30,20 @@ export function InsightsSidebar() {
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
-          ) : myPanels.length === 0 ? (
+          ) : dashboards.length === 0 ? (
             <p className="text-xs text-muted-foreground px-2 py-4">
               Nenhum painel criado ainda. Clique em "Criar" para começar.
             </p>
           ) : (
-            <InsightsPanelList
-              panels={myPanels}
-              activePanelId={activePanelId}
-              onSelect={setActivePanelId}
-              onDelete={deletePanel}
-              onRename={renamePanel}
+            <InsightsDashboardList
+              dashboards={dashboards}
+              activeDashboardId={activeDashboardId}
+              onSelect={navigateToDashboard}
+              onDelete={deleteDashboard}
+              onRename={renameDashboard}
             />
           )}
         </div>
-
-        {/* Section: Shared with me */}
-        {sharedPanels.length > 0 && (
-          <div className="p-2 border-t">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase px-2 mb-2 tracking-wide">
-              Compartilhado Comigo
-            </h3>
-            <InsightsPanelList
-              panels={sharedPanels}
-              activePanelId={activePanelId}
-              onSelect={setActivePanelId}
-              readOnly
-            />
-          </div>
-        )}
       </ScrollArea>
     </div>
   );

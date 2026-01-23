@@ -1,0 +1,361 @@
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { toast } from "sonner";
+
+// Types based on Supabase schema
+export interface InsightsDashboard {
+  id: string;
+  name: string;
+  folder: string | null;
+  user_id: string;
+  account_id: string;
+  created_at: string | null;
+}
+
+export interface InsightsVisual {
+  id: string;
+  dashboard_id: string;
+  title: string | null;
+  chart_type: string | null;
+  config: Record<string, any> | null;
+  layout: { x: number; y: number; w: number; h: number } | null;
+  created_at: string | null;
+}
+
+interface InsightsDashboardsContextType {
+  // Dashboard state
+  dashboards: InsightsDashboard[];
+  activeDashboard: InsightsDashboard | null;
+  activeDashboardId: string | null;
+  isLoading: boolean;
+  
+  // Visual state
+  visuals: InsightsVisual[];
+  isLoadingVisuals: boolean;
+  
+  // Dashboard actions
+  createDashboard: (name: string) => Promise<void>;
+  deleteDashboard: (id: string) => Promise<void>;
+  renameDashboard: (id: string, name: string) => Promise<void>;
+  navigateToDashboard: (id: string) => void;
+  setActiveDashboardId: (id: string | null) => void;
+  
+  // Visual actions
+  addVisual: (visual: Omit<InsightsVisual, "id" | "created_at">) => Promise<void>;
+  removeVisual: (id: string) => Promise<void>;
+  updateVisual: (id: string, updates: Partial<InsightsVisual>) => Promise<void>;
+  
+  // Mutations loading state
+  isCreating: boolean;
+}
+
+const InsightsDashboardsContext = createContext<InsightsDashboardsContextType | null>(null);
+
+interface InsightsDashboardsProviderProps {
+  children: ReactNode;
+}
+
+export function InsightsDashboardsProvider({ children }: InsightsDashboardsProviderProps) {
+  const { currentUser } = useCurrentUser();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { dashboardId } = useParams<{ dashboardId?: string }>();
+  
+  const [activeDashboardId, setActiveDashboardId] = useState<string | null>(dashboardId || null);
+
+  // Sync URL param with state
+  useEffect(() => {
+    if (dashboardId && dashboardId !== activeDashboardId) {
+      setActiveDashboardId(dashboardId);
+    }
+  }, [dashboardId]);
+
+  // Fetch dashboards
+  const { data: dashboards = [], isLoading } = useQuery({
+    queryKey: ["insights-dashboards", currentUser?.account_id],
+    queryFn: async () => {
+      if (!currentUser?.account_id) return [];
+      
+      const { data, error } = await supabase
+        .from("insights_dashboards")
+        .select("*")
+        .eq("account_id", currentUser.account_id)
+        .order("created_at", { ascending: true });
+      
+      if (error) throw error;
+      return data as InsightsDashboard[];
+    },
+    enabled: !!currentUser?.account_id,
+  });
+
+  // Fetch visuals for active dashboard
+  const { data: visuals = [], isLoading: isLoadingVisuals } = useQuery({
+    queryKey: ["insights-visuals", activeDashboardId],
+    queryFn: async () => {
+      if (!activeDashboardId) return [];
+      
+      const { data, error } = await supabase
+        .from("insights_visuals")
+        .select("*")
+        .eq("dashboard_id", activeDashboardId)
+        .order("created_at", { ascending: true });
+      
+      if (error) throw error;
+      return data.map(v => ({
+        ...v,
+        config: v.config as Record<string, any> | null,
+        layout: v.layout as { x: number; y: number; w: number; h: number } | null,
+      })) as InsightsVisual[];
+    },
+    enabled: !!activeDashboardId,
+  });
+
+  // Auto-select first dashboard if none selected
+  useEffect(() => {
+    if (!isLoading && dashboards.length > 0 && !activeDashboardId && !dashboardId) {
+      const firstDashboard = dashboards[0];
+      navigate(`/insights/${firstDashboard.id}`, { replace: true });
+    }
+  }, [isLoading, dashboards, activeDashboardId, dashboardId, navigate]);
+
+  // Active dashboard computed
+  const activeDashboard = useMemo(() => {
+    if (!activeDashboardId) return null;
+    return dashboards.find(d => d.id === activeDashboardId) || null;
+  }, [dashboards, activeDashboardId]);
+
+  // Create dashboard mutation
+  const createMutation = useMutation({
+    mutationFn: async (name: string) => {
+      if (!currentUser?.account_id || !currentUser?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+      
+      const { data, error } = await supabase
+        .from("insights_dashboards")
+        .insert({
+          name,
+          account_id: currentUser.account_id,
+          user_id: currentUser.id,
+          folder: "Meus Painéis",
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as InsightsDashboard;
+    },
+    onSuccess: (newDashboard) => {
+      queryClient.invalidateQueries({ queryKey: ["insights-dashboards"] });
+      toast.success("Painel criado com sucesso!");
+      navigate(`/insights/${newDashboard.id}`);
+    },
+    onError: (error) => {
+      console.error("Error creating dashboard:", error);
+      toast.error("Erro ao criar painel");
+    },
+  });
+
+  // Delete dashboard mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("insights_dashboards")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ["insights-dashboards"] });
+      toast.success("Painel excluído");
+      
+      // If deleted the active dashboard, navigate to first remaining or /insights
+      if (deletedId === activeDashboardId) {
+        const remaining = dashboards.filter(d => d.id !== deletedId);
+        if (remaining.length > 0) {
+          navigate(`/insights/${remaining[0].id}`, { replace: true });
+        } else {
+          navigate("/insights", { replace: true });
+          setActiveDashboardId(null);
+        }
+      }
+    },
+    onError: (error) => {
+      console.error("Error deleting dashboard:", error);
+      toast.error("Erro ao excluir painel");
+    },
+  });
+
+  // Rename dashboard mutation
+  const renameMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase
+        .from("insights_dashboards")
+        .update({ name })
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insights-dashboards"] });
+      toast.success("Painel renomeado");
+    },
+    onError: (error) => {
+      console.error("Error renaming dashboard:", error);
+      toast.error("Erro ao renomear painel");
+    },
+  });
+
+  // Add visual mutation
+  const addVisualMutation = useMutation({
+    mutationFn: async (visual: Omit<InsightsVisual, "id" | "created_at">) => {
+      const { data, error } = await supabase
+        .from("insights_visuals")
+        .insert({
+          dashboard_id: visual.dashboard_id,
+          title: visual.title,
+          chart_type: visual.chart_type,
+          config: visual.config,
+          layout: visual.layout,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insights-visuals", activeDashboardId] });
+      toast.success("Visual adicionado");
+    },
+    onError: (error) => {
+      console.error("Error adding visual:", error);
+      toast.error("Erro ao adicionar visual");
+    },
+  });
+
+  // Remove visual mutation
+  const removeVisualMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("insights_visuals")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insights-visuals", activeDashboardId] });
+      toast.success("Visual removido");
+    },
+    onError: (error) => {
+      console.error("Error removing visual:", error);
+      toast.error("Erro ao remover visual");
+    },
+  });
+
+  // Update visual mutation
+  const updateVisualMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<InsightsVisual> }) => {
+      const { error } = await supabase
+        .from("insights_visuals")
+        .update({
+          title: updates.title,
+          chart_type: updates.chart_type,
+          config: updates.config,
+          layout: updates.layout,
+        })
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insights-visuals", activeDashboardId] });
+    },
+    onError: (error) => {
+      console.error("Error updating visual:", error);
+      toast.error("Erro ao atualizar visual");
+    },
+  });
+
+  // Action handlers
+  const createDashboard = useCallback(async (name: string) => {
+    await createMutation.mutateAsync(name);
+  }, [createMutation]);
+
+  const deleteDashboard = useCallback(async (id: string) => {
+    await deleteMutation.mutateAsync(id);
+  }, [deleteMutation]);
+
+  const renameDashboard = useCallback(async (id: string, name: string) => {
+    await renameMutation.mutateAsync({ id, name });
+  }, [renameMutation]);
+
+  const navigateToDashboard = useCallback((id: string) => {
+    navigate(`/insights/${id}`);
+  }, [navigate]);
+
+  const addVisual = useCallback(async (visual: Omit<InsightsVisual, "id" | "created_at">) => {
+    await addVisualMutation.mutateAsync(visual);
+  }, [addVisualMutation]);
+
+  const removeVisual = useCallback(async (id: string) => {
+    await removeVisualMutation.mutateAsync(id);
+  }, [removeVisualMutation]);
+
+  const updateVisual = useCallback(async (id: string, updates: Partial<InsightsVisual>) => {
+    await updateVisualMutation.mutateAsync({ id, updates });
+  }, [updateVisualMutation]);
+
+  const value = useMemo<InsightsDashboardsContextType>(() => ({
+    dashboards,
+    activeDashboard,
+    activeDashboardId,
+    isLoading,
+    visuals,
+    isLoadingVisuals,
+    createDashboard,
+    deleteDashboard,
+    renameDashboard,
+    navigateToDashboard,
+    setActiveDashboardId,
+    addVisual,
+    removeVisual,
+    updateVisual,
+    isCreating: createMutation.isPending,
+  }), [
+    dashboards,
+    activeDashboard,
+    activeDashboardId,
+    isLoading,
+    visuals,
+    isLoadingVisuals,
+    createDashboard,
+    deleteDashboard,
+    renameDashboard,
+    navigateToDashboard,
+    addVisual,
+    removeVisual,
+    updateVisual,
+    createMutation.isPending,
+  ]);
+
+  return (
+    <InsightsDashboardsContext.Provider value={value}>
+      {children}
+    </InsightsDashboardsContext.Provider>
+  );
+}
+
+export function useInsightsDashboards() {
+  const context = useContext(InsightsDashboardsContext);
+  if (!context) {
+    throw new Error("useInsightsDashboards must be used within InsightsDashboardsProvider");
+  }
+  return context;
+}

@@ -191,6 +191,7 @@ const App = () => (
                             <Route path="/social-media" element={<SocialMedia />} />
                             <Route path="/marketing-tasks" element={<MarketingTasks />} />
                             <Route path="/insights" element={<Insights />} />
+                            <Route path="/insights/:dashboardId" element={<Insights />} />
                             <Route path="/team-chat/:chatId" element={<TeamChat />} />
                             <Route path="/admin" element={<Admin />} />
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
