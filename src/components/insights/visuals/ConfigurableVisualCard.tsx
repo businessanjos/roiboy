@@ -160,6 +160,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
             type={chartType}
             data={processedData}
             formatting={config.formatting}
+            appearance={config.appearance}
             onDrilldown={handleDrilldown}
           />
         </CardContent>
