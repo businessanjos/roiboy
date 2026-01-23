@@ -5095,6 +5095,48 @@ export type Database = {
           },
         ]
       }
+      insights_dashboards: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          folder: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          folder?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          folder?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_dashboards_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_dashboards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insights_layouts: {
         Row: {
           account_id: string
@@ -5148,6 +5190,44 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insights_visuals: {
+        Row: {
+          chart_type: string | null
+          config: Json | null
+          created_at: string | null
+          dashboard_id: string
+          id: string
+          layout: Json | null
+          title: string | null
+        }
+        Insert: {
+          chart_type?: string | null
+          config?: Json | null
+          created_at?: string | null
+          dashboard_id: string
+          id?: string
+          layout?: Json | null
+          title?: string | null
+        }
+        Update: {
+          chart_type?: string | null
+          config?: Json | null
+          created_at?: string | null
+          dashboard_id?: string
+          id?: string
+          layout?: Json | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_visuals_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "insights_dashboards"
             referencedColumns: ["id"]
           },
         ]
