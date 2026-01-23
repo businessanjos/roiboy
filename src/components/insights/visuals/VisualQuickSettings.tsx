@@ -8,6 +8,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
+import { Trash2 } from "lucide-react";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
 import { VisualConfig, DateDisplayFormat, ColorPalette, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
@@ -27,7 +40,7 @@ interface VisualQuickSettingsProps {
 }
 
 export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickSettingsProps) {
-  const { updateVisual } = useInsightsDashboards();
+  const { updateVisual, removeVisual } = useInsightsDashboards();
   const config = visual.config as VisualConfig | null;
 
   // Local state for appearance settings
@@ -44,6 +57,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
     config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Reset state when visual changes or sheet opens
   useEffect(() => {
@@ -83,6 +97,18 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await removeVisual(visual.id);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error deleting visual:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[340px] sm:w-[400px]">
@@ -107,7 +133,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           />
         </div>
 
-        <SheetFooter>
+        <SheetFooter className="flex flex-col gap-4">
           <Button 
             onClick={handleSave} 
             disabled={isSaving}
@@ -115,6 +141,40 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           >
             {isSaving ? "Salvando..." : "Salvar Alterações"}
           </Button>
+          
+          <Separator />
+          
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground text-center">Zona de Perigo</p>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isDeleting ? "Excluindo..." : "Excluir Visual"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir Visual?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir "{visual.title || 'Visual sem título'}"? 
+                    Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>
