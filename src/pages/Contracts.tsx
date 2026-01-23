@@ -92,7 +92,10 @@ import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet"
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
 import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
 import { ContractImportPreview, ImportRowWithDuplicate, DuplicateInfo } from "@/components/contracts/ContractImportPreview";
-import { BarChart3 } from "lucide-react";
+import { ContractTriageQueue } from "@/components/contracts/ContractTriageQueue";
+import { ConciliateButton } from "@/components/contracts/ConciliateButton";
+import { useBatchConciliationValidation } from "@/hooks/useConciliationValidation";
+import { BarChart3, UserCheck } from "lucide-react";
 
 interface Contract {
   id: string;
@@ -125,6 +128,7 @@ interface Contract {
     id: string;
     full_name: string;
     avatar_url: string | null;
+    responsible_user_id: string | null;
   };
   product?: {
     id: string;
@@ -391,7 +395,7 @@ export default function Contracts() {
         .from("client_contracts")
         .select(`
           *,
-          client:clients(id, full_name, avatar_url),
+          client:clients(id, full_name, avatar_url, responsible_user_id),
           product:products(id, name, color)
         `)
         .order("created_at", { ascending: false });
@@ -1369,8 +1373,23 @@ export default function Contracts() {
     return contracts.filter(c => !c.receivables_generated);
   }, [contracts]);
 
+  // Contracts for triage queue (clients without responsible)
+  const triageContracts = useMemo(() => {
+    return contracts.filter(c => !c.client?.responsible_user_id);
+  }, [contracts]);
+
+  // Batch validation for queue contracts
+  const { validations: conciliationValidations, isLoading: validationsLoading } = useBatchConciliationValidation(
+    queueContracts.map(c => ({
+      id: c.id,
+      client_id: c.client_id,
+      product: c.product,
+    }))
+  );
+
   // Get current contracts based on active tab
-  const currentContracts = activeTab === "conciliados" ? reconciledContracts : queueContracts;
+  const currentContracts = activeTab === "conciliados" ? reconciledContracts : 
+    activeTab === "triagem" ? triageContracts : queueContracts;
 
   const filteredContracts = useMemo(() => {
     const filtered = currentContracts.filter((contract) => {
@@ -1711,14 +1730,24 @@ export default function Contracts() {
 
       {/* Tabs for Reconciliation Status */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="fila" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
-            <span className="hidden sm:inline">Fila de Conciliação</span>
+            <span className="hidden sm:inline">Conciliação</span>
             <span className="sm:hidden">Fila</span>
             {queueContracts.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
                 {queueContracts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="triagem" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Triagem</span>
+            <span className="sm:hidden">Triagem</span>
+            {triageContracts.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                {triageContracts.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -1826,12 +1855,46 @@ export default function Contracts() {
                   <div>
                     <p className="font-medium text-amber-800">Contratos aguardando conciliação</p>
                     <p className="text-sm text-amber-700">
-                      Estes contratos ainda não tiveram os recebíveis gerados. Acesse o contrato e configure a negociação para gerar o fluxo financeiro.
+                      O botão "Conciliar" será liberado quando:
                     </p>
+                    <ul className="text-sm text-amber-700 mt-1 list-disc list-inside">
+                      <li>Lançamentos financeiros gerados</li>
+                      <li>CPF ou CNPJ preenchido</li>
+                      <li>Endereço completo cadastrado</li>
+                      <li>Produto vinculado ao contrato</li>
+                    </ul>
                   </div>
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {activeTab === "triagem" && (
+            <>
+              <Card className="border-blue-200 bg-blue-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Users className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-blue-800">Clientes aguardando atribuição</p>
+                      <p className="text-sm text-blue-700">
+                        Estes clientes ainda não possuem um consultor responsável. 
+                        Clique em "Puxar" para assumir o atendimento ou inicie uma conversa no ROY zAPP.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <ContractTriageQueue
+                contracts={triageContracts as any}
+                teamUsers={teamUsers}
+                onRefresh={fetchContracts}
+                onViewContract={(contract) => {
+                  setSelectedContract(contract as any);
+                  setDetailSheetOpen(true);
+                }}
+              />
+            </>
           )}
 
       {/* Contracts Table */}
@@ -1939,31 +2002,11 @@ export default function Contracts() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {activeTab === "fila" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  const { error } = await supabase
-                                    .from("client_contracts")
-                                    .update({ 
-                                      receivables_generated: true,
-                                      receivables_generated_at: new Date().toISOString()
-                                    })
-                                    .eq("id", contract.id);
-                                  if (error) throw error;
-                                  toast.success("Contrato marcado como conciliado");
-                                  fetchContracts();
-                                } catch (error) {
-                                  console.error("Error:", error);
-                                  toast.error("Erro ao atualizar contrato");
-                                }
-                              }}
-                            >
-                              <Check className="h-4 w-4 mr-1" />
-                              Conciliar
-                            </Button>
+                            <ConciliateButton
+                              contractId={contract.id}
+                              validation={conciliationValidations.get(contract.id)}
+                              onSuccess={fetchContracts}
+                            />
                           )}
                           <Button
                             variant="default"
