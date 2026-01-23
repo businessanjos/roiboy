@@ -16,6 +16,7 @@ interface InstanceInfo {
   name?: string;
   displayName: string;
   hasPinHash: boolean;
+  useSectorPin?: boolean; // NEW: Indicates if this uses sector-level PIN
 }
 
 interface ZappInstanceSelectorDialogProps {
@@ -24,6 +25,7 @@ interface ZappInstanceSelectorDialogProps {
   instances: InstanceInfo[];
   onSelect: (integrationId: string) => void;
   contactName?: string;
+  sectorId?: string; // NEW: Sector ID for sector-level PIN verification
 }
 
 export function ZappInstanceSelectorDialog({
@@ -32,6 +34,7 @@ export function ZappInstanceSelectorDialog({
   instances,
   onSelect,
   contactName,
+  sectorId,
 }: ZappInstanceSelectorDialogProps) {
   const [selectedInstance, setSelectedInstance] = useState<InstanceInfo | null>(null);
   const [showPinDialog, setShowPinDialog] = useState(false);
@@ -136,8 +139,10 @@ export function ZappInstanceSelectorDialog({
         <ZappPinDialog
           open={showPinDialog}
           onOpenChange={handlePinDialogClose}
-          integrationId={selectedInstance.id}
+          sectorId={sectorId}
+          integrationId={selectedInstance.useSectorPin ? undefined : selectedInstance.id}
           instanceName={selectedInstance.displayName || selectedInstance.name}
+          useSectorPin={selectedInstance.useSectorPin}
           onSuccess={handlePinSuccess}
         />
       )}

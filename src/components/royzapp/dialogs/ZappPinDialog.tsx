@@ -20,6 +20,8 @@ interface ZappPinDialogProps {
   sectorName?: string;
   integrationId?: string;
   instanceName?: string;
+  // NEW: Force sector PIN mode even when integrationId is provided
+  useSectorPin?: boolean;
   onSuccess: () => void;
 }
 
@@ -30,6 +32,7 @@ export function ZappPinDialog({
   sectorName,
   integrationId,
   instanceName,
+  useSectorPin = false,
   onSuccess,
 }: ZappPinDialogProps) {
   const [pin, setPin] = useState("");
@@ -39,11 +42,13 @@ export function ZappPinDialog({
   const MAX_ATTEMPTS = 3;
 
   // Determine which mode we're in
-  const isInstanceMode = !!integrationId;
-  const displayName = isInstanceMode ? instanceName : sectorName;
+  // Use sector PIN if explicitly requested OR if only sectorId is provided
+  const shouldUseSectorPin = useSectorPin || (!!sectorId && !integrationId);
+  const isInstanceMode = !!integrationId && !useSectorPin;
+  const displayName = isInstanceMode ? instanceName : (instanceName || sectorName);
   
-  // Instance PINs are 4 digits, legacy sector PINs are 6 digits
-  const PIN_LENGTH = isInstanceMode ? 4 : 6;
+  // Sector PINs are 6 digits, Instance PINs are 4 digits
+  const PIN_LENGTH = shouldUseSectorPin ? 6 : 4;
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -66,20 +71,23 @@ export function ZappPinDialog({
     try {
       let data, fetchError;
 
-      if (isInstanceMode) {
-        // Verify PIN for specific instance
+      if (shouldUseSectorPin && sectorId) {
+        // Verify PIN for sector (legacy 6-digit or inherited protection)
+        const response = await supabase.functions.invoke("verify-sector-pin", {
+          body: { sector_id: sectorId, pin },
+        });
+        data = response.data;
+        fetchError = response.error;
+      } else if (isInstanceMode && integrationId) {
+        // Verify PIN for specific instance (4-digit)
         const response = await supabase.functions.invoke("verify-instance-pin", {
           body: { integration_id: integrationId, pin },
         });
         data = response.data;
         fetchError = response.error;
       } else {
-        // Legacy: Verify PIN for sector
-        const response = await supabase.functions.invoke("verify-sector-pin", {
-          body: { sector_id: sectorId, pin },
-        });
-        data = response.data;
-        fetchError = response.error;
+        setError("Configuração de PIN inválida");
+        return;
       }
 
       if (fetchError) {
@@ -121,7 +129,7 @@ export function ZappPinDialog({
           </div>
           <DialogTitle className="text-center">Acesso Restrito</DialogTitle>
           <DialogDescription className="text-center">
-            Digite o PIN de {PIN_LENGTH} dígitos para acessar {isInstanceMode ? "a instância" : "a área da"} <strong>{displayName}</strong>
+            Digite o PIN de {PIN_LENGTH} dígitos para acessar {shouldUseSectorPin ? "o setor" : "a instância"} <strong>{displayName}</strong>
           </DialogDescription>
         </DialogHeader>
 

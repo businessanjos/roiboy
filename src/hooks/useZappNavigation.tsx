@@ -18,6 +18,7 @@ interface IntegrationInfo {
   id: string;
   displayName: string;
   hasPinHash: boolean;
+  useSectorPin?: boolean; // NEW: Indicates if this uses sector-level PIN
 }
 
 export function useZappNavigation() {
@@ -29,6 +30,7 @@ export function useZappNavigation() {
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [pendingIntegration, setPendingIntegration] = useState<IntegrationInfo | null>(null);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
+  const [pendingSectorId, setPendingSectorIdForPin] = useState<string | null>(null); // NEW: Track sector for PIN
 
   // Instance selector state
   const [showInstanceSelector, setShowInstanceSelector] = useState(false);
@@ -52,11 +54,11 @@ export function useZappNavigation() {
     return `/roy-zapp?sector=vendas&integrationId=${integrationId}&newPhone=${normalizedPhone}&newName=${encodedName}${leadId ? `&leadId=${leadId}` : ""}${clientId ? `&clientId=${clientId}` : ""}`;
   }, []);
 
-  const navigateToInstance = useCallback(async (integrationId: string, options: ZappNavigationOptions) => {
+  const navigateToInstance = useCallback(async (integrationId: string, options: ZappNavigationOptions, sectorHasPin: boolean = false) => {
     // Fetch integration to check for PIN
     const { data: integration } = await supabase
       .from("integrations")
-      .select("id, pin_hash, display_name, config")
+      .select("id, pin_hash, display_name, config, sector_id")
       .eq("id", integrationId)
       .single();
 
@@ -66,15 +68,19 @@ export function useZappNavigation() {
     }
 
     const navigationUrl = buildNavigationUrl(integrationId, options);
+    const instanceHasPin = !!integration.pin_hash;
 
-    // Check if integration has PIN protection
-    if (integration.pin_hash) {
+    // Check if integration has PIN protection (instance OR sector level)
+    if (instanceHasPin || sectorHasPin) {
+      const useSectorPin = !instanceHasPin && sectorHasPin;
       setPendingIntegration({
         id: integration.id,
         displayName: integration.display_name || (integration.config as any)?.instance_name || "Instância",
         hasPinHash: true,
+        useSectorPin,
       });
       setPendingNavigationUrl(navigationUrl);
+      setPendingSectorIdForPin(integration.sector_id);
       setPendingOptions(options); // Store options for openInNewTab
       setShowPinDialog(true);
       return;
@@ -108,11 +114,21 @@ export function useZappNavigation() {
       // Fetch ALL connected integrations for vendas sector
       const { data: allIntegrations } = await supabase
         .from("integrations")
-        .select("id, pin_hash, display_name, config, status")
+        .select("id, pin_hash, display_name, config, status, sector_id")
         .eq("account_id", currentUser.account_id)
         .eq("sector_id", "vendas")
         .eq("status", "connected")
         .order("created_at", { ascending: true });
+
+      // NEW: Fetch sector-level PIN settings for vendas
+      const { data: sectorSettings } = await supabase
+        .from("sector_settings")
+        .select("pin_hash")
+        .eq("account_id", currentUser.account_id)
+        .eq("sector_id", "vendas")
+        .maybeSingle();
+      
+      const sectorHasPin = !!sectorSettings?.pin_hash;
 
       if (!allIntegrations || allIntegrations.length === 0) {
         // No integrations, navigate without integrationId (fallback)
@@ -127,17 +143,21 @@ export function useZappNavigation() {
       // If only ONE integration, use it directly
       if (allIntegrations.length === 1) {
         const integration = allIntegrations[0];
-        await navigateToInstance(integration.id, options);
+        await navigateToInstance(integration.id, options, sectorHasPin);
         setLoading(false);
         return;
       }
 
       // MULTIPLE integrations - show selector dialog
-      const instances: IntegrationInfo[] = allIntegrations.map((int) => ({
-        id: int.id,
-        displayName: int.display_name || (int.config as any)?.instance_name || "Instância",
-        hasPinHash: !!int.pin_hash,
-      }));
+      const instances: IntegrationInfo[] = allIntegrations.map((int) => {
+        const instanceHasPin = !!int.pin_hash;
+        return {
+          id: int.id,
+          displayName: int.display_name || (int.config as any)?.instance_name || "Instância",
+          hasPinHash: instanceHasPin || sectorHasPin, // Effective PIN protection
+          useSectorPin: !instanceHasPin && sectorHasPin,
+        };
+      });
 
       setAvailableInstances(instances);
       setPendingOptions(options);
@@ -180,6 +200,7 @@ export function useZappNavigation() {
       setShowPinDialog(false);
       setPendingIntegration(null);
       setPendingNavigationUrl(null);
+      setPendingSectorIdForPin(null);
     }
   }, []);
 
@@ -196,8 +217,10 @@ export function useZappNavigation() {
     <ZappPinDialog
       open={showPinDialog}
       onOpenChange={handlePinDialogClose}
-      integrationId={pendingIntegration.id}
+      sectorId={pendingSectorId || undefined}
+      integrationId={pendingIntegration.useSectorPin ? undefined : pendingIntegration.id}
       instanceName={pendingIntegration.displayName}
+      useSectorPin={pendingIntegration.useSectorPin}
       onSuccess={handlePinSuccess}
     />
   ) : null;
