@@ -111,7 +111,7 @@ async function fetchDealsData(
   if (filters.userId && filters.userId !== 'all') {
     query = query.eq('responsible_user_id', filters.userId);
   }
-  if (filters.stageId) {
+  if (filters.stageId && filters.stageId !== 'all') {
     query = query.eq('stage_id', filters.stageId);
   }
 
