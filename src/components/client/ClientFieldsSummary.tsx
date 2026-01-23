@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -165,9 +166,9 @@ const FIELD_TYPE_CONFIG: Record<string, {
 };
 
 export function ClientFieldsSummary({ clientId, expanded = false }: ClientFieldsSummaryProps) {
+  const { currentUser } = useCurrentUser();
   const [fields, setFields] = useState<CustomField[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
-  const [accountId, setAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Dialog state for adding new field
@@ -184,16 +185,6 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
 
   const fetchData = async () => {
     try {
-      // Get account ID
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-
-      if (userData) {
-        setAccountId(userData.account_id);
-      }
-
       // Fetch active custom fields that should appear in clients
       const { data: fieldsData, error: fieldsError } = await supabase
         .from("custom_fields")
@@ -303,7 +294,12 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
 
   // Save new field
   const handleSaveNewField = async () => {
-    if (!accountId || !newFieldName.trim()) {
+    if (!currentUser?.account_id) {
+      toast.error("Erro: usuário não identificado. Tente recarregar a página.");
+      return;
+    }
+
+    if (!newFieldName.trim()) {
       toast.error("Por favor, preencha o nome do campo");
       return;
     }
@@ -327,10 +323,10 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
       const { data: maxOrderData } = await supabase
         .from("custom_fields")
         .select("display_order")
-        .eq("account_id", accountId)
+        .eq("account_id", currentUser.account_id)
         .order("display_order", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       const newOrder = (maxOrderData?.display_order || 0) + 1;
 
@@ -341,7 +337,7 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
       }));
 
       const { error } = await supabase.from("custom_fields").insert({
-        account_id: accountId,
+        account_id: currentUser.account_id,
         name: newFieldName.trim(),
         field_type: newFieldType,
         options: optionsWithOrder.length > 0 ? optionsWithOrder : null,
@@ -486,11 +482,11 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
 
                     {/* Field Value */}
                     <div className="pl-11">
-                      {accountId ? (
+                      {currentUser?.account_id ? (
                         <FieldValueEditor
                           field={field}
                           clientId={clientId}
-                          accountId={accountId}
+                          accountId={currentUser.account_id}
                           currentValue={value}
                           onValueChange={handleValueChange}
                         />
@@ -600,11 +596,11 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
                   <p className="text-xs text-muted-foreground mb-1 truncate" title={field.name}>
                     {field.name}
                   </p>
-                  {accountId ? (
+                  {currentUser?.account_id ? (
                     <FieldValueEditor
                       field={field}
                       clientId={clientId}
-                      accountId={accountId}
+                      accountId={currentUser.account_id}
                       currentValue={value}
                       onValueChange={handleValueChange}
                     />
