@@ -32,6 +32,7 @@ interface ConfigurableChartProps {
     type: FormatType;
     decimals: number;
   };
+  onDrilldown?: (groupName?: string) => void;
 }
 
 const CHART_COLORS = [
@@ -47,7 +48,7 @@ const CHART_COLORS = [
   '#00C49F',
 ];
 
-export function ConfigurableChart({ type, data, formatting }: ConfigurableChartProps) {
+export function ConfigurableChart({ type, data, formatting, onDrilldown }: ConfigurableChartProps) {
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -60,17 +61,17 @@ export function ConfigurableChart({ type, data, formatting }: ConfigurableChartP
     case 'number':
       return <ConfigurableScorecard data={data} formatting={formatting} />;
     case 'bar':
-      return <BarChartView data={data} formatting={formatting} />;
+      return <BarChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
     case 'line':
-      return <LineChartView data={data} formatting={formatting} />;
+      return <LineChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
     case 'pie':
-      return <PieChartView data={data} formatting={formatting} />;
+      return <PieChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
     default:
-      return <BarChartView data={data} formatting={formatting} />;
+      return <BarChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
   }
 }
 
-function BarChartView({ data, formatting }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting'] }) {
+function BarChartView({ data, formatting, onDrilldown }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting']; onDrilldown?: (groupName?: string) => void }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
@@ -91,7 +92,12 @@ function BarChartView({ data, formatting }: { data: AggregatedDataPoint[]; forma
           width={60}
         />
         <Tooltip content={<ChartTooltip formatting={formatting} showCount />} />
-        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+        <Bar 
+          dataKey="value" 
+          radius={[4, 4, 0, 0]}
+          onClick={(data) => onDrilldown?.(data.name)}
+          style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
+        >
           {data.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
@@ -104,7 +110,7 @@ function BarChartView({ data, formatting }: { data: AggregatedDataPoint[]; forma
   );
 }
 
-function LineChartView({ data, formatting }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting'] }) {
+function LineChartView({ data, formatting, onDrilldown }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting']; onDrilldown?: (groupName?: string) => void }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
@@ -131,16 +137,14 @@ function LineChartView({ data, formatting }: { data: AggregatedDataPoint[]; form
           stroke="hsl(var(--primary))"
           strokeWidth={2}
           dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
-          activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+          activeDot={{ r: 6, fill: 'hsl(var(--primary))', onClick: (_, e: any) => onDrilldown?.(e?.payload?.name) }}
         />
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
-function PieChartView({ data, formatting }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting'] }) {
-  const total = data.reduce((acc, item) => acc + item.value, 0);
-
+function PieChartView({ data, formatting, onDrilldown }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting']; onDrilldown?: (groupName?: string) => void }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -154,6 +158,8 @@ function PieChartView({ data, formatting }: { data: AggregatedDataPoint[]; forma
           dataKey="value"
           label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
           labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+          onClick={(data) => onDrilldown?.(data.name)}
+          style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
         >
           {data.map((entry, index) => (
             <Cell

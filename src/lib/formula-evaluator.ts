@@ -111,3 +111,6 @@ export function formatValueCompact(
   }
   return `${prefix}${Math.round(value)}`;
 }
+
+// Alias for backward compatibility
+export const formatValueDisplay = formatValue;
