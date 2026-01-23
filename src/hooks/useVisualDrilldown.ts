@@ -71,21 +71,33 @@ async function fetchDealsRecords(
     `)
     .eq('account_id', accountId);
 
-  // Apply date filters
-  if (filters.dateRange?.from) {
-    query = query.gte('created_at', filters.dateRange.from.toISOString());
+  // Determine which date field to use for filters based on dimension
+  const dateFilterField = config.dimension?.type === 'date' && config.dimension.field 
+    ? config.dimension.field 
+    : 'created_at';
+
+  // For specific date fields (won_at, lost_at), filter out records with null values
+  if (dateFilterField === 'won_at') {
+    query = query.not('won_at', 'is', null);
+  } else if (dateFilterField === 'lost_at') {
+    query = query.not('lost_at', 'is', null);
   }
-  if (filters.dateRange?.to) {
-    query = query.lte('created_at', filters.dateRange.to.toISOString());
+
+  // Apply date filters on the correct field
+  if (filters.startDate) {
+    query = query.gte(dateFilterField, filters.startDate);
   }
-  if (filters.userId) {
+  if (filters.endDate) {
+    query = query.lte(dateFilterField, filters.endDate);
+  }
+  if (filters.userId && filters.userId !== 'all') {
     query = query.eq('responsible_user_id', filters.userId);
   }
   if (filters.stageId) {
     query = query.eq('stage_id', filters.stageId);
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false });
+  const { data, error } = await query.order(dateFilterField, { ascending: false });
 
   if (error) {
     console.error('Error fetching deals drilldown:', error);
@@ -127,11 +139,11 @@ async function fetchLeadsRecords(
     .select('id, full_name, status, source, revenue_range, created_at, email, phone')
     .eq('account_id', accountId);
 
-  if (filters.dateRange?.from) {
-    query = query.gte('created_at', filters.dateRange.from.toISOString());
+  if (filters.startDate) {
+    query = query.gte('created_at', filters.startDate);
   }
-  if (filters.dateRange?.to) {
-    query = query.lte('created_at', filters.dateRange.to.toISOString());
+  if (filters.endDate) {
+    query = query.lte('created_at', filters.endDate);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });
