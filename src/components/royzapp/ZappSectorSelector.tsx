@@ -31,6 +31,8 @@ interface SectorInstance {
   connected: boolean;
   has_pin: boolean;
   pin_hash: string | null;
+  // NEW: Indicates if this instance inherits sector-level PIN protection
+  use_sector_pin: boolean;
 }
 
 interface WhatsAppSectorStatus {
@@ -60,8 +62,15 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
   
   // Estado para PIN
   const [showPinDialog, setShowPinDialog] = useState(false);
-  const [pendingInstance, setPendingInstance] = useState<{ sectorId: SectorId; integrationId: string; instanceName: string } | null>(null);
+  const [pendingInstance, setPendingInstance] = useState<{ 
+    sectorId: SectorId; 
+    integrationId: string; 
+    instanceName: string;
+    useSectorPin: boolean; // NEW: Flag to use sector PIN instead of instance PIN
+  } | null>(null);
   const [pinVerifiedInstances, setPinVerifiedInstances] = useState<Set<string>>(new Set());
+  // NEW: Track which sectors have been verified (for sector-level PINs)
+  const [pinVerifiedSectors, setPinVerifiedSectors] = useState<Set<string>>(new Set());
 
   // Buscar preferências do usuário
   const fetchUserPreferences = async () => {
@@ -130,6 +139,20 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
         
         console.log("[ZappSectorSelector] Integrations loaded:", integrations);
 
+        // NEW: Fetch sector-level PIN settings
+        const { data: sectorSettings } = await supabase
+          .from("sector_settings")
+          .select("sector_id, pin_hash")
+          .eq("account_id", currentUser.account_id)
+          .in("sector_id", WHATSAPP_SECTOR_IDS);
+        
+        // Create a map of sector -> has PIN at sector level
+        const sectorPinMap: Record<string, boolean> = {};
+        (sectorSettings || []).forEach((s: any) => {
+          sectorPinMap[s.sector_id] = !!s.pin_hash;
+        });
+        console.log("[ZappSectorSelector] Sector PIN map:", sectorPinMap);
+
         // Buscar contagem de mensagens não lidas por departamento (setor)
         const { data: departments } = await supabase
           .from("zapp_departments")
@@ -163,6 +186,15 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
           const config = integration.config as any;
           const connected = integration.status === "connected" || !!config?.instance_name;
           
+          // Instance has its own PIN
+          const instanceHasPin = !!integration.pin_hash || !!config?.pin_hash;
+          // Sector has a PIN that protects all its instances
+          const sectorHasPin = !!sectorPinMap[sectorId];
+          // Effective PIN protection: instance OR sector
+          const effectiveHasPin = instanceHasPin || sectorHasPin;
+          // If instance doesn't have its own PIN but sector does, use sector PIN
+          const useSectorPin = !instanceHasPin && sectorHasPin;
+          
           instancesBySector[sectorId].push({
             id: integration.id,
             status: integration.status,
@@ -171,8 +203,9 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
             phone_number: config?.phone_number || null,
             instance_name: config?.instance_name || null,
             connected,
-            has_pin: !!integration.pin_hash || !!config?.pin_hash,
+            has_pin: effectiveHasPin,
             pin_hash: integration.pin_hash || config?.pin_hash || null,
+            use_sector_pin: useSectorPin,
           });
         });
 
@@ -242,12 +275,17 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
 
   // Handler para selecionar instância no dropdown
   const handleInstanceSelect = (sectorId: SectorId, instance: SectorInstance) => {
+    // Check if already verified: either instance-level or sector-level
+    const isVerified = pinVerifiedInstances.has(instance.id) || 
+                       (instance.use_sector_pin && pinVerifiedSectors.has(sectorId));
+    
     // Verificar se a instância requer PIN e ainda não foi verificada
-    if (instance.has_pin && !pinVerifiedInstances.has(instance.id)) {
+    if (instance.has_pin && !isVerified) {
       setPendingInstance({
         sectorId,
         integrationId: instance.id,
         instanceName: instance.display_name || instance.instance_name || "Instância",
+        useSectorPin: instance.use_sector_pin,
       });
       setShowPinDialog(true);
       return;
@@ -267,12 +305,17 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       return;
     }
     
+    // Check if already verified: either instance-level or sector-level
+    const isVerified = pinVerifiedInstances.has(selectedInstance.id) || 
+                       (selectedInstance.use_sector_pin && pinVerifiedSectors.has(sectorId));
+    
     // Verificar se a instância selecionada requer PIN
-    if (selectedInstance.has_pin && !pinVerifiedInstances.has(selectedInstance.id)) {
+    if (selectedInstance.has_pin && !isVerified) {
       setPendingInstance({
         sectorId,
         integrationId: selectedInstance.id,
         instanceName: selectedInstance.display_name || selectedInstance.instance_name || "Instância",
+        useSectorPin: selectedInstance.use_sector_pin,
       });
       setShowPinDialog(true);
       return;
@@ -284,8 +327,14 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
   // Callback quando o PIN é verificado com sucesso
   const handlePinSuccess = () => {
     if (pendingInstance) {
-      // Marcar instância como verificada nesta sessão
-      setPinVerifiedInstances(prev => new Set([...prev, pendingInstance.integrationId]));
+      // Mark as verified based on PIN type
+      if (pendingInstance.useSectorPin) {
+        // Sector PIN verified - mark sector as verified (all instances in this sector are now accessible)
+        setPinVerifiedSectors(prev => new Set([...prev, pendingInstance.sectorId]));
+      } else {
+        // Instance PIN verified - mark only this instance
+        setPinVerifiedInstances(prev => new Set([...prev, pendingInstance.integrationId]));
+      }
       
       // Salvar preferência
       saveUserPreference(pendingInstance.sectorId, pendingInstance.integrationId);
@@ -412,7 +461,9 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                             className="h-7 px-2 text-xs gap-1 max-w-[140px]"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {selectedInstance?.has_pin && !pinVerifiedInstances.has(selectedInstance.id) && (
+                            {selectedInstance?.has_pin && 
+                              !pinVerifiedInstances.has(selectedInstance.id) && 
+                              !(selectedInstance.use_sector_pin && pinVerifiedSectors.has(sectorId)) && (
                               <Lock className="h-3 w-3 text-amber-500 shrink-0" />
                             )}
                             <span className="truncate">
@@ -425,7 +476,9 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                           <DropdownMenuContent align="end" className="w-56">
                             {instances.map((instance) => {
                               const isSelected = selectedInstance?.id === instance.id;
-                              const isVerified = pinVerifiedInstances.has(instance.id);
+                              // Check if verified: instance-level OR sector-level
+                              const isVerified = pinVerifiedInstances.has(instance.id) || 
+                                                 (instance.use_sector_pin && pinVerifiedSectors.has(sectorId));
                               
                               return (
                                 <DropdownMenuItem
@@ -480,12 +533,14 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
         </div>
       </div>
       
-      {/* PIN Dialog - now for instance */}
+      {/* PIN Dialog - supports both instance and sector PINs */}
       <ZappPinDialog
         open={showPinDialog}
         onOpenChange={setShowPinDialog}
-        integrationId={pendingInstance?.integrationId || ""}
+        sectorId={pendingInstance?.sectorId || ""}
+        integrationId={pendingInstance?.useSectorPin ? undefined : pendingInstance?.integrationId}
         instanceName={pendingInstance?.instanceName || "Instância"}
+        useSectorPin={pendingInstance?.useSectorPin}
         onSuccess={handlePinSuccess}
       />
     </div>

@@ -10,12 +10,14 @@ interface IntegrationInfo {
   id: string;
   displayName: string;
   hasPinHash: boolean;
+  useSectorPin?: boolean; // NEW: Indicates if this uses sector-level PIN
 }
 
 interface PendingNavigation {
   sectorId: string;
   integrationId: string;
   displayName: string;
+  useSectorPin?: boolean; // NEW: Flag to use sector PIN verification
 }
 
 export function useSidebarZappNavigation() {
@@ -58,6 +60,16 @@ export function useSidebarZappNavigation() {
         .eq("status", "connected")
         .order("created_at", { ascending: true });
 
+      // NEW: Fetch sector-level PIN settings
+      const { data: sectorSettings } = await supabase
+        .from("sector_settings")
+        .select("pin_hash")
+        .eq("account_id", currentUser.account_id)
+        .eq("sector_id", sectorId)
+        .maybeSingle();
+      
+      const sectorHasPin = !!sectorSettings?.pin_hash;
+
       // No integrations - navigate directly
       if (!integrations || integrations.length === 0) {
         completeNavigation(sectorId);
@@ -65,16 +77,19 @@ export function useSidebarZappNavigation() {
         return;
       }
 
-      // Single integration - check PIN and navigate
+      // Single integration - check PIN (instance or sector) and navigate
       if (integrations.length === 1) {
         const integration = integrations[0];
         const displayName = integration.display_name || (integration.config as any)?.instance_name || "Instância";
+        const instanceHasPin = !!integration.pin_hash;
         
-        if (integration.pin_hash) {
+        // Check if protected by instance PIN OR sector PIN
+        if (instanceHasPin || sectorHasPin) {
           setPendingNavigation({
             sectorId,
             integrationId: integration.id,
             displayName,
+            useSectorPin: !instanceHasPin && sectorHasPin, // Use sector PIN if instance doesn't have one
           });
           setShowPinDialog(true);
           setLoading(false);
@@ -86,12 +101,16 @@ export function useSidebarZappNavigation() {
         return;
       }
 
-      // Multiple integrations - show selector
-      const instances: IntegrationInfo[] = integrations.map((int) => ({
-        id: int.id,
-        displayName: int.display_name || (int.config as any)?.instance_name || "Instância",
-        hasPinHash: !!int.pin_hash,
-      }));
+      // Multiple integrations - show selector with PIN info
+      const instances: IntegrationInfo[] = integrations.map((int) => {
+        const instanceHasPin = !!int.pin_hash;
+        return {
+          id: int.id,
+          displayName: int.display_name || (int.config as any)?.instance_name || "Instância",
+          hasPinHash: instanceHasPin || sectorHasPin, // Effective PIN protection
+          useSectorPin: !instanceHasPin && sectorHasPin,
+        };
+      });
 
       setAvailableInstances(instances);
       setPendingSectorId(sectorId);
@@ -143,8 +162,10 @@ export function useSidebarZappNavigation() {
     <ZappPinDialog
       open={showPinDialog}
       onOpenChange={handlePinDialogClose}
-      integrationId={pendingNavigation.integrationId}
+      sectorId={pendingNavigation.sectorId}
+      integrationId={pendingNavigation.useSectorPin ? undefined : pendingNavigation.integrationId}
       instanceName={pendingNavigation.displayName}
+      useSectorPin={pendingNavigation.useSectorPin}
       onSuccess={handlePinSuccess}
     />
   ) : null;
