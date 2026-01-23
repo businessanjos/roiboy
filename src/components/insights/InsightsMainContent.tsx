@@ -1,15 +1,40 @@
-import { BarChart3, FileText, Plus } from "lucide-react";
-import { useInsightsPanels } from "@/hooks/useInsightsPanels";
+import { BarChart3, Plus } from "lucide-react";
+import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { InsightsFilterBar } from "./InsightsFilterBar";
-import { AddWidgetButton } from "./widgets/AddWidgetButton";
-import { InsightsGridLayout } from "./grid/InsightsGridLayout";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function InsightsMainContent() {
-  const { activePanel, activePanelId, myPanels, createPanel, isCreating } = useInsightsPanels();
+  const { 
+    activeDashboard, 
+    activeDashboardId, 
+    dashboards, 
+    visuals,
+    isLoading,
+    isLoadingVisuals,
+    createDashboard, 
+    isCreating,
+    addVisual
+  } = useInsightsDashboards();
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex-1 p-8">
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-12 w-full" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If no panels exist, show create panel state
-  if (myPanels.length === 0 && !activePanelId) {
+  if (dashboards.length === 0 && !activeDashboardId) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center max-w-md">
@@ -21,7 +46,7 @@ export function InsightsMainContent() {
             Organize seus insights em painéis personalizados com gráficos e indicadores.
           </p>
           <Button
-            onClick={() => createPanel("Meu Primeiro Painel", "dashboard")}
+            onClick={() => createDashboard("Meu Primeiro Painel")}
             disabled={isCreating}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -33,7 +58,7 @@ export function InsightsMainContent() {
   }
 
   // If no active panel selected
-  if (!activePanelId || !activePanel) {
+  if (!activeDashboardId || !activeDashboard) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center text-muted-foreground">
@@ -43,8 +68,18 @@ export function InsightsMainContent() {
     );
   }
 
-  const hasWidgets = activePanel.widgets && activePanel.widgets.length > 0;
-  const PanelIcon = activePanel.type === "report" ? FileText : BarChart3;
+  const hasVisuals = visuals && visuals.length > 0;
+
+  const handleAddFirstVisual = async () => {
+    // Add a placeholder visual for now
+    await addVisual({
+      dashboard_id: activeDashboardId,
+      title: "Novo Visual",
+      chart_type: "bar",
+      config: {},
+      layout: { x: 0, y: 0, w: 6, h: 4 }
+    });
+  };
 
   return (
     <div className="flex-1 overflow-auto">
@@ -52,18 +87,43 @@ export function InsightsMainContent() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <PanelIcon className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold">{activePanel.name}</h1>
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
           </div>
-          <AddWidgetButton />
+          {hasVisuals && (
+            <Button onClick={handleAddFirstVisual} disabled={isLoadingVisuals}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Visual
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
         <InsightsFilterBar />
 
         {/* Grid or Empty State */}
-        {hasWidgets ? (
-          <InsightsGridLayout />
+        {isLoadingVisuals ? (
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+        ) : hasVisuals ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visuals.map((visual) => (
+              <div
+                key={visual.id}
+                className="border rounded-lg p-4 bg-card min-h-[200px] flex flex-col"
+              >
+                <h3 className="font-medium mb-2">{visual.title || "Visual sem título"}</h3>
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                  <BarChart3 className="h-12 w-12 opacity-50" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tipo: {visual.chart_type || "Não definido"}
+                </p>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -73,7 +133,10 @@ export function InsightsMainContent() {
             <p className="text-muted-foreground text-center max-w-sm mb-6">
               Adicione gráficos e indicadores para visualizar seus dados de vendas e negócios.
             </p>
-            <AddWidgetButton />
+            <Button onClick={handleAddFirstVisual} disabled={isLoadingVisuals}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Primeiro Visual
+            </Button>
           </div>
         )}
       </div>

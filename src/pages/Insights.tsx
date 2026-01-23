@@ -1,12 +1,12 @@
 import { InsightsFiltersProvider } from "@/hooks/useInsightsFilters";
-import { InsightsPanelsProvider } from "@/hooks/useInsightsPanels";
+import { InsightsDashboardsProvider } from "@/hooks/useInsightsDashboards";
 import { InsightsSidebar } from "@/components/insights/sidebar";
 import { InsightsMainContent } from "@/components/insights/InsightsMainContent";
 
 export default function Insights() {
   return (
     <InsightsFiltersProvider>
-      <InsightsPanelsProvider>
+      <InsightsDashboardsProvider>
         <div className="flex h-[calc(100vh-4rem)]">
           {/* Sidebar */}
           <InsightsSidebar />
@@ -14,7 +14,7 @@ export default function Insights() {
           {/* Main Content */}
           <InsightsMainContent />
         </div>
-      </InsightsPanelsProvider>
+      </InsightsDashboardsProvider>
     </InsightsFiltersProvider>
   );
 }
