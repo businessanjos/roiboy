@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { BarChart3, Plus } from "lucide-react";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { InsightsFilterBar } from "./InsightsFilterBar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VisualBuilderSheet } from "./visual-builder";
 
 export function InsightsMainContent() {
   const { 
@@ -14,8 +16,9 @@ export function InsightsMainContent() {
     isLoadingVisuals,
     createDashboard, 
     isCreating,
-    addVisual
   } = useInsightsDashboards();
+  
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
   // Loading state
   if (isLoading) {
@@ -70,19 +73,9 @@ export function InsightsMainContent() {
 
   const hasVisuals = visuals && visuals.length > 0;
 
-  const handleAddFirstVisual = async () => {
-    // Add a placeholder visual for now
-    await addVisual({
-      dashboard_id: activeDashboardId,
-      title: "Novo Visual",
-      chart_type: "bar",
-      config: {},
-      layout: { x: 0, y: 0, w: 6, h: 4 }
-    });
-  };
-
   return (
     <div className="flex-1 overflow-auto">
+      <VisualBuilderSheet open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
       <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -91,7 +84,7 @@ export function InsightsMainContent() {
             <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
           </div>
           {hasVisuals && (
-            <Button onClick={handleAddFirstVisual} disabled={isLoadingVisuals}>
+            <Button onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Visual
             </Button>
@@ -133,7 +126,7 @@ export function InsightsMainContent() {
             <p className="text-muted-foreground text-center max-w-sm mb-6">
               Adicione gráficos e indicadores para visualizar seus dados de vendas e negócios.
             </p>
-            <Button onClick={handleAddFirstVisual} disabled={isLoadingVisuals}>
+            <Button onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Primeiro Visual
             </Button>
