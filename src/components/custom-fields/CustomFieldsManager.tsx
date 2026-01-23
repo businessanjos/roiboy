@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users, Instagram, MapPin, FolderPlus, Check, ChevronDown, ChevronRight, Folder } from "lucide-react";
+import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users, Instagram, MapPin, FolderPlus, Check, ChevronDown, ChevronRight, Folder, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -185,6 +185,9 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
   const [loading, setLoading] = useState(true);
   const [internalDialogOpen, setInternalDialogOpen] = useState(false);
   
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  
   // Folder creation state
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -193,7 +196,10 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
   const isControlled = externalOpen !== undefined;
   const managerOpen = isControlled ? externalOpen : internalDialogOpen;
   const setManagerOpen = isControlled 
-    ? (open: boolean) => externalOnOpenChange?.(open)
+    ? (open: boolean) => {
+        externalOnOpenChange?.(open);
+        if (!open) setSearchQuery(""); // Clear search when closing
+      }
     : setInternalDialogOpen;
   
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -265,6 +271,13 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
       fetchFields();
     }
   }, [currentUser?.account_id]);
+
+  // Refetch fields when dialog opens
+  useEffect(() => {
+    if (managerOpen && currentUser?.account_id) {
+      fetchFields();
+    }
+  }, [managerOpen]);
   
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !currentUser?.account_id) return;
@@ -641,12 +654,20 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
     </Dialog>
   );
 
-  // Campos sem pasta
-  const fieldsWithoutFolder = fields.filter(f => !f.folder_id);
+  // Filter fields based on search query
+  const filteredFields = searchQuery.trim()
+    ? fields.filter(f =>
+        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.options.some(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : fields;
+
+  // Campos sem pasta (using filtered fields)
+  const fieldsWithoutFolder = filteredFields.filter(f => !f.folder_id);
   
   // Função para renderizar campos de uma pasta
   const renderFolderFields = (folderId: string) => {
-    const folderFields = fields.filter(f => f.folder_id === folderId);
+    const folderFields = filteredFields.filter(f => f.folder_id === folderId);
     if (folderFields.length === 0) {
       return (
         <div className="text-center py-3 text-muted-foreground text-sm">
@@ -695,7 +716,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
             onRename={(name) => handleRenameFolder(folder.id, name)}
             onDelete={() => handleDeleteFolder(folder.id)}
           >
-            <SortableContext items={fields.filter(f => f.folder_id === folder.id).map(f => f.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={filteredFields.filter(f => f.folder_id === folder.id).map(f => f.id)} strategy={verticalListSortingStrategy}>
               {renderFolderFields(folder.id)}
             </SortableContext>
           </FolderSection>
@@ -755,6 +776,19 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
               </DialogHeader>
             </div>
             
+            {/* Barra de pesquisa */}
+            <div className="flex-shrink-0 px-6 pt-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar campos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+                />
+              </div>
+            </div>
+
             {/* Botões Nova Pasta e Novo Campo - fixos */}
             <div className="flex-shrink-0 px-6 pt-4 pb-4 border-b">
               <div className="flex items-center gap-2 justify-end">
