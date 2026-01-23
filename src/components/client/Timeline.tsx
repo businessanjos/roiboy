@@ -752,11 +752,15 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  // Image paste/drop preview state
+  const [pastedImagePreview, setPastedImagePreview] = useState<{ file: File; url: string } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const location = useLocation();
   
   // Refs for hidden file inputs
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -899,6 +903,98 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmitComment();
+    }
+  };
+
+  // Handle paste event for images
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          // Validate max file size (100MB)
+          if (file.size > 100 * 1024 * 1024) {
+            toast.error("Imagem muito grande. Máximo 100MB.");
+            return;
+          }
+          const previewUrl = URL.createObjectURL(file);
+          setPastedImagePreview({ file, url: previewUrl });
+        }
+        break;
+      }
+    }
+  };
+
+  // Handle drag events for image drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      if (file.size > 100 * 1024 * 1024) {
+        toast.error("Imagem muito grande. Máximo 100MB.");
+        return;
+      }
+      const previewUrl = URL.createObjectURL(file);
+      setPastedImagePreview({ file, url: previewUrl });
+    }
+  };
+
+  // Discard pasted image preview
+  const discardImagePreview = () => {
+    if (pastedImagePreview) {
+      URL.revokeObjectURL(pastedImagePreview.url);
+    }
+    setPastedImagePreview(null);
+  };
+
+  // Send pasted/dropped image
+  const sendPastedImage = async () => {
+    if (!pastedImagePreview || !currentUser || !clientId) return;
+    
+    setUploading(true);
+    try {
+      const fileData = await uploadFile(pastedImagePreview.file);
+      
+      const { error } = await supabase
+        .from("client_followups")
+        .insert({
+          account_id: currentUser.account_id!,
+          client_id: clientId,
+          user_id: currentUser.id,
+          type: "image",
+          content: null,
+          file_url: fileData.url,
+          file_name: fileData.name,
+          file_size: fileData.size,
+        });
+
+      if (error) throw error;
+      
+      toast.success("Imagem enviada!");
+      discardImagePreview();
+      onCommentAdded?.();
+    } catch (error: any) {
+      console.error("Error sending pasted image:", error);
+      toast.error("Erro ao enviar imagem");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -1075,73 +1171,116 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                 {currentUser.name?.charAt(0) || "U"}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 relative">
+            <div 
+              className={cn(
+                "flex-1 relative",
+                isDragging && "ring-2 ring-primary ring-offset-2 rounded-2xl"
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {/* Image paste/drop preview */}
+              {pastedImagePreview && (
+                <div className="flex items-center gap-3 p-3 mb-2 bg-muted/50 rounded-lg border">
+                  <img 
+                    src={pastedImagePreview.url} 
+                    alt="Preview" 
+                    className="h-16 w-16 object-cover rounded"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Imagem pronta para envio</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {pastedImagePreview.file.name}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={discardImagePreview}
+                    disabled={uploading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={sendPastedImage}
+                    disabled={uploading}
+                  >
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              )}
+              
               <MentionTextarea
                 placeholder="Escreva um comentário... Use @ para mencionar"
                 value={comment}
                 onChange={setComment}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 className="pr-24"
               />
-            {/* Hidden file inputs */}
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleFileSelect(e, "image")}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="*"
-              className="hidden"
-              onChange={(e) => handleFileSelect(e, "file")}
-            />
+              {/* Hidden file inputs */}
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "image")}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="*"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "file")}
+              />
             
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      disabled={uploading}
-                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    >
-                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              {comment.trim() && (
-                <button
-                  type="button"
-                  onClick={handleSubmitComment}
-                  disabled={submitting}
-                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </button>
-              )}
+              <div className="absolute right-1 bottom-1/2 translate-y-1/2 flex items-center gap-0.5">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={uploading}
+                        className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                      >
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Foto</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {comment.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitComment}
+                    disabled={submitting}
+                    className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     );
   }
@@ -1206,12 +1345,55 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               {currentUser.name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 relative">
+          <div 
+            className={cn(
+              "flex-1 relative",
+              isDragging && "ring-2 ring-primary ring-offset-2 rounded-2xl"
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {/* Image paste/drop preview */}
+            {pastedImagePreview && (
+              <div className="flex items-center gap-3 p-3 mb-2 bg-muted/50 rounded-lg border">
+                <img 
+                  src={pastedImagePreview.url} 
+                  alt="Preview" 
+                  className="h-16 w-16 object-cover rounded"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Imagem pronta para envio</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {pastedImagePreview.file.name}
+                  </p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={discardImagePreview}
+                  disabled={uploading}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={sendPastedImage}
+                  disabled={uploading}
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+            
             <MentionTextarea
               placeholder="Escreva um comentário... Use @ para mencionar"
               value={comment}
               onChange={setComment}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               className="pr-24"
             />
             {/* Hidden file inputs */}
@@ -1230,7 +1412,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               onChange={(e) => handleFileSelect(e, "file")}
             />
             
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <div className="absolute right-1 bottom-1/2 translate-y-1/2 flex items-center gap-0.5">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>

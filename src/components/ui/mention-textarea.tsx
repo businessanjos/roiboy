@@ -16,12 +16,13 @@ interface MentionTextareaProps {
   placeholder?: string;
   className?: string;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  onPaste?: (e: React.ClipboardEvent) => void;
   minRows?: number;
   maxRows?: number;
 }
 
 export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(
-  ({ value, onChange, onMentionSelect, placeholder, className, onKeyDown, minRows = 1, maxRows = 6 }, ref) => {
+  ({ value, onChange, onMentionSelect, placeholder, className, onKeyDown, onPaste, minRows = 1, maxRows = 6 }, ref) => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [suggestions, setSuggestions] = useState<User[]>([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -183,6 +184,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={onPaste}
           placeholder={placeholder}
           rows={minRows}
           style={{
