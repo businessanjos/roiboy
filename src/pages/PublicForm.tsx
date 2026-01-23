@@ -92,16 +92,26 @@ export default function PublicForm() {
 
       setFormData(data.form);
       setClientData(data.client);
-      setCustomFields(
-        (data.customFields || []).filter((f: CustomField) =>
-          data.form.fields.includes(f.id)
-        )
-      );
+      
+      // The backend now returns fields in correct order, already filtered
+      // Just use them directly - they're already ordered by form.fields sequence
+      const orderedFields = data.customFields || [];
+      
+      // Log for debugging if there's a mismatch
+      const formFieldIds = data.form.fields || [];
+      if (orderedFields.length !== formFieldIds.length) {
+        console.warn(
+          `Form field count mismatch: form defines ${formFieldIds.length} fields, but only ${orderedFields.length} are available.`,
+          "Missing field IDs:", formFieldIds.filter((id: string) => !orderedFields.find((f: CustomField) => f.id === id))
+        );
+      }
+      
+      setCustomFields(orderedFields);
 
       // Pre-fill client info if available
       if (data.client) {
-        setClientName(data.client.name);
-        setClientPhone(data.client.phone);
+        setClientName(data.client.name || "");
+        setClientPhone(data.client.phone || "");
       }
     } catch (err: any) {
       console.error("Error fetching form:", err);
