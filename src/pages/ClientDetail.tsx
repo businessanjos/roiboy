@@ -1198,16 +1198,10 @@ export default function ClientDetail() {
   };
 
   const handleAddRoi = async () => {
-    if (!id || !client) return;
+    if (!id || !client || !currentUser?.account_id) return;
 
     setUploadingRoi(true);
     try {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("account_id")
-        .single();
-
-      if (!userData) throw new Error("User not found");
 
       let imageUrl: string | null = null;
 
@@ -1230,7 +1224,7 @@ export default function ClientDetail() {
       }
 
       const { error } = await supabase.from("roi_events").insert({
-        account_id: userData.account_id,
+        account_id: currentUser.account_id,
         client_id: id,
         source: "manual" as const,
         roi_type: roiType as "tangible" | "intangible",
