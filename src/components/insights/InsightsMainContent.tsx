@@ -4,7 +4,7 @@ import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { InsightsFilterBar } from "./InsightsFilterBar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { VisualBuilderSheet } from "./visual-builder";
+import { AddVisualModal } from "./AddVisualModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 
 export function InsightsMainContent() {
@@ -86,7 +86,7 @@ export function InsightsMainContent() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <VisualBuilderSheet open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
+      <AddVisualModal open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
       <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
