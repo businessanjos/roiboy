@@ -71,6 +71,11 @@ interface UseOptimizedClientsOptions {
   limit?: number;
   page?: number;
   status?: string;
+  responsibleUserId?: string;
+  productId?: string;
+  vnpsClass?: string;
+  contractFilter?: string;
+  clientStatus?: string;
 }
 
 export function useOptimizedClients(options: UseOptimizedClientsOptions = {}) {
@@ -80,7 +85,7 @@ export function useOptimizedClients(options: UseOptimizedClientsOptions = {}) {
   const limit = options.limit || 50;
   const offset = (page - 1) * limit;
 
-  const queryKey = ["clients-optimized", currentUser?.account_id, options.search, page, limit, options.status];
+  const queryKey = ["clients-optimized", currentUser?.account_id, options.search, page, limit, options.status, options.responsibleUserId, options.productId, options.vnpsClass, options.contractFilter, options.clientStatus];
 
   const fetchClients = useCallback(async (): Promise<ListClientsResponse> => {
     if (!currentUser?.account_id || !currentUser?.id) {
@@ -98,6 +103,23 @@ export function useOptimizedClients(options: UseOptimizedClientsOptions = {}) {
 
     if (options.status) {
       params.set("status", options.status);
+    }
+
+    // Add server-side filter parameters
+    if (options.responsibleUserId && options.responsibleUserId !== "all") {
+      params.set("responsible_user_id", options.responsibleUserId);
+    }
+    if (options.productId && options.productId !== "all") {
+      params.set("product_id", options.productId);
+    }
+    if (options.vnpsClass && options.vnpsClass !== "all") {
+      params.set("vnps_class", options.vnpsClass);
+    }
+    if (options.contractFilter && options.contractFilter !== "all") {
+      params.set("contract_filter", options.contractFilter);
+    }
+    if (options.clientStatus && options.clientStatus !== "all") {
+      params.set("client_status", options.clientStatus);
     }
 
     const response = await fetch(
@@ -118,7 +140,7 @@ export function useOptimizedClients(options: UseOptimizedClientsOptions = {}) {
     }
 
     return response.json();
-  }, [currentUser?.account_id, currentUser?.id, limit, offset, options.search, options.status]);
+  }, [currentUser?.account_id, currentUser?.id, limit, offset, options.search, options.status, options.responsibleUserId, options.productId, options.vnpsClass, options.contractFilter, options.clientStatus]);
 
   const {
     data,
@@ -150,10 +172,10 @@ export function useOptimizedClients(options: UseOptimizedClientsOptions = {}) {
     goToPage(page - 1);
   }, [page, goToPage]);
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or filters change
   useEffect(() => {
     setPage(1);
-  }, [options.search, options.status]);
+  }, [options.search, options.status, options.responsibleUserId, options.productId, options.vnpsClass, options.contractFilter, options.clientStatus]);
 
   // Prefetch next page
   useEffect(() => {

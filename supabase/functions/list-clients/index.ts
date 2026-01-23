@@ -53,8 +53,15 @@ Deno.serve(async (req) => {
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
     const offset = parseInt(url.searchParams.get("offset") || "0");
     const statusFilter = url.searchParams.get("status") || "";
+    
+    // Server-side filter parameters
+    const responsibleUserId = url.searchParams.get("responsible_user_id") || "";
+    const productId = url.searchParams.get("product_id") || "";
+    const vnpsClass = url.searchParams.get("vnps_class") || "";
+    const contractFilter = url.searchParams.get("contract_filter") || "";
+    const clientStatus = url.searchParams.get("client_status") || "";
 
-    console.log(`Listing clients for account ${accountId}, search: "${search}", limit: ${limit}, offset: ${offset}`);
+    console.log(`Listing clients for account ${accountId}, search: "${search}", limit: ${limit}, offset: ${offset}, filters: responsible=${responsibleUserId}, product=${productId}, vnps=${vnpsClass}, contract=${contractFilter}, clientStatus=${clientStatus}`);
 
     // Build main query for clients with products
     let query = supabase
@@ -101,6 +108,51 @@ Deno.serve(async (req) => {
     // Add status filter if provided
     if (statusFilter) {
       query = query.eq("status", statusFilter);
+    }
+
+    // Add client status filter if provided
+    if (clientStatus && clientStatus !== "all") {
+      if (clientStatus === "no_contract") {
+        // This will be handled after fetching metrics
+      } else {
+        query = query.eq("status", clientStatus);
+      }
+    }
+
+    // Add responsible user filter - server-side
+    if (responsibleUserId && responsibleUserId !== "all") {
+      if (responsibleUserId === "none") {
+        query = query.is("responsible_user_id", null);
+      } else {
+        query = query.eq("responsible_user_id", responsibleUserId);
+      }
+    }
+
+    // Add product filter - requires join with client_products
+    let productFilterClientIds: string[] | null = null;
+    if (productId && productId !== "all") {
+      const { data: clientProducts } = await supabase
+        .from("client_products")
+        .select("client_id")
+        .eq("account_id", accountId)
+        .eq("product_id", productId);
+      
+      productFilterClientIds = clientProducts?.map(cp => cp.client_id) || [];
+      if (productFilterClientIds.length > 0) {
+        query = query.in("id", productFilterClientIds);
+      } else {
+        // No clients have this product, return empty
+        return new Response(
+          JSON.stringify({
+            clients: [],
+            total: 0,
+            limit,
+            offset,
+            team_users: []
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const { data: clients, error: clientsError, count } = await query;
@@ -206,10 +258,47 @@ Deno.serve(async (req) => {
       };
     }) || [];
 
-    // For operation role, filter to only active/pending contracts
+    // Apply server-side V-NPS filter
     let filteredClients = enrichedClients;
+    if (vnpsClass && vnpsClass !== "all") {
+      if (vnpsClass === "none") {
+        filteredClients = filteredClients.filter(c => !c.vnps);
+      } else {
+        filteredClients = filteredClients.filter(c => c.vnps?.vnps_class === vnpsClass);
+      }
+    }
+
+    // Apply server-side contract filter
+    if (contractFilter && contractFilter !== "all") {
+      if (contractFilter === "none") {
+        filteredClients = filteredClients.filter(c => !c.contract);
+      } else {
+        filteredClients = filteredClients.filter(c => {
+          if (!c.contract) return false;
+          const endDate = c.contract.end_date;
+          if (!endDate) return contractFilter === "ok";
+          
+          const now = new Date();
+          const end = new Date(endDate);
+          const diffDays = Math.floor((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (contractFilter === "expired") return diffDays < 0;
+          if (contractFilter === "urgent") return diffDays >= 0 && diffDays <= 30;
+          if (contractFilter === "warning") return diffDays > 30 && diffDays <= 90;
+          if (contractFilter === "ok") return diffDays > 90 || !endDate;
+          return true;
+        });
+      }
+    }
+
+    // Apply client status filter for "no_contract"
+    if (clientStatus === "no_contract") {
+      filteredClients = filteredClients.filter(c => !c.contract);
+    }
+
+    // For operation role, filter to only active/pending contracts
     if (user.role === "operation") {
-      filteredClients = enrichedClients.filter(c => 
+      filteredClients = filteredClients.filter(c => 
         c.contract?.status === "active" || c.contract?.status === "pending"
       );
     }
