@@ -3,6 +3,15 @@ export type Aggregation = 'sum' | 'avg' | 'count';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
 export type ChartType = 'bar' | 'line' | 'pie' | 'number';
+export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
+export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
+
+export interface AppearanceConfig {
+  showDataLabels: boolean;
+  dateDisplayFormat: DateDisplayFormat;
+  colorPalette: ColorPalette;
+  fillEmptyDates: boolean;
+}
 
 export interface FieldOption {
   value: string;
@@ -27,6 +36,8 @@ export interface VisualConfig {
   };
   // Custom formula for transformations (e.g., "{{value}} * 0.1")
   customFormula?: string;
+  // Visual appearance settings
+  appearance?: AppearanceConfig;
 }
 
 // Data source options
@@ -65,6 +76,39 @@ export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'pie', label: 'Pizza' },
   { value: 'number', label: 'Scorecard' },
 ];
+
+// Date display format options
+export const DATE_DISPLAY_FORMAT_OPTIONS: { value: DateDisplayFormat; label: string; example: string }[] = [
+  { value: 'short', label: 'Mês Curto', example: 'Jan' },
+  { value: 'monthYear', label: 'Mês/Ano', example: 'Jan/26' },
+  { value: 'full', label: 'Data Completa', example: 'Janeiro 2026' },
+];
+
+// Color palette definitions
+export const COLOR_PALETTES: Record<ColorPalette, string[]> = {
+  professional: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'],
+  modern: ['#8b5cf6', '#a78bfa', '#14b8a6', '#2dd4bf', '#5eead4'],
+  vibrant: ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#22d3ee'],
+  alert: ['#dc2626', '#ea580c', '#f59e0b', '#fbbf24', '#fcd34d'],
+  nature: ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#a3e635'],
+};
+
+// Color palette options for UI
+export const COLOR_PALETTE_OPTIONS: { value: ColorPalette; label: string }[] = [
+  { value: 'professional', label: 'Profissional' },
+  { value: 'modern', label: 'Moderno' },
+  { value: 'vibrant', label: 'Vibrante' },
+  { value: 'alert', label: 'Alerta' },
+  { value: 'nature', label: 'Natureza' },
+];
+
+// Default appearance config
+export const DEFAULT_APPEARANCE: AppearanceConfig = {
+  showDataLabels: false,
+  dateDisplayFormat: 'monthYear',
+  colorPalette: 'professional',
+  fillEmptyDates: false,
+};
 
 // Fields available per data source
 export const DATA_SOURCE_FIELDS: Record<DataSource, {

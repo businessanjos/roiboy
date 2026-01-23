@@ -18,15 +18,19 @@ import { DimensionSection } from "./DimensionSection";
 import { FormattingSection } from "./FormattingSection";
 import { ChartTypeSelector } from "./ChartTypeSelector";
 import { FormulaSection } from "./FormulaSection";
+import { AppearanceSection } from "./AppearanceSection";
 import {
   DataSource,
   Aggregation,
   FormatType,
   DateGrouping,
   ChartType,
+  DateDisplayFormat,
+  ColorPalette,
   VisualConfig,
   DATA_SOURCE_FIELDS,
   generateVisualTitle,
+  DEFAULT_APPEARANCE,
 } from "./types";
 
 interface VisualBuilderSheetProps {
@@ -48,6 +52,12 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [title, setTitle] = useState('');
   const [customFormula, setCustomFormula] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  
+  // Appearance state
+  const [showDataLabels, setShowDataLabels] = useState(DEFAULT_APPEARANCE.showDataLabels);
+  const [dateDisplayFormat, setDateDisplayFormat] = useState<DateDisplayFormat>(DEFAULT_APPEARANCE.dateDisplayFormat);
+  const [colorPalette, setColorPalette] = useState<ColorPalette>(DEFAULT_APPEARANCE.colorPalette);
+  const [fillEmptyDates, setFillEmptyDates] = useState(DEFAULT_APPEARANCE.fillEmptyDates);
 
   // Reset form when sheet closes
   useEffect(() => {
@@ -61,6 +71,11 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       setChartType('bar');
       setTitle('');
       setCustomFormula('');
+      // Reset appearance
+      setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
+      setDateDisplayFormat(DEFAULT_APPEARANCE.dateDisplayFormat);
+      setColorPalette(DEFAULT_APPEARANCE.colorPalette);
+      setFillEmptyDates(DEFAULT_APPEARANCE.fillEmptyDates);
     }
   }, [open]);
 
@@ -125,6 +140,12 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
           decimals: formatType === 'decimal' ? 2 : (formatType === 'percentage' ? 1 : 2),
         },
         ...(customFormula.trim() && { customFormula: customFormula.trim() }),
+        appearance: {
+          showDataLabels,
+          dateDisplayFormat,
+          colorPalette,
+          fillEmptyDates,
+        },
       };
 
       await addVisual({
@@ -202,6 +223,21 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
             <FormulaSection
               value={customFormula}
               onChange={setCustomFormula}
+            />
+
+            <Separator />
+
+            {/* Appearance */}
+            <AppearanceSection
+              showDataLabels={showDataLabels}
+              onShowDataLabelsChange={setShowDataLabels}
+              dateDisplayFormat={dateDisplayFormat}
+              onDateDisplayFormatChange={setDateDisplayFormat}
+              colorPalette={colorPalette}
+              onColorPaletteChange={setColorPalette}
+              fillEmptyDates={fillEmptyDates}
+              onFillEmptyDatesChange={setFillEmptyDates}
+              isDimensionDate={isDimensionDate}
             />
 
             <Separator />

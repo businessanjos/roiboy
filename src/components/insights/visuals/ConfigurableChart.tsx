@@ -11,9 +11,9 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
+  LabelList,
 } from "recharts";
-import { ChartType, FormatType } from "../visual-builder/types";
+import { ChartType, FormatType, AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { formatValueCompact } from "@/lib/formula-evaluator";
@@ -32,23 +32,17 @@ interface ConfigurableChartProps {
     type: FormatType;
     decimals: number;
   };
+  appearance?: AppearanceConfig;
   onDrilldown?: (groupName?: string) => void;
 }
 
-const CHART_COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  '#8884d8',
-  '#82ca9d',
-  '#ffc658',
-  '#ff7300',
-  '#00C49F',
-];
+function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
+  return COLOR_PALETTES[palette] || COLOR_PALETTES.professional;
+}
 
-export function ConfigurableChart({ type, data, formatting, onDrilldown }: ConfigurableChartProps) {
+export function ConfigurableChart({ type, data, formatting, appearance, onDrilldown }: ConfigurableChartProps) {
+  const config = appearance || DEFAULT_APPEARANCE;
+  
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -61,20 +55,32 @@ export function ConfigurableChart({ type, data, formatting, onDrilldown }: Confi
     case 'number':
       return <ConfigurableScorecard data={data} formatting={formatting} />;
     case 'bar':
-      return <BarChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
+      return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'line':
-      return <LineChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
+      return <LineChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'pie':
-      return <PieChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
+      return <PieChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     default:
-      return <BarChartView data={data} formatting={formatting} onDrilldown={onDrilldown} />;
+      return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
   }
 }
 
-function BarChartView({ data, formatting, onDrilldown }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting']; onDrilldown?: (groupName?: string) => void }) {
+function BarChartView({ 
+  data, 
+  formatting, 
+  appearance,
+  onDrilldown 
+}: { 
+  data: AggregatedDataPoint[]; 
+  formatting: ConfigurableChartProps['formatting']; 
+  appearance: AppearanceConfig;
+  onDrilldown?: (groupName?: string) => void;
+}) {
+  const colors = getChartColors(appearance.colorPalette);
+  
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+      <BarChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="name"
@@ -98,10 +104,18 @@ function BarChartView({ data, formatting, onDrilldown }: { data: AggregatedDataP
           onClick={(data) => onDrilldown?.(data.name)}
           style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
         >
+          {appearance.showDataLabels && (
+            <LabelList 
+              dataKey="value" 
+              position="top" 
+              formatter={(value: number) => formatValueCompact(value, formatting.type)}
+              style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+            />
+          )}
           {data.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
-              fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]}
+              fill={entry.color || colors[index % colors.length]}
             />
           ))}
         </Bar>
@@ -110,10 +124,23 @@ function BarChartView({ data, formatting, onDrilldown }: { data: AggregatedDataP
   );
 }
 
-function LineChartView({ data, formatting, onDrilldown }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting']; onDrilldown?: (groupName?: string) => void }) {
+function LineChartView({ 
+  data, 
+  formatting, 
+  appearance,
+  onDrilldown 
+}: { 
+  data: AggregatedDataPoint[]; 
+  formatting: ConfigurableChartProps['formatting']; 
+  appearance: AppearanceConfig;
+  onDrilldown?: (groupName?: string) => void;
+}) {
+  const colors = getChartColors(appearance.colorPalette);
+  const primaryColor = colors[0];
+  
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+      <LineChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="name"
@@ -134,17 +161,38 @@ function LineChartView({ data, formatting, onDrilldown }: { data: AggregatedData
         <Line
           type="monotone"
           dataKey="value"
-          stroke="hsl(var(--primary))"
+          stroke={primaryColor}
           strokeWidth={2}
-          dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
-          activeDot={{ r: 6, fill: 'hsl(var(--primary))', onClick: (_, e: any) => onDrilldown?.(e?.payload?.name) }}
-        />
+          dot={{ fill: primaryColor, strokeWidth: 2 }}
+          activeDot={{ r: 6, fill: primaryColor, onClick: (_, e: any) => onDrilldown?.(e?.payload?.name) }}
+        >
+          {appearance.showDataLabels && (
+            <LabelList 
+              dataKey="value" 
+              position="top" 
+              formatter={(value: number) => formatValueCompact(value, formatting.type)}
+              style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+            />
+          )}
+        </Line>
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
-function PieChartView({ data, formatting, onDrilldown }: { data: AggregatedDataPoint[]; formatting: ConfigurableChartProps['formatting']; onDrilldown?: (groupName?: string) => void }) {
+function PieChartView({ 
+  data, 
+  formatting, 
+  appearance,
+  onDrilldown 
+}: { 
+  data: AggregatedDataPoint[]; 
+  formatting: ConfigurableChartProps['formatting']; 
+  appearance: AppearanceConfig;
+  onDrilldown?: (groupName?: string) => void;
+}) {
+  const colors = getChartColors(appearance.colorPalette);
+  
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -164,7 +212,7 @@ function PieChartView({ data, formatting, onDrilldown }: { data: AggregatedDataP
           {data.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
-              fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]}
+              fill={entry.color || colors[index % colors.length]}
             />
           ))}
         </Pie>

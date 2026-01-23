@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { VisualConfig, DateGrouping } from "@/components/insights/visual-builder/types";
-import { format, parseISO, startOfWeek } from "date-fns";
+import { VisualConfig, DateGrouping, DateDisplayFormat } from "@/components/insights/visual-builder/types";
+import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export interface AggregatedDataPoint {
@@ -27,18 +27,38 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
       if (!config || !currentUser?.account_id) return [];
 
-      const { dataSource, measure, dimension } = config;
+      const { dataSource, measure, dimension, appearance } = config;
+      const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+      const fillEmptyDates = appearance?.fillEmptyDates || false;
+
+      let result: AggregatedDataPoint[];
 
       switch (dataSource) {
         case 'deals':
-          return fetchDealsData(currentUser.account_id, measure, dimension, filters);
+          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+          break;
         case 'leads':
-          return fetchLeadsData(currentUser.account_id, measure, dimension, filters);
+          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+          break;
         case 'products':
-          return fetchProductsData(currentUser.account_id, measure, dimension, filters);
+          result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+          break;
         default:
-          return [];
+          result = [];
       }
+
+      // Fill empty dates if enabled and dimension is date
+      if (fillEmptyDates && dimension.type === 'date' && filters.startDate && filters.endDate) {
+        result = fillMissingDates(
+          result,
+          new Date(filters.startDate),
+          new Date(filters.endDate),
+          dimension.dateGrouping || 'month',
+          dateDisplayFormat
+        );
+      }
+
+      return result;
     },
     enabled: enabled && !!config && !!currentUser?.account_id,
     staleTime: 30000,
@@ -49,7 +69,8 @@ async function fetchDealsData(
   accountId: string,
   measure: VisualConfig['measure'],
   dimension: VisualConfig['dimension'],
-  filters: any
+  filters: any,
+  dateDisplayFormat: DateDisplayFormat
 ): Promise<AggregatedDataPoint[]> {
   let query = supabase
     .from('deals')
@@ -68,14 +89,14 @@ async function fetchDealsData(
     `)
     .eq('account_id', accountId);
 
-  // Apply date filters
-  if (filters.dateRange?.from) {
-    query = query.gte('created_at', filters.dateRange.from.toISOString());
+  // Apply date filters - use startDate/endDate from filters
+  if (filters.startDate) {
+    query = query.gte('created_at', filters.startDate);
   }
-  if (filters.dateRange?.to) {
-    query = query.lte('created_at', filters.dateRange.to.toISOString());
+  if (filters.endDate) {
+    query = query.lte('created_at', filters.endDate);
   }
-  if (filters.userId) {
+  if (filters.userId && filters.userId !== 'all') {
     query = query.eq('responsible_user_id', filters.userId);
   }
   if (filters.stageId) {
@@ -89,25 +110,26 @@ async function fetchDealsData(
     return [];
   }
 
-  return aggregateData(data || [], measure, dimension);
+  return aggregateData(data || [], measure, dimension, dateDisplayFormat);
 }
 
 async function fetchLeadsData(
   accountId: string,
   measure: VisualConfig['measure'],
   dimension: VisualConfig['dimension'],
-  filters: any
+  filters: any,
+  dateDisplayFormat: DateDisplayFormat
 ): Promise<AggregatedDataPoint[]> {
   let query = supabase
     .from('leads')
     .select('id, status, source, revenue_range, created_at')
     .eq('account_id', accountId);
 
-  if (filters.dateRange?.from) {
-    query = query.gte('created_at', filters.dateRange.from.toISOString());
+  if (filters.startDate) {
+    query = query.gte('created_at', filters.startDate);
   }
-  if (filters.dateRange?.to) {
-    query = query.lte('created_at', filters.dateRange.to.toISOString());
+  if (filters.endDate) {
+    query = query.lte('created_at', filters.endDate);
   }
 
   const { data, error } = await query;
@@ -118,14 +140,15 @@ async function fetchLeadsData(
   }
 
   // Leads only support count aggregation
-  return aggregateData(data || [], { ...measure, aggregation: 'count' }, dimension);
+  return aggregateData(data || [], { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
 }
 
 async function fetchProductsData(
   accountId: string,
   measure: VisualConfig['measure'],
   dimension: VisualConfig['dimension'],
-  filters: any
+  filters: any,
+  dateDisplayFormat: DateDisplayFormat
 ): Promise<AggregatedDataPoint[]> {
   let query = supabase
     .from('products')
@@ -139,18 +162,19 @@ async function fetchProductsData(
     return [];
   }
 
-  return aggregateData(data || [], measure, dimension);
+  return aggregateData(data || [], measure, dimension, dateDisplayFormat);
 }
 
 function aggregateData(
   data: any[],
   measure: VisualConfig['measure'],
-  dimension: VisualConfig['dimension']
+  dimension: VisualConfig['dimension'],
+  dateDisplayFormat: DateDisplayFormat
 ): AggregatedDataPoint[] {
   const groups = new Map<string, { values: number[]; color?: string; count: number }>();
 
   for (const item of data) {
-    const groupKey = getGroupKey(item, dimension);
+    const groupKey = getGroupKey(item, dimension, dateDisplayFormat);
     const groupColor = getGroupColor(item, dimension);
     
     if (!groups.has(groupKey)) {
@@ -209,7 +233,7 @@ function aggregateData(
   return result;
 }
 
-function getGroupKey(item: any, dimension: VisualConfig['dimension']): string {
+function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDisplayFormat: DateDisplayFormat): string {
   const field = dimension.field;
 
   // Handle special field mappings
@@ -227,7 +251,7 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension']): string {
   if (dimension.type === 'date') {
     const dateValue = item[field];
     if (!dateValue) return 'Sem Data';
-    return formatDateGroup(dateValue, dimension.dateGrouping || 'month');
+    return formatDateGroup(dateValue, dimension.dateGrouping || 'month', dateDisplayFormat);
   }
 
   // Handle text fields
@@ -252,7 +276,7 @@ function getMeasureValue(item: any, field: string): number {
   return 0;
 }
 
-function formatDateGroup(dateString: string, grouping: DateGrouping): string {
+function formatDateGroup(dateString: string, grouping: DateGrouping, displayFormat: DateDisplayFormat = 'monthYear'): string {
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : new Date(dateString);
 
@@ -263,7 +287,15 @@ function formatDateGroup(dateString: string, grouping: DateGrouping): string {
         const weekStart = startOfWeek(date, { locale: ptBR });
         return format(weekStart, "'Sem' w/yyyy", { locale: ptBR });
       case 'month':
-        return format(date, 'MMM/yy', { locale: ptBR });
+        switch (displayFormat) {
+          case 'short':
+            return format(date, 'MMM', { locale: ptBR });
+          case 'full':
+            return format(date, 'MMMM yyyy', { locale: ptBR });
+          case 'monthYear':
+          default:
+            return format(date, 'MMM/yy', { locale: ptBR });
+        }
       case 'year':
         return format(date, 'yyyy');
       default:
@@ -272,4 +304,57 @@ function formatDateGroup(dateString: string, grouping: DateGrouping): string {
   } catch {
     return 'Data Inválida';
   }
+}
+
+// Fill missing dates with zero values for continuous time series
+function fillMissingDates(
+  data: AggregatedDataPoint[],
+  startDate: Date,
+  endDate: Date,
+  grouping: DateGrouping,
+  displayFormat: DateDisplayFormat
+): AggregatedDataPoint[] {
+  const dataMap = new Map(data.map(d => [d.name, d]));
+  const allDates: string[] = [];
+
+  // Generate all date keys in the range
+  switch (grouping) {
+    case 'day':
+      eachDayOfInterval({ start: startDate, end: endDate }).forEach(date => {
+        allDates.push(format(date, 'dd/MM/yyyy', { locale: ptBR }));
+      });
+      break;
+    case 'week':
+      eachWeekOfInterval({ start: startDate, end: endDate }, { locale: ptBR }).forEach(date => {
+        allDates.push(format(date, "'Sem' w/yyyy", { locale: ptBR }));
+      });
+      break;
+    case 'month':
+      eachMonthOfInterval({ start: startDate, end: endDate }).forEach(date => {
+        switch (displayFormat) {
+          case 'short':
+            allDates.push(format(date, 'MMM', { locale: ptBR }));
+            break;
+          case 'full':
+            allDates.push(format(date, 'MMMM yyyy', { locale: ptBR }));
+            break;
+          case 'monthYear':
+          default:
+            allDates.push(format(date, 'MMM/yy', { locale: ptBR }));
+        }
+      });
+      break;
+    case 'year':
+      eachYearOfInterval({ start: startDate, end: endDate }).forEach(date => {
+        allDates.push(format(date, 'yyyy'));
+      });
+      break;
+  }
+
+  // Map all dates, filling with zeros where no data exists
+  return allDates.map(dateKey => dataMap.get(dateKey) || {
+    name: dateKey,
+    value: 0,
+    count: 0,
+  });
 }
