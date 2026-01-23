@@ -5,6 +5,7 @@ import { InsightsFilterBar } from "./InsightsFilterBar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VisualBuilderSheet } from "./visual-builder";
+import { ConfigurableVisualCard } from "./visuals";
 
 export function InsightsMainContent() {
   const { 
@@ -103,18 +104,7 @@ export function InsightsMainContent() {
         ) : hasVisuals ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {visuals.map((visual) => (
-              <div
-                key={visual.id}
-                className="border rounded-lg p-4 bg-card min-h-[200px] flex flex-col"
-              >
-                <h3 className="font-medium mb-2">{visual.title || "Visual sem título"}</h3>
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <BarChart3 className="h-12 w-12 opacity-50" />
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Tipo: {visual.chart_type || "Não definido"}
-                </p>
-              </div>
+              <ConfigurableVisualCard key={visual.id} visual={visual} />
             ))}
           </div>
         ) : (

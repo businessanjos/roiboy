@@ -25,6 +25,8 @@ export interface VisualConfig {
     type: FormatType;
     decimals: number;
   };
+  // Custom formula for transformations (e.g., "{{value}} * 0.1")
+  customFormula?: string;
 }
 
 // Data source options
