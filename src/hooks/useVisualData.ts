@@ -87,14 +87,26 @@ async function fetchDealsData(
       deal_stages!deals_stage_id_fkey(name, color),
       users!deals_responsible_user_id_fkey(full_name)
     `)
-    .eq('account_id', accountId);
+  .eq('account_id', accountId);
 
-  // Apply date filters - use startDate/endDate from filters
+  // Determine which date field to use for filters based on dimension
+  const dateFilterField = dimension.type === 'date' && dimension.field 
+    ? dimension.field 
+    : 'created_at';
+
+  // For specific date fields (won_at, lost_at), filter out records with null values
+  if (dateFilterField === 'won_at') {
+    query = query.not('won_at', 'is', null);
+  } else if (dateFilterField === 'lost_at') {
+    query = query.not('lost_at', 'is', null);
+  }
+
+  // Apply date filters on the correct field
   if (filters.startDate) {
-    query = query.gte('created_at', filters.startDate);
+    query = query.gte(dateFilterField, filters.startDate);
   }
   if (filters.endDate) {
-    query = query.lte('created_at', filters.endDate);
+    query = query.lte(dateFilterField, filters.endDate);
   }
   if (filters.userId && filters.userId !== 'all') {
     query = query.eq('responsible_user_id', filters.userId);
