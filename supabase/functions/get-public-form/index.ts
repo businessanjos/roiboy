@@ -95,7 +95,25 @@ Deno.serve(async (req) => {
       console.error("Error fetching custom fields:", fieldsError);
     }
 
-    console.log(`Found form: ${form.title}, fields: ${customFields?.length || 0}`);
+    // Get the field IDs defined in the form
+    const formFieldIds: string[] = form.fields || [];
+    const allFieldsMap = new Map((customFields || []).map(f => [f.id, f]));
+    
+    // Find and log any missing fields
+    const missingFieldIds = formFieldIds.filter(id => !allFieldsMap.has(id));
+    if (missingFieldIds.length > 0) {
+      console.warn(`Form ${formId} references ${missingFieldIds.length} missing/inactive fields:`, missingFieldIds);
+    }
+
+    // Return fields in the ORDER defined by the form, filtering out missing ones
+    const orderedFields = formFieldIds
+      .map(id => allFieldsMap.get(id))
+      .filter((f): f is NonNullable<typeof f> => f !== undefined);
+
+    // Only include valid field IDs in the response
+    const validFieldIds = formFieldIds.filter(id => allFieldsMap.has(id));
+
+    console.log(`Found form: ${form.title}, requested fields: ${formFieldIds.length}, valid fields: ${orderedFields.length}`);
 
     return new Response(
       JSON.stringify({
@@ -103,12 +121,12 @@ Deno.serve(async (req) => {
           id: form.id,
           title: form.title,
           description: form.description,
-          fields: form.fields,
+          fields: validFieldIds, // Only valid field IDs
           require_client_info: form.require_client_info,
           appearance: form.appearance || {},
         },
         client,
-        customFields: customFields || [],
+        customFields: orderedFields, // Fields in correct order, only valid ones
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

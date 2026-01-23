@@ -188,13 +188,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Helper function to normalize phone numbers
+    function normalizePhoneNumber(phone: string): string {
+      let normalized = phone.replace(/\D/g, "");
+      if (!normalized.startsWith("+")) {
+        if (normalized.length === 11 || normalized.length === 10) {
+          normalized = "+55" + normalized;
+        } else {
+          normalized = "+" + normalized;
+        }
+      }
+      return normalized;
+    }
+
     let resolvedClientId = clientId;
 
-    // If clientId provided, verify it exists
+    // If clientId provided, verify it exists AND validate phone matches
     if (clientId) {
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
-        .select("id")
+        .select("id, phone_e164")
         .eq("id", clientId)
         .eq("account_id", form.account_id)
         .maybeSingle();
@@ -202,20 +215,24 @@ Deno.serve(async (req) => {
       if (clientError || !clientData) {
         console.warn(`[${clientIP}] Client not found, proceeding without linking`);
         resolvedClientId = null;
+      } else if (sanitizedPhone && clientData.phone_e164) {
+        // CRITICAL: Validate that the phone submitted matches the URL client's phone
+        const normalizedInputPhone = normalizePhoneNumber(sanitizedPhone);
+        const urlClientPhone = clientData.phone_e164;
+        
+        if (normalizedInputPhone !== urlClientPhone) {
+          console.warn(`[${clientIP}] Phone mismatch! URL client has ${urlClientPhone}, form submitted ${normalizedInputPhone}. Will search by phone instead.`);
+          // Reset clientId - the person filling is NOT the one in the URL
+          resolvedClientId = null;
+        } else {
+          console.log(`[${clientIP}] Phone validated - matches URL client ${clientId}`);
+        }
       }
     }
 
-    // Try to find existing client by phone if not provided
+    // Try to find existing client by phone if not resolved yet
     if (!resolvedClientId && sanitizedPhone) {
-      // Normalize phone
-      let normalizedPhone = sanitizedPhone.replace(/\D/g, "");
-      if (!normalizedPhone.startsWith("+")) {
-        if (normalizedPhone.length === 11 || normalizedPhone.length === 10) {
-          normalizedPhone = "+55" + normalizedPhone;
-        } else {
-          normalizedPhone = "+" + normalizedPhone;
-        }
-      }
+      const normalizedPhone = normalizePhoneNumber(sanitizedPhone);
 
       const { data: existingClient } = await supabase
         .from("clients")
@@ -227,6 +244,8 @@ Deno.serve(async (req) => {
       if (existingClient) {
         resolvedClientId = existingClient.id;
         console.log(`[${clientIP}] Found existing client by phone: ${resolvedClientId}`);
+      } else {
+        console.log(`[${clientIP}] No existing client found for phone ${normalizedPhone}, response will be unlinked`);
       }
     }
 
