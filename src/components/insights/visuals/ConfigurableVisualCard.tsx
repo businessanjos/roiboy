@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical } from "lucide-react";
 import { useVisualData } from "@/hooks/useVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
+import { DrilldownDialog } from "./DrilldownDialog";
 import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import {
@@ -27,6 +28,8 @@ interface ConfigurableVisualCardProps {
 export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) {
   const config = visual.config as VisualConfig | null;
   const chartType = (visual.chart_type || 'bar') as ChartType;
+  const [drilldownOpen, setDrilldownOpen] = useState(false);
+  const [drilldownGroup, setDrilldownGroup] = useState<string | undefined>();
 
   const { data, isLoading, error } = useVisualData({
     config,
@@ -109,32 +112,65 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
     );
   }
 
+  const handleDrilldown = (groupName?: string) => {
+    setDrilldownGroup(groupName);
+    setDrilldownOpen(true);
+  };
+
   return (
-    <Card className="min-h-[250px] flex flex-col">
-      <CardHeader className="pb-2 flex-shrink-0">
-        <CardTitle className="text-base flex items-center justify-between">
-          <span className="truncate">{visual.title || "Visual"}</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Info className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-[250px]">
-                {infoContent}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 min-h-[200px]">
-        <ConfigurableChart
-          type={chartType}
-          data={processedData}
-          formatting={config.formatting}
-        />
-      </CardContent>
-    </Card>
+    <>
+      <Card className="min-h-[250px] flex flex-col h-full">
+        <CardHeader className="pb-2 flex-shrink-0">
+          <CardTitle className="text-base flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />
+              <span className="truncate">{visual.title || "Visual"}</span>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button 
+                      onClick={() => handleDrilldown()}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                    >
+                      <Table className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Explorar Dados</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[250px]">
+                    {infoContent}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 min-h-[200px]">
+          <ConfigurableChart
+            type={chartType}
+            data={processedData}
+            formatting={config.formatting}
+            onDrilldown={handleDrilldown}
+          />
+        </CardContent>
+      </Card>
+
+      <DrilldownDialog
+        open={drilldownOpen}
+        onOpenChange={setDrilldownOpen}
+        visual={visual}
+        groupName={drilldownGroup}
+      />
+    </>
   );
 }
