@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings } from "lucide-react";
 import { useVisualData } from "@/hooks/useVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { DrilldownDialog } from "./DrilldownDialog";
+import { VisualQuickSettings } from "./VisualQuickSettings";
 import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import {
@@ -30,6 +31,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   const chartType = (visual.chart_type || 'bar') as ChartType;
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownGroup, setDrilldownGroup] = useState<string | undefined>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { data, isLoading, error } = useVisualData({
     config,
@@ -143,6 +145,19 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
+                    <button 
+                      onClick={() => setSettingsOpen(true)}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Ajustes do Visual</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
                       <Info className="h-4 w-4" />
                     </button>
@@ -171,6 +186,12 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
         onOpenChange={setDrilldownOpen}
         visual={visual}
         groupName={drilldownGroup}
+      />
+
+      <VisualQuickSettings
+        visual={visual}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
       />
     </>
   );
