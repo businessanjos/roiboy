@@ -17,6 +17,7 @@ import { MeasureSection } from "./MeasureSection";
 import { DimensionSection } from "./DimensionSection";
 import { FormattingSection } from "./FormattingSection";
 import { ChartTypeSelector } from "./ChartTypeSelector";
+import { FormulaSection } from "./FormulaSection";
 import {
   DataSource,
   Aggregation,
@@ -45,6 +46,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [formatType, setFormatType] = useState<FormatType>('decimal');
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [title, setTitle] = useState('');
+  const [customFormula, setCustomFormula] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   // Reset form when sheet closes
@@ -58,6 +60,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       setFormatType('decimal');
       setChartType('bar');
       setTitle('');
+      setCustomFormula('');
     }
   }, [open]);
 
@@ -121,6 +124,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
           type: formatType,
           decimals: formatType === 'decimal' ? 2 : (formatType === 'percentage' ? 1 : 2),
         },
+        ...(customFormula.trim() && { customFormula: customFormula.trim() }),
       };
 
       await addVisual({
@@ -190,6 +194,14 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
             <ChartTypeSelector
               value={chartType}
               onChange={setChartType}
+            />
+
+            <Separator />
+
+            {/* Custom Formula (Collapsible) */}
+            <FormulaSection
+              value={customFormula}
+              onChange={setCustomFormula}
             />
 
             <Separator />
