@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MentionInput } from "@/components/ui/mention-input";
+import { MentionTextarea } from "@/components/ui/mention-textarea";
 import { Camera, Paperclip, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -136,7 +136,7 @@ export function FinancialQuickNoteInput({
       </Avatar>
 
       <div className="flex-1 flex items-center gap-2">
-        <MentionInput
+        <MentionTextarea
           value={quickComment}
           onChange={setQuickComment}
           placeholder="Escreva uma nota financeira..."

@@ -31,7 +31,8 @@ import {
   Check,
   Download,
 } from "lucide-react";
-import { MentionInput, extractMentions } from "@/components/ui/mention-input";
+import { extractMentions } from "@/components/ui/mention-input";
+import { MentionTextarea } from "@/components/ui/mention-textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -1075,7 +1076,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 relative">
-              <MentionInput
+              <MentionTextarea
                 placeholder="Escreva um comentário... Use @ para mencionar"
                 value={comment}
                 onChange={setComment}
@@ -1206,7 +1207,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 relative">
-            <MentionInput
+            <MentionTextarea
               placeholder="Escreva um comentário... Use @ para mencionar"
               value={comment}
               onChange={setComment}
