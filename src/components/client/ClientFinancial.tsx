@@ -563,25 +563,19 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
         </TabsList>
 
         {/* Financial Entries Tab */}
-        <TabsContent value="entries" className="mt-4 space-y-4">
-          {/* Quick note input for Admin and CX users */}
-          {currentUser && (
-            <FinancialQuickNoteInput
-              clientId={clientId}
-              currentUser={currentUser}
-            />
-          )}
-
-          {financialEntries.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Nenhum lançamento financeiro</p>
-              <p className="text-sm mt-1">
-                Lançamentos vinculados ao cliente ou CNPJ aparecerão aqui
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
+        <TabsContent value="entries" className="mt-4 flex flex-col max-h-[600px]">
+          {/* Scrollable entries area */}
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+            {financialEntries.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>Nenhum lançamento financeiro</p>
+                <p className="text-sm mt-1">
+                  Lançamentos vinculados ao cliente ou CNPJ aparecerão aqui
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
               {financialEntries.map((entry) => {
                 const isReceivable = entry.entry_type === "receivable";
                 const statusConf = entryStatusConfig[entry.status] || entryStatusConfig.pending;
@@ -645,6 +639,17 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
                   </div>
                 );
               })}
+              </div>
+            )}
+          </div>
+
+          {/* Quick note input - Fixed at bottom */}
+          {currentUser && (
+            <div className="flex-shrink-0 pt-4 mt-4 border-t bg-background">
+              <FinancialQuickNoteInput
+                clientId={clientId}
+                currentUser={currentUser}
+              />
             </div>
           )}
         </TabsContent>

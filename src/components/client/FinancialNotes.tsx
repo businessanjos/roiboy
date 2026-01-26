@@ -257,82 +257,20 @@ export function FinancialNotes({ clientId, currentUser }: FinancialNotesProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Quick Comment Input */}
-      {currentUser && (
-        <div className="flex gap-3 p-4 bg-muted/30 rounded-lg border">
-          <Avatar className="h-9 w-9 flex-shrink-0">
-            <AvatarImage src={currentUser.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {currentUser.name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 relative">
-            <MentionInput
-              placeholder="Escreva uma nota financeira... Use @ para mencionar"
-              value={quickComment}
-              onChange={setQuickComment}
-              onKeyDown={handleQuickKeyDown}
-              className="pr-24"
-            />
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleFileSelect(e, "image")}
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => handleFileSelect(e, "file")}
-              />
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploading}
-                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                title="Enviar imagem"
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                title="Enviar arquivo"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              {(quickComment.trim() || saving) && (
-                <button
-                  type="button"
-                  onClick={handleQuickComment}
-                  disabled={saving || !quickComment.trim()}
-                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </button>
-              )}
-            </div>
+    <div className="flex flex-col max-h-[600px]">
+      {/* Scrollable Notes Area */}
+      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+        {/* Notes List */}
+        {notes.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p>Nenhuma anotação financeira</p>
+            <p className="text-sm mt-1">
+              Adicione comentários, comprovantes ou documentos do setor financeiro
+            </p>
           </div>
-        </div>
-      )}
-
-      {/* Notes List */}
-      {notes.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Nenhuma anotação financeira</p>
-          <p className="text-sm mt-1">
-            Adicione comentários, comprovantes ou documentos do setor financeiro
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
+        ) : (
+          <div className="space-y-3">
           {notes.map((note) => {
             const isOwner = currentUser?.id === note.user?.id;
             const isEditing = editingNoteId === note.id;
@@ -485,6 +423,71 @@ export function FinancialNotes({ clientId, currentUser }: FinancialNotesProps) {
               </div>
             );
           })}
+          </div>
+        )}
+      </div>
+
+      {/* Comment Input - Fixed at bottom */}
+      {currentUser && (
+        <div className="flex-shrink-0 flex gap-3 p-4 mt-4 bg-muted/30 rounded-lg border">
+          <Avatar className="h-9 w-9 flex-shrink-0">
+            <AvatarImage src={currentUser.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              {currentUser.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 relative">
+            <MentionInput
+              placeholder="Escreva uma nota financeira... Use @ para mencionar"
+              value={quickComment}
+              onChange={setQuickComment}
+              onKeyDown={handleQuickKeyDown}
+              className="pr-24"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "image")}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e, "file")}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={uploading}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                title="Enviar imagem"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                title="Enviar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              {(quickComment.trim() || saving) && (
+                <button
+                  type="button"
+                  onClick={handleQuickComment}
+                  disabled={saving || !quickComment.trim()}
+                  className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
