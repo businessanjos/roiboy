@@ -169,7 +169,6 @@ export function ContractTriageQueue({
         .from("clients")
         .update({
           responsible_user_id: currentUser.id,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", clientId);
 
@@ -192,7 +191,6 @@ export function ContractTriageQueue({
         .from("clients")
         .update({
           responsible_user_id: userId,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", clientId);
 
