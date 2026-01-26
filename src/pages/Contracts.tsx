@@ -446,11 +446,11 @@ export default function Contracts() {
     }
   };
   
-  // Debounced client search
+  // Debounced client search - 800ms debounce to reduce API calls
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchClients(clientSearchTerm);
-    }, 300);
+    }, 800);
     return () => clearTimeout(timer);
   }, [clientSearchTerm]);
 

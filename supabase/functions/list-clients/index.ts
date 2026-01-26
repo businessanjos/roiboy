@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
     // Parse query params for pagination and search
     const url = new URL(req.url);
     const search = url.searchParams.get("search") || "";
-    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
+    // Reduced max limit from 200 to 50 to optimize Cloud costs
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 50);
     const offset = parseInt(url.searchParams.get("offset") || "0");
     const statusFilter = url.searchParams.get("status") || "";
     

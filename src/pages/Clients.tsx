@@ -589,11 +589,11 @@ export default function Clients() {
     // Note: teamUsers now comes from edge function response
   }, [currentSector?.id]);
   
-  // Refetch clients when filters change (server-side filtering)
+  // Refetch clients when filters change (server-side filtering) - 800ms debounce to reduce API calls
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchClients();
-    }, 300);
+    }, 800);
     return () => clearTimeout(timer);
   }, [searchQuery, filterResponsible, filterProduct, filterVNPS, filterContract, filterClientStatus]);
 
