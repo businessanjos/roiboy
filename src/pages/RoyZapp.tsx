@@ -1438,8 +1438,22 @@ export default function RoyZapp() {
       } catch (error: any) {
         console.error("Error sending message:", error);
         
-        // Parse error message for better UX
-        const errorMsg = error.message || "Erro ao enviar mensagem";
+        // Try to extract error message from Edge Function JSON response
+        let errorMsg = error.message || "Erro ao enviar mensagem";
+        
+        // If error has context body (from Edge Function), try to parse it
+        if (error.context?.body) {
+          try {
+            const errorBody = JSON.parse(error.context.body);
+            if (errorBody.error) {
+              errorMsg = errorBody.error;
+            }
+          } catch {
+            // Ignore JSON parse errors
+          }
+        }
+        
+        // Check for WhatsApp disconnection
         const isWhatsAppDisconnected = errorMsg.includes("WHATSAPP_DISCONNECTED") || 
                                         errorMsg.includes("desconectado") ||
                                         errorMsg.includes("disconnected");
@@ -1447,7 +1461,14 @@ export default function RoyZapp() {
         // Check for "no LID found" error (number not registered on WhatsApp)
         const isLidNotFound = errorMsg.includes("no LID found") || 
                               errorMsg.includes("LID not found") ||
-                              errorMsg.includes("not found for") && errorMsg.includes("@s.whatsapp.net");
+                              (errorMsg.includes("not found for") && errorMsg.includes("@s.whatsapp.net"));
+        
+        // Check for invalid phone number format
+        const isInvalidNumber = errorMsg.includes("invalid") || 
+                                errorMsg.includes("Could not parse") ||
+                                errorMsg.includes("not valid") ||
+                                errorMsg.includes("número inválido") ||
+                                errorMsg.includes("formato inválido");
         
         // Determine user-friendly error message
         let userErrorMessage = errorMsg;
@@ -1455,6 +1476,8 @@ export default function RoyZapp() {
           userErrorMessage = "WhatsApp desconectado";
         } else if (isLidNotFound) {
           userErrorMessage = "Número não encontrado no WhatsApp";
+        } else if (isInvalidNumber) {
+          userErrorMessage = "Número de telefone inválido ou não registrado no WhatsApp";
         }
         
         // Mark message as failed instead of removing it
@@ -1479,6 +1502,10 @@ export default function RoyZapp() {
           });
         } else if (isLidNotFound) {
           toast.error("Este número não está cadastrado no WhatsApp ou é inválido. Verifique se o número está correto.", {
+            duration: 8000,
+          });
+        } else if (isInvalidNumber) {
+          toast.error("Número de telefone inválido. Verifique o formato e tente novamente.", {
             duration: 8000,
           });
         } else {
