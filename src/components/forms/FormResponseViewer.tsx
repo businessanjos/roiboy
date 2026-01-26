@@ -507,11 +507,11 @@ export function FormResponseViewer({
 
       {/* Response Detail Dialog */}
       <Dialog open={!!selectedResponse} onOpenChange={(open) => !open && setSelectedResponse(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-3xl max-h-[85vh] !flex !flex-col overflow-hidden p-0">
           {selectedResponse && (
             <>
               {/* Header with navigation */}
-              <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedResponse.clients?.avatar_url} />
@@ -559,27 +559,28 @@ export function FormResponseViewer({
               </div>
 
               {/* Content */}
-              <ScrollArea className="flex-1 px-6 py-4">
-                <div className="space-y-6">
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="px-6 py-4 space-y-6">
                   {/* Client Info Section */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                       Informações do Cliente
                     </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1 min-w-0">
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <User className="h-3 w-3" /> Nome
                         </Label>
-                        <p className="font-medium">
+                        <p className="font-medium break-words">
                           {selectedResponse.clients?.full_name || selectedResponse.client_name || "—"}
                         </p>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <Phone className="h-3 w-3" /> Telefone
                         </Label>
-                        <p className="font-medium">
+                        <p className="font-medium break-all">
                           {selectedResponse.clients?.phone_e164 || selectedResponse.client_phone || "—"}
                         </p>
                       </div>
@@ -625,19 +626,19 @@ export function FormResponseViewer({
                     <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                       Respostas do Formulário
                     </h3>
-                    <div className="divide-y rounded-lg border bg-card">
+                    <div className="divide-y rounded-lg border bg-card overflow-hidden">
                       {orderedFields.map((field) => {
                         const value = selectedResponse.responses?.[field.id];
 
                         return (
-                          <div key={field.id} className="flex flex-col gap-2 p-4">
+                          <div key={field.id} className="flex flex-col gap-2 p-4 overflow-hidden">
                             <div className="min-w-0">
-                              <Label className="text-sm font-medium text-foreground">
+                              <Label className="text-sm font-medium text-foreground break-words">
                                 {field.name}
                                 {field.is_required && <span className="text-destructive ml-1">*</span>}
                               </Label>
                             </div>
-                            <div className="text-sm break-words min-w-0">
+                            <div className="text-sm break-words min-w-0 overflow-hidden">
                               {renderValue(field, value)}
                             </div>
                           </div>
@@ -645,11 +646,12 @@ export function FormResponseViewer({
                       })}
                     </div>
                   </div>
-                </div>
-              </ScrollArea>
+                  </div>
+                </ScrollArea>
+              </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-muted/20">
+              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-muted/20 flex-shrink-0">
                 <Button variant="outline" onClick={() => setSelectedResponse(null)}>
                   Fechar
                 </Button>
