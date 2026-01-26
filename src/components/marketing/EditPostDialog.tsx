@@ -57,6 +57,7 @@ export interface EditPostFormData {
   comments: number;
   shares: number;
   saves: number;
+  link_clicks: number;
   views: number;
   reposts: number;
   followers_gained: number;
@@ -90,6 +91,7 @@ export function EditPostDialog({
   const [comments, setComments] = useState('');
   const [shares, setShares] = useState('');
   const [saves, setSaves] = useState('');
+  const [linkClicks, setLinkClicks] = useState('');
   const [views, setViews] = useState('');
   const [reposts, setReposts] = useState('');
   const [followersGained, setFollowersGained] = useState('');
@@ -112,6 +114,7 @@ export function EditPostDialog({
       setComments(post.comments.toString());
       setShares(post.shares.toString());
       setSaves(post.saves.toString());
+      setLinkClicks((post.link_clicks || 0).toString());
       setViews((post.views || 0).toString());
       setReposts((post.reposts || 0).toString());
       setFollowersGained((post.followers_gained || 0).toString());
@@ -135,6 +138,7 @@ export function EditPostDialog({
     const commentsNum = parseInt(comments) || 0;
     const sharesNum = parseInt(shares) || 0;
     const savesNum = parseInt(saves) || 0;
+    const linkClicksNum = parseInt(linkClicks) || 0;
     const viewsNum = parseInt(views) || 0;
     const repostsNum = parseInt(reposts) || 0;
     const followersGainedNum = parseInt(followersGained) || 0;
@@ -152,6 +156,7 @@ export function EditPostDialog({
       comments: commentsNum,
       shares: sharesNum,
       saves: savesNum,
+      link_clicks: linkClicksNum,
       views: viewsNum,
       reposts: repostsNum,
       followers_gained: followersGainedNum,
@@ -377,6 +382,20 @@ export function EditPostDialog({
                       placeholder="0"
                       value={saves}
                       onChange={(e) => setSaves(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-link-clicks" className="text-xs text-muted-foreground">
+                      Cliques no Link
+                    </Label>
+                    <Input
+                      id="edit-link-clicks"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={linkClicks}
+                      onChange={(e) => setLinkClicks(e.target.value)}
                       className="h-8"
                     />
                   </div>
