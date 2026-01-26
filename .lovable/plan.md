@@ -1,219 +1,252 @@
 
 
-# Plano Crítico: Correção de Mensagens não Chegando no ROY zAPP
+# Plano: Mostrar Grupos em Comum na Busca de Contatos do ROY zAPP
 
-## Diagnóstico Completo
+## Resumo do Objetivo
 
-### Problema Identificado
-Mensagens do cliente **Aleff Oliveira** (+55 31 98956-0046) enviadas às 09:02 não aparecem na interface do atendente **José da Paixão**.
+Quando o usuário buscar um contato no diálogo "Nova Conversa" do ROY zAPP, além de mostrar o contato encontrado, o sistema também deve exibir os grupos WhatsApp que esse contato participa em comum com a instância conectada.
 
-### Causa Raiz
-Existem **DUAS conversas duplicadas** para o mesmo cliente no banco de dados:
+## Arquitetura da Solução
 
 ```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ CONVERSAS DUPLICADAS - ALEFF OLIVEIRA                                                  │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│ Conversa 1 (2b7903f9)                    │ Conversa 2 (d33bcdbd)                       │
-│ ─────────────────────────────────────────┼────────────────────────────────────────────│
-│ Telefone: +5531989560046 (normalizado)   │ Telefone: +55 31 98956-0046 (com espaços)  │
-│ Atendente: Vanessa Minelli               │ Atendente: José da Paixão                  │
-│ Departamento: Vendas                     │ Departamento: Operações                    │
-│ Mensagens: 100                           │ Mensagens: 12                              │
-│ Última mensagem: 26/01 13:36 ✓           │ Última mensagem: 23/01 14:37               │
-│ ← MENSAGENS NOVAS VÃO PARA AQUI          │ ← JOSE ESTA OLHANDO ESTA                   │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        FLUXO DA FEATURE                                         │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  1. USUARIO DIGITA NOME/TELEFONE                                               │
+│     └─> searchContacts() busca clientes, leads, conversas                      │
+│                                                                                 │
+│  2. AO ENCONTRAR CONTATOS                                                       │
+│     └─> Para cada telefone encontrado, buscar grupos em comum                  │
+│     └─> Consulta whatsapp_group_participants por phone                         │
+│                                                                                 │
+│  3. RESULTADO AGRUPADO                                                          │
+│     ├─> Contato: "João Silva" [Cliente]                                        │
+│     │   └─> Grupos em comum: "QG Anjos", "Leadership Team"                     │
+│     └─> Contato: "Maria Santos" [Lead]                                         │
+│         └─> Grupos em comum: "ClaxClub Sócios"                                 │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Fluxo do Problema
+## Alteracoes Necessarias
 
-```text
-1. CLIENTE ENVIA MENSAGEM
-   └─> Webhook UAZAPI recebe com telefone "+55 31 98956-0046"
-        │
-2. WEBHOOK NORMALIZA TELEFONE
-   └─> Converte para "+5531989560046"
-        │
-3. WEBHOOK BUSCA CONVERSA (Layer 2)
-   └─> Busca qualquer conversa com esse telefone
-   └─> Encontra 2b7903f9 (mais recente) ← PROBLEMA AQUI
-        │
-4. MENSAGEM SALVA NA CONVERSA ERRADA
-   └─> Salva em 2b7903f9 (Vanessa/Vendas)
-   └─> José está olhando d33bcdbd (Operações)
-        │
-5. JOSE NÃO VÊ A MENSAGEM
-   └─> Ele está subscrito ao realtime de d33bcdbd
-   └─> A mensagem foi para 2b7903f9
-```
+### Parte 1: Criar Tabela de Cache de Participantes (SQL Migration)
 
-## Solução Proposta
-
-### Parte 1: Correção Imediata (Unificação de Conversas Duplicadas)
-
-Executar migração SQL para mover mensagens da conversa duplicada para a principal e deletar a duplicata.
+Criar tabela `whatsapp_group_participants` para armazenar participantes de cada grupo:
 
 ```sql
--- 1. Identificar a conversa principal (mais recente/mais mensagens)
--- 2. Mover todas as mensagens para a conversa principal
--- 3. Atualizar assignments para apontar para conversa principal
--- 4. Deletar a conversa duplicata
+CREATE TABLE public.whatsapp_group_participants (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  group_jid text NOT NULL,
+  phone text NOT NULL,
+  name text,
+  is_admin boolean DEFAULT false,
+  synced_at timestamptz DEFAULT now(),
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(account_id, group_jid, phone)
+);
+
+CREATE INDEX idx_group_participants_account ON whatsapp_group_participants(account_id);
+CREATE INDEX idx_group_participants_phone ON whatsapp_group_participants(account_id, phone);
+CREATE INDEX idx_group_participants_group ON whatsapp_group_participants(account_id, group_jid);
+
+-- Habilitar RLS
+ALTER TABLE whatsapp_group_participants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users_view_own_account_participants" ON whatsapp_group_participants
+  FOR SELECT USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
+
+CREATE POLICY "service_role_all" ON whatsapp_group_participants
+  FOR ALL USING (true) WITH CHECK (true);
 ```
 
-### Parte 2: Prevenção no Webhook (Melhoria do Layer 2)
+### Parte 2: Atualizar uazapi-manager para Salvar Participantes
 
-Modificar o webhook `uazapi-webhook/index.ts` para:
+Modificar a action `group_participants` ou criar uma nova action `sync_group_participants` que alem de retornar os participantes, salva no banco de dados.
 
-1. **Detectar múltiplas conversas** para o mesmo telefone
-2. **Priorizar por setor/integration_id** em vez de apenas data
-3. **Unificar automaticamente** se encontrar duplicatas do mesmo account+sector
-4. **Atualizar assignments associados** quando unificar
+**Arquivo:** `supabase/functions/uazapi-manager/index.ts`
 
-### Alteracoes Tecnicas
-
-#### Arquivo 1: Migração SQL (Correção Imediata)
-
-```sql
--- Unificar conversas de Aleff Oliveira
-DO $$
-DECLARE
-  v_principal_id uuid := '2b7903f9-c997-440a-824c-ad1049674961';
-  v_duplicate_id uuid := 'd33bcdbd-fadd-45af-b8c6-e98f7e37f47e';
-BEGIN
-  -- Mover mensagens da duplicata para a principal
-  UPDATE zapp_messages 
-  SET zapp_conversation_id = v_principal_id
-  WHERE zapp_conversation_id = v_duplicate_id;
-  
-  -- Atualizar assignment da duplicata para apontar para a principal
-  UPDATE zapp_conversation_assignments
-  SET zapp_conversation_id = v_principal_id
-  WHERE zapp_conversation_id = v_duplicate_id;
-  
-  -- Deletar a conversa duplicata
-  DELETE FROM zapp_conversations WHERE id = v_duplicate_id;
-  
-  RAISE NOTICE 'Unificação concluída: % → %', v_duplicate_id, v_principal_id;
-END $$;
-
--- Unificar conversas de Hugo (outra duplicata encontrada)
-DO $$
-DECLARE
-  v_principal_id uuid := '9787190d-51f2-4e54-85bb-dee841cd4c66'; -- vendas, mais recente
-  v_duplicate_id uuid := 'be62d6b7-7a82-416a-aa22-b5bb07fadf3f'; -- operacoes
-BEGIN
-  UPDATE zapp_messages 
-  SET zapp_conversation_id = v_principal_id
-  WHERE zapp_conversation_id = v_duplicate_id;
-  
-  UPDATE zapp_conversation_assignments
-  SET zapp_conversation_id = v_principal_id
-  WHERE zapp_conversation_id = v_duplicate_id;
-  
-  DELETE FROM zapp_conversations WHERE id = v_duplicate_id;
-  
-  RAISE NOTICE 'Unificação concluída: % → %', v_duplicate_id, v_principal_id;
-END $$;
-```
-
-#### Arquivo 2: `supabase/functions/uazapi-webhook/index.ts`
-
-Modificar a busca Layer 2 (linhas ~822-873) para:
-
-1. **Buscar TODAS as conversas** com o mesmo telefone (não apenas 1)
-2. **Priorizar por sector_id/integration_id** que corresponde ao webhook atual
-3. **Se encontrar múltiplas do mesmo sector**, unificar automaticamente
-
-**Mudancas na logica Layer 2:**
+Adicionar logica para inserir participantes na tabela apos buscar da API:
 
 ```typescript
-// ANTES: .limit(1).maybeSingle()
-// DEPOIS: busca todas e escolhe a melhor match
-
-// Buscar TODAS conversas com esse telefone
-const { data: allConvos } = await supabase
-  .from("zapp_conversations")
-  .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
-  .eq("account_id", accountId)
-  .eq("is_group", false)
-  .or(phoneConditions)
-  .order("last_message_at", { ascending: false });
-
-if (allConvos && allConvos.length > 0) {
-  // Prioridade: mesmo integration_id > mesmo sector_id > mais recente
-  let bestMatch = allConvos.find(c => c.integration_id === integrationId);
-  if (!bestMatch && sectorId) {
-    bestMatch = allConvos.find(c => c.sector_id === sectorId);
-  }
-  if (!bestMatch) {
-    bestMatch = allConvos[0]; // mais recente
-  }
+// Apos obter participants com sucesso
+if (participants.length > 0) {
+  // Limpar participantes antigos deste grupo
+  await supabaseClient
+    .from("whatsapp_group_participants")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("group_jid", groupJidForParticipants);
   
-  existingZappConvo = bestMatch;
+  // Inserir novos participantes
+  const participantRows = participants.map(p => ({
+    account_id: accountId,
+    group_jid: groupJidForParticipants,
+    phone: p.phone,
+    name: p.name || null,
+    is_admin: p.admin === "admin" || p.admin === "superadmin",
+    synced_at: new Date().toISOString(),
+  }));
   
-  // UNIFICAÇÃO AUTOMÁTICA: Se houver duplicatas do mesmo account+sector
-  if (allConvos.length > 1) {
-    const duplicates = allConvos.filter(c => c.id !== bestMatch.id);
-    for (const dup of duplicates) {
-      // Mover mensagens
-      await supabase.from("zapp_messages")
-        .update({ zapp_conversation_id: bestMatch.id })
-        .eq("zapp_conversation_id", dup.id);
-      
-      // Atualizar assignments
-      await supabase.from("zapp_conversation_assignments")
-        .update({ zapp_conversation_id: bestMatch.id })
-        .eq("zapp_conversation_id", dup.id);
-      
-      // Deletar duplicata
-      await supabase.from("zapp_conversations")
-        .delete()
-        .eq("id", dup.id);
-        
-      console.log(`[DEDUPE] Unified conversation ${dup.id} → ${bestMatch.id}`);
-    }
-  }
+  await supabaseClient
+    .from("whatsapp_group_participants")
+    .insert(participantRows);
 }
 ```
 
-### Parte 3: Adicionar Constraint de Unicidade
+### Parte 3: Criar Sincronizacao Inicial de Todos os Grupos
 
-Para prevenir futuras duplicatas, adicionar constraint no banco:
+Adicionar nova action `sync_all_group_participants` no uazapi-manager que:
+1. Lista todos os grupos da conta
+2. Para cada grupo, busca participantes
+3. Salva todos no banco
 
-```sql
--- Criar índice único para evitar duplicatas futuras
--- (account_id + telefone normalizado + is_group=false)
-CREATE UNIQUE INDEX IF NOT EXISTS zapp_conversations_unique_phone_idx 
-ON zapp_conversations (account_id, REGEXP_REPLACE(phone_e164, '[^0-9]', '', 'g'))
-WHERE is_group = false AND phone_e164 IS NOT NULL AND phone_e164 != '';
+Isso pode ser disparado manualmente ou via cron.
+
+### Parte 4: Modificar searchContacts no RoyZapp.tsx
+
+**Arquivo:** `src/pages/RoyZapp.tsx`
+
+Apos encontrar contatos, buscar grupos em comum para cada telefone:
+
+```typescript
+// Apos obter combined de contatos
+const phonesForGroupSearch = combined.map(c => c.phone_e164?.replace(/\D/g, '')).filter(Boolean);
+
+// Buscar grupos em comum para esses telefones
+const { data: groupParticipants } = await supabase
+  .from("whatsapp_group_participants")
+  .select("phone, group_jid, whatsapp_groups(name, avatar_url)")
+  .eq("account_id", currentUser.account_id)
+  .in("phone", phonesForGroupSearch);
+
+// Criar mapa de telefone -> grupos
+const phoneToGroups = new Map<string, Array<{name: string, avatar_url: string | null}>>();
+(groupParticipants || []).forEach(p => {
+  const phone = p.phone;
+  if (!phoneToGroups.has(phone)) {
+    phoneToGroups.set(phone, []);
+  }
+  if (p.whatsapp_groups) {
+    phoneToGroups.get(phone)!.push({
+      name: p.whatsapp_groups.name,
+      avatar_url: p.whatsapp_groups.avatar_url,
+    });
+  }
+});
+
+// Adicionar grupos aos contatos
+const combinedWithGroups = combined.map(c => ({
+  ...c,
+  common_groups: phoneToGroups.get(c.phone_e164?.replace(/\D/g, '') || '') || [],
+}));
+
+setNewConversationClients(combinedWithGroups);
 ```
 
-**Nota:** Este índice pode precisar ser adiado até depois da limpeza de duplicatas.
+### Parte 5: Atualizar Interface Contact
+
+**Arquivo:** `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx`
+
+Atualizar interface Contact para incluir grupos:
+
+```typescript
+interface Contact {
+  id: string;
+  full_name: string;
+  phone_e164: string;
+  avatar_url: string | null;
+  type?: 'client' | 'lead' | 'conversation';
+  common_groups?: Array<{ name: string; avatar_url: string | null }>;
+}
+```
+
+### Parte 6: Exibir Grupos em Comum no UI
+
+**Arquivo:** `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx`
+
+Adicionar exibicao de grupos abaixo de cada contato:
+
+```tsx
+<button key={...} onClick={...} className="...">
+  {/* Avatar e info existentes */}
+  <Avatar>...</Avatar>
+  <div className="flex-1 min-w-0">
+    <div className="flex items-center gap-2">
+      <span>{formatName(client.full_name)}</span>
+      <Badge>...</Badge>
+    </div>
+    <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
+    
+    {/* NOVO: Grupos em comum */}
+    {client.common_groups && client.common_groups.length > 0 && (
+      <div className="flex items-center gap-1 mt-1 flex-wrap">
+        <Users className="h-3 w-3 text-[#8696a0]" />
+        <span className="text-xs text-[#8696a0]">
+          {client.common_groups.length} grupo{client.common_groups.length > 1 ? 's' : ''} em comum:
+        </span>
+        {client.common_groups.slice(0, 3).map((g, i) => (
+          <Badge key={i} variant="outline" className="text-xs bg-[#202c33] border-[#3b4a54]">
+            {g.name.slice(0, 15)}{g.name.length > 15 ? '...' : ''}
+          </Badge>
+        ))}
+        {client.common_groups.length > 3 && (
+          <span className="text-xs text-[#8696a0]">+{client.common_groups.length - 3}</span>
+        )}
+      </div>
+    )}
+  </div>
+</button>
+```
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteração |
+| Arquivo | Alteracao |
 |---------|-----------|
-| Migração SQL | Unificar conversas duplicadas existentes |
-| `supabase/functions/uazapi-webhook/index.ts` | Melhorar Layer 2 para detectar e unificar duplicatas |
-| Migração SQL (opcional) | Criar constraint de unicidade |
+| SQL Migration | Criar tabela `whatsapp_group_participants` |
+| `supabase/functions/uazapi-manager/index.ts` | Salvar participantes ao buscar grupos |
+| `src/pages/RoyZapp.tsx` | Modificar `searchContacts` para buscar grupos em comum |
+| `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx` | Adicionar interface e UI para grupos em comum |
 
-## Ordem de Execução
+## Estrategia de Sincronizacao de Participantes
 
-1. **Primeiro**: Executar migração SQL para unificar as 2 duplicatas encontradas
-2. **Segundo**: Atualizar o webhook para prevenir novas duplicatas
-3. **Terceiro** (opcional): Criar constraint de unicidade após confirmar que não há mais duplicatas
+1. **Sincronizacao sob demanda**: Quando `group_participants` e chamado, salvar no banco
+2. **Sincronizacao inicial**: Botao na pagina de grupos para sincronizar todos os participantes
+3. **Sincronizacao automatica**: Quando uma mensagem de grupo e recebida, atualizar cache do grupo
 
-## Impacto
+## Consideracoes de Performance
 
-- **José da Paixão** verá todas as mensagens de Aleff Oliveira após a unificação
-- **Mensagens futuras** irão corretamente para a conversa unificada
-- **Prevenção** de novas duplicatas pelo webhook melhorado
+- A busca de grupos sera feita em paralelo com a busca de contatos
+- Limite de 3 grupos exibidos inline com "+N" para excesso
+- Cache de participantes evita chamadas repetidas a API UAZAPI
+- Indice `idx_group_participants_phone` otimiza busca por telefone
 
-## Testes de Validação
+## Layout Visual Final
 
-1. Verificar que a conversa d33bcdbd não existe mais
-2. Verificar que todas as mensagens estão em 2b7903f9
-3. Verificar que José da Paixão consegue ver as mensagens
-4. Testar envio de nova mensagem pelo cliente e confirmar que aparece no chat correto
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ Nova Conversa                                                   X │
+├────────────────────────────────────────────────────────────────────┤
+│ Busque um contato para iniciar uma conversa                       │
+│ ┌────────────────────────────────────────────────────────────────┐│
+│ │ Buscar por nome ou telefone...                                 ││
+│ └────────────────────────────────────────────────────────────────┘│
+│                                                                    │
+│ ┌────────────────────────────────────────────────────────────────┐│
+│ │ [AV] João Silva              [Cliente]                         ││
+│ │      +55 11 98765-4321                                         ││
+│ │      👥 2 grupos em comum: [QG Anjos] [Leadership]             ││
+│ ├────────────────────────────────────────────────────────────────┤│
+│ │ [AV] Maria Santos            [Lead]                            ││
+│ │      +55 21 99876-5432                                         ││
+│ │      👥 1 grupo em comum: [ClaxClub Socios]                    ││
+│ ├────────────────────────────────────────────────────────────────┤│
+│ │ [AV] Pedro Alves             [Contato]                         ││
+│ │      +55 31 98888-7777                                         ││
+│ │      (sem grupos em comum)                                     ││
+│ └────────────────────────────────────────────────────────────────┘│
+└────────────────────────────────────────────────────────────────────┘
+```
 
