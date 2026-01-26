@@ -744,10 +744,11 @@ export default function SalesPipeline() {
         onReorderStages={reorderStages}
       />
 
-      {/* Custom Fields Manager (Admin only) */}
+      {/* Custom Fields Manager (Admin only) - Deals context */}
       <CustomFieldsManager
         open={isFieldsDialogOpen}
         onOpenChange={setIsFieldsDialogOpen}
+        sectorContext="deals"
       />
     </>
   );

@@ -526,6 +526,7 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
           open={isManagerOpen}
           onOpenChange={setIsManagerOpen}
           onFieldsChange={fetchData}
+          sectorContext="clients"
         />
       </div>
     );
@@ -639,6 +640,7 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
         open={isManagerOpen}
         onOpenChange={setIsManagerOpen}
         onFieldsChange={fetchData}
+        sectorContext="clients"
       />
     </Card>
   );
