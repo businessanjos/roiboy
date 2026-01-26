@@ -134,6 +134,7 @@ interface DealDetailSheetProps {
   onReopen: (dealId: string) => Promise<void>;
   onStageChange: (dealId: string, stageId: string) => Promise<boolean>;
   onDealUpdated?: () => void;
+  processingWonDealId?: string | null;
 }
 
 const EVENT_TYPES = [
@@ -183,6 +184,7 @@ export function DealDetailSheet({
   onReopen,
   onStageChange,
   onDealUpdated,
+  processingWonDealId,
 }: DealDetailSheetProps) {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<DealActivity[]>([]);
@@ -635,15 +637,21 @@ export function DealDetailSheet({
                     size="sm"
                     className="h-8 px-2.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
                     onClick={() => onMarkAsWon(deal.id)}
+                    disabled={processingWonDealId === deal.id}
                   >
-                    <Trophy className="h-4 w-4 mr-1" />
-                    Ganha
+                    {processingWonDealId === deal.id ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Trophy className="h-4 w-4 mr-1" />
+                    )}
+                    {processingWonDealId === deal.id ? "Processando..." : "Ganha"}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2.5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
                     onClick={() => setLostDialogOpen(true)}
+                    disabled={!!processingWonDealId}
                   >
                     <XCircle className="h-4 w-4 mr-1" />
                     Perdida
