@@ -2604,7 +2604,41 @@ export default function RoyZapp() {
       return true;
     });
 
-    setNewConversationClients(combined);
+    // Fetch common groups for the found contacts
+    const phonesForGroupSearch = combined.map(c => c.phone_e164?.replace(/\D/g, '')).filter(Boolean) as string[];
+    
+    if (phonesForGroupSearch.length > 0) {
+      const { data: groupParticipants } = await supabase
+        .from("whatsapp_group_participants")
+        .select("phone, group_jid, whatsapp_groups(name, avatar_url)")
+        .eq("account_id", currentUser.account_id)
+        .in("phone", phonesForGroupSearch);
+
+      // Create phone -> groups map
+      const phoneToGroups = new Map<string, Array<{name: string, avatar_url: string | null}>>();
+      (groupParticipants || []).forEach((p: { phone: string; whatsapp_groups: { name: string; avatar_url: string | null } | null }) => {
+        const phone = p.phone;
+        if (!phoneToGroups.has(phone)) {
+          phoneToGroups.set(phone, []);
+        }
+        if (p.whatsapp_groups) {
+          phoneToGroups.get(phone)!.push({
+            name: p.whatsapp_groups.name,
+            avatar_url: p.whatsapp_groups.avatar_url,
+          });
+        }
+      });
+
+      // Add groups to contacts
+      const combinedWithGroups = combined.map(c => ({
+        ...c,
+        common_groups: phoneToGroups.get(c.phone_e164?.replace(/\D/g, '') || '') || [],
+      }));
+
+      setNewConversationClients(combinedWithGroups);
+    } else {
+      setNewConversationClients(combined);
+    }
   }, [currentUser?.account_id]);
 
   // Debounced search effect

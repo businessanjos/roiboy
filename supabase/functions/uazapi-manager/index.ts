@@ -2210,6 +2210,56 @@ serve(async (req) => {
           }
         }
 
+        // CACHE PARTICIPANTS IN DATABASE for search functionality
+        if (participantsFound && participants.length > 0) {
+          try {
+            console.log(`[CACHE] Saving ${participants.length} participants for group ${groupJidForParticipants}`);
+            
+            // Clear old participants for this group
+            await supabase
+              .from("whatsapp_group_participants")
+              .delete()
+              .eq("account_id", accountId)
+              .eq("group_jid", groupJidForParticipants);
+            
+            // Prepare participant rows
+            const participantRows = participants.map((p: unknown) => {
+              const part = p as { id?: string; jid?: string; phone?: string; name?: string; admin?: string; isAdmin?: boolean };
+              // Extract phone from jid (format: 5531999998888@s.whatsapp.net) or phone field
+              let phone = part.phone || "";
+              if (!phone && part.id) {
+                phone = part.id.replace(/@.*$/, "").replace(/\D/g, "");
+              }
+              if (!phone && part.jid) {
+                phone = part.jid.replace(/@.*$/, "").replace(/\D/g, "");
+              }
+              return {
+                account_id: accountId,
+                group_jid: groupJidForParticipants,
+                phone,
+                name: part.name || null,
+                is_admin: part.admin === "admin" || part.admin === "superadmin" || part.isAdmin === true,
+                synced_at: new Date().toISOString(),
+              };
+            }).filter(row => row.phone); // Only include rows with valid phone
+            
+            if (participantRows.length > 0) {
+              const { error: insertError } = await supabase
+                .from("whatsapp_group_participants")
+                .insert(participantRows);
+              
+              if (insertError) {
+                console.error("[CACHE] Failed to insert participants:", insertError.message);
+              } else {
+                console.log(`[CACHE] Successfully cached ${participantRows.length} participants`);
+              }
+            }
+          } catch (cacheErr) {
+            console.error("[CACHE] Error caching participants:", (cacheErr as Error).message);
+            // Don't fail the request if caching fails
+          }
+        }
+
         result = participantsResult || { participants: [], message: "Não foi possível buscar os membros do grupo. Tente atualizar a lista de grupos." };
         break;
       }

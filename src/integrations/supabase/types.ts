@@ -9240,6 +9240,47 @@ export type Database = {
           },
         ]
       }
+      whatsapp_group_participants: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          group_jid: string
+          id: string
+          is_admin: boolean | null
+          name: string | null
+          phone: string
+          synced_at: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          group_jid: string
+          id?: string
+          is_admin?: boolean | null
+          name?: string | null
+          phone: string
+          synced_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          group_jid?: string
+          id?: string
+          is_admin?: boolean | null
+          name?: string | null
+          phone?: string
+          synced_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_group_participants_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_groups: {
         Row: {
           account_id: string

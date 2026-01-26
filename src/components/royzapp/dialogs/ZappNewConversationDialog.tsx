@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,12 +12,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+interface CommonGroup {
+  name: string;
+  avatar_url: string | null;
+}
+
 interface Contact {
   id: string;
   full_name: string;
   phone_e164: string;
   avatar_url: string | null;
   type?: 'client' | 'lead' | 'conversation';
+  common_groups?: CommonGroup[];
 }
 
 interface ZappNewConversationDialogProps {
