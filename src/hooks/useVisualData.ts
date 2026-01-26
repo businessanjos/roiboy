@@ -85,7 +85,7 @@ async function fetchDealsData(
       won_at,
       lost_at,
       deal_stages!deals_stage_id_fkey(name, color),
-      users!deals_responsible_user_id_fkey(full_name)
+      users!deals_responsible_user_id_fkey(name)
     `)
   .eq('account_id', accountId);
 
@@ -253,7 +253,7 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
     return item.deal_stages?.name || 'Sem Etapa';
   }
   if (field === 'responsible_name') {
-    return item.users?.full_name || 'Sem Responsável';
+    return item.users?.name || 'Sem Responsável';
   }
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';

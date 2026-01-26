@@ -56,10 +56,23 @@ const METRIC_TO_CONFIG: Record<Metric, { dataSource: 'deals'; measureField: stri
 };
 
 const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' }> = {
-  month: { field: 'created_at', type: 'date', dateGrouping: 'month' },
+  month: { field: 'created_at', type: 'date', dateGrouping: 'month' }, // Default, overridden by getDateFieldForMetric
   user: { field: 'responsible_name', type: 'text' },
   stage: { field: 'stage_name', type: 'text' },
   product: { field: 'product_name', type: 'text' },
+};
+
+// Determines the correct date field based on the metric being measured
+const getDateFieldForMetric = (metric: Metric): string => {
+  switch (metric) {
+    case 'revenue':      // Revenue = WON deals
+    case 'avg_ticket':   // Avg ticket also based on won deals
+      return 'won_at';
+    case 'lost_reasons': // Losses = LOST deals
+      return 'lost_at';
+    default:
+      return 'created_at';
+  }
 };
 
 const METRIC_LABELS: Record<Metric, string> = {
@@ -124,7 +137,12 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
     setIsCreating(true);
     try {
       const metricConfig = METRIC_TO_CONFIG[metric];
-      const dimensionConfig = GROUP_BY_TO_DIMENSION[groupBy];
+      const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy];
+      
+      // Use intelligent date field selection for temporal groupings
+      const dimensionField = baseDimensionConfig.type === 'date' 
+        ? getDateFieldForMetric(metric) 
+        : baseDimensionConfig.field;
 
       const config: VisualConfig = {
         dataSource: metricConfig.dataSource,
@@ -133,9 +151,9 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           aggregation: metricConfig.aggregation,
         },
         dimension: {
-          field: dimensionConfig.field,
-          type: dimensionConfig.type,
-          ...(dimensionConfig.dateGrouping && { dateGrouping: dimensionConfig.dateGrouping }),
+          field: dimensionField,
+          type: baseDimensionConfig.type,
+          ...(baseDimensionConfig.dateGrouping && { dateGrouping: baseDimensionConfig.dateGrouping }),
         },
         formatting: {
           type: metricConfig.formatType,
