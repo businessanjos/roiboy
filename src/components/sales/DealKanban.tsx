@@ -13,6 +13,9 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealKanbanColumn } from "./DealKanbanColumn";
 import { DealCard } from "./DealCard";
 import { ZappNavigationProvider } from "@/contexts/ZappNavigationContext";
+import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
+import { RequiredFieldsModal } from "./RequiredFieldsModal";
+import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -21,8 +24,20 @@ interface DealKanbanProps {
   onDealMove: (dealId: string, newStageId: string) => Promise<boolean>;
 }
 
+interface RequiredFieldsModalState {
+  open: boolean;
+  dealId: string;
+  dealTitle: string;
+  targetStageId: string;
+  targetStageName: string;
+  missingFields: CustomField[];
+  accountId: string;
+}
+
 export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanbanProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
+  const { validateDealMove } = useRequiredFieldsValidation();
+  const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -96,23 +111,47 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     const dealId = active.id as string;
     const overId = over.id as string;
 
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) return;
+
     // Check if dropped on a column
-    const targetStage = stages.find(s => s.id === overId);
-    if (targetStage) {
-      const deal = deals.find(d => d.id === dealId);
-      if (deal && deal.stage_id !== targetStage.id) {
-        await onDealMove(dealId, targetStage.id);
+    let targetStage = stages.find(s => s.id === overId);
+    
+    // Check if dropped on another deal
+    if (!targetStage) {
+      const targetDeal = deals.find(d => d.id === overId);
+      if (targetDeal && targetDeal.stage_id) {
+        targetStage = stages.find(s => s.id === targetDeal.stage_id);
       }
-      return;
     }
 
-    // Check if dropped on another deal
-    const targetDeal = deals.find(d => d.id === overId);
-    if (targetDeal && targetDeal.stage_id) {
-      const deal = deals.find(d => d.id === dealId);
-      if (deal && deal.stage_id !== targetDeal.stage_id) {
-        await onDealMove(dealId, targetDeal.stage_id);
-      }
+    if (!targetStage || deal.stage_id === targetStage.id) return;
+
+    // Validate required fields for target stage
+    const validation = await validateDealMove(dealId, targetStage.id, deal.account_id);
+    
+    if (!validation.canMoveToStage) {
+      // Open modal to fill missing required fields
+      setRequiredFieldsModal({
+        open: true,
+        dealId,
+        dealTitle: deal.title,
+        targetStageId: targetStage.id,
+        targetStageName: targetStage.name,
+        missingFields: validation.missingFields,
+        accountId: deal.account_id,
+      });
+      return;
+    }
+    
+    // Move normally
+    await onDealMove(dealId, targetStage.id);
+  };
+
+  const handleRequiredFieldsComplete = async () => {
+    if (requiredFieldsModal) {
+      await onDealMove(requiredFieldsModal.dealId, requiredFieldsModal.targetStageId);
+      setRequiredFieldsModal(null);
     }
   };
 
@@ -152,6 +191,20 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
           )}
         </DragOverlay>
       </DndContext>
+
+      {/* Required Fields Modal */}
+      {requiredFieldsModal && (
+        <RequiredFieldsModal
+          open={requiredFieldsModal.open}
+          onOpenChange={(open) => !open && setRequiredFieldsModal(null)}
+          dealId={requiredFieldsModal.dealId}
+          dealTitle={requiredFieldsModal.dealTitle}
+          targetStageName={requiredFieldsModal.targetStageName}
+          missingFields={requiredFieldsModal.missingFields}
+          accountId={requiredFieldsModal.accountId}
+          onComplete={handleRequiredFieldsComplete}
+        />
+      )}
     </ZappNavigationProvider>
   );
 }
