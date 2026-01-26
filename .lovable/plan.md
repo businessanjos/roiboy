@@ -1,252 +1,150 @@
 
+# Plano: Correção de Isolamento de Campos por Setor e Formatação de Texto em Formulários
 
-# Plano: Mostrar Grupos em Comum na Busca de Contatos do ROY zAPP
+## Problemas Identificados
 
-## Resumo do Objetivo
+### Problema 1: Campos de Vendas aparecendo em Formulários de Operações
 
-Quando o usuário buscar um contato no diálogo "Nova Conversa" do ROY zAPP, além de mostrar o contato encontrado, o sistema também deve exibir os grupos WhatsApp que esse contato participa em comum com a instância conectada.
+**Causa Raiz:**
+- A função `fetchCustomFields` em `src/pages/Forms.tsx` (linha 744-757) busca TODOS os campos personalizados ativos sem filtrar por setor
+- Isso permite que usuários selecionem campos de Vendas (como "Canal de Venda", "Item da Venda") ao criar formulários de Operações
+- O formulário "Cadastro Empresarial" foi identificado com campos de Vendas incorretamente incluídos
 
-## Arquitetura da Solução
+**Campos incorretos encontrados:**
+- `Canal de Venda` (show_in_deals: true) - Campo exclusivo de Vendas
+- `Item da Venda` (show_in_deals: true) - Campo exclusivo de Vendas
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                        FLUXO DA FEATURE                                         │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  1. USUARIO DIGITA NOME/TELEFONE                                               │
-│     └─> searchContacts() busca clientes, leads, conversas                      │
-│                                                                                 │
-│  2. AO ENCONTRAR CONTATOS                                                       │
-│     └─> Para cada telefone encontrado, buscar grupos em comum                  │
-│     └─> Consulta whatsapp_group_participants por phone                         │
-│                                                                                 │
-│  3. RESULTADO AGRUPADO                                                          │
-│     ├─> Contato: "João Silva" [Cliente]                                        │
-│     │   └─> Grupos em comum: "QG Anjos", "Leadership Team"                     │
-│     └─> Contato: "Maria Santos" [Lead]                                         │
-│         └─> Grupos em comum: "ClaxClub Sócios"                                 │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+### Problema 2: Texto branco em fundo claro nos campos de formulário
+
+**Causa Raiz:**
+- Em `src/pages/PublicForm.tsx`, os Labels dentro de RadioGroup (linha 253-258) e Checkbox (linha 288-289) não aplicam a cor de texto do appearance
+- Eles usam apenas `className="font-normal cursor-pointer"` sem o `style={{ color: appearance.text_color }}`
+- Quando o fundo do card é claro e a cor de texto padrão é clara, o texto fica invisível
+
+---
+
+## Soluções Propostas
+
+### Correção 1: Implementar Isolamento de Campos por Setor no Editor de Formulários
+
+**Arquivo:** `src/pages/Forms.tsx`
+
+**Mudança na função `fetchCustomFields`:**
+```typescript
+// ANTES (linha 744-757):
+const fetchCustomFields = async () => {
+  const { data, error } = await supabase
+    .from("custom_fields")
+    .select("id, name, field_type, options, is_required")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+  // ...
+};
+
+// DEPOIS:
+const fetchCustomFields = async () => {
+  // Buscar campos que são show_in_clients=true (padrão para formulários CX)
+  // OU campos que não pertencem exclusivamente a deals/leads
+  const { data, error } = await supabase
+    .from("custom_fields")
+    .select("id, name, field_type, options, is_required, show_in_clients, show_in_deals, show_in_leads")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+  
+  if (error) throw error;
+  
+  // Filtrar apenas campos que:
+  // 1. São visíveis em clientes (show_in_clients = true), OU
+  // 2. Não são exclusivos de deals/leads (campos genéricos)
+  const filteredFields = (data || []).filter(field => 
+    field.show_in_clients === true || 
+    (!field.show_in_deals && !field.show_in_leads)
+  );
+  
+  setCustomFields(filteredFields);
+};
 ```
 
-## Alteracoes Necessarias
+**Lógica:**
+- Campos com `show_in_deals = true` E `show_in_clients = false` são exclusivos de Vendas (Pipeline)
+- Campos com `show_in_leads = true` E `show_in_clients = false` são exclusivos de Leads
+- Formulários CX devem mostrar apenas campos genéricos ou campos de clientes
 
-### Parte 1: Criar Tabela de Cache de Participantes (SQL Migration)
+### Correção 2: Aplicar Cor de Texto aos Labels de Opções
 
-Criar tabela `whatsapp_group_participants` para armazenar participantes de cada grupo:
+**Arquivo:** `src/pages/PublicForm.tsx`
+
+**Mudança no renderField para select (linhas 253-258):**
+```tsx
+// ANTES:
+<Label
+  htmlFor={`${field.id}-${opt.value}`}
+  className="font-normal cursor-pointer"
+>
+  {opt.label}
+</Label>
+
+// DEPOIS:
+<Label
+  htmlFor={`${field.id}-${opt.value}`}
+  className="font-normal cursor-pointer"
+  style={{ color: appearance.text_color }}
+>
+  {opt.label}
+</Label>
+```
+
+**Mudança no renderField para multi_select (linhas 288-289):**
+```tsx
+// ANTES:
+<Label
+  htmlFor={`${field.id}-${opt.value}`}
+  className="font-normal cursor-pointer"
+>
+  {opt.label}
+</Label>
+
+// DEPOIS:
+<Label
+  htmlFor={`${field.id}-${opt.value}`}
+  className="font-normal cursor-pointer"
+  style={{ color: appearance.text_color }}
+>
+  {opt.label}
+</Label>
+```
+
+### Correção 3: Limpar Campos Incorretos do Formulário Existente (Migração SQL)
+
+**Ação:** Remover os campos de Vendas do formulário "Cadastro Empresarial"
 
 ```sql
-CREATE TABLE public.whatsapp_group_participants (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  group_jid text NOT NULL,
-  phone text NOT NULL,
-  name text,
-  is_admin boolean DEFAULT false,
-  synced_at timestamptz DEFAULT now(),
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(account_id, group_jid, phone)
-);
-
-CREATE INDEX idx_group_participants_account ON whatsapp_group_participants(account_id);
-CREATE INDEX idx_group_participants_phone ON whatsapp_group_participants(account_id, phone);
-CREATE INDEX idx_group_participants_group ON whatsapp_group_participants(account_id, group_jid);
-
--- Habilitar RLS
-ALTER TABLE whatsapp_group_participants ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "users_view_own_account_participants" ON whatsapp_group_participants
-  FOR SELECT USING (account_id IN (SELECT account_id FROM users WHERE id = auth.uid()));
-
-CREATE POLICY "service_role_all" ON whatsapp_group_participants
-  FOR ALL USING (true) WITH CHECK (true);
+-- Remover campos de Vendas do formulário de Operações
+UPDATE forms 
+SET fields = array_remove(array_remove(fields, '16ebda9f-cd3b-412c-bb06-0950001963c5'), '033b91fb-3add-4c96-aec9-567fefbd0fb2')
+WHERE id = 'f53653f9-85b3-4f42-8b86-57cecb553330';
 ```
 
-### Parte 2: Atualizar uazapi-manager para Salvar Participantes
-
-Modificar a action `group_participants` ou criar uma nova action `sync_group_participants` que alem de retornar os participantes, salva no banco de dados.
-
-**Arquivo:** `supabase/functions/uazapi-manager/index.ts`
-
-Adicionar logica para inserir participantes na tabela apos buscar da API:
-
-```typescript
-// Apos obter participants com sucesso
-if (participants.length > 0) {
-  // Limpar participantes antigos deste grupo
-  await supabaseClient
-    .from("whatsapp_group_participants")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("group_jid", groupJidForParticipants);
-  
-  // Inserir novos participantes
-  const participantRows = participants.map(p => ({
-    account_id: accountId,
-    group_jid: groupJidForParticipants,
-    phone: p.phone,
-    name: p.name || null,
-    is_admin: p.admin === "admin" || p.admin === "superadmin",
-    synced_at: new Date().toISOString(),
-  }));
-  
-  await supabaseClient
-    .from("whatsapp_group_participants")
-    .insert(participantRows);
-}
-```
-
-### Parte 3: Criar Sincronizacao Inicial de Todos os Grupos
-
-Adicionar nova action `sync_all_group_participants` no uazapi-manager que:
-1. Lista todos os grupos da conta
-2. Para cada grupo, busca participantes
-3. Salva todos no banco
-
-Isso pode ser disparado manualmente ou via cron.
-
-### Parte 4: Modificar searchContacts no RoyZapp.tsx
-
-**Arquivo:** `src/pages/RoyZapp.tsx`
-
-Apos encontrar contatos, buscar grupos em comum para cada telefone:
-
-```typescript
-// Apos obter combined de contatos
-const phonesForGroupSearch = combined.map(c => c.phone_e164?.replace(/\D/g, '')).filter(Boolean);
-
-// Buscar grupos em comum para esses telefones
-const { data: groupParticipants } = await supabase
-  .from("whatsapp_group_participants")
-  .select("phone, group_jid, whatsapp_groups(name, avatar_url)")
-  .eq("account_id", currentUser.account_id)
-  .in("phone", phonesForGroupSearch);
-
-// Criar mapa de telefone -> grupos
-const phoneToGroups = new Map<string, Array<{name: string, avatar_url: string | null}>>();
-(groupParticipants || []).forEach(p => {
-  const phone = p.phone;
-  if (!phoneToGroups.has(phone)) {
-    phoneToGroups.set(phone, []);
-  }
-  if (p.whatsapp_groups) {
-    phoneToGroups.get(phone)!.push({
-      name: p.whatsapp_groups.name,
-      avatar_url: p.whatsapp_groups.avatar_url,
-    });
-  }
-});
-
-// Adicionar grupos aos contatos
-const combinedWithGroups = combined.map(c => ({
-  ...c,
-  common_groups: phoneToGroups.get(c.phone_e164?.replace(/\D/g, '') || '') || [],
-}));
-
-setNewConversationClients(combinedWithGroups);
-```
-
-### Parte 5: Atualizar Interface Contact
-
-**Arquivo:** `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx`
-
-Atualizar interface Contact para incluir grupos:
-
-```typescript
-interface Contact {
-  id: string;
-  full_name: string;
-  phone_e164: string;
-  avatar_url: string | null;
-  type?: 'client' | 'lead' | 'conversation';
-  common_groups?: Array<{ name: string; avatar_url: string | null }>;
-}
-```
-
-### Parte 6: Exibir Grupos em Comum no UI
-
-**Arquivo:** `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx`
-
-Adicionar exibicao de grupos abaixo de cada contato:
-
-```tsx
-<button key={...} onClick={...} className="...">
-  {/* Avatar e info existentes */}
-  <Avatar>...</Avatar>
-  <div className="flex-1 min-w-0">
-    <div className="flex items-center gap-2">
-      <span>{formatName(client.full_name)}</span>
-      <Badge>...</Badge>
-    </div>
-    <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
-    
-    {/* NOVO: Grupos em comum */}
-    {client.common_groups && client.common_groups.length > 0 && (
-      <div className="flex items-center gap-1 mt-1 flex-wrap">
-        <Users className="h-3 w-3 text-[#8696a0]" />
-        <span className="text-xs text-[#8696a0]">
-          {client.common_groups.length} grupo{client.common_groups.length > 1 ? 's' : ''} em comum:
-        </span>
-        {client.common_groups.slice(0, 3).map((g, i) => (
-          <Badge key={i} variant="outline" className="text-xs bg-[#202c33] border-[#3b4a54]">
-            {g.name.slice(0, 15)}{g.name.length > 15 ? '...' : ''}
-          </Badge>
-        ))}
-        {client.common_groups.length > 3 && (
-          <span className="text-xs text-[#8696a0]">+{client.common_groups.length - 3}</span>
-        )}
-      </div>
-    )}
-  </div>
-</button>
-```
+---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| SQL Migration | Criar tabela `whatsapp_group_participants` |
-| `supabase/functions/uazapi-manager/index.ts` | Salvar participantes ao buscar grupos |
-| `src/pages/RoyZapp.tsx` | Modificar `searchContacts` para buscar grupos em comum |
-| `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx` | Adicionar interface e UI para grupos em comum |
+| `src/pages/Forms.tsx` | Filtrar campos por setor em `fetchCustomFields` |
+| `src/pages/PublicForm.tsx` | Adicionar `style={{ color: appearance.text_color }}` aos Labels de opções |
+| Migração SQL | Remover campos de Vendas do formulário "Cadastro Empresarial" |
 
-## Estrategia de Sincronizacao de Participantes
+---
 
-1. **Sincronizacao sob demanda**: Quando `group_participants` e chamado, salvar no banco
-2. **Sincronizacao inicial**: Botao na pagina de grupos para sincronizar todos os participantes
-3. **Sincronizacao automatica**: Quando uma mensagem de grupo e recebida, atualizar cache do grupo
+## Resumo Técnico
 
-## Consideracoes de Performance
+1. **fetchCustomFields** passará a filtrar campos excluindo aqueles exclusivos de Deals/Leads
+2. **renderField** passará a propagar a cor de texto para todas as labels de opções
+3. **Migração SQL** limpará os campos incorretos já inseridos no formulário afetado
 
-- A busca de grupos sera feita em paralelo com a busca de contatos
-- Limite de 3 grupos exibidos inline com "+N" para excesso
-- Cache de participantes evita chamadas repetidas a API UAZAPI
-- Indice `idx_group_participants_phone` otimiza busca por telefone
+## Impacto Esperado
 
-## Layout Visual Final
-
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│ Nova Conversa                                                   X │
-├────────────────────────────────────────────────────────────────────┤
-│ Busque um contato para iniciar uma conversa                       │
-│ ┌────────────────────────────────────────────────────────────────┐│
-│ │ Buscar por nome ou telefone...                                 ││
-│ └────────────────────────────────────────────────────────────────┘│
-│                                                                    │
-│ ┌────────────────────────────────────────────────────────────────┐│
-│ │ [AV] João Silva              [Cliente]                         ││
-│ │      +55 11 98765-4321                                         ││
-│ │      👥 2 grupos em comum: [QG Anjos] [Leadership]             ││
-│ ├────────────────────────────────────────────────────────────────┤│
-│ │ [AV] Maria Santos            [Lead]                            ││
-│ │      +55 21 99876-5432                                         ││
-│ │      👥 1 grupo em comum: [ClaxClub Socios]                    ││
-│ ├────────────────────────────────────────────────────────────────┤│
-│ │ [AV] Pedro Alves             [Contato]                         ││
-│ │      +55 31 98888-7777                                         ││
-│ │      (sem grupos em comum)                                     ││
-│ └────────────────────────────────────────────────────────────────┘│
-└────────────────────────────────────────────────────────────────────┘
-```
-
+- Campos de Vendas não aparecerão mais na seleção de formulários CX/Operações
+- Texto dos campos de formulário sempre terá contraste adequado
+- Formulário "Cadastro Empresarial" não mostrará mais "Canal de Venda" e "Item da Venda"
