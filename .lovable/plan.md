@@ -1,109 +1,163 @@
 
-# Plano: Sincronizar Nome do Header com a Sidebar no ROY zAPP
+# Plano: Fixar Barra de Comentários no Perfil do Cliente
 
-## Problema Identificado
+## Problema
 
-A imagem mostra uma discrepância clara:
+Quando a Timeline ou as abas de Financeiro possuem muitas informações, os usuários precisam rolar até o final da página para acessar a caixa de comentário/anexo. Isso prejudica a usabilidade.
 
-| Local | Nome Exibido |
-|-------|--------------|
-| **Sidebar** (esquerda) | "Thiago & Jamile - Rykas Mentoring" ✓ |
-| **Header** (chat aberto) | "Thiago Almeida" ✗ |
+## Componentes Afetados
 
-A causa raiz é a existência de **duas implementações diferentes** da função `getContactInfo`:
+| Componente | Local do Input | Problema |
+|------------|----------------|----------|
+| `Timeline.tsx` | Final da lista | Fica escondido quando há muitos eventos |
+| `FinancialNotes.tsx` | Topo da lista | OK, mas pode melhorar com scroll |
+| `ClientFinancial.tsx` (aba Lançamentos) | Topo | Usa `FinancialQuickNoteInput` |
 
-```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│                     SITUAÇÃO ATUAL - DUPLICAÇÃO DE LÓGICA                  │
-└────────────────────────────────────────────────────────────────────────────┘
+## Solução Proposta
 
-   src/components/royzapp/types.ts                  src/pages/RoyZapp.tsx
-          (SIDEBAR)                                      (HEADER)
-   ┌─────────────────────────────┐           ┌─────────────────────────────┐
-   │ getContactInfo()            │           │ getContactInfo() (diferente)│
-   │                             │           │                             │
-   │ Para GRUPOS:                │           │ Para TODOS:                 │
-   │ → contact_name (grupo)      │           │ → client.full_name          │
-   │                             │           │ → lead.full_name            │
-   │ Para INDIVIDUAIS:           │           │ → contact_name              │
-   │ → client.full_name          │           │                             │
-   │ → lead.full_name            │           │ NÃO diferencia grupos!      │
-   │ → contact_name              │           │                             │
-   └─────────────────────────────┘           └─────────────────────────────┘
-           │                                          │
-           ▼                                          ▼
-   "Thiago & Jamile - Rykas"               "Thiago Almeida"
-   (nome do grupo no WhatsApp)             (nome do cliente vinculado)
-```
-
----
-
-## Solução
-
-Atualizar a função `getContactInfo` em `RoyZapp.tsx` para usar a **mesma lógica** de `types.ts`, diferenciando grupos de conversas individuais:
+Reestruturar o layout para usar um container flex com altura definida:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                     SOLUÇÃO - LÓGICA UNIFICADA                             │
+│                           ESTRUTURA ATUAL                                  │
 └────────────────────────────────────────────────────────────────────────────┘
 
-   src/pages/RoyZapp.tsx (ATUALIZADO)
-   ┌─────────────────────────────────────────────────────────────────────────┐
-   │ getContactInfo()                                                        │
-   │                                                                         │
-   │ if (zc?.is_group) {                                                     │
-   │   → contact_name (nome do grupo) OU "Grupo sem nome"                    │
-   │ } else {                                                                │
-   │   → client.full_name                                                    │
-   │   → lead.full_name                                                      │
-   │   → contact_name                                                        │
-   │   → phone_e164                                                          │
-   │   → "Desconhecido"                                                      │
-   │ }                                                                       │
-   └─────────────────────────────────────────────────────────────────────────┘
-           │
-           ▼
-   RESULTADO: Sidebar e Header exibem o mesmo nome
+   Timeline.tsx                        FinancialNotes.tsx
+┌─────────────────────────┐         ┌─────────────────────────┐
+│  Evento 1               │         │  Input (topo)           │
+│  Evento 2               │         │  Nota 1                 │
+│  Evento 3               │         │  Nota 2                 │
+│  ...                    │         │  ...                    │
+│  Evento N               │         │  Nota N                 │
+│  ────────────────────── │         └─────────────────────────┘
+│  Input (fundo)          │
+│  (precisa rolar)        │
+└─────────────────────────┘
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                           ESTRUTURA NOVA                                   │
+└────────────────────────────────────────────────────────────────────────────┘
+
+   Timeline.tsx                        FinancialNotes.tsx
+┌─────────────────────────┐         ┌─────────────────────────┐
+│ ┌─────────────────────┐ │         │ ┌─────────────────────┐ │
+│ │  Evento 1           │ │         │ │  Nota 1             │ │
+│ │  Evento 2           │ │         │ │  Nota 2             │ │
+│ │  Evento 3           │ │         │ │  ...                │ │
+│ │  ...                │ │         │ │  Nota N             │ │
+│ │  (scrollable)       │ │         │ │  (scrollable)       │ │
+│ └─────────────────────┘ │         │ └─────────────────────┘ │
+│ ────────────────────────│         │ ────────────────────────│
+│ Input (fixo no fundo)   │         │ Input (fixo no fundo)   │
+│ sempre visível          │         │ sempre visível          │
+└─────────────────────────┘         └─────────────────────────┘
 ```
 
----
+## Alterações por Arquivo
 
-## Alteração Específica
+### 1. `src/components/client/Timeline.tsx`
 
-### Arquivo: `src/pages/RoyZapp.tsx`
+Modificar o wrapper principal para:
+- Usar `flex flex-col` com altura máxima (ex: `max-h-[600px]`)
+- Lista de eventos dentro de um container com `flex-1 overflow-y-auto`
+- Input permanece fora do container scrollable (no fundo)
 
-Localização: Função `getContactInfo` (linhas 1114-1149)
-
-**Antes (linha 1118):**
-```typescript
-const name = zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || "Contato";
+```tsx
+// Estrutura nova:
+<div className="flex flex-col max-h-[600px]">
+  {/* Lista scrollable */}
+  <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+    {/* eventos aqui */}
+  </div>
+  
+  {/* Input fixo no fundo */}
+  <div className="flex-shrink-0 pt-4 border-t bg-background">
+    {/* comment input */}
+  </div>
+</div>
 ```
 
-**Depois:**
-```typescript
-// IMPORTANTE: Para GRUPOS, sempre usar contact_name (nome do grupo no WhatsApp)
-// Para conversas individuais, priorizar cliente/lead vinculado
-// Isso mantém consistência entre sidebar e header
-const name = zc?.is_group 
-  ? (zc?.contact_name || "Grupo sem nome")
-  : (zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || zc?.phone_e164 || "Desconhecido");
+### 2. `src/components/client/FinancialNotes.tsx`
+
+Aplicar a mesma estrutura:
+- Container flex com altura máxima
+- Lista de notas scrollable
+- Input MOVIDO para o fundo (atualmente está no topo)
+
+```tsx
+<div className="flex flex-col max-h-[600px]">
+  {/* Lista scrollable */}
+  <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+    {notes.map(...)}
+  </div>
+  
+  {/* Input fixo no fundo */}
+  <div className="flex-shrink-0 pt-4 border-t bg-background">
+    {/* quick comment input */}
+  </div>
+</div>
 ```
 
----
+### 3. `src/components/client/ClientFinancial.tsx`
 
-## Resultado Esperado
+Para a aba "entries" (Lançamentos):
+- Mover `FinancialQuickNoteInput` para o FINAL do TabsContent
+- Aplicar layout flex similar
 
-| Tipo de Conversa | Sidebar | Header | Consistente? |
-|------------------|---------|--------|--------------|
-| **Grupo** (ex: "Thiago & Jamile - Rykas") | Nome do grupo | Nome do grupo | ✓ |
-| **Individual com cliente** | Nome do cliente | Nome do cliente | ✓ |
-| **Individual com lead** | Nome do lead | Nome do lead | ✓ |
-| **Sem vínculo** | Nome do contato/telefone | Nome do contato/telefone | ✓ |
+```tsx
+<TabsContent value="entries" className="mt-4 flex flex-col max-h-[600px]">
+  {/* Lista scrollable */}
+  <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+    {financialEntries.map(...)}
+  </div>
+  
+  {/* Input fixo no fundo */}
+  <div className="flex-shrink-0 pt-4 border-t bg-background">
+    <FinancialQuickNoteInput ... />
+  </div>
+</TabsContent>
+```
 
----
+## Detalhes Técnicos
 
-## Arquivo a Modificar
+### Altura do Container
+
+Usar `max-h-[600px]` como padrão, que:
+- Permite cerca de 6-8 itens visíveis
+- Funciona bem em telas de laptop (768px+)
+- Pode ser ajustado com media queries se necessário
+
+### Scroll Suave
+
+Adicionar `scroll-smooth` para melhor UX ao navegar:
+```css
+.overflow-y-auto {
+  scroll-behavior: smooth;
+}
+```
+
+### Padding Right
+
+Adicionar `pr-2` na área scrollable para evitar que a scrollbar sobreponha o conteúdo.
+
+### Background do Input
+
+Usar `bg-background` no container do input para garantir que ele se destaque do conteúdo scrollado.
+
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/RoyZapp.tsx` | Atualizar lógica de `name` na função `getContactInfo` (linha 1118) para diferenciar grupos de conversas individuais |
+| `src/components/client/Timeline.tsx` | Reestruturar layout com flex e área scrollable |
+| `src/components/client/FinancialNotes.tsx` | Mover input para fundo + layout flex |
+| `src/components/client/ClientFinancial.tsx` | Aba "entries": mover input para fundo + layout flex |
+
+## Resultado Esperado
+
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Timeline com 50+ eventos | Rolar toda a página | Input sempre visível no fundo |
+| Notas financeiras extensas | Rolar para comentar | Input sempre acessível |
+| Lançamentos financeiros | Input no topo desaparece | Input fixo no fundo |
+| Telas pequenas (laptop) | Mesmo problema | Área scrollable contida |
