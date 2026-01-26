@@ -1812,44 +1812,122 @@ serve(async (req) => {
 
     // Handle message deletion events
     if (eventType === "messages.delete" || eventType === "message.revoke" || eventType === "message.deleted" || eventType === "messages.revoke") {
-      console.log(`Processing message deletion event: ${eventType}`, JSON.stringify(payload).substring(0, 500));
+      console.log(`Processing message deletion event: ${eventType}`, JSON.stringify(payload).substring(0, 1000));
       
       const payloadAny = payload as any;
       const msg = payloadAny.message || payloadAny.data || payloadAny;
       
-      // Try to extract message ID from various formats
-      let deletedMessageId = msg?.id || msg?.key?.id || msg?.messageId || payloadAny?.key?.id;
+      // Helper function to mark a message as deleted with exact and partial matching
+      const markMessageAsDeleted = async (msgId: string): Promise<number> => {
+        if (!msgId) return 0;
+        
+        console.log(`[DELETE] Attempting to mark message as deleted: ${msgId}`);
+        
+        // Try exact match first
+        const { data: exactMatch, error: exactError } = await supabase
+          .from("zapp_messages")
+          .update({ 
+            is_deleted: true, 
+            deleted_at: new Date().toISOString()
+          })
+          .eq("account_id", accountId)
+          .eq("external_message_id", msgId)
+          .select("id");
+        
+        if (exactError) {
+          console.error(`[DELETE] Exact match error:`, exactError);
+        }
+        
+        if (exactMatch && exactMatch.length > 0) {
+          console.log(`[DELETE] Exact match found and updated: ${exactMatch.length} message(s)`);
+          return exactMatch.length;
+        }
+        
+        // Try partial match (ID ends with the value - handles phone:msgId format)
+        console.log(`[DELETE] No exact match, trying partial match with %${msgId}`);
+        const { data: partialMatch, error: partialError } = await supabase
+          .from("zapp_messages")
+          .update({ 
+            is_deleted: true, 
+            deleted_at: new Date().toISOString()
+          })
+          .eq("account_id", accountId)
+          .ilike("external_message_id", `%${msgId}`)
+          .select("id");
+        
+        if (partialError) {
+          console.error(`[DELETE] Partial match error:`, partialError);
+        }
+        
+        if (partialMatch && partialMatch.length > 0) {
+          console.log(`[DELETE] Partial match found and updated: ${partialMatch.length} message(s)`);
+          return partialMatch.length;
+        }
+        
+        console.log(`[DELETE] No message found for ID: ${msgId}`);
+        return 0;
+      };
       
-      // Also check for remoteJid:id format
+      let totalDeleted = 0;
+      
+      // Try to extract message ID from various formats
+      // Format 1: Simple ID fields
+      let deletedMessageId = msg?.id || msg?.key?.id || msg?.messageId || 
+                             payloadAny?.key?.id || msg?.messageid;
+      
+      // Format 2: Array in data.keys (Evolution API / WASender style)
+      if (!deletedMessageId && payloadAny.data?.keys) {
+        const keys = payloadAny.data.keys;
+        if (Array.isArray(keys) && keys.length > 0) {
+          console.log(`[DELETE] Processing ${keys.length} keys from data.keys array`);
+          for (const key of keys) {
+            const keyId = key?.id || key;
+            if (keyId && typeof keyId === 'string') {
+              const count = await markMessageAsDeleted(keyId);
+              totalDeleted += count;
+            }
+          }
+          // Set flag to indicate we processed array
+          deletedMessageId = "processed_array";
+        }
+      }
+      
+      // Format 3: Array in data.messages
+      if (!deletedMessageId && payloadAny.data?.messages) {
+        const messages = payloadAny.data.messages;
+        if (Array.isArray(messages) && messages.length > 0) {
+          console.log(`[DELETE] Processing ${messages.length} messages from data.messages array`);
+          for (const m of messages) {
+            const msgId = m?.key?.id || m?.id || m?.messageId || m?.messageid;
+            if (msgId) {
+              const count = await markMessageAsDeleted(msgId);
+              totalDeleted += count;
+            }
+          }
+          deletedMessageId = "processed_array";
+        }
+      }
+      
+      // Format 4: message.key.id nested structure
       if (!deletedMessageId && msg?.key) {
         deletedMessageId = msg.key.id;
       }
       
-      if (deletedMessageId) {
-        console.log(`Marking message ${deletedMessageId} as deleted`);
-        
-        // Update the message as deleted
-        const { error: deleteError, count } = await supabase
-          .from("zapp_messages")
-          .update({ 
-            is_deleted: true, 
-            deleted_at: new Date().toISOString(),
-            content: "🚫 Mensagem apagada"
-          })
-          .eq("account_id", accountId)
-          .eq("external_message_id", deletedMessageId);
-        
-        if (deleteError) {
-          console.error("Error marking message as deleted:", deleteError);
-        } else {
-          console.log(`Message ${deletedMessageId} marked as deleted`);
-        }
-      } else {
-        console.log("Could not extract message ID from deletion event");
+      // Format 5: Check for participant-based ID (group messages)
+      if (!deletedMessageId && payloadAny.participant && payloadAny.id) {
+        deletedMessageId = payloadAny.id;
       }
       
+      // Process single message ID (if not already processed as array)
+      if (deletedMessageId && deletedMessageId !== "processed_array") {
+        const count = await markMessageAsDeleted(deletedMessageId);
+        totalDeleted += count;
+      }
+      
+      console.log(`[DELETE] Total messages marked as deleted: ${totalDeleted}`);
+      
       return new Response(
-        JSON.stringify({ success: true, event: eventType, deleted: true }),
+        JSON.stringify({ success: true, event: eventType, deleted: true, count: totalDeleted }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
