@@ -1,146 +1,111 @@
 
-# Análise: Separação de Propriedade por Setor no RoyZapp
+# Plano: Correção do Visual de Faturamento por Mês
 
-## A Arquitetura ATUAL Já Suporta Propriedade Multi-Setor!
+## Diagnóstico
 
-A análise do banco de dados confirma que o sistema **JÁ IMPLEMENTA** corretamente a separação de propriedade por setor:
+O visual "Faturamento por Mês" está configurado incorretamente:
 
-### Exemplo Real do Banco de Dados
+| Campo | Valor Atual | Valor Correto |
+|-------|-------------|---------------|
+| `dimension.field` | `created_at` | `won_at` |
 
-**Contato: Náyara Hungaro (+5511914339207)**
-
-| Setor | Departamento | Agente Responsável | Status |
-|-------|--------------|-------------------|--------|
-| vendas | Vendas | Jonathan Marcato | active |
-| operacoes | Operações | Michele Santos | closed |
-
-**Mesma conversa, DUAS atribuições diferentes!**
-
-Outros exemplos encontrados no banco:
-- Tathiana Marinho Lopes → Vendas + Operações
-- Hugo → Vendas + Operações
-- Lucas Gouveia Zeoti → Vendas + Operações
-
----
-
-## Como Funciona a Separação por Setor
+### Fluxo do Problema
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    zapp_conversations                           │
-│                (ID: ed2e0c7f-cbea-4baa-829e-ea48e5cf4206)       │
-│                phone_e164: +5511914339207                        │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-         ┌───────────────┴───────────────┐
-         ▼                               ▼
-┌──────────────────────┐       ┌──────────────────────┐
-│ zapp_conversation_   │       │ zapp_conversation_   │
-│ assignments          │       │ assignments          │
-│                      │       │                      │
-│ department: Vendas   │       │ department: Operações│
-│ agent: Jonathan M.   │       │ agent: Michele S.    │
-│ status: active       │       │ status: closed       │
-└──────────────────────┘       └──────────────────────┘
+1. Visual configurado com dimension.field = "created_at"
+2. useVisualData usa created_at para filtrar datas
+3. Busca TODOS os negócios criados no período (462)
+4. Agrega por created_at (data de criação)
+5. Resultado: mostra negócios open/lost/won misturados
+6. Mas como a medida é SUM(value) e muitos têm value=0...
+   O gráfico aparece sem barras visíveis ou com valores inconsistentes
 ```
 
-Cada setor tem sua **própria atribuição (assignment)** para a mesma conversa base. Isso permite:
-- Vendas ter Vanessa como responsável
-- Operações ter José como responsável
-- Cada setor ver apenas suas conversas
-- Histórico de mensagens compartilhado (mesmo cliente)
+### Evidência dos Dados
+
+Query executada no banco:
+
+```text
+Com created_at (Jan/2026): 462 negócios, R$ 35.240.800
+Com won_at (Jan/2026): 30 negócios, R$ 3.517.200
+```
+
+O visual de "Faturamento" deveria mostrar apenas os R$ 3.517.200 de negócios efetivamente ganhos.
 
 ---
 
-## O Problema Real: Filtro de Agentes
+## Causa Raiz
 
-O problema que os vendedores estão enfrentando NÃO é de arquitetura, mas sim do **filtro de agentes** no `useZappData.tsx`:
+O modal de criação de visuais permite escolher o campo de data como `created_at` mesmo para métricas de faturamento, o que não faz sentido semântico. 
 
-```typescript
-// Linhas 516-540: Filtro de agentes por departamento
-filteredAgents = finalAgents.filter((a: Agent) => {
-  // Show if assigned to this specific department
-  if (a.department_id === targetDepartmentId) return true;
-  
-  // Show if assigned to ALL departments (null)
-  if (a.department_id === null) return true;
-  
-  // Admins/gestores appear in all departments
-  if (isAdmin || isGestor || hasAdminFlag) return true;
-  
-  return false;  // ❌ EXCLUI vendedores quando estão no setor errado
-});
-```
-
-**Cenário do Bug:**
-1. Vanessa (dept: Vendas) está visualizando setor Operações
-2. Filtro exclui Vanessa da lista de agentes
-3. `currentAgent = agents.find(a => a.user_id === currentUser.id)` = **undefined**
-4. Filtro "Minhas": `a.agent_id === currentAgent?.id` = **sempre false**
-5. Conversa não aparece na aba "Minhas"
+Para um visual de "Faturamento por Mês":
+- A medida é `SUM(value)` (soma dos valores)
+- A dimensão deveria ser `won_at` (agrupado por data de vitória)
 
 ---
 
 ## Solução Proposta
 
-Modificar o filtro para **SEMPRE incluir o usuário atual** na lista de agentes, independente do departamento:
+### Opção 1: Corrigir o Visual Existente (Recomendado para Curto Prazo)
 
-### Arquivo: `src/hooks/useZappData.tsx`
+Atualizar diretamente a configuração do visual no banco de dados:
 
-**Mudança nas linhas 516-540:**
+```sql
+UPDATE insights_visuals
+SET config = jsonb_set(
+  config,
+  '{dimension,field}',
+  '"won_at"'
+)
+WHERE id = '8f774cc5-7e6f-441f-b868-de5e3601b1aa';
+```
+
+Isso corrige imediatamente o visual existente.
+
+### Opção 2: Melhorar o Modal de Criação (Recomendado para Longo Prazo)
+
+Modificar o componente `AddVisualModal.tsx` para:
+1. Quando a medida for "Valor (value)" e o campo for selecionado para agregar deals
+2. Sugerir automaticamente `won_at` como campo de data
+3. Ou adicionar opções semânticas como "Data de Vitória" e "Data de Perda" além de "Data de Criação"
+
+**Arquivo:** `src/components/insights/AddVisualModal.tsx`
+
+Adicionar ao passo de seleção de dimensão:
 
 ```typescript
-// Filter agents by current sector's department
-// Include: current user, agents in this department, admins/gestores, or null department
-let filteredAgents = finalAgents;
-if (sectorId && targetDepartmentId) {
-  filteredAgents = finalAgents.filter((a: Agent) => {
-    // ✅ SEMPRE incluir o próprio usuário para que currentAgent funcione
-    if (a.user_id === currentUser.id) {
-      return true;
-    }
-    
-    // Show if assigned to this specific department
-    if (a.department_id === targetDepartmentId) {
-      return true;
-    }
-    
-    // Show if assigned to ALL departments (department_id is null)
-    if (a.department_id === null) {
-      return true;
-    }
-    
-    // Admins/gestores appear in all departments
-    // ... resto do código existente
-  });
-}
+// Quando dataSource === 'deals' e dimension.type === 'date'
+const dealDateOptions = [
+  { value: 'created_at', label: 'Data de Criação' },
+  { value: 'won_at', label: 'Data de Vitória (Faturamento)' },
+  { value: 'lost_at', label: 'Data de Perda' },
+];
 ```
 
 ---
 
-## Por que Esta Solução é Segura e Correta
-
-| Aspecto | Garantia |
-|---------|----------|
-| **Isolamento de Setor** | Conversas continuam filtradas por `department_id` na query e no filteredAssignments |
-| **Propriedade Separada** | Cada setor mantém sua própria atribuição com seu próprio agente responsável |
-| **Aba "Minhas"** | O usuário só vê conversas onde ELE é o agente daquele setor específico |
-| **Não expõe dados** | A mudança apenas garante que o usuário consiga se identificar como agente |
-
----
-
-## Arquivo a Modificar
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/useZappData.tsx` | Adicionar `if (a.user_id === currentUser.id) return true;` no início do filtro de agentes (linha 516) |
+| Banco de dados | Corrigir configuração do visual existente via SQL |
+| `src/components/insights/AddVisualModal.tsx` | Adicionar opções claras para campos de data em deals |
+| `src/components/insights/visual-builder/types.ts` | Verificar se `won_at` e `lost_at` são opções válidas |
 
 ---
 
-## Resultado Esperado
+## Impacto da Correção
 
-Após a correção:
-1. Vendedor puxa conversa no setor de Vendas → aparece na aba "Minhas" do setor Vendas
-2. Consultor puxa o mesmo cliente no setor Operações → aparece na aba "Minhas" do setor Operações
-3. Cada setor mantém sua propriedade independente
-4. A troca de setor mostra apenas as conversas daquele setor
+Após aplicar a correção:
+1. O visual de "Faturamento por Mês" mostrará apenas negócios com status "won"
+2. Agrupará corretamente por mês de vitória
+3. Valor total de Janeiro: R$ 3.517.200 (30 negócios)
+4. O "Explorar Dados" também mostrará apenas os 30 negócios ganhos
+
+---
+
+## Passos de Implementação
+
+1. **Passo 1**: Executar migração SQL para corrigir o visual existente
+2. **Passo 2**: Atualizar o modal de criação de visuais para mostrar opções de data mais claras
+3. **Passo 3**: (Opcional) Adicionar validação para alertar quando a combinação dimension/measure não faz sentido semântico
