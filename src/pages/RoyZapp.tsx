@@ -2622,12 +2622,12 @@ export default function RoyZapp() {
       if (groupJids.length > 0) {
         const { data: groups } = await supabase
           .from("whatsapp_groups")
-          .select("jid, name, avatar_url")
+          .select("group_jid, name")
           .eq("account_id", currentUser.account_id)
-          .in("jid", groupJids);
+          .in("group_jid", groupJids);
         
-        (groups || []).forEach(g => {
-          groupsMap.set(g.jid, { name: g.name, avatar_url: g.avatar_url });
+        (groups || []).forEach((g: { group_jid: string; name: string }) => {
+          groupsMap.set(g.group_jid, { name: g.name, avatar_url: null });
         });
       }
 
