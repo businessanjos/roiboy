@@ -1,74 +1,189 @@
 
-# Plano: Exibir Todos os Meses e Rótulos de Dados no Gráfico
+# Plano: Adicionar "Item da Venda" ao Dialog "Criar Negócio" da Aba Leads
 
-## Situação Atual
+## Contexto
 
-O sistema já possui a infraestrutura para o que você precisa:
-
-| Funcionalidade | Config | Valor Atual |
-|----------------|--------|-------------|
-| Preencher meses vazios | `fillEmptyDates` | `false` |
-| Exibir rótulos nas barras | `showDataLabels` | `false` |
-
-Ambas estão **desabilitadas por padrão** — por isso o gráfico só mostra os meses que têm dados.
+O campo "Item da Venda" já existe no modal "Nova Negociação" do Pipeline (`DealDialog.tsx`), permitindo selecionar um produto e auto-preencher o valor do negócio. Esse campo precisa ser replicado no modal "Criar Negócio" da aba Leads (`LeadsTab.tsx`).
 
 ---
 
-## Solução Proposta
+## Mudanças Necessárias
 
-### Correção 1: Ativar Defaults Inteligentes para Visuais Temporais
+### 1. Adicionar Estado para Produtos
 
-Quando um visual usa agrupamento "Por Mês" (ou outro temporal), automaticamente habilitar:
-- `fillEmptyDates: true` → mostra todos os meses do período
-- `showDataLabels: true` → exibe valores nas barras
-
-**Arquivo:** `src/components/insights/AddVisualModal.tsx`
+Adicionar o estado `products` e `selectedProductId` no componente `LeadsTab`:
 
 ```typescript
-// No handleCreate, ajustar appearance baseado no tipo de agrupamento
-const isTemporalGrouping = baseDimensionConfig.type === 'date';
+// Interface para produtos
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
 
-const config: VisualConfig = {
-  // ... outras configurações
-  appearance: {
-    ...DEFAULT_APPEARANCE,
-    // Ativar automaticamente para agrupamentos temporais
-    fillEmptyDates: isTemporalGrouping,
-    showDataLabels: isTemporalGrouping,
-  },
+// Estados
+const [products, setProducts] = useState<Product[]>([]);
+const [selectedProductId, setSelectedProductId] = useState<string>("");
+```
+
+### 2. Carregar Produtos do Banco
+
+Criar um `useEffect` para buscar produtos ativos quando o usuário abrir o dialog de criação de negócio:
+
+```typescript
+useEffect(() => {
+  const loadProducts = async () => {
+    if (!currentUser?.account_id) return;
+    
+    const { data } = await supabase
+      .from("products")
+      .select("id, name, price")
+      .eq("account_id", currentUser.account_id)
+      .eq("is_active", true)
+      .order("name");
+    
+    setProducts(data || []);
+  };
+  
+  if (dialogStep === 'deal-form') {
+    loadProducts();
+  }
+}, [dialogStep, currentUser?.account_id]);
+```
+
+### 3. Adicionar Campo "Item da Venda" ao Formulário
+
+Inserir o selector de produtos no formulário `deal-form`, entre "Título" e "Valor":
+
+```typescript
+{/* Item da Venda + Valor em grid de 2 colunas */}
+<div className="grid grid-cols-2 gap-4">
+  <div className="space-y-2">
+    <Label>Item da Venda</Label>
+    <Select
+      value={selectedProductId}
+      onValueChange={(productId) => {
+        setSelectedProductId(productId);
+        // Auto-preencher valor com preço do produto
+        if (productId && productId !== "__none__") {
+          const product = products.find(p => p.id === productId);
+          if (product) {
+            setDealFormData(prev => ({
+              ...prev,
+              value: product.price.toString()
+            }));
+          }
+        }
+      }}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Selecione o produto" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">Nenhum</SelectItem>
+        {products.map(product => (
+          <SelectItem key={product.id} value={product.id}>
+            <div className="flex items-center justify-between w-full gap-2">
+              <span>{product.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                }).format(product.price)}
+              </span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+  
+  <div className="space-y-2">
+    <Label>Valor (R$)</Label>
+    <Input
+      type="number"
+      placeholder="0,00"
+      value={dealFormData.value}
+      onChange={(e) =>
+        setDealFormData({ ...dealFormData, value: e.target.value })
+      }
+    />
+  </div>
+</div>
+```
+
+### 4. Incluir `product_id` na Criação do Negócio
+
+Modificar a função `handleCreateDeal` para enviar o `product_id` selecionado:
+
+```typescript
+const handleCreateDeal = async () => {
+  setCreatingDeal(true);
+  try {
+    const productId = selectedProductId && selectedProductId !== "__none__" 
+      ? selectedProductId 
+      : undefined;
+
+    if (existingClient) {
+      const deal = await createDeal({
+        title: dealFormData.title || `Novo negócio - ${existingClient.full_name}`,
+        client_id: existingClient.id,
+        stage_id: dealFormData.stage_id || undefined,
+        value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
+        notes: dealFormData.notes || undefined,
+        product_id: productId, // ← ADICIONADO
+      });
+      // ... resto do código
+    } else if (leadForDeal) {
+      const deal = await createDeal({
+        title: dealFormData.title || `Novo negócio - ${leadForDeal.full_name}`,
+        lead_id: leadForDeal.id,
+        contact_name: leadForDeal.full_name,
+        contact_phone: leadForDeal.phone || undefined,
+        contact_email: leadForDeal.email || undefined,
+        stage_id: dealFormData.stage_id || undefined,
+        value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
+        notes: dealFormData.notes || leadForDeal.notes || undefined,
+        source: leadForDeal.source || undefined,
+        product_id: productId, // ← ADICIONADO
+      });
+      // ... resto do código
+    }
+  } catch (error) {
+    console.error("Error creating deal:", error);
+    toast.error("Erro ao criar negócio");
+  } finally {
+    setCreatingDeal(false);
+  }
 };
 ```
 
-### Correção 2: Atualizar o Visual Existente
+### 5. Resetar Estado ao Fechar Dialog
 
-Atualizar a configuração do visual "Faturamento por Mês" no banco para ativar as opções:
+Atualizar a função `resetForm` para limpar o produto selecionado:
 
-```sql
-UPDATE insights_visuals
-SET config = jsonb_set(
-  jsonb_set(
-    config,
-    '{appearance,fillEmptyDates}',
-    'true'
-  ),
-  '{appearance,showDataLabels}',
-  'true'
-)
-WHERE title = 'Faturamento por Mês'
-  AND (config->>'dataSource') = 'deals';
+```typescript
+const resetForm = () => {
+  // ... campos existentes
+  setSelectedProductId(""); // ← ADICIONADO
+};
 ```
 
 ---
 
-## Resultado Esperado
+## Fluxo de Funcionamento
 
-### Antes
-- Eixo X: apenas "jan/26" (meses com dados)
-- Barras: sem rótulos
-
-### Depois
-- Eixo X: jan/26, fev/26, mar/26... dez/26 (todos os meses do filtro)
-- Barras: cada uma com valor formatado (ex: "R$3,5M")
+```text
+1. Usuário clica em "Criar Negócio" no menu de um Lead
+2. Dialog abre com formulário de negócio
+3. Produtos são carregados do banco (is_active = true)
+4. Usuário seleciona "Item da Venda"
+5. Campo "Valor" é automaticamente preenchido com preço do produto
+6. Ao clicar "Criar Negócio":
+   - createDeal() recebe product_id
+   - useDeals salva na tabela deal_field_values
+7. O negócio é criado com produto associado
+```
 
 ---
 
@@ -76,29 +191,17 @@ WHERE title = 'Faturamento por Mês'
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/insights/AddVisualModal.tsx` | Ativar `fillEmptyDates` e `showDataLabels` para agrupamentos temporais |
-| Banco de dados | Atualizar config do visual existente |
+| `src/components/sales/LeadsTab.tsx` | Adicionar estado, fetch de produtos, campo no form e incluir `product_id` no `createDeal` |
 
 ---
 
-## Detalhes Técnicos
+## Resultado Visual Esperado
 
-A função `fillMissingDates` em `useVisualData.ts` já usa `eachMonthOfInterval` do `date-fns` para gerar todos os meses entre `startDate` e `endDate` definidos no filtro global. Portanto:
+O dialog "Criar Negócio" da aba Leads terá a mesma estrutura do "Nova Negociação" do Pipeline:
 
-- Se o filtro for "Janeiro 2026", aparece só janeiro
-- Se o filtro for "2026 inteiro", aparecem todos os 12 meses
+- **Título do Negócio**
+- **Item da Venda** | **Valor (R$)** ← layout em 2 colunas
+- **Etapa**
+- **Observações**
 
-O componente `BarChartView` em `ConfigurableChart.tsx` já renderiza `LabelList` quando `appearance.showDataLabels` é `true`.
-
----
-
-## Alternativa: Configuração Manual
-
-Se preferir não alterar o default, você pode ativar essas opções manualmente:
-
-1. Clique no ícone ⚙️ (engrenagem) no canto do visual
-2. Ative "Exibir rótulos de dados"
-3. Ative "Preencher datas vazias"
-4. Clique "Salvar Alterações"
-
-Recomendo a Correção 1 para que novos visuais temporais já venham configurados corretamente.
+Quando o usuário selecionar um produto, o valor será automaticamente preenchido, mas poderá ser alterado manualmente.
