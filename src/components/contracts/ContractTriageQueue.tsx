@@ -45,6 +45,7 @@ import {
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useOperationRole } from "@/hooks/useOperationRole";
 
 const CONTRACT_STATUS_CONFIG: Record<
   string,
@@ -140,6 +141,7 @@ export function ContractTriageQueue({
   const navigate = useNavigate();
   const { isAdmin } = usePermissions();
   const { currentUser } = useCurrentUser();
+  const { roleName } = useOperationRole();
   const [pullingClientId, setPullingClientId] = useState<string | null>(null);
   const [assigningClientId, setAssigningClientId] = useState<string | null>(null);
 
@@ -344,8 +346,8 @@ export function ContractTriageQueue({
                         </Tooltip>
                       </TooltipProvider>
 
-                      {/* Assign selector - visible only for Admin */}
-                      {isAdmin && (
+                      {/* Assign selector - visible for Admin and CX roles */}
+                      {(isAdmin || roleName === "CX") && (
                         <Select
                           onValueChange={(userId) => {
                             handleAssignResponsible(contract.client_id, userId);
