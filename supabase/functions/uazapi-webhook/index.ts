@@ -695,16 +695,27 @@ serve(async (req) => {
         const hasMedia = mediaType && (mediaUrl || encryptedMediaUrl);
 
         if (direction === "inbound" && !phone) {
-          console.log(`[WEBHOOK] BLOCKED: Inbound message without phone. Chat data: id=${chat.id}, wa_chatid=${chat.wa_chatid}, jid=${chat.jid}, phone=${chat.phone}`);
-          console.log(`[WEBHOOK] Message data: sender=${msg.sender}, sender_pn=${msg.sender_pn}, chatid=${msg.chatid}`);
-          return new Response(JSON.stringify({ ignored: true, reason: "missing_phone" }), { 
+          console.error(`[WEBHOOK] CRITICAL: Inbound message BLOCKED - missing phone`);
+          console.error(`[WEBHOOK] Full payload snippet:`, JSON.stringify({
+            chatPhone: chat.phone,
+            chatId: chat.id,
+            waChatid: chat.wa_chatid,
+            chatJid: chat.jid,
+            sender: msg.sender,
+            senderPn: msg.sender_pn,
+            msgChatid: msg.chatid,
+            msgId: msg.id,
+            msgType: msg.type,
+            instanceName
+          }));
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_phone", msgId: msg.id }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
 
         if (direction === "inbound" && !hasContent && !hasMedia) {
-          console.log(`[WEBHOOK] BLOCKED: Inbound message without content/media. phone: ${phone}, content: "${content.substring(0, 50)}", mediaType: ${mediaType}, mediaUrl: ${mediaUrl?.substring(0, 50) || 'N/A'}`);
-          return new Response(JSON.stringify({ ignored: true, reason: "missing_content_and_media" }), { 
+          console.warn(`[WEBHOOK] BLOCKED: Inbound message without content/media. msgId: ${msg.id}, phone: ${phone}, content: "${content?.substring(0, 50) || ''}", mediaType: ${mediaType}, mediaUrl: ${mediaUrl?.substring(0, 50) || 'N/A'}, msgType: ${msg.type}`);
+          return new Response(JSON.stringify({ ignored: true, reason: "missing_content_and_media", msgId: msg.id, phone }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
@@ -788,34 +799,60 @@ serve(async (req) => {
           // Layer 1: Try alternate phone format (12 vs 13 digits for BR numbers)
           // Layer 2: If still not found, search WITHOUT integration_id filter (unify conversations)
           
-          // === LAYER 1: Brazilian phone format fallback (with integration_id) ===
+          // === LAYER 1: Brazilian phone format fallback (CROSS-INTEGRATION) ===
+          // For BR numbers with 13 digits (including the 9th digit), try to find conversations
+          // with the old 12-digit format across ALL integrations to prevent fragmentation
           if (!existingZappConvo && phone && phone.startsWith("+55") && phone.length === 14) {
             const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
-            console.log(`[PHONE] Fallback L1: trying ${phoneWithout9} (removed 9th digit)`);
+            console.log(`[PHONE] Fallback L1 (cross-integration): trying ${phoneWithout9} (removed 9th digit) across ALL integrations`);
             
-            let fallbackQuery = supabase
+            // Search WITHOUT integration_id filter to find existing conversations anywhere
+            const { data: fallbackData } = await supabase
               .from("zapp_conversations")
-              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164")
+              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
               .eq("account_id", accountId)
               .eq("phone_e164", phoneWithout9)
-              .eq("is_group", false);
-            
-            if (integrationId) {
-              fallbackQuery = fallbackQuery.eq("integration_id", integrationId);
-            } else if (sectorId) {
-              fallbackQuery = fallbackQuery.eq("sector_id", sectorId);
-            }
-            
-            const { data: fallbackData } = await fallbackQuery.maybeSingle();
+              .eq("is_group", false)
+              .order("last_message_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
             
             if (fallbackData) {
               existingZappConvo = fallbackData;
-              console.log(`[PHONE] Found via L1: old format ${phoneWithout9}, updating to ${phone}`);
+              console.log(`[PHONE] Found via L1 (cross-integration): old format ${phoneWithout9} in sector ${fallbackData.sector_id}, updating to ${phone} and moving to sector ${sectorId}`);
+              
+              // Update phone to normalized format + update integration/sector to current
+              const updateFields: Record<string, unknown> = { phone_e164: phone };
+              if (integrationId && fallbackData.integration_id !== integrationId) {
+                updateFields.integration_id = integrationId;
+              }
+              if (sectorId && fallbackData.sector_id !== sectorId) {
+                updateFields.sector_id = sectorId;
+              }
               
               await supabase
                 .from("zapp_conversations")
-                .update({ phone_e164: phone })
+                .update(updateFields)
                 .eq("id", fallbackData.id);
+              
+              // Try to link client if not already linked
+              if (!fallbackData.client_id) {
+                const { data: clientMatch } = await supabase
+                  .from("clients")
+                  .select("id")
+                  .eq("account_id", accountId)
+                  .or(`phone_e164.eq.${phone},phone_e164.eq.${phoneWithout9}`)
+                  .limit(1)
+                  .maybeSingle();
+                
+                if (clientMatch) {
+                  await supabase
+                    .from("zapp_conversations")
+                    .update({ client_id: clientMatch.id })
+                    .eq("id", fallbackData.id);
+                  console.log(`[PHONE] L1: Auto-linked client ${clientMatch.id} to conversation ${fallbackData.id}`);
+                }
+              }
             }
           }
           
