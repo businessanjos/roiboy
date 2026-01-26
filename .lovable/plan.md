@@ -1,85 +1,104 @@
 
-# Plano: Correção do Visual de Faturamento por Mês
 
-## Diagnóstico
+# Solução Permanente: Correção do Visual de Faturamento
 
-O visual "Faturamento por Mês" está configurado incorretamente:
+## Diagnóstico Final
 
-| Campo | Valor Atual | Valor Correto |
-|-------|-------------|---------------|
-| `dimension.field` | `created_at` | `won_at` |
+Existem **dois problemas** que causam o visual de Faturamento não exibir dados:
 
-### Fluxo do Problema
+### Problema 1: Erro de Coluna na Query (Bug Crítico)
+O código tenta buscar `users.full_name`, mas a coluna correta é `users.name`:
 
-```text
-1. Visual configurado com dimension.field = "created_at"
-2. useVisualData usa created_at para filtrar datas
-3. Busca TODOS os negócios criados no período (462)
-4. Agrega por created_at (data de criação)
-5. Resultado: mostra negócios open/lost/won misturados
-6. Mas como a medida é SUM(value) e muitos têm value=0...
-   O gráfico aparece sem barras visíveis ou com valores inconsistentes
+| Arquivo | Linha | Erro |
+|---------|-------|------|
+| `useVisualData.ts` | 88 | `users...full_name` → coluna não existe |
+| `useVisualData.ts` | 256 | `item.users?.full_name` → undefined |
+
+Isso faz a query do Supabase falhar silenciosamente, retornando array vazio.
+
+### Problema 2: Mapeamento Fixo no Modal de Criação (Causa Raiz)
+O `AddVisualModal.tsx` sempre usa `created_at` para agrupamento "Por Mês", independente da métrica:
+
+```typescript
+// Linha 58-59 - PROBLEMA: hardcoded created_at
+const GROUP_BY_TO_DIMENSION = {
+  month: { field: 'created_at', type: 'date', dateGrouping: 'month' },
+  // ...
+};
 ```
 
-### Evidência dos Dados
-
-Query executada no banco:
-
-```text
-Com created_at (Jan/2026): 462 negócios, R$ 35.240.800
-Com won_at (Jan/2026): 30 negócios, R$ 3.517.200
-```
-
-O visual de "Faturamento" deveria mostrar apenas os R$ 3.517.200 de negócios efetivamente ganhos.
-
----
-
-## Causa Raiz
-
-O modal de criação de visuais permite escolher o campo de data como `created_at` mesmo para métricas de faturamento, o que não faz sentido semântico. 
-
-Para um visual de "Faturamento por Mês":
-- A medida é `SUM(value)` (soma dos valores)
-- A dimensão deveria ser `won_at` (agrupado por data de vitória)
+Quando o usuário escolhe "Faturamento por Mês", o sistema deveria usar `won_at` (data de ganho), não `created_at`.
 
 ---
 
 ## Solução Proposta
 
-### Opção 1: Corrigir o Visual Existente (Recomendado para Curto Prazo)
+### Correção 1: Erro de Coluna (Imediata)
 
-Atualizar diretamente a configuração do visual no banco de dados:
+Corrigir `full_name` para `name` nos arquivos:
 
-```sql
-UPDATE insights_visuals
-SET config = jsonb_set(
-  config,
-  '{dimension,field}',
-  '"won_at"'
-)
-WHERE id = '8f774cc5-7e6f-441f-b868-de5e3601b1aa';
+**Arquivo:** `src/hooks/useVisualData.ts`
+- Linha 88: `users!...full_name` → `users!...name`
+- Linha 256: `item.users?.full_name` → `item.users?.name`
+
+**Arquivo:** `src/hooks/useVisualDrilldown.ts`
+- Linha 225: `item.users?.full_name` → `item.users?.name`
+
+---
+
+### Correção 2: Lógica Inteligente de Campo de Data (Permanente)
+
+Modificar o `AddVisualModal.tsx` para selecionar automaticamente o campo de data correto baseado na métrica escolhida:
+
+```text
+Se métrica = "revenue" (Faturamento)
+  → Usar won_at (data de ganho)
+
+Se métrica = "lost_reasons" (Perdas)
+  → Usar lost_at (data de perda)
+
+Qualquer outra métrica
+  → Usar created_at (data de criação)
 ```
 
-Isso corrige imediatamente o visual existente.
-
-### Opção 2: Melhorar o Modal de Criação (Recomendado para Longo Prazo)
-
-Modificar o componente `AddVisualModal.tsx` para:
-1. Quando a medida for "Valor (value)" e o campo for selecionado para agregar deals
-2. Sugerir automaticamente `won_at` como campo de data
-3. Ou adicionar opções semânticas como "Data de Vitória" e "Data de Perda" além de "Data de Criação"
-
-**Arquivo:** `src/components/insights/AddVisualModal.tsx`
-
-Adicionar ao passo de seleção de dimensão:
+**Implementação:**
 
 ```typescript
-// Quando dataSource === 'deals' e dimension.type === 'date'
-const dealDateOptions = [
-  { value: 'created_at', label: 'Data de Criação' },
-  { value: 'won_at', label: 'Data de Vitória (Faturamento)' },
-  { value: 'lost_at', label: 'Data de Perda' },
-];
+// Função para determinar campo de data baseado na métrica
+const getDateFieldForMetric = (metric: Metric): string => {
+  switch (metric) {
+    case 'revenue':     // Faturamento = negócios GANHOS
+    case 'avg_ticket':  // Ticket médio também baseado em ganhos
+      return 'won_at';
+    case 'lost_reasons': // Perdas = negócios PERDIDOS
+      return 'lost_at';
+    default:
+      return 'created_at';
+  }
+};
+
+// Usar no handleCreate:
+const dimensionConfig = {
+  ...GROUP_BY_TO_DIMENSION[groupBy],
+  // Se for agrupamento temporal, usar campo correto para a métrica
+  field: groupBy === 'month' 
+    ? getDateFieldForMetric(metric) 
+    : GROUP_BY_TO_DIMENSION[groupBy].field
+};
+```
+
+---
+
+## Fluxo Após a Correção
+
+```text
+Usuário cria visual "Faturamento por Mês":
+1. Escolhe métrica: "Valor Total (R$)" → metric = 'revenue'
+2. Escolhe agrupamento: "Por Mês" → groupBy = 'month'
+3. Sistema detecta: revenue + month → usa 'won_at'
+4. Visual salvo com dimension.field = 'won_at'
+5. useVisualData filtra: won_at IS NOT NULL
+6. Resultado: apenas negócios ganhos, agrupados por mês de vitória
 ```
 
 ---
@@ -88,24 +107,34 @@ const dealDateOptions = [
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Banco de dados | Corrigir configuração do visual existente via SQL |
-| `src/components/insights/AddVisualModal.tsx` | Adicionar opções claras para campos de data em deals |
-| `src/components/insights/visual-builder/types.ts` | Verificar se `won_at` e `lost_at` são opções válidas |
+| `src/hooks/useVisualData.ts` | Corrigir `full_name` → `name` (linhas 88, 256) |
+| `src/hooks/useVisualDrilldown.ts` | Corrigir `full_name` → `name` (linha 225) |
+| `src/components/insights/AddVisualModal.tsx` | Adicionar lógica inteligente para campo de data baseado na métrica |
 
 ---
 
-## Impacto da Correção
+## Benefícios da Solução
 
-Após aplicar a correção:
-1. O visual de "Faturamento por Mês" mostrará apenas negócios com status "won"
-2. Agrupará corretamente por mês de vitória
-3. Valor total de Janeiro: R$ 3.517.200 (30 negócios)
-4. O "Explorar Dados" também mostrará apenas os 30 negócios ganhos
+| Aspecto | Antes | Depois |
+|---------|-------|--------|
+| Criação de visual de faturamento | Usa created_at (errado) | Usa won_at automaticamente |
+| Criação de visual de perdas | Usa created_at (errado) | Usa lost_at automaticamente |
+| Query de responsáveis | Falha (coluna inexistente) | Funciona corretamente |
+| Visuais futuros | Problema pode se repetir | Prevenido automaticamente |
 
 ---
 
-## Passos de Implementação
+## Sobre o Visual Existente
 
-1. **Passo 1**: Executar migração SQL para corrigir o visual existente
-2. **Passo 2**: Atualizar o modal de criação de visuais para mostrar opções de data mais claras
-3. **Passo 3**: (Opcional) Adicionar validação para alertar quando a combinação dimension/measure não faz sentido semântico
+Após aplicar as correções de código, o visual atual ainda estará com a configuração errada (`created_at`). Há duas opções:
+
+1. **Recriar o visual** — Depois das correções, deletar o visual atual e criar um novo "Faturamento por Mês" que já usará `won_at` automaticamente
+
+2. **Corrigir via SQL** — Atualizar a configuração do visual existente:
+```sql
+UPDATE insights_visuals 
+SET config = jsonb_set(config, '{dimension,field}', '"won_at"') 
+WHERE title = 'Faturamento por Mês' 
+  AND (config->>'dataSource') = 'deals';
+```
+
