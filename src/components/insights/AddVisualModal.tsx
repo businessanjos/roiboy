@@ -144,6 +144,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
         ? getDateFieldForMetric(metric) 
         : baseDimensionConfig.field;
 
+      const isTemporalGrouping = baseDimensionConfig.type === 'date';
+
       const config: VisualConfig = {
         dataSource: metricConfig.dataSource,
         measure: {
@@ -159,7 +161,11 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           type: metricConfig.formatType,
           decimals: metricConfig.formatType === 'currency' ? 2 : (metricConfig.formatType === 'percentage' ? 1 : 0),
         },
-        appearance: DEFAULT_APPEARANCE,
+        appearance: {
+          ...DEFAULT_APPEARANCE,
+          fillEmptyDates: isTemporalGrouping,
+          showDataLabels: isTemporalGrouping,
+        },
       };
 
       await addVisual({
