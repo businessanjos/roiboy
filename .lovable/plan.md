@@ -1,105 +1,74 @@
 
+# Plano: Exibir Todos os Meses e Rótulos de Dados no Gráfico
 
-# Solução Permanente: Correção do Visual de Faturamento
+## Situação Atual
 
-## Diagnóstico Final
+O sistema já possui a infraestrutura para o que você precisa:
 
-Existem **dois problemas** que causam o visual de Faturamento não exibir dados:
+| Funcionalidade | Config | Valor Atual |
+|----------------|--------|-------------|
+| Preencher meses vazios | `fillEmptyDates` | `false` |
+| Exibir rótulos nas barras | `showDataLabels` | `false` |
 
-### Problema 1: Erro de Coluna na Query (Bug Crítico)
-O código tenta buscar `users.full_name`, mas a coluna correta é `users.name`:
-
-| Arquivo | Linha | Erro |
-|---------|-------|------|
-| `useVisualData.ts` | 88 | `users...full_name` → coluna não existe |
-| `useVisualData.ts` | 256 | `item.users?.full_name` → undefined |
-
-Isso faz a query do Supabase falhar silenciosamente, retornando array vazio.
-
-### Problema 2: Mapeamento Fixo no Modal de Criação (Causa Raiz)
-O `AddVisualModal.tsx` sempre usa `created_at` para agrupamento "Por Mês", independente da métrica:
-
-```typescript
-// Linha 58-59 - PROBLEMA: hardcoded created_at
-const GROUP_BY_TO_DIMENSION = {
-  month: { field: 'created_at', type: 'date', dateGrouping: 'month' },
-  // ...
-};
-```
-
-Quando o usuário escolhe "Faturamento por Mês", o sistema deveria usar `won_at` (data de ganho), não `created_at`.
+Ambas estão **desabilitadas por padrão** — por isso o gráfico só mostra os meses que têm dados.
 
 ---
 
 ## Solução Proposta
 
-### Correção 1: Erro de Coluna (Imediata)
+### Correção 1: Ativar Defaults Inteligentes para Visuais Temporais
 
-Corrigir `full_name` para `name` nos arquivos:
+Quando um visual usa agrupamento "Por Mês" (ou outro temporal), automaticamente habilitar:
+- `fillEmptyDates: true` → mostra todos os meses do período
+- `showDataLabels: true` → exibe valores nas barras
 
-**Arquivo:** `src/hooks/useVisualData.ts`
-- Linha 88: `users!...full_name` → `users!...name`
-- Linha 256: `item.users?.full_name` → `item.users?.name`
-
-**Arquivo:** `src/hooks/useVisualDrilldown.ts`
-- Linha 225: `item.users?.full_name` → `item.users?.name`
-
----
-
-### Correção 2: Lógica Inteligente de Campo de Data (Permanente)
-
-Modificar o `AddVisualModal.tsx` para selecionar automaticamente o campo de data correto baseado na métrica escolhida:
-
-```text
-Se métrica = "revenue" (Faturamento)
-  → Usar won_at (data de ganho)
-
-Se métrica = "lost_reasons" (Perdas)
-  → Usar lost_at (data de perda)
-
-Qualquer outra métrica
-  → Usar created_at (data de criação)
-```
-
-**Implementação:**
+**Arquivo:** `src/components/insights/AddVisualModal.tsx`
 
 ```typescript
-// Função para determinar campo de data baseado na métrica
-const getDateFieldForMetric = (metric: Metric): string => {
-  switch (metric) {
-    case 'revenue':     // Faturamento = negócios GANHOS
-    case 'avg_ticket':  // Ticket médio também baseado em ganhos
-      return 'won_at';
-    case 'lost_reasons': // Perdas = negócios PERDIDOS
-      return 'lost_at';
-    default:
-      return 'created_at';
-  }
-};
+// No handleCreate, ajustar appearance baseado no tipo de agrupamento
+const isTemporalGrouping = baseDimensionConfig.type === 'date';
 
-// Usar no handleCreate:
-const dimensionConfig = {
-  ...GROUP_BY_TO_DIMENSION[groupBy],
-  // Se for agrupamento temporal, usar campo correto para a métrica
-  field: groupBy === 'month' 
-    ? getDateFieldForMetric(metric) 
-    : GROUP_BY_TO_DIMENSION[groupBy].field
+const config: VisualConfig = {
+  // ... outras configurações
+  appearance: {
+    ...DEFAULT_APPEARANCE,
+    // Ativar automaticamente para agrupamentos temporais
+    fillEmptyDates: isTemporalGrouping,
+    showDataLabels: isTemporalGrouping,
+  },
 };
+```
+
+### Correção 2: Atualizar o Visual Existente
+
+Atualizar a configuração do visual "Faturamento por Mês" no banco para ativar as opções:
+
+```sql
+UPDATE insights_visuals
+SET config = jsonb_set(
+  jsonb_set(
+    config,
+    '{appearance,fillEmptyDates}',
+    'true'
+  ),
+  '{appearance,showDataLabels}',
+  'true'
+)
+WHERE title = 'Faturamento por Mês'
+  AND (config->>'dataSource') = 'deals';
 ```
 
 ---
 
-## Fluxo Após a Correção
+## Resultado Esperado
 
-```text
-Usuário cria visual "Faturamento por Mês":
-1. Escolhe métrica: "Valor Total (R$)" → metric = 'revenue'
-2. Escolhe agrupamento: "Por Mês" → groupBy = 'month'
-3. Sistema detecta: revenue + month → usa 'won_at'
-4. Visual salvo com dimension.field = 'won_at'
-5. useVisualData filtra: won_at IS NOT NULL
-6. Resultado: apenas negócios ganhos, agrupados por mês de vitória
-```
+### Antes
+- Eixo X: apenas "jan/26" (meses com dados)
+- Barras: sem rótulos
+
+### Depois
+- Eixo X: jan/26, fev/26, mar/26... dez/26 (todos os meses do filtro)
+- Barras: cada uma com valor formatado (ex: "R$3,5M")
 
 ---
 
@@ -107,34 +76,29 @@ Usuário cria visual "Faturamento por Mês":
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/useVisualData.ts` | Corrigir `full_name` → `name` (linhas 88, 256) |
-| `src/hooks/useVisualDrilldown.ts` | Corrigir `full_name` → `name` (linha 225) |
-| `src/components/insights/AddVisualModal.tsx` | Adicionar lógica inteligente para campo de data baseado na métrica |
+| `src/components/insights/AddVisualModal.tsx` | Ativar `fillEmptyDates` e `showDataLabels` para agrupamentos temporais |
+| Banco de dados | Atualizar config do visual existente |
 
 ---
 
-## Benefícios da Solução
+## Detalhes Técnicos
 
-| Aspecto | Antes | Depois |
-|---------|-------|--------|
-| Criação de visual de faturamento | Usa created_at (errado) | Usa won_at automaticamente |
-| Criação de visual de perdas | Usa created_at (errado) | Usa lost_at automaticamente |
-| Query de responsáveis | Falha (coluna inexistente) | Funciona corretamente |
-| Visuais futuros | Problema pode se repetir | Prevenido automaticamente |
+A função `fillMissingDates` em `useVisualData.ts` já usa `eachMonthOfInterval` do `date-fns` para gerar todos os meses entre `startDate` e `endDate` definidos no filtro global. Portanto:
+
+- Se o filtro for "Janeiro 2026", aparece só janeiro
+- Se o filtro for "2026 inteiro", aparecem todos os 12 meses
+
+O componente `BarChartView` em `ConfigurableChart.tsx` já renderiza `LabelList` quando `appearance.showDataLabels` é `true`.
 
 ---
 
-## Sobre o Visual Existente
+## Alternativa: Configuração Manual
 
-Após aplicar as correções de código, o visual atual ainda estará com a configuração errada (`created_at`). Há duas opções:
+Se preferir não alterar o default, você pode ativar essas opções manualmente:
 
-1. **Recriar o visual** — Depois das correções, deletar o visual atual e criar um novo "Faturamento por Mês" que já usará `won_at` automaticamente
+1. Clique no ícone ⚙️ (engrenagem) no canto do visual
+2. Ative "Exibir rótulos de dados"
+3. Ative "Preencher datas vazias"
+4. Clique "Salvar Alterações"
 
-2. **Corrigir via SQL** — Atualizar a configuração do visual existente:
-```sql
-UPDATE insights_visuals 
-SET config = jsonb_set(config, '{dimension,field}', '"won_at"') 
-WHERE title = 'Faturamento por Mês' 
-  AND (config->>'dataSource') = 'deals';
-```
-
+Recomendo a Correção 1 para que novos visuais temporais já venham configurados corretamente.
