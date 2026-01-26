@@ -44,6 +44,9 @@ export interface Message {
   // Status de envio local (para mensagens otimistas)
   send_status?: "sending" | "sent" | "failed";
   send_error?: string | null;
+  // Campos para edição
+  updated_at?: string | null;
+  is_edited?: boolean;
 }
 
 const HEARTBEAT_INTERVAL_MS = 60000;
@@ -557,7 +560,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
       // The ZappMessageBubble component handles displaying "🚫 Mensagem apagada" for is_deleted=true
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name")
+        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name, updated_at, is_edited")
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: false })
         .limit(100);
@@ -590,6 +593,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
         quoted_message_id: m.quoted_message_id || null,
         quoted_content: m.quoted_content || null,
         quoted_sender_name: m.quoted_sender_name || null,
+        // Campos de edição
+        updated_at: m.updated_at || null,
+        is_edited: m.is_edited || false,
       }));
       
       setMessages(msgs);
