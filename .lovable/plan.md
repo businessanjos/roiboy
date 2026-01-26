@@ -1,463 +1,273 @@
 
-# Plano: Campos Obrigatórios por Etapa do Pipeline
+# Plano: Sincronização de Mensagens Apagadas do WhatsApp no ROY zAPP
 
-## Visão Geral
+## Diagnóstico do Problema
 
-Implementar validação de campos personalizados obrigatórios baseada na etapa do pipeline, bloqueando a movimentação de negócios quando campos obrigatórios da etapa de destino não estiverem preenchidos.
+O time de Operações relata que mensagens apagadas pelos clientes no WhatsApp continuam aparecendo normalmente no ROY zAPP. A análise revelou dois problemas:
 
----
-
-## Arquitetura da Solução
+| Componente | Problema Identificado |
+|------------|----------------------|
+| Webhook UAZAPI | Extração de ID limitada a formatos simples - não captura arrays em `data.keys` |
+| Frontend (useZappData) | Query SQL filtra mensagens deletadas, fazendo-as "desaparecer" ao recarregar |
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    FLUXO DE MOVIMENTAÇÃO DE NEGÓCIO                     │
-└─────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                      FLUXO ATUAL (QUEBRADO)                                │
+└────────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼
-    ┌─────────────────────────────────────────────────────────────────┐
-    │  1. Vendedor arrasta negócio para nova etapa (DealKanban)       │
-    └─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-    ┌─────────────────────────────────────────────────────────────────┐
-    │  2. Verificar campos obrigatórios para etapa de destino         │
-    │     - Buscar campos com required_stages contendo "all" ou       │
-    │       a etapa de destino                                        │
-    │     - Verificar quais não possuem valor preenchido              │
-    └─────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┴───────────────┐
-                    │                               │
-                    ▼                               ▼
-    ┌─────────────────────────────┐   ┌─────────────────────────────┐
-    │  TODOS PREENCHIDOS          │   │  CAMPOS VAZIOS              │
-    │  --> Mover normalmente      │   │  --> Abrir modal de         │
-    │                             │   │      preenchimento          │
-    └─────────────────────────────┘   └─────────────────────────────┘
-                                                    │
-                                                    ▼
-                                      ┌─────────────────────────────┐
-                                      │  3. Usuário preenche campos │
-                                      │     obrigatórios no modal   │
-                                      └─────────────────────────────┘
-                                                    │
-                                    ┌───────────────┴───────────────┐
-                                    │                               │
-                                    ▼                               ▼
-                    ┌─────────────────────────────┐   ┌─────────────────────────────┐
-                    │  PREENCHIDO E SALVO         │   │  CANCELOU                   │
-                    │  --> Mover negócio          │   │  --> Negócio permanece na   │
-                    │                             │   │      etapa atual            │
-                    └─────────────────────────────┘   └─────────────────────────────┘
+     Cliente apaga mensagem         │
+     no WhatsApp                    ▼
+                        ┌─────────────────────────┐
+                        │   UAZAPI envia webhook  │
+                        │   EventType: messages.  │
+                        │   delete ou revoke      │
+                        └────────────┬────────────┘
+                                     │
+         ┌───────────────────────────┴───────────────────────────┐
+         │                                                       │
+         ▼                                                       ▼
+┌─────────────────────────┐                        ┌─────────────────────────┐
+│ Formato 1: { id: "..." }│                        │ Formato 2 (NÃO CAPTURADO│
+│                         │                        │ { data: { keys: [...] } │
+│ ✓ Capturado             │                        │                         │
+│                         │                        │ ✗ ID não encontrado     │
+└─────────────────────────┘                        └─────────────────────────┘
+                                     │
+                                     ▼
+                        ┌─────────────────────────┐
+                        │   Mesmo quando atualiza │
+                        │   is_deleted = true     │
+                        │                         │
+                        │   ✗ Frontend filtra a   │
+                        │   mensagem na próxima   │
+                        │   vez que carrega       │
+                        └─────────────────────────┘
 ```
 
 ---
 
-## Etapa 1: Alteração no Banco de Dados
+## Solução Proposta
 
-Adicionar coluna para armazenar as etapas onde o campo é obrigatório:
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                      FLUXO CORRIGIDO                                       │
+└────────────────────────────────────────────────────────────────────────────┘
 
-```sql
--- Adicionar coluna para armazenar etapas onde o campo é obrigatório
-ALTER TABLE public.custom_fields 
-ADD COLUMN IF NOT EXISTS required_stages JSONB DEFAULT '["all"]';
-
--- A estrutura será:
--- ["all"] = obrigatório em todas as etapas (padrão)
--- ["stage_id_1", "stage_id_2"] = obrigatório apenas nessas etapas específicas
--- [] = não obrigatório (is_required seria false neste caso)
+     Cliente apaga mensagem                    
+     no WhatsApp                               
+                        ┌─────────────────────────┐
+                        │   UAZAPI envia webhook  │
+                        └────────────┬────────────┘
+                                     │
+                                     ▼
+                        ┌─────────────────────────┐
+                        │   Webhook processa      │
+                        │   TODOS os formatos:    │
+                        │   • msg.id              │
+                        │   • msg.key.id          │
+                        │   • data.keys[]         │ ← NOVO
+                        │   • data.messages[]     │ ← NOVO
+                        │   • message.messageid   │ ← NOVO
+                        └────────────┬────────────┘
+                                     │
+                                     ▼
+                        ┌─────────────────────────┐
+                        │   UPDATE zapp_messages  │
+                        │   SET is_deleted = true │
+                        └────────────┬────────────┘
+                                     │
+         ┌───────────────────────────┴───────────────────────────┐
+         │                                                       │
+         ▼                                                       ▼
+┌─────────────────────────┐                        ┌─────────────────────────┐
+│  Realtime UPDATE        │                        │  Próximo fetchMessages  │
+│                         │                        │                         │
+│  → Atualiza na UI       │                        │  → INCLUI mensagens     │
+│    instantaneamente     │                        │    com is_deleted=true  │
+│                         │                        │    (sem filtrar)        │
+│  → Mostra placeholder   │                        │  → Mostra placeholder   │
+│    "🚫 Mensagem apagada"│                        │    "🚫 Mensagem apagada"│
+└─────────────────────────┘                        └─────────────────────────┘
 ```
 
 ---
 
-## Etapa 2: Modificar CustomFieldsManager
+## Etapa 1: Expandir Extração de ID no Webhook
 
-### 2.1 Adicionar Estado e Fetch de Etapas
-
-Quando o contexto for "deals", buscar as etapas do pipeline para exibir como opções:
+O código atual tenta apenas alguns caminhos simples. Precisamos adicionar suporte para formatos de array:
 
 ```typescript
-// Novos estados
-const [dealStages, setDealStages] = useState<{id: string, name: string}[]>([]);
-const [requiredStages, setRequiredStages] = useState<string[]>(["all"]);
+// ANTES (limitado):
+let deletedMessageId = msg?.id || msg?.key?.id || msg?.messageId || payloadAny?.key?.id;
 
-// Buscar etapas quando contexto for deals
-useEffect(() => {
-  if (sectorContext === "deals" && currentUser?.account_id) {
-    supabase
-      .from("deal_stages")
-      .select("id, name")
-      .eq("account_id", currentUser.account_id)
-      .eq("is_active", true)
-      .order("display_order")
-      .then(({ data }) => {
-        if (data) setDealStages(data);
-      });
-  }
-}, [sectorContext, currentUser?.account_id]);
-```
+// DEPOIS (completo):
+// 1. Tentar formatos simples
+let deletedMessageId = msg?.id || msg?.key?.id || msg?.messageId || 
+                       payloadAny?.key?.id || msg?.messageid;
 
-### 2.2 Atualizar UI do Formulário
-
-Adicionar seletor de etapas que aparece apenas quando "Obrigatório" está marcado:
-
-```typescript
-{/* Switch de Obrigatório */}
-<div className="flex items-center justify-between pt-2">
-  <div>
-    <Label className="text-sm">Obrigatório</Label>
-    <p className="text-xs text-muted-foreground">Campo deve ser preenchido</p>
-  </div>
-  <Switch checked={isRequired} onCheckedChange={setIsRequired} />
-</div>
-
-{/* Seletor de etapas obrigatórias - aparece só quando isRequired = true e contexto = deals */}
-{isRequired && sectorContext === "deals" && dealStages.length > 0 && (
-  <div className="space-y-2 pl-2 border-l-2 border-primary/20 ml-2">
-    <Label className="text-sm">Obrigatório em quais etapas?</Label>
-    <div className="space-y-2">
-      {/* Opção "Todas" */}
-      <div className="flex items-center gap-2">
-        <Checkbox
-          checked={requiredStages.includes("all")}
-          onCheckedChange={(checked) => {
-            if (checked) {
-              setRequiredStages(["all"]);
-            } else {
-              setRequiredStages([]);
-            }
-          }}
-        />
-        <span className="text-sm font-medium">Todas as etapas</span>
-      </div>
-      
-      {/* Etapas individuais (desabilitadas se "Todas" estiver marcada) */}
-      {!requiredStages.includes("all") && dealStages.map(stage => (
-        <div key={stage.id} className="flex items-center gap-2 pl-4">
-          <Checkbox
-            checked={requiredStages.includes(stage.id)}
-            onCheckedChange={(checked) => {
-              setRequiredStages(prev => 
-                checked 
-                  ? [...prev, stage.id]
-                  : prev.filter(id => id !== stage.id)
-              );
-            }}
-          />
-          <span className="text-sm">{stage.name}</span>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-```
-
-### 2.3 Atualizar handleSave
-
-Incluir `required_stages` nos dados salvos:
-
-```typescript
-const fieldData = {
-  // ... campos existentes
-  is_required: isRequired,
-  required_stages: isRequired && sectorContext === "deals" 
-    ? requiredStages 
-    : null,
-};
-```
-
----
-
-## Etapa 3: Criar Hook de Validação
-
-Novo hook para verificar campos obrigatórios pendentes:
-
-```typescript
-// src/hooks/useRequiredFieldsValidation.tsx
-
-interface RequiredFieldValidation {
-  canMoveToStage: boolean;
-  missingFields: CustomField[];
-}
-
-export function useRequiredFieldsValidation() {
-  const validateDealMove = async (
-    dealId: string,
-    targetStageId: string,
-    accountId: string
-  ): Promise<RequiredFieldValidation> => {
-    
-    // 1. Buscar campos obrigatórios para a etapa de destino
-    const { data: fields } = await supabase
-      .from("custom_fields")
-      .select("*")
-      .eq("account_id", accountId)
-      .eq("show_in_deals", true)
-      .eq("is_active", true)
-      .eq("is_required", true);
-    
-    if (!fields || fields.length === 0) {
-      return { canMoveToStage: true, missingFields: [] };
-    }
-    
-    // 2. Filtrar campos que são obrigatórios para esta etapa
-    const requiredForStage = fields.filter(field => {
-      const stages = field.required_stages as string[] | null;
-      if (!stages || stages.length === 0) return false;
-      return stages.includes("all") || stages.includes(targetStageId);
-    });
-    
-    if (requiredForStage.length === 0) {
-      return { canMoveToStage: true, missingFields: [] };
-    }
-    
-    // 3. Buscar valores preenchidos para o negócio
-    const { data: values } = await supabase
-      .from("deal_field_values")
-      .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
-      .eq("deal_id", dealId);
-    
-    const filledFieldIds = new Set(
-      (values || [])
-        .filter(v => 
-          v.value_text !== null || 
-          v.value_number !== null || 
-          v.value_boolean !== null ||
-          v.value_date !== null ||
-          v.value_json !== null
-        )
-        .map(v => v.field_id)
-    );
-    
-    // 4. Identificar campos não preenchidos
-    const missingFields = requiredForStage.filter(
-      field => !filledFieldIds.has(field.id)
-    );
-    
-    return {
-      canMoveToStage: missingFields.length === 0,
-      missingFields,
-    };
-  };
-  
-  return { validateDealMove };
-}
-```
-
----
-
-## Etapa 4: Criar Modal de Preenchimento
-
-Novo componente para exibir e preencher campos obrigatórios faltantes:
-
-```typescript
-// src/components/sales/RequiredFieldsModal.tsx
-
-interface RequiredFieldsModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  dealId: string;
-  dealTitle: string;
-  targetStageName: string;
-  missingFields: CustomField[];
-  accountId: string;
-  onComplete: () => void;
-}
-
-export function RequiredFieldsModal({
-  open,
-  onOpenChange,
-  dealId,
-  dealTitle,
-  targetStageName,
-  missingFields,
-  accountId,
-  onComplete,
-}: RequiredFieldsModalProps) {
-  const [values, setValues] = useState<Record<string, any>>({});
-  const [saving, setSaving] = useState(false);
-  
-  const allFieldsFilled = missingFields.every(field => {
-    const value = values[field.id];
-    if (field.field_type === "boolean") return value !== undefined;
-    return value !== null && value !== undefined && value !== "";
-  });
-  
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      // Salvar todos os valores
-      for (const field of missingFields) {
-        const value = values[field.id];
-        if (value === undefined || value === null) continue;
-        
-        const valueData = {
-          account_id: accountId,
-          deal_id: dealId,
-          field_id: field.id,
-          value_text: field.field_type === "text" || field.field_type === "select" ? value : null,
-          value_number: field.field_type === "number" || field.field_type === "currency" ? value : null,
-          value_boolean: field.field_type === "boolean" ? value : null,
-          value_date: field.field_type === "date" ? value : null,
-          value_json: ["multi_select", "user", "location"].includes(field.field_type) ? value : null,
-        };
-        
-        await supabase
-          .from("deal_field_values")
-          .upsert(valueData, { onConflict: "deal_id,field_id" });
+// 2. Tentar formato com array em data.keys (Evolution API style)
+if (!deletedMessageId && payloadAny.data?.keys) {
+  const keys = payloadAny.data.keys;
+  if (Array.isArray(keys) && keys.length > 0) {
+    deletedMessageId = keys[0].id;
+    // Processar múltiplas deleções se necessário
+    for (const key of keys) {
+      if (key.id) {
+        await markMessageAsDeleted(supabase, accountId, key.id);
       }
-      
-      toast.success("Campos preenchidos!");
-      onComplete();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error("Erro ao salvar campos");
-    } finally {
-      setSaving(false);
     }
-  };
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Campos Obrigatórios</DialogTitle>
-          <DialogDescription>
-            Para mover "{dealTitle}" para a etapa "{targetStageName}", 
-            preencha os campos abaixo:
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          {missingFields.map(field => (
-            <div key={field.id} className="space-y-2">
-              <Label className="text-sm font-medium">
-                {field.name} <span className="text-destructive">*</span>
-              </Label>
-              <DealFieldValueEditor
-                field={field}
-                dealId={dealId}
-                accountId={accountId}
-                currentValue={values[field.id]}
-                onValueChange={(fieldId, value) => 
-                  setValues(prev => ({ ...prev, [fieldId]: value }))
-                }
-              />
-            </div>
-          ))}
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={!allFieldsFilled || saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Preencher e Mover
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  }
+}
+
+// 3. Tentar formato com array em data.messages
+if (!deletedMessageId && payloadAny.data?.messages) {
+  const messages = payloadAny.data.messages;
+  if (Array.isArray(messages)) {
+    for (const m of messages) {
+      const msgId = m.key?.id || m.id || m.messageId;
+      if (msgId) {
+        await markMessageAsDeleted(supabase, accountId, msgId);
+      }
+    }
+    deletedMessageId = "processed_array"; // Flag para saber que processamos
+  }
+}
+
+// 4. Tentar buscar por ID parcial (formato "phone:msgId")
+// O webhook pode enviar apenas "msgId" mas no DB temos "phone:msgId"
+```
+
+### Melhorar Busca por ID
+
+Quando o UAZAPI envia apenas o ID parcial (sem o prefixo do telefone), a busca atual falha. Precisamos buscar também por substring:
+
+```typescript
+// Tentar busca exata primeiro
+let updateQuery = supabase
+  .from("zapp_messages")
+  .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+  .eq("account_id", accountId)
+  .eq("external_message_id", deletedMessageId);
+
+const { count } = await updateQuery;
+
+// Se não encontrou, tentar busca parcial (ID termina com o valor enviado)
+if (!count || count === 0) {
+  const { error, count: partialCount } = await supabase
+    .from("zapp_messages")
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq("account_id", accountId)
+    .ilike("external_message_id", `%${deletedMessageId}`);
+    
+  console.log(`Partial match update affected ${partialCount} rows`);
 }
 ```
 
 ---
 
-## Etapa 5: Integrar no DealKanban
+## Etapa 2: Remover Filtro de Mensagens Deletadas no Frontend
 
-Modificar o fluxo de movimentação para validar antes de mover:
+O hook `useZappData.tsx` está filtrando mensagens deletadas, impedindo que apareçam com o placeholder:
 
 ```typescript
-// Em DealKanban.tsx
+// ANTES (linha 560 de useZappData.tsx):
+.or("is_deleted.is.null,is_deleted.eq.false")
 
-const { validateDealMove } = useRequiredFieldsValidation();
-const [requiredFieldsModal, setRequiredFieldsModal] = useState<{
-  open: boolean;
-  dealId: string;
-  dealTitle: string;
-  targetStageId: string;
-  targetStageName: string;
-  missingFields: CustomField[];
-} | null>(null);
-
-const handleDragEnd = async (event: DragEndEvent) => {
-  const { active, over } = event;
-  setActiveDeal(null);
-
-  if (!over) return;
-
-  const dealId = active.id as string;
-  const overId = over.id as string;
-
-  const deal = deals.find(d => d.id === dealId);
-  const targetStage = stages.find(s => s.id === overId) 
-    || stages.find(s => s.id === deals.find(d => d.id === overId)?.stage_id);
-  
-  if (!deal || !targetStage || deal.stage_id === targetStage.id) return;
-
-  // Validar campos obrigatórios
-  const validation = await validateDealMove(dealId, targetStage.id, deal.account_id);
-  
-  if (!validation.canMoveToStage) {
-    // Abrir modal para preencher campos faltantes
-    setRequiredFieldsModal({
-      open: true,
-      dealId,
-      dealTitle: deal.title,
-      targetStageId: targetStage.id,
-      targetStageName: targetStage.name,
-      missingFields: validation.missingFields,
-    });
-    return;
-  }
-  
-  // Mover normalmente
-  await onDealMove(dealId, targetStage.id);
-};
-
-// No JSX, adicionar o modal
-{requiredFieldsModal && (
-  <RequiredFieldsModal
-    open={requiredFieldsModal.open}
-    onOpenChange={(open) => !open && setRequiredFieldsModal(null)}
-    dealId={requiredFieldsModal.dealId}
-    dealTitle={requiredFieldsModal.dealTitle}
-    targetStageName={requiredFieldsModal.targetStageName}
-    missingFields={requiredFieldsModal.missingFields}
-    accountId={currentUser.account_id}
-    onComplete={() => {
-      onDealMove(requiredFieldsModal.dealId, requiredFieldsModal.targetStageId);
-      setRequiredFieldsModal(null);
-    }}
-  />
-)}
+// DEPOIS:
+// Remover este filtro completamente!
+// A query deve retornar TODAS as mensagens, incluindo deletadas
+// O ZappMessageBubble já cuida de mostrar o placeholder adequado
 ```
 
 ---
 
-## Arquivos a Modificar/Criar
+## Etapa 3: Garantir Atualização em Tempo Real
+
+O listener de Realtime já existe e funciona (`RoyZapp.tsx:682-690`), mas precisamos confirmar que está escutando eventos UPDATE:
+
+```typescript
+// Já existe, apenas verificar:
+.on(
+  'postgres_changes',
+  { 
+    event: 'UPDATE', // ← Deve capturar quando is_deleted muda
+    schema: 'public',
+    table: 'zapp_messages',
+    filter: `zapp_conversation_id=eq.${conversationId}`
+  },
+  (payload) => {
+    const updatedMsg = payload.new;
+    setMessages(prev => prev.map(m => 
+      m.id === updatedMsg.id 
+        ? { ...m, ...updatedMsg } // Isso inclui is_deleted: true
+        : m
+    ));
+  }
+)
+```
+
+---
+
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/migrations/[timestamp].sql` | Adicionar coluna `required_stages` à tabela `custom_fields` |
-| `src/components/custom-fields/CustomFieldsManager.tsx` | Adicionar seletor de etapas obrigatórias quando `isRequired` está ativo |
-| `src/hooks/useRequiredFieldsValidation.tsx` | **NOVO** - Hook para validar campos obrigatórios por etapa |
-| `src/components/sales/RequiredFieldsModal.tsx` | **NOVO** - Modal para preenchimento de campos faltantes |
-| `src/components/sales/DealKanban.tsx` | Integrar validação no `handleDragEnd` |
-| `src/pages/SalesPipeline.tsx` | Passar props necessárias para o DealKanban |
+| `supabase/functions/uazapi-webhook/index.ts` | Expandir extração de ID de mensagem para suportar formatos de array e busca parcial |
+| `src/hooks/useZappData.tsx` | Remover filtro `.or("is_deleted.is.null,is_deleted.eq.false")` |
+
+---
+
+## Detalhes Técnicos
+
+### Formatos de Payload Suportados (Após Correção)
+
+```typescript
+// Formato 1: Simples
+{ message: { id: "MSG_ID" } }
+
+// Formato 2: Com key
+{ message: { key: { id: "MSG_ID" } } }
+{ data: { id: "MSG_ID" } }
+{ key: { id: "MSG_ID" } }
+
+// Formato 3: Array de keys (Evolution API / WASender)
+{ data: { keys: [{ id: "MSG_ID", fromMe: false, remoteJid: "..." }] } }
+
+// Formato 4: Array de messages
+{ data: { messages: [{ key: { id: "MSG_ID" }, ... }] } }
+
+// Formato 5: ID no root
+{ id: "MSG_ID" }
+{ messageId: "MSG_ID" }
+{ messageid: "MSG_ID" }
+```
+
+### Matching de IDs
+
+O sistema armazena `external_message_id` em formatos como:
+- `"554388346806:3EB0A21FD5E7E7DF84A6F7"` (phone:msgId)
+- `"3EB0A21FD5E7E7DF84A6F7"` (apenas msgId)
+
+A busca deve suportar ambos via:
+1. Busca exata: `.eq("external_message_id", deletedMessageId)`
+2. Busca parcial: `.ilike("external_message_id", `%${deletedMessageId}`)`
 
 ---
 
 ## Resultado Esperado
 
-| Cenário | Comportamento |
-|---------|---------------|
-| Campo obrigatório em "Todas" | Vendedor deve preencher antes de mover para qualquer etapa |
-| Campo obrigatório em etapas específicas | Vendedor só precisa preencher quando mover para essas etapas |
-| Campo não obrigatório | Nenhuma validação |
-| Campos já preenchidos | Movimentação ocorre normalmente |
-| Campos vazios obrigatórios | Modal abre solicitando preenchimento |
-| Usuário cancela modal | Negócio permanece na etapa atual |
-| Usuário preenche e confirma | Valores são salvos e negócio é movido |
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Cliente apaga mensagem | Mensagem permanece visível | Exibe "🚫 Mensagem apagada" em tempo real |
+| Recarregar página após deleção | Mensagem desaparece completamente | Exibe "🚫 Mensagem apagada" corretamente |
+| Webhook com formato de array | Não capturado, mensagem fica | Capturado e sincronizado |
+| ID parcial enviado | Não encontra no DB | Busca parcial encontra |
+
+---
+
+## Testes Sugeridos
+
+1. Simular deleção de mensagem enviada por cliente no WhatsApp
+2. Verificar nos logs do webhook se o ID foi extraído corretamente
+3. Verificar se a mensagem aparece como "🚫 Mensagem apagada" na conversa
+4. Recarregar a página e confirmar que o placeholder permanece visível
