@@ -1,150 +1,129 @@
 
-# Plano: Correção de Isolamento de Campos por Setor e Formatação de Texto em Formulários
 
-## Problemas Identificados
+# Plano: Correção do Salvamento de Dados na Análise de Conteúdo
 
-### Problema 1: Campos de Vendas aparecendo em Formulários de Operações
+## Problema Identificado
 
-**Causa Raiz:**
-- A função `fetchCustomFields` em `src/pages/Forms.tsx` (linha 744-757) busca TODOS os campos personalizados ativos sem filtrar por setor
-- Isso permite que usuários selecionem campos de Vendas (como "Canal de Venda", "Item da Venda") ao criar formulários de Operações
-- O formulário "Cadastro Empresarial" foi identificado com campos de Vendas incorretamente incluídos
+Ao editar posts na Análise de Conteúdo, as alterações não são persistidas. A causa raiz é que o campo `link_clicks` está **faltando** na mutation `updatePost` do hook `useSocialMediaData.tsx`.
 
-**Campos incorretos encontrados:**
-- `Canal de Venda` (show_in_deals: true) - Campo exclusivo de Vendas
-- `Item da Venda` (show_in_deals: true) - Campo exclusivo de Vendas
+## Analise Tecnica
 
-### Problema 2: Texto branco em fundo claro nos campos de formulário
+### O que esta acontecendo:
 
-**Causa Raiz:**
-- Em `src/pages/PublicForm.tsx`, os Labels dentro de RadioGroup (linha 253-258) e Checkbox (linha 288-289) não aplicam a cor de texto do appearance
-- Eles usam apenas `className="font-normal cursor-pointer"` sem o `style={{ color: appearance.text_color }}`
-- Quando o fundo do card é claro e a cor de texto padrão é clara, o texto fica invisível
+1. O formulario `EditPostDialog.tsx` envia **todos os campos** corretamente, incluindo `link_clicks` (linha 60)
+2. A mutation `updatePost` em `useSocialMediaData.tsx` **NAO inclui** `link_clicks` nos parametros (linhas 314-332)
+3. A chamada `.update()` do Supabase tambem **NAO inclui** `link_clicks` (linhas 349-373)
 
----
+### Fluxo do Problema:
 
-## Soluções Propostas
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUXO ATUAL (COM BUG)                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Usuario edita post no EditPostDialog                        │
+│     └─> Envia: { ..., link_clicks: 15, ... }                   │
+│                                                                 │
+│  2. handleEditPost chama updatePost.mutate                      │
+│     └─> Passa: { postId, data }                                │
+│                                                                 │
+│  3. updatePost mutation em useSocialMediaData                   │
+│     └─> IGNORA link_clicks (nao esta nos parametros!)          │
+│                                                                 │
+│  4. Supabase .update() executa                                  │
+│     └─> Salva tudo EXCETO link_clicks                          │
+│                                                                 │
+│  5. Usuario recarrega pagina                                    │
+│     └─> Valor antigo de link_clicks aparece novamente          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### Correção 1: Implementar Isolamento de Campos por Setor no Editor de Formulários
+## Solucao
 
-**Arquivo:** `src/pages/Forms.tsx`
+### Arquivo: `src/hooks/useSocialMediaData.tsx`
 
-**Mudança na função `fetchCustomFields`:**
+**Mudanca 1:** Adicionar `link_clicks` na definicao de tipos da mutation (linhas 314-332)
+
 ```typescript
-// ANTES (linha 744-757):
-const fetchCustomFields = async () => {
-  const { data, error } = await supabase
-    .from("custom_fields")
-    .select("id, name, field_type, options, is_required")
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
-  // ...
+// ADICIONAR na linha 325 (apos saves: number;):
+link_clicks: number;
+```
+
+**Mudanca 2:** Adicionar `link_clicks` na chamada `.update()` (linhas 349-373)
+
+```typescript
+// ADICIONAR apos "saves: data.saves," (linha 362):
+link_clicks: data.link_clicks || 0,
+```
+
+## Codigo Final Esperado
+
+### Parametros da mutation (linhas 314-332):
+
+```typescript
+data: {
+  permalink: string;
+  post_type: 'reels' | 'carousel' | 'static';
+  theme?: string;
+  ai_objective: 'growth' | 'connection' | 'authority' | 'sales';
+  posted_at: Date;
+  caption: string;
+  reach: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  link_clicks: number;  // <-- ADICIONADO
+  views: number;
+  reposts: number;
+  followers_gained: number;
+  profile_visits: number;
+  specialist_version?: string;
+  composition?: string[];
 };
-
-// DEPOIS:
-const fetchCustomFields = async () => {
-  // Buscar campos que são show_in_clients=true (padrão para formulários CX)
-  // OU campos que não pertencem exclusivamente a deals/leads
-  const { data, error } = await supabase
-    .from("custom_fields")
-    .select("id, name, field_type, options, is_required, show_in_clients, show_in_deals, show_in_leads")
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
-  
-  if (error) throw error;
-  
-  // Filtrar apenas campos que:
-  // 1. São visíveis em clientes (show_in_clients = true), OU
-  // 2. Não são exclusivos de deals/leads (campos genéricos)
-  const filteredFields = (data || []).filter(field => 
-    field.show_in_clients === true || 
-    (!field.show_in_deals && !field.show_in_leads)
-  );
-  
-  setCustomFields(filteredFields);
-};
 ```
 
-**Lógica:**
-- Campos com `show_in_deals = true` E `show_in_clients = false` são exclusivos de Vendas (Pipeline)
-- Campos com `show_in_leads = true` E `show_in_clients = false` são exclusivos de Leads
-- Formulários CX devem mostrar apenas campos genéricos ou campos de clientes
+### Chamada .update() (linhas 349-373):
 
-### Correção 2: Aplicar Cor de Texto aos Labels de Opções
-
-**Arquivo:** `src/pages/PublicForm.tsx`
-
-**Mudança no renderField para select (linhas 253-258):**
-```tsx
-// ANTES:
-<Label
-  htmlFor={`${field.id}-${opt.value}`}
-  className="font-normal cursor-pointer"
->
-  {opt.label}
-</Label>
-
-// DEPOIS:
-<Label
-  htmlFor={`${field.id}-${opt.value}`}
-  className="font-normal cursor-pointer"
-  style={{ color: appearance.text_color }}
->
-  {opt.label}
-</Label>
+```typescript
+.update({
+  instagram_id: instagramId,
+  permalink: data.permalink,
+  post_type: data.post_type,
+  theme: data.theme || null,
+  ai_objective: data.ai_objective,
+  ai_objective_confidence: 100,
+  posted_at: data.posted_at.toISOString(),
+  caption: data.caption || null,
+  reach: data.reach,
+  likes: data.likes,
+  comments: data.comments,
+  shares: data.shares,
+  saves: data.saves,
+  link_clicks: data.link_clicks || 0,  // <-- ADICIONADO
+  views: data.views,
+  reposts: data.reposts,
+  followers_gained: data.followers_gained,
+  profile_visits: data.profile_visits || 0,
+  specialist_version: data.specialist_version || null,
+  composition: data.composition || [],
+  engagement_rate: Math.round(engagementRate * 100) / 100,
+  virality_rate: Math.round(viralityRate * 100) / 100,
+  is_trending: engagementRate >= 12 || viralityRate >= 1.5,
+  updated_at: new Date().toISOString(),
+})
 ```
 
-**Mudança no renderField para multi_select (linhas 288-289):**
-```tsx
-// ANTES:
-<Label
-  htmlFor={`${field.id}-${opt.value}`}
-  className="font-normal cursor-pointer"
->
-  {opt.label}
-</Label>
+## Arquivo a Modificar
 
-// DEPOIS:
-<Label
-  htmlFor={`${field.id}-${opt.value}`}
-  className="font-normal cursor-pointer"
-  style={{ color: appearance.text_color }}
->
-  {opt.label}
-</Label>
-```
-
-### Correção 3: Limpar Campos Incorretos do Formulário Existente (Migração SQL)
-
-**Ação:** Remover os campos de Vendas do formulário "Cadastro Empresarial"
-
-```sql
--- Remover campos de Vendas do formulário de Operações
-UPDATE forms 
-SET fields = array_remove(array_remove(fields, '16ebda9f-cd3b-412c-bb06-0950001963c5'), '033b91fb-3add-4c96-aec9-567fefbd0fb2')
-WHERE id = 'f53653f9-85b3-4f42-8b86-57cecb553330';
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Alteração |
+| Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/Forms.tsx` | Filtrar campos por setor em `fetchCustomFields` |
-| `src/pages/PublicForm.tsx` | Adicionar `style={{ color: appearance.text_color }}` aos Labels de opções |
-| Migração SQL | Remover campos de Vendas do formulário "Cadastro Empresarial" |
-
----
-
-## Resumo Técnico
-
-1. **fetchCustomFields** passará a filtrar campos excluindo aqueles exclusivos de Deals/Leads
-2. **renderField** passará a propagar a cor de texto para todas as labels de opções
-3. **Migração SQL** limpará os campos incorretos já inseridos no formulário afetado
+| `src/hooks/useSocialMediaData.tsx` | Adicionar `link_clicks` nos parametros e no `.update()` |
 
 ## Impacto Esperado
 
-- Campos de Vendas não aparecerão mais na seleção de formulários CX/Operações
-- Texto dos campos de formulário sempre terá contraste adequado
-- Formulário "Cadastro Empresarial" não mostrará mais "Canal de Venda" e "Item da Venda"
+- Todas as metricas editadas no formulario serao salvas corretamente
+- O campo `link_clicks` sera persistido no banco de dados
+- Apos salvar e recarregar, os valores aparecerao corretamente
+
