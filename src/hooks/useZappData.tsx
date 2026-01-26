@@ -510,10 +510,16 @@ export function useZappData(options: UseZappDataOptions = {}) {
       }
       
       // Filter agents by current sector's department
-      // Include: agents assigned to this department, admins/gestores, or agents with department_id = null
+      // Include: current user (always), agents assigned to this department, admins/gestores, or agents with department_id = null
       let filteredAgents = finalAgents;
       if (sectorId && targetDepartmentId) {
         filteredAgents = finalAgents.filter((a: Agent) => {
+          // ALWAYS include the current user's agent record so currentAgent is correctly identified
+          // This ensures the "Minhas" tab filter works regardless of which sector the user is viewing
+          if (a.user_id === currentUser.id) {
+            return true;
+          }
+          
           // Show if assigned to this specific department
           if (a.department_id === targetDepartmentId) {
             return true;
