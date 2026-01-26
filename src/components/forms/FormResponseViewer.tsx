@@ -228,7 +228,7 @@ export function FormResponseViewer({
         );
 
       default:
-        return <span className="break-words">{String(value)}</span>;
+        return <span className="break-words whitespace-pre-wrap">{String(value)}</span>;
     }
   };
 
@@ -507,7 +507,7 @@ export function FormResponseViewer({
 
       {/* Response Detail Dialog */}
       <Dialog open={!!selectedResponse} onOpenChange={(open) => !open && setSelectedResponse(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
           {selectedResponse && (
             <>
               {/* Header with navigation */}
@@ -630,14 +630,14 @@ export function FormResponseViewer({
                         const value = selectedResponse.responses?.[field.id];
 
                         return (
-                          <div key={field.id} className="flex flex-col sm:flex-row sm:items-start gap-2 p-4">
-                            <div className="sm:w-1/3">
+                          <div key={field.id} className="flex flex-col gap-2 p-4">
+                            <div className="min-w-0">
                               <Label className="text-sm font-medium text-foreground">
                                 {field.name}
                                 {field.is_required && <span className="text-destructive ml-1">*</span>}
                               </Label>
                             </div>
-                            <div className="sm:w-2/3">
+                            <div className="text-sm break-words min-w-0">
                               {renderValue(field, value)}
                             </div>
                           </div>
