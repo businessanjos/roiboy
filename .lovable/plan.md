@@ -1,100 +1,94 @@
 
-# Plano: Correção dos Erros de Atribuição na Fila de Triagem
+# Plano: Correção da Visualização de Respostas do Formulário CX
 
-## Diagnóstico
+## Problemas Identificados
 
-Após investigação detalhada do código, banco de dados e políticas RLS, identifiquei a causa raiz dos erros:
+### Problema 1: Campos Truncados/Cortados na Visualização
 
-### Problema Identificado
+Após análise da imagem e código, identifiquei que os valores das respostas estão sendo cortados visualmente no modal de visualização. O layout atual tem as seguintes limitações:
 
-O componente `ContractTriageQueue.tsx` está tentando atualizar uma coluna que **NÃO EXISTE** na tabela `clients`:
+**Causa raiz no código:**
 
-```typescript
-// Código atual - LINHA 168-174
-const { error } = await supabase
-  .from("clients")
-  .update({
-    responsible_user_id: currentUser.id,
-    updated_at: new Date().toISOString(),  // ERRO: Esta coluna não existe!
-  })
-  .eq("id", clientId);
-```
+| Localização | Problema |
+|-------------|----------|
+| `FormResponseViewer.tsx` linha 640 | Container de valor usa `sm:w-2/3` mas não tem classe de quebra de texto |
+| Linha 633 | O layout flex pode não expandir corretamente com textos longos |
+| Linha 231 | O `renderValue` para texto usa `break-words` mas o container pai não permite expansão |
 
-A tabela `clients` possui apenas `created_at`, não possui `updated_at`. Quando o Supabase tenta executar este update, ele falha porque a coluna não existe.
+**Evidência na imagem:**
+- "Thiago -" aparece truncado quando deveria mostrar "Thiago - empresário e gestor de tráfego"
+- "Não tenh" truncado de "Não tenho"
+- "Nutricion" truncado de "Nutricionista"
 
-### Evidência
+### Problema 2: Dados de Cliente Aparecendo Incorretamente
 
-A verificação do schema da tabela `clients` confirma que não há coluna `updated_at`:
-- Colunas existentes incluem: `id`, `account_id`, `full_name`, `phone_e164`, `created_at`, `responsible_user_id`, etc.
-- Coluna `updated_at` está **ausente**
+Após investigar o banco de dados, **os dados estão CORRETOS**. O que pode causar confusão:
+
+1. A resposta da **Priscila** contém no campo "Nome e Profissão do Cônjuge" o valor "Thiago - empresário e gestor de tráfego" - isso é dado correto preenchido por ela sobre o esposo
+2. Não há dados de um cliente misturados com outro no banco
+
+**Verificação feita:**
+
+| Resposta | Cliente | Número | Rua | Cônjuge |
+|----------|---------|--------|-----|---------|
+| Priscila | Correto | 216 | Marulo | Thiago - empresário... |
+| Thiago | Correto | 170 | (vazio) | Mentoria para nutri... |
+
+A lógica de vinculação de cliente no `submit-form-response` está correta:
+- Valida que o telefone submetido corresponde ao cliente da URL
+- Se não corresponde, busca por telefone
+- Se não encontra, deixa `client_id = null`
 
 ---
 
-## Solução
+## Solução Proposta
 
-### Correção no Arquivo: `src/components/contracts/ContractTriageQueue.tsx`
+### Correção 1: Melhorar Layout de Visualização de Respostas
 
-Remover a referência à coluna `updated_at` em ambas as funções de atualização:
+**Arquivo:** `src/components/forms/FormResponseViewer.tsx`
 
-**1. Função `handlePullClient` (linhas 160-186):**
-
-```typescript
-const handlePullClient = async (clientId: string) => {
-  if (!currentUser) {
-    toast.error("Usuário não autenticado");
-    return;
-  }
-
-  setPullingClientId(clientId);
-  try {
-    const { error } = await supabase
-      .from("clients")
-      .update({
-        responsible_user_id: currentUser.id,
-        // Remover: updated_at: new Date().toISOString(),
-      })
-      .eq("id", clientId);
-
-    if (error) throw error;
-
-    toast.success("Cliente atribuído a você!");
-    onRefresh();
-  } catch (error) {
-    console.error("Error pulling client:", error);
-    toast.error("Erro ao puxar cliente");
-  } finally {
-    setPullingClientId(null);
-  }
-};
-```
-
-**2. Função `handleAssignResponsible` (linhas 188-210):**
+**Mudança no container de campo (linha 633-643):**
 
 ```typescript
-const handleAssignResponsible = async (clientId: string, userId: string) => {
-  setAssigningClientId(clientId);
-  try {
-    const { error } = await supabase
-      .from("clients")
-      .update({
-        responsible_user_id: userId,
-        // Remover: updated_at: new Date().toISOString(),
-      })
-      .eq("id", clientId);
-
-    if (error) throw error;
-
-    const assignedUser = teamUsers.find((u) => u.id === userId);
-    toast.success(`Cliente atribuído a ${assignedUser?.name || "usuário"}!`);
-    onRefresh();
-  } catch (error) {
-    console.error("Error assigning responsible:", error);
-    toast.error("Erro ao atribuir responsável");
-  } finally {
-    setAssigningClientId(null);
-  }
-};
+<div key={field.id} className="flex flex-col gap-2 p-4">
+  <div>
+    <Label className="text-sm font-medium text-foreground">
+      {field.name}
+      {field.is_required && <span className="text-destructive ml-1">*</span>}
+    </Label>
+  </div>
+  <div className="text-sm break-words">
+    {renderValue(field, value)}
+  </div>
+</div>
 ```
+
+Alterações:
+- Remover layout side-by-side (`sm:flex-row`) para evitar truncamento
+- Usar layout vertical (pergunta em cima, resposta embaixo)
+- Garantir `break-words` no container de valor
+- Adicionar `min-w-0` para prevenir overflow
+
+### Correção 2: Aumentar Largura do Modal
+
+**Arquivo:** `src/components/forms/FormResponseViewer.tsx` (linha 510)
+
+```typescript
+<DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+```
+
+Mudança de `max-w-2xl` (672px) para `max-w-3xl` (768px) para acomodar melhor os textos.
+
+### Correção 3: Melhorar Função renderValue
+
+**Arquivo:** `src/components/forms/FormResponseViewer.tsx` (linha 230-231)
+
+```typescript
+default:
+  return <span className="break-words whitespace-pre-wrap">{String(value)}</span>;
+```
+
+Adicionar `whitespace-pre-wrap` para preservar quebras de linha e garantir que textos longos quebrem corretamente.
 
 ---
 
@@ -102,22 +96,22 @@ const handleAssignResponsible = async (clientId: string, userId: string) => {
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/contracts/ContractTriageQueue.tsx` | Remover referência a `updated_at` nas funções `handlePullClient` e `handleAssignResponsible` |
+| `src/components/forms/FormResponseViewer.tsx` | Ajustar layout de campos, aumentar modal, melhorar renderValue |
 
 ---
 
 ## Impacto Esperado
 
-- O botão "Puxar" passará a funcionar corretamente
-- O seletor "Atribuir a..." passará a funcionar corretamente
-- Clientes poderão ser atribuídos a consultores sem erros
-- O fluxo de triagem da operação será restaurado
+1. Todos os valores de respostas serão exibidos por completo
+2. Textos longos terão quebra automática de linha
+3. O modal terá mais espaço horizontal para exibir as informações
+4. Layout vertical (pergunta/resposta) será mais legível
 
-## Considerações Técnicas
+## Consideracoes Adicionais
 
-A coluna `updated_at` é comumente usada para rastrear a última modificação de um registro. Se for desejável ter essa funcionalidade no futuro, seria necessário:
+A lógica de vinculação de clientes já está correta e robusta:
+- Valida o telefone submetido contra o cliente da URL
+- Faz busca por telefone se não houver match
+- Os dados no banco estão íntegros
 
-1. Adicionar a coluna `updated_at` na tabela `clients` via migração
-2. Opcionalmente criar um trigger para atualizar automaticamente este valor
-
-Porém, para resolver o problema imediato, basta remover a referência à coluna inexistente.
+O que pode parecer "dados de outro cliente" é na verdade informação sobre o cônjuge que a própria cliente preencheu (ex: Priscila preencheu "Thiago" como nome do cônjuge).
