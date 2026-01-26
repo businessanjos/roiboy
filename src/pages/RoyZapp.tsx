@@ -641,9 +641,17 @@ export default function RoyZapp() {
               console.log("[RoyZapp] Skipping refetch for own recent message:", newMsg.id);
               // Just update state directly instead of refetching
               setMessages(prev => {
-                // Check if message already exists (avoid duplicates)
-                const exists = prev.some(m => m.id === newMsg.id || m.external_message_id === newMsg.external_message_id);
-                if (exists) {
+                // CRITICAL FIX: Check if message already exists by id OR external_message_id
+                const existingByExternal = prev.find(m => 
+                  m.external_message_id && m.external_message_id === newMsg.external_message_id
+                );
+                const existsById = prev.some(m => m.id === newMsg.id);
+                
+                // If message exists (especially edited ones), skip to prevent duplicates
+                if (existsById || existingByExternal) {
+                  if (existingByExternal) {
+                    console.log("[RoyZapp] Ignoring INSERT for existing message with same external_id:", newMsg.external_message_id);
+                  }
                   return prev;
                 }
                 // Remove any temp messages that might be for this audio

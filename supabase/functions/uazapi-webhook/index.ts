@@ -1219,13 +1219,16 @@ serve(async (req) => {
             .eq("external_message_id", messageId)
             .maybeSingle();
 
+          // CRITICAL FIX: Flag to skip insert when message already exists
+          let skipInsert = false;
+          
           if (existingMsg) {
             console.log(`Message already exists with external_message_id ${messageId}, checking if deleted`);
             
             // Check if the message is deleted - don't update if so
             const { data: msgDetails } = await supabase
               .from("zapp_messages")
-              .select("is_deleted")
+              .select("is_deleted, is_edited")
               .eq("id", existingMsg.id)
               .maybeSingle();
             
@@ -1236,6 +1239,11 @@ serve(async (req) => {
                 { headers: { ...corsHeaders, "Content-Type": "application/json" } }
               );
             }
+            
+            // CRITICAL FIX: If message exists and is NOT deleted, skip insert
+            // This prevents duplication when UAZAPI sends confirmation webhooks for edited messages
+            console.log(`[DEDUPE] Message ${messageId} already exists (is_edited: ${msgDetails?.is_edited}), skipping insert`);
+            skipInsert = true;
           } else {
             // For outbound messages, check for recent duplicates without external_message_id
             // This handles messages sent from the UI that are then echoed back by the webhook
@@ -1303,7 +1311,8 @@ serve(async (req) => {
               }
             }
 
-            if (!isDuplicate) {
+            // CRITICAL FIX: Also check skipInsert flag to prevent duplication from edit webhooks
+            if (!isDuplicate && !skipInsert) {
               const { error: zappMsgError } = await supabase
                 .from("zapp_messages")
                 .insert({
