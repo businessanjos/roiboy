@@ -97,6 +97,8 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = useState<string>('all');
   const [lostMonthFilter, setLostMonthFilter] = useState<string>('all');
+  // State to prevent double-click on "Mark as Won" button
+  const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
 
   // Handle URL query param to open deal detail automatically
   useEffect(() => {
@@ -267,6 +269,12 @@ export default function SalesPipeline() {
   };
 
   const handleMarkAsWon = async (dealId: string) => {
+    // CRITICAL FIX: Prevent double-click
+    if (processingWonDealId) {
+      toast.warning("Aguarde, processando negócio anterior...");
+      return;
+    }
+
     // Find the deal to get client/lead info
     const deal = deals.find(d => d.id === dealId);
     if (!deal) {
@@ -274,13 +282,15 @@ export default function SalesPipeline() {
       return;
     }
 
+    setProcessingWonDealId(dealId);
+
     try {
       let clientId = deal.client_id;
       
       // Fetch deal custom field values BEFORE conversion
       const dealFieldValues = await fetchDealCustomFieldValues(dealId);
       
-      // If deal has lead_id but no client_id, convert lead to client first
+      // STEP 1: Convert lead to client if necessary
       if (deal.lead_id && !deal.client_id) {
         // 1. Fetch lead data to check status and phone
         const { data: lead } = await supabase
@@ -318,10 +328,11 @@ export default function SalesPipeline() {
             const { data: convertedClient, error: convertError } = await supabase
               .rpc('convert_lead_to_client', { p_lead_id: deal.lead_id });
             
-            if (convertError) {
-              console.error("Error converting lead:", convertError);
-              toast.error("Erro ao converter lead para cliente");
-              return;
+            // CRITICAL FIX: Validate both error AND null return
+            if (convertError || !convertedClient) {
+              console.error("[MarkAsWon] Error converting lead:", convertError || "RPC returned null");
+              toast.error("Erro ao converter lead para cliente. Verifique os dados do lead.");
+              return; // Block flow
             }
             clientId = convertedClient;
             toast.success("Lead convertido para cliente!");
@@ -331,36 +342,42 @@ export default function SalesPipeline() {
           const { data: convertedClient, error: convertError } = await supabase
             .rpc('convert_lead_to_client', { p_lead_id: deal.lead_id });
           
-          if (convertError) {
-            console.error("Error converting lead:", convertError);
-            toast.error("Erro ao converter lead para cliente");
-            return;
+          // CRITICAL FIX: Validate both error AND null return
+          if (convertError || !convertedClient) {
+            console.error("[MarkAsWon] Error converting lead:", convertError || "RPC returned null");
+            toast.error("Erro ao converter lead para cliente. Verifique os dados do lead.");
+            return; // Block flow
           }
           clientId = convertedClient;
           toast.success("Lead convertido para cliente!");
         }
         
-        // Update the deal with the client_id to prevent future conversion attempts
-        if (clientId) {
-          await supabase
-            .from('deals')
-            .update({ client_id: clientId })
-            .eq('id', dealId);
+        // STEP 2: CRITICAL VALIDATION - Ensure we have a valid clientId
+        if (!clientId) {
+          console.error("[MarkAsWon] CRITICAL: clientId is null after conversion attempt for deal:", dealId);
+          toast.error("Erro crítico: Não foi possível obter o ID do cliente. Tente novamente.");
+          return; // Block flow - DO NOT proceed without clientId
+        }
+        
+        // STEP 3: Update deal with client_id
+        const { error: updateDealError } = await supabase
+          .from('deals')
+          .update({ client_id: clientId })
+          .eq('id', dealId);
+        
+        if (updateDealError) {
+          console.error("[MarkAsWon] Error updating deal with client_id:", updateDealError);
+          // Continue even with error here, since client was created
         }
       }
 
-      // Update client with deal custom field data (Instagram, City, Bonus)
+      // STEP 4: Update client with deal custom field data (Instagram, City, Bonus)
       if (clientId && currentUser?.account_id) {
         await updateClientWithDealData(clientId, currentUser.account_id, dealFieldValues);
       }
 
-      // Mark deal as won (keeps in pipeline with 'won' status)
-      await markAsWon(dealId);
-      
-      setIsDetailOpen(false);
-      setSelectedDeal(null);
-      
-      // Create contract automatically in reconciliation queue
+      // STEP 5: Create contract BEFORE marking as won
+      let contractCreated = false;
       if (clientId && currentUser?.account_id) {
         const today = new Date().toISOString().split('T')[0];
         const clientName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || "";
@@ -377,7 +394,6 @@ export default function SalesPipeline() {
           status: 'active',
           receivables_generated: false, // Ensures it goes to reconciliation queue
           notes: `Contrato gerado automaticamente do negócio: ${deal.title}`,
-          // NEW: Data from deal custom fields
           product_id: contractDataFromDeal.product_id || null,
           payment_method: contractDataFromDeal.payment_method || null,
           negotiation_description: contractDataFromDeal.negotiation_description || null,
@@ -390,28 +406,48 @@ export default function SalesPipeline() {
           .single();
 
         if (contractError) {
-          console.error("Error creating contract:", contractError);
-          toast.error("Negócio ganho, mas houve erro ao criar contrato");
-        } else {
-          // Send notifications to operations and financial teams
-          if (newContract) {
-            await notifyContractCreated({
-              contractId: newContract.id,
-              clientName,
-              contractValue: deal.value || 0,
-              fromDeal: true,
-              createdByUserId: currentUser.id,
-              accountId: currentUser.account_id,
-            });
+          console.error("[MarkAsWon] Error creating contract:", contractError);
+          // Ask user if they want to continue without contract
+          const continueWithoutContract = window.confirm(
+            "Houve um erro ao criar o contrato. Deseja marcar como ganho mesmo assim?\n\n" +
+            "Você precisará criar o contrato manualmente depois."
+          );
+          if (!continueWithoutContract) {
+            return; // User cancelled - don't proceed
           }
-          toast.success("🎉 Negócio ganho! Contrato enviado para a fila de conciliação.");
+          toast.warning("Negócio será marcado como ganho, mas o contrato precisará ser criado manualmente.");
+        } else if (newContract) {
+          contractCreated = true;
+          // Send notifications to operations and financial teams
+          await notifyContractCreated({
+            contractId: newContract.id,
+            clientName,
+            contractValue: deal.value || 0,
+            fromDeal: true,
+            createdByUserId: currentUser.id,
+            accountId: currentUser.account_id,
+          });
         }
+      }
+
+      // STEP 6: NOW mark as won (only after all validations passed)
+      await markAsWon(dealId);
+      
+      setIsDetailOpen(false);
+      setSelectedDeal(null);
+      
+      if (contractCreated) {
+        toast.success("🎉 Negócio ganho! Contrato enviado para a fila de conciliação.");
+      } else if (clientId) {
+        toast.success("🎉 Negócio ganho!");
       } else {
         toast.success("Negociação marcada como ganha!");
       }
     } catch (error) {
-      console.error("Error marking deal as won:", error);
-      toast.error("Erro ao processar ganho");
+      console.error("[MarkAsWon] Error marking deal as won:", error);
+      toast.error("Erro ao processar ganho. Tente novamente.");
+    } finally {
+      setProcessingWonDealId(null);
     }
   };
 
@@ -714,6 +750,7 @@ export default function SalesPipeline() {
         onReopen={handleReopen}
         onStageChange={handleDealMove}
         onDealUpdated={fetchDeals}
+        processingWonDealId={processingWonDealId}
       />
 
       {/* Edit Deal Dialog */}
