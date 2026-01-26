@@ -1,147 +1,174 @@
 
-# Plano: Correção de Erros de Envio de Mensagens no ROY zAPP - Setor Operações
+# Plano: Correção do Download de Arquivos no ROY zAPP
 
-## Diagnóstico Completo
+## Problema Identificado
 
-Após investigação detalhada dos logs e banco de dados, identifiquei os seguintes problemas:
+O download de arquivos no ROY zAPP não está funcionando corretamente. Quando o usuário clica para baixar um documento (como "Secretátia 1.docx"), o arquivo é baixado mas com um nome incorreto/ilegível.
 
-### Problema 1: Número de Telefone com Formato Inválido
+### Evidências no Banco de Dados:
 
-**Situação encontrada:**
-- A conversa da cliente "Jéssica Almeida Marcato" tem o telefone `+97461465018463`
-- O código de país 974 pertence ao **Qatar**, não ao Brasil
-- Isso causa falha no UAZAPI ao tentar enviar mensagens
+| Campo | Valor |
+|-------|-------|
+| `media_filename` | `Secretátia 1.docx` |
+| `media_url` | `...document_1769443527484_dcee457d.vnd.openxmlformats-officedocument.wordprocessingml.document` |
 
-**Causa raiz:**
-- O telefone foi salvo incorretamente no banco de dados (tanto na tabela `clients` quanto em `zapp_conversations`)
-- Quando o UAZAPI tenta enviar para esse número, ele falha porque é um número inválido/não existente no WhatsApp
+O nome do arquivo na URL do Storage usa a extensão do mimetype (`vnd.openxmlformats-officedocument.wordprocessingml.document`) ao invés de preservar o nome original com extensão `.docx`.
 
-### Problema 2: Erro "Could not parse Group JID" (separado)
+### Por que isso acontece:
 
-**Este erro está relacionado à busca de participantes de grupos, não ao envio de mensagens diretas**
-- O sistema tenta buscar informações de grupo com JIDs malformados em alguns casos
-- Isso acontece na ação `group_participants` quando um `group_id` inválido é passado
+1. O componente `ZappMessageBubble.tsx` usa uma tag `<a>` simples apontando para `message.media_url`
+2. Quando o navegador baixa de URLs cross-origin, ele ignora o atributo `download` por segurança
+3. O navegador usa o último segmento da URL como nome do arquivo, resultando em nomes como `document_1769443527484_dcee457d.vnd.openxmlformats-officedocument.wordprocessingml.document`
 
----
+## Solução Proposta
 
-## Soluções Propostas
+Implementar o padrão **fetch-to-blob** que já está sendo usado com sucesso no Timeline de clientes (`src/components/client/Timeline.tsx`).
 
-### Correção 1: Melhorar Tratamento de Erros no Frontend
+### Como funciona:
 
-**Arquivo:** `src/pages/RoyZapp.tsx`
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUXO ATUAL (COM BUG)                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Usuario clica no link                                       │
+│     └─> <a href={media_url} target="_blank">                   │
+│                                                                 │
+│  2. Navegador abre nova aba com a URL                           │
+│     └─> Baixa usando nome da URL (sem extensao correta)        │
+│                                                                 │
+│  3. Arquivo salvo com nome incorreto                            │
+│     └─> "document_...vnd.openxmlformats..."                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-Adicionar detecção de erros específicos do UAZAPI para números inválidos e mostrar mensagens mais informativas:
 
-```typescript
-// Adicionar detecção para números inválidos
-const isInvalidNumber = errorMsg.includes("invalid") || 
-                        errorMsg.includes("Could not parse") ||
-                        errorMsg.includes("not valid") ||
-                        errorMsg.includes("número inválido");
-
-// Na lógica de mensagem:
-if (isInvalidNumber) {
-  userErrorMessage = "Número de telefone inválido ou não registrado no WhatsApp";
-}
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUXO CORRIGIDO                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Usuario clica no botao de download                          │
+│     └─> handleDownload(message)                                │
+│                                                                 │
+│  2. Frontend faz fetch do arquivo                               │
+│     └─> const blob = await fetch(media_url).blob()             │
+│                                                                 │
+│  3. Cria URL local temporaria                                   │
+│     └─> const url = URL.createObjectURL(blob)                  │
+│                                                                 │
+│  4. Cria link programatico com nome correto                     │
+│     └─> link.download = message.media_filename                 │
+│                                                                 │
+│  5. Dispara download e limpa recursos                           │
+│     └─> link.click(); URL.revokeObjectURL(url)                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Correção 2: Adicionar Validação de Telefone no Backend
+## Implementacao Tecnica
 
-**Arquivo:** `supabase/functions/uazapi-manager/index.ts`
+### Arquivo: `src/components/royzapp/ZappMessageBubble.tsx`
 
-Adicionar validação básica de formato de número antes de enviar ao UAZAPI:
-
-```typescript
-// No case "send_text":
-const cleanPhone = phone.replace(/\D/g, "");
-
-// Validar formato básico (mínimo 10 dígitos, máximo 15)
-if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-  return new Response(
-    JSON.stringify({ error: "Número de telefone com formato inválido" }),
-    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
-```
-
-### Correção 3: Proteger Busca de Participantes de Grupo
-
-**Arquivo:** `supabase/functions/uazapi-manager/index.ts`
-
-Adicionar validação do `group_id` antes de chamar o UAZAPI para evitar erros "Could not parse Group JID":
+**Mudanca 1:** Adicionar funcao de download (apos as funcoes existentes, antes do componente)
 
 ```typescript
-// No case "group_participants":
-if (!group_id || group_id.trim() === "") {
-  throw new Error("ID do grupo é obrigatório");
-}
-
-// Validar formato básico do group_id
-const groupIdClean = group_id.trim();
-if (!groupIdClean.match(/^\d+@g\.us$/) && !groupIdClean.match(/^\d+-\d+@g\.us$/) && !groupIdClean.match(/^\d+$/)) {
-  return new Response(
-    JSON.stringify({ error: "Formato de ID de grupo inválido" }),
-    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
-```
-
-### Correção 4: Melhorar Mensagem de Erro para o Usuário
-
-**Arquivo:** `src/pages/RoyZapp.tsx`
-
-Modificar o catch handler para extrair a mensagem de erro do JSON retornado pela Edge Function:
-
-```typescript
-} catch (error: any) {
-  console.error("Error sending message:", error);
-  
-  // Tentar extrair mensagem de erro do response body
-  let errorMsg = error.message || "Erro ao enviar mensagem";
-  
-  // Se for erro de Edge Function, tentar parsear o JSON interno
-  if (error.context?.body) {
-    try {
-      const errorBody = JSON.parse(error.context.body);
-      if (errorBody.error) {
-        errorMsg = errorBody.error;
-      }
-    } catch {}
+// Function to handle file download with correct filename
+async function handleFileDownload(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Falha ao baixar arquivo");
+    
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename || "documento";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error("Erro ao baixar arquivo:", error);
+    throw error;
   }
-  
-  // ... resto do código de tratamento
 }
 ```
 
----
+**Mudanca 2:** Adicionar estado de loading e toast hook (dentro do componente)
 
-## Arquivos a Modificar
+```typescript
+const [isDownloading, setIsDownloading] = useState(false);
+const { toast } = useToast();
+```
 
-| Arquivo | Alteração |
+**Mudanca 3:** Substituir tag `<a>` por elemento clicavel com handler (linhas 452-472)
+
+```typescript
+{message.media_url && message.media_type === "document" && (
+  <button
+    onClick={async (e) => {
+      e.preventDefault();
+      if (isDownloading) return;
+      setIsDownloading(true);
+      try {
+        await handleFileDownload(
+          message.media_url!,
+          message.media_filename || "documento"
+        );
+        toast({
+          title: "Download iniciado",
+          description: message.media_filename || "documento",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro ao baixar",
+          description: "Não foi possível baixar o arquivo",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDownloading(false);
+      }
+    }}
+    disabled={isDownloading}
+    className="flex items-center gap-3 bg-black/20 rounded-lg p-3 mb-1 hover:bg-black/30 transition-colors w-full text-left cursor-pointer disabled:opacity-50"
+  >
+    <div className="w-10 h-10 rounded-lg bg-[#7f66ff]/20 flex items-center justify-center">
+      <FileText className="h-5 w-5 text-[#7f66ff]" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm text-zapp-text truncate">
+        {message.media_filename || "Documento"}
+      </p>
+      <p className="text-xs text-zapp-text-muted">
+        {isDownloading ? "Baixando..." : "Clique para baixar"}
+      </p>
+    </div>
+    {isDownloading ? (
+      <Loader2 className="h-4 w-4 text-zapp-text-muted flex-shrink-0 animate-spin" />
+    ) : (
+      <Download className="h-4 w-4 text-zapp-text-muted flex-shrink-0" />
+    )}
+  </button>
+)}
+```
+
+## Arquivo a Modificar
+
+| Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/RoyZapp.tsx` | Melhorar parsing de erros e adicionar detecção de números inválidos |
-| `supabase/functions/uazapi-manager/index.ts` | Adicionar validação de formato de telefone e group_id |
-
----
-
-## Ação Imediata Recomendada (Manual)
-
-O telefone da cliente "Jéssica Almeida Marcato" (`+97461465018463`) parece estar incorreto. Para resolver o problema imediatamente:
-
-1. Corrigir o telefone no cadastro do cliente (provavelmente deveria ser `+55...`)
-2. A conversa será automaticamente atualizada pelo trigger existente
-
----
-
-## Resumo Técnico
-
-1. **Frontend** receberá mensagens de erro mais claras do backend
-2. **Backend** validará números e group_ids antes de chamar o UAZAPI
-3. **Números inválidos** serão rejeitados com mensagem amigável
-4. **Grupos com JID malformado** não causarão mais crashes
+| `src/components/royzapp/ZappMessageBubble.tsx` | Substituir link direto por handler fetch-to-blob |
 
 ## Impacto Esperado
 
-- Usuários verão mensagens de erro claras em português
-- Erros silenciosos serão eliminados
-- O sistema será mais resiliente a dados malformados
+- Arquivos serao baixados com o nome original preservado (ex: "Secretátia 1.docx")
+- Indicador visual de loading durante o download
+- Feedback via toast ao usuario
+- Melhor experiencia de usuario
+
+## Consideracoes
+
+Esta solucao:
+- Usa o mesmo padrao ja comprovado no Timeline de clientes
+- Nao requer alteracoes no backend ou Edge Functions
+- Funciona para todos os tipos de documentos (PDF, DOCX, XLSX, etc.)
+- Preserva o `media_filename` original armazenado no banco de dados
