@@ -61,6 +61,7 @@ import {
   Copy,
   Trash2,
   GitMerge,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
@@ -73,6 +74,7 @@ import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
 import { MergeDealDialog } from "./MergeDealDialog";
 import { useDealMerge } from "@/hooks/useDealMerge";
+import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
 
 interface DealActivity {
   id: string;
@@ -216,6 +218,7 @@ export function DealDetailSheet({
   // Deal custom fields
   const [dealCustomFields, setDealCustomFields] = useState<CustomField[]>([]);
   const [dealFieldValues, setDealFieldValues] = useState<Record<string, any>>({});
+  const [itemVendaProductName, setItemVendaProductName] = useState<string | null>(null);
   
   const { isAdmin } = usePermissions();
 
@@ -333,6 +336,35 @@ export function DealDetailSheet({
           }
         });
         setDealFieldValues(valuesMap);
+        
+        // Fetch product name for Item da Venda if it exists
+        const itemVendaValue = valuesMap[DEAL_FIELD_IDS.ITEM_VENDA];
+        if (itemVendaValue) {
+          // Check if it's a UUID (new format - direct product_id)
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(itemVendaValue)) {
+            const { data: productData } = await supabase
+              .from('products')
+              .select('name')
+              .eq('id', itemVendaValue)
+              .maybeSingle();
+            
+            if (productData) {
+              setItemVendaProductName(productData.name);
+            }
+          } else {
+            // Legacy format - get label from custom field options
+            const itemVendaField = formattedFields.find(f => f.id === DEAL_FIELD_IDS.ITEM_VENDA);
+            if (itemVendaField?.options) {
+              const option = itemVendaField.options.find(o => o.value === itemVendaValue);
+              if (option) {
+                setItemVendaProductName(option.label);
+              }
+            }
+          }
+        } else {
+          setItemVendaProductName(null);
+        }
       }
     } catch (error) {
       console.error("Error fetching deal custom fields:", error);
@@ -754,6 +786,15 @@ export function DealDetailSheet({
                       </div>
                     )}
                   </div>
+
+                  {/* Item da Venda (Product) - Highlighted */}
+                  {itemVendaProductName && (
+                    <div className="flex items-center gap-2 py-2 px-3 -mx-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <Package className="h-4 w-4 text-primary flex-shrink-0" />
+                      <span className="text-xs text-muted-foreground min-w-[50px]">Item</span>
+                      <span className="text-sm font-medium text-primary flex-1">{itemVendaProductName}</span>
+                    </div>
+                  )}
 
                   {/* Tags */}
                   {deal.tags && deal.tags.length > 0 && (
